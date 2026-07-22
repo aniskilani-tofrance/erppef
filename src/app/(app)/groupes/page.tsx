@@ -20,12 +20,13 @@ export default async function GroupesPage() {
   const { role } = await requireSession();
   const supabase = await createClient();
 
-  const [{ data: groups }, { data: hours }] = await Promise.all([
+  const [{ data: groups }, { data: hours }, { data: enrollments }] = await Promise.all([
     supabase
       .from("groups")
-      .select("id, name, status, starts_on, ends_on, total_hours, capacity, enrolled_count, programs(name), funders(name, color), trainers:trainer_id(first_name), rooms:room_id(name)")
+      .select("id, name, status, starts_on, ends_on, total_hours, capacity, programs(name), funders(name, color), trainers:trainer_id(first_name), rooms:room_id(name)")
       .order("starts_on", { ascending: false }),
     supabase.from("v_group_hours").select("*"),
+    supabase.from("enrollments").select("group_id").eq("status", "inscrit"),
   ]);
 
   const canWrite = role === "admin" || role === "coordinator";
@@ -54,6 +55,7 @@ export default async function GroupesPage() {
               <TableHead>Formateur</TableHead>
               <TableHead>Salle</TableHead>
               <TableHead>Période</TableHead>
+              <TableHead>Effectif</TableHead>
               <TableHead>Avancement</TableHead>
               <TableHead>Statut</TableHead>
             </TableRow>
@@ -61,7 +63,7 @@ export default async function GroupesPage() {
           <TableBody>
             {(groups ?? []).length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} className="py-8 text-center text-muted-foreground">
+                <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">
                   Aucun groupe. Créez le premier avec « Nouveau groupe ».
                 </TableCell>
               </TableRow>
@@ -69,6 +71,7 @@ export default async function GroupesPage() {
             {(groups ?? []).map((g) => {
               const h = (hours ?? []).find((x) => x.group_id === g.id);
               const done = h ? Math.round(Number(h.hours_done)) : 0;
+              const enrolled = (enrollments ?? []).filter((e) => e.group_id === g.id).length;
               const status = STATUS_LABELS[g.status] ?? STATUS_LABELS.en_attente;
               const funder = g.funders as unknown as { name: string; color: string } | null;
               return (
@@ -89,6 +92,9 @@ export default async function GroupesPage() {
                   <TableCell>{(g.rooms as unknown as { name: string } | null)?.name ?? "—"}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {formatDate(g.starts_on)} → {g.ends_on ? formatDate(g.ends_on) : "?"}
+                  </TableCell>
+                  <TableCell className={`text-sm ${g.capacity && enrolled > g.capacity ? "font-medium text-destructive" : ""}`}>
+                    {enrolled}{g.capacity ? ` / ${g.capacity}` : ""}
                   </TableCell>
                   <TableCell className="text-sm">{done} / {Number(g.total_hours)} h</TableCell>
                   <TableCell><Badge variant={status.variant}>{status.label}</Badge></TableCell>
