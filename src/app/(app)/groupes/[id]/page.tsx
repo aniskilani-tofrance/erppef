@@ -148,6 +148,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
                   <TableHead>Formateur</TableHead>
                   <TableHead>Salle</TableHead>
                   <TableHead>Statut</TableHead>
+                  <TableHead>Émargement</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -163,6 +164,13 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
                       <Badge variant={s.status === "annulee" ? "destructive" : s.status === "realisee" ? "secondary" : "outline"}>
                         {{ planifiee: "Planifiée", realisee: "Réalisée", annulee: "Annulée" }[s.status as string]}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {s.status !== "annulee" && (
+                        <Link href={`/seances/${s.id}/emargement`} className="text-sm text-muted-foreground hover:underline">
+                          Feuille →
+                        </Link>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

@@ -111,6 +111,13 @@ export function SessionSheet({
           </div>
 
           <Link
+            href={`/seances/${session.id}/emargement`}
+            className="block text-sm font-medium hover:underline"
+          >
+            Feuille d&apos;émargement →
+          </Link>
+
+          <Link
             href={`/groupes/${session.groupId}`}
             className="block text-sm text-muted-foreground hover:underline"
           >
