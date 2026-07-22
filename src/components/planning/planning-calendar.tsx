@@ -16,6 +16,7 @@ import {
   moveSession,
   type CalendarSession,
 } from "@/app/(app)/planning/actions";
+import { nextDay } from "@/lib/dates";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -24,17 +25,20 @@ import { SessionSheet } from "./session-sheet";
 type Filters = { trainerId: string; roomId: string; funderId: string };
 type Option = { id: string; name: string };
 type FunderOption = { id: string; name: string; color: string };
+type ClosureBand = { id: string; label: string; startsOn: string; endsOn: string };
 
 export function PlanningCalendar({
   canEdit,
   trainers,
   rooms,
   funders,
+  closures = [],
 }: {
   canEdit: boolean;
   trainers: Option[];
   rooms: Option[];
   funders: FunderOption[];
+  closures?: ClosureBand[];
 }) {
   const queryClient = useQueryClient();
   const [range, setRange] = useState<{ from: string; to: string } | null>(null);
@@ -77,15 +81,28 @@ export function PlanningCalendar({
     [sessions, filters, funders],
   );
 
-  const events = filtered.map((s) => ({
-    id: s.id,
-    title: `${s.groupName}${s.roomName ? ` · ${s.roomName}` : ""}${s.trainerName ? ` · ${s.trainerName}` : ""}`,
-    start: s.startsAt,
-    end: s.endsAt,
-    backgroundColor: s.funderColor,
-    borderColor: s.funderColor,
-    editable: canEdit && s.status === "planifiee",
-  }));
+  const events = [
+    ...filtered.map((s) => ({
+      id: s.id,
+      title: `${s.groupName}${s.roomName ? ` · ${s.roomName}` : ""}${s.trainerName ? ` · ${s.trainerName}` : ""}`,
+      start: s.startsAt,
+      end: s.endsAt,
+      backgroundColor: s.funderColor,
+      borderColor: s.funderColor,
+      editable: canEdit && s.status === "planifiee",
+    })),
+    // Vacances, fériés et fermetures en fond grisé (ends_on inclusif → end exclusif).
+    ...closures.map((c) => ({
+      id: `closure-${c.id}`,
+      title: c.label,
+      start: c.startsOn,
+      end: nextDay(c.endsOn),
+      allDay: true,
+      display: "background" as const,
+      backgroundColor: "#94a3b8",
+      editable: false,
+    })),
+  ];
 
   function handleMove(arg: EventDropArg | EventResizeDoneArg) {
     if (!arg.event.start || !arg.event.end) {

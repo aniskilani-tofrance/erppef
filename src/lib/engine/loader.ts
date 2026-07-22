@@ -102,7 +102,7 @@ export async function loadEngineData(orgId: string, fromDate: string): Promise<E
       if (c.kind === "vacances_scolaires" && c.zone && c.zone !== zone) return false;
       return true;
     })
-    .map((c) => ({ startsOn: c.starts_on, endsOn: c.ends_on, label: c.label }));
+    .map((c) => ({ startsOn: c.starts_on, endsOn: c.ends_on, label: c.label, kind: c.kind }));
 
   return {
     trainers: engineTrainers,

@@ -26,6 +26,7 @@ const proposeSchema = z.object({
   preferredTrainerId: z.string().uuid().optional(),
   preferredRoomId: z.string().uuid().optional(),
   expectedHeadcount: z.number().int().positive().optional(),
+  skipSchoolHolidays: z.boolean().optional(),
 });
 
 export type ProposeResult =
@@ -63,6 +64,7 @@ export async function proposePlan(raw: z.infer<typeof proposeSchema>): Promise<P
       preferredTrainerId: input.preferredTrainerId,
       preferredRoomId: input.preferredRoomId,
       expectedHeadcount: input.expectedHeadcount,
+      skipSchoolHolidays: input.skipSchoolHolidays,
     },
     data,
   );
@@ -82,6 +84,7 @@ const commitSchema = z.object({
   weeklyPattern: z.array(slotSchema),
   totalHours: z.number().positive(),
   endsOn: z.string().nullable(),
+  skipSchoolHolidays: z.boolean().default(true),
   sessions: z.array(
     z.object({ startsAt: z.string(), endsAt: z.string() }),
   ).min(1),
@@ -115,6 +118,7 @@ export async function commitProposal(raw: z.infer<typeof commitSchema>): Promise
         status: "ouvert",
         weekly_pattern: d.weeklyPattern,
         notes: d.notes,
+        skip_school_holidays: d.skipSchoolHolidays,
       },
       sessions: d.sessions.map((s) => ({
         trainer_id: d.trainerId,

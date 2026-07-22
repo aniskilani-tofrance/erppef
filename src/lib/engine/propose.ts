@@ -31,12 +31,17 @@ export function proposeGroupPlan(input: ProposalInput, data: EngineData): Propos
     });
   }
 
-  // 2. Matérialisation des séances (fériés + vacances + fermetures sautés).
+  // 2. Matérialisation des séances. Fériés et fermetures org toujours sautés ;
+  // vacances scolaires sautées sauf si le groupe a explicitement cours pendant.
+  const closures =
+    input.skipSchoolHolidays === false
+      ? data.closures.filter((c) => c.kind !== "vacances_scolaires")
+      : data.closures;
   const recurrence = generateSessions({
     pattern,
     startsOn: input.startsOn,
     totalHours: input.totalHours,
-    closures: data.closures,
+    closures,
     tz: data.timezone,
   });
   if (recurrence.truncatedLast) {

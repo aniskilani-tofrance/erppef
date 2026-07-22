@@ -13,13 +13,13 @@ const PATTERN_15H: SlotPattern[] = [1, 2, 3, 4, 5].map((weekday) => ({
 }));
 
 const CLOSURES_2026: Closure[] = [
-  { startsOn: "2026-04-04", endsOn: "2026-04-19", label: "Printemps 2026 (zone C)" },
-  { startsOn: "2026-04-06", endsOn: "2026-04-06", label: "Lundi de Pâques" },
-  { startsOn: "2026-05-01", endsOn: "2026-05-01", label: "Fête du Travail" },
-  { startsOn: "2026-05-08", endsOn: "2026-05-08", label: "Victoire 1945" },
-  { startsOn: "2026-05-14", endsOn: "2026-05-14", label: "Ascension" },
-  { startsOn: "2026-05-25", endsOn: "2026-05-25", label: "Lundi de Pentecôte" },
-  { startsOn: "2026-07-04", endsOn: "2026-08-31", label: "Été 2026 (zone C)" },
+  { startsOn: "2026-04-04", endsOn: "2026-04-19", label: "Printemps 2026 (zone C)", kind: "vacances_scolaires" },
+  { startsOn: "2026-04-06", endsOn: "2026-04-06", label: "Lundi de Pâques", kind: "jour_ferie" },
+  { startsOn: "2026-05-01", endsOn: "2026-05-01", label: "Fête du Travail", kind: "jour_ferie" },
+  { startsOn: "2026-05-08", endsOn: "2026-05-08", label: "Victoire 1945", kind: "jour_ferie" },
+  { startsOn: "2026-05-14", endsOn: "2026-05-14", label: "Ascension", kind: "jour_ferie" },
+  { startsOn: "2026-05-25", endsOn: "2026-05-25", label: "Lundi de Pentecôte", kind: "jour_ferie" },
+  { startsOn: "2026-07-04", endsOn: "2026-08-31", label: "Été 2026 (zone C)", kind: "vacances_scolaires" },
 ];
 
 describe("generateSessions", () => {

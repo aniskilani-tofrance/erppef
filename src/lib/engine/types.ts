@@ -7,10 +7,13 @@ export type SlotPattern = {
   end: string;
 };
 
+export type ClosureKind = "jour_ferie" | "vacances_scolaires" | "fermeture_org";
+
 export type Closure = {
   startsOn: string; // 'YYYY-MM-DD' inclusif
   endsOn: string;
   label: string;
+  kind: ClosureKind;
 };
 
 export type ProposedSession = {
@@ -60,6 +63,8 @@ export type ProposalInput = {
   preferredTrainerId?: string;
   preferredRoomId?: string;
   expectedHeadcount?: number;
+  // false = le groupe a cours pendant les vacances scolaires (fériés et fermetures org toujours exclus).
+  skipSchoolHolidays?: boolean;
 };
 
 export type EngineData = {

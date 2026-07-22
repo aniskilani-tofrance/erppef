@@ -186,4 +186,25 @@ describe("proposeGroupPlan", () => {
     );
     expect(p.trainer?.trainerId).toBe("m2");
   });
+
+  it("skipSchoolHolidays=false : planifie pendant les vacances mais jamais les fériés", () => {
+    const withClosures: EngineData = {
+      ...data([marie()]),
+      closures: [
+        { startsOn: "2026-02-14", endsOn: "2026-03-01", label: "Hiver 2026 (zone C)", kind: "vacances_scolaires" },
+        { startsOn: "2026-01-12", endsOn: "2026-01-12", label: "Fermeture exceptionnelle", kind: "fermeture_org" },
+      ],
+    };
+    const holidayDates = (skip: boolean | undefined) =>
+      proposeGroupPlan({ ...input, totalHours: 120, skipSchoolHolidays: skip }, withClosures)
+        .sessions.map((s) => s.localDate);
+
+    // Par défaut (undefined = true) : rien pendant les vacances d'hiver.
+    expect(holidayDates(undefined).some((d) => d >= "2026-02-14" && d <= "2026-03-01")).toBe(false);
+
+    // Option décochée : cours pendant les vacances, mais la fermeture org reste sautée.
+    const dates = holidayDates(false);
+    expect(dates.some((d) => d >= "2026-02-14" && d <= "2026-03-01")).toBe(true);
+    expect(dates).not.toContain("2026-01-12");
+  });
 });

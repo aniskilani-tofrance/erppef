@@ -7,6 +7,7 @@ import { proposePlan, commitProposal } from "@/app/(app)/groupes/actions";
 import type { Proposal } from "@/lib/engine/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -34,6 +35,7 @@ export function GroupWizard({ programs, funders }: { programs: Program[]; funder
   const [name, setName] = useState("");
   const [startsOn, setStartsOn] = useState("");
   const [headcount, setHeadcount] = useState("");
+  const [skipHolidays, setSkipHolidays] = useState(true);
   const [proposal, setProposal] = useState<Proposal | null>(null);
 
   const program = programs.find((p) => p.id === programId);
@@ -60,6 +62,7 @@ export function GroupWizard({ programs, funders }: { programs: Program[]; funder
         programId,
         startsOn,
         expectedHeadcount: headcount ? Number(headcount) : undefined,
+        skipSchoolHolidays: skipHolidays,
       });
       if (!result.ok) {
         toast.error(result.error);
@@ -83,6 +86,7 @@ export function GroupWizard({ programs, funders }: { programs: Program[]; funder
         weeklyPattern: p.weeklyPattern,
         totalHours: p.totals.hours,
         endsOn: p.totals.endsOn,
+        skipSchoolHolidays: skipHolidays,
         sessions: p.sessions.map((s) => ({ startsAt: s.startsAt, endsAt: s.endsAt })),
       });
       if (!result.ok) {
@@ -162,6 +166,18 @@ export function GroupWizard({ programs, funders }: { programs: Program[]; funder
             <Label htmlFor="headcount">Effectif attendu</Label>
             <Input id="headcount" type="number" min={1} value={headcount} onChange={(e) => setHeadcount(e.target.value)} placeholder="12" />
           </div>
+        </div>
+
+        <div className="space-y-1">
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox checked={skipHolidays} onCheckedChange={(c) => setSkipHolidays(c === true)} />
+            Pas de cours pendant les vacances scolaires (zone C)
+          </label>
+          <p className="pl-6 text-xs text-muted-foreground">
+            {skipHolidays
+              ? "Le planning sautera les vacances scolaires, les jours fériés et les fermetures de l'organisme."
+              : "Le groupe aura cours pendant les vacances scolaires ; jours fériés et fermetures de l'organisme restent exclus."}
+          </p>
         </div>
 
         {program && (
