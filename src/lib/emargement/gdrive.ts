@@ -5,8 +5,12 @@ import { google } from "googleapis";
 // de service. Prérequis (variables d'environnement) :
 //   GDRIVE_SERVICE_ACCOUNT_EMAIL  — email du compte de service
 //   GDRIVE_SERVICE_ACCOUNT_KEY   — clé privée PEM (les \n littéraux sont acceptés)
-//   GDRIVE_EMARGEMENTS_FOLDER_ID — id du dossier racine « Émargements », partagé en
-//                                  Éditeur avec le compte de service
+//   GDRIVE_EMARGEMENTS_FOLDER_ID — id du dossier racine « Émargements »
+//   GDRIVE_IMPERSONATE_USER      — optionnel : email Workspace au nom duquel agir
+//                                  (délégation domain-wide). Sans lui, le compte de
+//                                  service écrit en son nom propre : cela exige un
+//                                  DRIVE PARTAGÉ (un « Mon Drive » refuse les fichiers
+//                                  d'un compte de service, qui n'a pas de quota).
 // Arborescence : <racine>/<nom du groupe>/<emargement_YYYY-MM-DD_groupe.pdf>
 
 const FOLDER_MIME = "application/vnd.google-apps.folder";
@@ -24,6 +28,7 @@ function driveClient() {
     email: process.env.GDRIVE_SERVICE_ACCOUNT_EMAIL,
     key: process.env.GDRIVE_SERVICE_ACCOUNT_KEY!.replace(/\\n/g, "\n"),
     scopes: ["https://www.googleapis.com/auth/drive"],
+    subject: process.env.GDRIVE_IMPERSONATE_USER || undefined,
   });
   return google.drive({ version: "v3", auth });
 }
