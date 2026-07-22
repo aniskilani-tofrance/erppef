@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { driveConfigured, uploadSheetToDrive } from "@/lib/emargement/gdrive";
+import { buildAttendancePdf, loadAttendanceSheetData, sheetFileName } from "@/lib/emargement/pdf";
 
 // Gestion des feuilles d'émargement côté équipe. La RLS de `sessions` n'autorise pas
 // l'écriture aux formateurs : on passe par le client service_role, toujours après
@@ -146,6 +148,40 @@ export async function closeAttendanceSheet(raw: z.infer<typeof closeSchema>): Pr
   if (error) return { ok: false, error: error.message };
   revalidatePath(`/seances/${d.sessionId}/emargement`);
   return { ok: true };
+}
+
+export type DriveResult = { ok: true; link: string | null } | { ok: false; error: string };
+
+// Génère le PDF de la feuille clôturée et le dépose sur le Drive de l'organisme,
+// dans un sous-dossier au nom du groupe (formation).
+export async function depositSheetToDrive(sessionId: string): Promise<DriveResult> {
+  if (!z.string().uuid().safeParse(sessionId).success) return { ok: false, error: "Séance invalide" };
+
+  const { orgId } = await requireRole([...ROLES]);
+
+  if (!driveConfigured()) {
+    return {
+      ok: false,
+      error: "Intégration Google Drive non configurée (variables GDRIVE_* manquantes sur Vercel).",
+    };
+  }
+
+  const data = await loadAttendanceSheetData(sessionId, orgId);
+  if (!data) return { ok: false, error: "Séance introuvable" };
+  if (!data.closedAt) return { ok: false, error: "Clôturez la feuille avant de la déposer sur le Drive." };
+
+  try {
+    const pdf = await buildAttendancePdf(data);
+    const { link } = await uploadSheetToDrive({
+      folderName: data.groupName,
+      fileName: sheetFileName(data),
+      pdf,
+    });
+    return { ok: true, link };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "erreur inconnue";
+    return { ok: false, error: `Dépôt Drive impossible : ${message}` };
+  }
 }
 
 // Réouverture en cas d'erreur : réservée à l'équipe de coordination, nouveau token.

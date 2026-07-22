@@ -3,9 +3,10 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { CheckCircle2, Copy, RefreshCw } from "lucide-react";
+import { CheckCircle2, CloudUpload, Copy, FileDown, RefreshCw } from "lucide-react";
 import {
   closeAttendanceSheet,
+  depositSheetToDrive,
   openAttendanceSheet,
   reopenAttendanceSheet,
   setAttendanceStatus,
@@ -52,6 +53,19 @@ export function AttendanceManager({
   const [pending, startTransition] = useTransition();
   const [closing, setClosing] = useState(false);
   const [signature, setSignature] = useState<string | null>(null);
+  const [driveLink, setDriveLink] = useState<string | null>(null);
+
+  function deposit() {
+    startTransition(async () => {
+      const result = await depositSheetToDrive(sessionId);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      setDriveLink(result.link);
+      toast.success("Feuille déposée sur le Drive.");
+    });
+  }
 
   // Les signatures arrivent depuis la tablette : on rafraîchit la liste régulièrement.
   useEffect(() => {
@@ -246,14 +260,31 @@ export function AttendanceManager({
                 <img src={trainerSignature} alt="Signature du formateur" className="h-20 rounded-md border bg-white" />
               </div>
             )}
-            {canReopen && (
-              <Button
-                variant="outline"
-                disabled={pending}
-                onClick={() => run(() => reopenAttendanceSheet(sessionId), "Feuille rouverte : nouveau lien généré.")}
-              >
-                Rouvrir pour correction
+            <div className="flex flex-wrap items-center gap-2">
+              <Button asChild variant="outline">
+                <a href={`/seances/${sessionId}/emargement/pdf`}>
+                  <FileDown className="mr-2 h-4 w-4" />
+                  Télécharger le PDF
+                </a>
               </Button>
+              <Button onClick={deposit} disabled={pending}>
+                <CloudUpload className="mr-2 h-4 w-4" />
+                {pending ? "Dépôt…" : "Déposer sur le Drive"}
+              </Button>
+              {canReopen && (
+                <Button
+                  variant="ghost"
+                  disabled={pending}
+                  onClick={() => run(() => reopenAttendanceSheet(sessionId), "Feuille rouverte : nouveau lien généré.")}
+                >
+                  Rouvrir pour correction
+                </Button>
+              )}
+            </div>
+            {driveLink && (
+              <a href={driveLink} target="_blank" rel="noreferrer" className="block text-sm text-muted-foreground hover:underline">
+                Voir le fichier sur le Drive →
+              </a>
             )}
           </CardContent>
         </Card>
