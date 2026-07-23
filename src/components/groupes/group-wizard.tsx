@@ -4,7 +4,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { proposePlan, commitProposal } from "@/app/(app)/groupes/actions";
-import type { Proposal } from "@/lib/engine/types";
+import type { Proposal, SlotPattern } from "@/lib/engine/types";
+import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -36,6 +37,8 @@ export function GroupWizard({ programs, funders }: { programs: Program[]; funder
   const [startsOn, setStartsOn] = useState("");
   const [headcount, setHeadcount] = useState("");
   const [skipHolidays, setSkipHolidays] = useState(true);
+  // null = créneaux automatiques (matinées 9h-12h puis après-midis 13h-16h)
+  const [customSlots, setCustomSlots] = useState<SlotPattern[] | null>(null);
   const [proposal, setProposal] = useState<Proposal | null>(null);
 
   const program = programs.find((p) => p.id === programId);
@@ -57,12 +60,17 @@ export function GroupWizard({ programs, funders }: { programs: Program[]; funder
       toast.error("Choisissez un dispositif et une date de début.");
       return;
     }
+    if (customSlots?.some((s) => s.end <= s.start)) {
+      toast.error("Un créneau se termine avant de commencer : corrigez les horaires.");
+      return;
+    }
     startTransition(async () => {
       const result = await proposePlan({
         programId,
         startsOn,
         expectedHeadcount: headcount ? Number(headcount) : undefined,
         skipSchoolHolidays: skipHolidays,
+        weeklyPattern: customSlots?.length ? customSlots : undefined,
       });
       if (!result.ok) {
         toast.error(result.error);
@@ -166,6 +174,76 @@ export function GroupWizard({ programs, funders }: { programs: Program[]; funder
             <Label htmlFor="headcount">Effectif attendu</Label>
             <Input id="headcount" type="number" min={1} value={headcount} onChange={(e) => setHeadcount(e.target.value)} placeholder="12" />
           </div>
+        </div>
+
+        <div className="space-y-1">
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={customSlots !== null}
+              onCheckedChange={(c) =>
+                setCustomSlots(c === true ? [{ weekday: 1, start: "09:00", end: "12:00" }] : null)
+              }
+            />
+            Définir les créneaux hebdomadaires manuellement
+          </label>
+          <p className="pl-6 text-xs text-muted-foreground">
+            {customSlots
+              ? "Horaires d'ouverture : 9h-12h et 13h-20h. Un créneau en dehors sera signalé."
+              : "Sinon : matinées 9h-12h puis après-midis 13h-16h, selon le rythme du dispositif."}
+          </p>
+          {customSlots && (
+            <div className="space-y-2 pl-6 pt-2">
+              {customSlots.map((slot, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <Select
+                    value={String(slot.weekday)}
+                    onValueChange={(v) =>
+                      setCustomSlots((s) =>
+                        s!.map((x, j) => (j === i ? { ...x, weekday: Number(v) as SlotPattern["weekday"] } : x)),
+                      )
+                    }
+                  >
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"] as const).map((d, idx) => (
+                        <SelectItem key={d} value={String(idx + 1)}>{d}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    type="time" className="w-28" value={slot.start} step={900}
+                    onChange={(e) =>
+                      setCustomSlots((s) => s!.map((x, j) => (j === i ? { ...x, start: e.target.value } : x)))
+                    }
+                  />
+                  <span className="text-sm text-muted-foreground">→</span>
+                  <Input
+                    type="time" className="w-28" value={slot.end} step={900}
+                    onChange={(e) =>
+                      setCustomSlots((s) => s!.map((x, j) => (j === i ? { ...x, end: e.target.value } : x)))
+                    }
+                  />
+                  <Button
+                    variant="ghost" size="icon" className="h-8 w-8"
+                    onClick={() => setCustomSlots((s) => s!.filter((_, j) => j !== i))}
+                  >
+                    <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                  </Button>
+                </div>
+              ))}
+              <Button
+                variant="outline" size="sm"
+                onClick={() =>
+                  setCustomSlots((s) => [...(s ?? []), { weekday: 1, start: "13:00", end: "16:00" }])
+                }
+              >
+                <Plus className="mr-2 h-3.5 w-3.5" />
+                Ajouter un créneau
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="space-y-1">

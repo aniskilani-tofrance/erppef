@@ -158,7 +158,7 @@ export function PlanningCalendar({
           }}
           locale={frLocale}
           timeZone="Europe/Paris"
-          slotMinTime="08:00:00"
+          slotMinTime="09:00:00"
           slotMaxTime="20:00:00"
           weekends={false}
           height="auto"

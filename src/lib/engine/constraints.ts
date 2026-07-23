@@ -151,8 +151,23 @@ function round1(n: number): number {
   return Math.round(n * 10) / 10;
 }
 
+// Fenêtres d'ouverture de l'organisme : cours possibles 9h-12h et 13h-20h
+// (pause déjeuner 12h-13h). Toute génération et toute saisie manuelle s'y réfèrent.
+export const OPENING_HOURS = [
+  { start: "09:00", end: "12:00" },
+  { start: "13:00", end: "20:00" },
+] as const;
+
+// Créneaux d'un motif qui débordent des fenêtres d'ouverture (comparaison ISO 'HH:mm').
+export function slotsOutsideOpeningHours(pattern: SlotPattern[]): SlotPattern[] {
+  return pattern.filter(
+    (s) => !OPENING_HOURS.some((w) => s.start >= w.start && s.end <= w.end),
+  );
+}
+
 // Motif hebdo par défaut dérivé du rythme du dispositif :
-// on remplit des matinées 9h-12h (lun→ven), puis des après-midis 13h30-16h30 si besoin.
+// on remplit des matinées 9h-12h (lun→ven), puis des après-midis 13h-16h si besoin,
+// toujours à l'intérieur des fenêtres d'ouverture.
 export function defaultPattern(weeklyHours: number): SlotPattern[] {
   const pattern: SlotPattern[] = [];
   let remaining = weeklyHours;
@@ -166,7 +181,7 @@ export function defaultPattern(weeklyHours: number): SlotPattern[] {
   for (const weekday of weekdays) {
     if (remaining <= 0) break;
     const hours = Math.min(3, remaining);
-    pattern.push({ weekday, start: "13:30", end: addHoursToTimeLocal("13:30", hours) });
+    pattern.push({ weekday, start: "13:00", end: addHoursToTimeLocal("13:00", hours) });
     remaining -= hours;
   }
   return pattern;

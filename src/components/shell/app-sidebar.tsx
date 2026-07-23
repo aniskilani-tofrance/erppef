@@ -89,9 +89,13 @@ export function AppSidebar({ role, orgName }: { role: AppRole; orgName: string }
 
       {/* Desktop */}
       <aside className="sticky top-0 hidden h-screen w-56 flex-col border-r bg-background md:flex">
-        <div className="border-b p-4">
-          <p className="truncate text-sm font-semibold">{orgName}</p>
-          <p className="text-xs capitalize text-muted-foreground">{roleLabel(role)}</p>
+        <div className="flex items-center gap-3 border-b p-4">
+          {/* eslint-disable-next-line @next/next/no-img-element -- asset statique */}
+          <img src="/logo-pef.png" alt="ParlerEmploi Formation" className="h-10 w-auto" />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold">{orgName}</p>
+            <p className="text-xs capitalize text-muted-foreground">{roleLabel(role)}</p>
+          </div>
         </div>
         {nav}
         <div className="border-t p-3">

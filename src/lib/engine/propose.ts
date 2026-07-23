@@ -2,6 +2,7 @@ import {
   defaultPattern,
   patternWeeklyHours,
   roomHardViolations,
+  slotsOutsideOpeningHours,
   trainerHardViolations,
   trainerSoftNotes,
 } from "./constraints";
@@ -28,6 +29,15 @@ export function proposeGroupPlan(input: ProposalInput, data: EngineData): Propos
     warnings.push({
       code: "default_rhythm",
       message: "Aucun rythme défini sur le dispositif : 15 h/semaine appliquées par défaut",
+    });
+  }
+  const outside = slotsOutsideOpeningHours(pattern);
+  if (outside.length > 0) {
+    warnings.push({
+      code: "outside_opening_hours",
+      message: `Créneau hors horaires d'ouverture (9h-12h / 13h-20h) : ${outside
+        .map((s) => `${s.start}-${s.end}`)
+        .join(", ")}`,
     });
   }
 

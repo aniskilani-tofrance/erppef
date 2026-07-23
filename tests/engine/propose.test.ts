@@ -187,6 +187,25 @@ describe("proposeGroupPlan", () => {
     expect(p.trainer?.trainerId).toBe("m2");
   });
 
+  it("signale un créneau imposé hors horaires d'ouverture (9h-12h / 13h-20h)", () => {
+    const p = proposeGroupPlan(
+      {
+        ...input,
+        totalHours: 15,
+        weeklyPattern: [
+          { weekday: 1, start: "08:00", end: "11:00" }, // avant l'ouverture
+          { weekday: 2, start: "11:00", end: "14:00" }, // à cheval sur la pause déjeuner
+          { weekday: 3, start: "13:00", end: "16:00" }, // conforme
+        ],
+      },
+      data([marie()]),
+    );
+    const w = p.warnings.find((x) => x.code === "outside_opening_hours");
+    expect(w?.message).toContain("08:00-11:00");
+    expect(w?.message).toContain("11:00-14:00");
+    expect(w?.message).not.toContain("13:00-16:00");
+  });
+
   it("skipSchoolHolidays=false : planifie pendant les vacances mais jamais les fériés", () => {
     const withClosures: EngineData = {
       ...data([marie()]),

@@ -1,6 +1,12 @@
 import { PDFDocument, PDFFont, PDFImage, PDFPage, StandardFonts, rgb } from "pdf-lib";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { utcToLocalTime } from "@/lib/dates";
+import { LOGO_PEF_BASE64 } from "./logo-data";
+
+// Charte ParlerEmploi
+const PEF_GREEN = rgb(0.059, 0.298, 0.227); // #0F4C3A
+const PEF_EMERALD = rgb(0.169, 0.682, 0.494); // #2BAE7E
+const PEF_PALE = rgb(0.918, 0.957, 0.937); // vert très pâle (fond d'en-tête de tableau)
 
 // Mentions légales de l'organisme sur la feuille (org unique en pratique).
 // À déplacer en base si l'ERP devient réellement multi-organismes.
@@ -135,13 +141,25 @@ export async function buildAttendancePdf(data: AttendanceSheetData): Promise<Uin
   const text = (p: PDFPage, str: string, x: number, yy: number, f: PDFFont, size: number) =>
     p.drawText(str, { x, y: yy, size, font: f, color: rgb(0.12, 0.16, 0.23) });
 
-  // En-tête organisme
-  text(page, "FEUILLE D'ÉMARGEMENT", MARGIN, y, bold, 16);
+  // En-tête organisme : logo + titre aux couleurs de la charte
+  const logo = await embedDataUrlPng(doc, `data:image/png;base64,${LOGO_PEF_BASE64}`);
+  let textX = MARGIN;
+  if (logo) {
+    const scale = 52 / logo.height;
+    page.drawImage(logo, { x: MARGIN, y: y - 40, width: logo.width * scale, height: 52 });
+    textX = MARGIN + logo.width * scale + 14;
+  }
+  page.drawText("FEUILLE D'ÉMARGEMENT", { x: textX, y, size: 16, font: bold, color: PEF_GREEN });
   y -= 22;
-  text(page, ORG_LEGAL.name, MARGIN, y, bold, 10);
+  page.drawText(ORG_LEGAL.name, { x: textX, y, size: 10, font: bold, color: PEF_EMERALD });
   y -= 14;
-  text(page, `${ORG_LEGAL.nda} — ${ORG_LEGAL.siret}`, MARGIN, y, font, 8.5);
+  text(page, `${ORG_LEGAL.nda} — ${ORG_LEGAL.siret}`, textX, y, font, 8.5);
   y -= 24;
+  page.drawLine({
+    start: { x: MARGIN, y }, end: { x: A4.width - MARGIN, y },
+    thickness: 1.5, color: PEF_EMERALD,
+  });
+  y -= 18;
 
   // Bloc séance
   const info: [string, string][] = [
@@ -163,7 +181,7 @@ export async function buildAttendancePdf(data: AttendanceSheetData): Promise<Uin
     let x = MARGIN;
     p.drawRectangle({
       x: MARGIN, y: yy - 6, width: A4.width - 2 * MARGIN, height: 20,
-      color: rgb(0.93, 0.95, 0.97),
+      color: PEF_PALE,
     });
     for (const [label, w] of [
       ["Nom de l'apprenant", COLS.name],
