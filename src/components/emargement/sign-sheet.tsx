@@ -4,8 +4,20 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
 import { signAttendance, type SheetLearner } from "@/app/emargement/[token]/actions";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { SignaturePad } from "./signature-pad";
+
+function LearnerAvatar({ learner }: { learner: SheetLearner }) {
+  return (
+    <Avatar className="h-9 w-9">
+      {learner.photoUrl && <AvatarImage src={learner.photoUrl} alt="" className="object-cover" />}
+      <AvatarFallback className="text-xs">
+        {learner.name.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("")}
+      </AvatarFallback>
+    </Avatar>
+  );
+}
 
 // Écran tablette : liste des inscrits → signature → retour à la liste.
 export function SignSheet({ token, learners }: { token: string; learners: SheetLearner[] }) {
@@ -64,16 +76,18 @@ export function SignSheet({ token, learners }: { token: string; learners: SheetL
         {learners.map((l) => (
           <li key={l.id}>
             {l.signedAt ? (
-              <div className="flex items-center gap-2 rounded-md border bg-muted px-4 py-3 text-muted-foreground">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
+              <div className="flex items-center gap-3 rounded-md border bg-muted px-4 py-2.5 text-muted-foreground">
+                <LearnerAvatar learner={l} />
                 <span className="font-medium">{l.name}</span>
+                <CheckCircle2 className="ml-auto h-5 w-5 text-green-600" />
               </div>
             ) : (
               <button
                 type="button"
-                className="w-full rounded-md border bg-background px-4 py-3 text-left font-medium transition-colors hover:bg-muted"
+                className="flex w-full items-center gap-3 rounded-md border bg-background px-4 py-2.5 text-left font-medium transition-colors hover:bg-muted"
                 onClick={() => { setSelected(l); setError(null); }}
               >
+                <LearnerAvatar learner={l} />
                 {l.name}
               </button>
             )}

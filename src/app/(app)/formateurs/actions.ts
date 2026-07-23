@@ -10,6 +10,7 @@ import { inviteUser } from "@/lib/invitations";
 
 const trainerSchema = z.object({
   id: z.string().uuid().optional(),
+  photoUrl: z.string().url().nullable(),
   firstName: z.string().min(1),
   lastName: z.string(),
   email: z.string().email().nullable(),
@@ -38,6 +39,7 @@ export async function upsertTrainer(raw: z.infer<typeof trainerSchema>): Promise
 
   const row = {
     org_id: orgId,
+    photo_url: d.photoUrl,
     first_name: d.firstName,
     last_name: d.lastName,
     email: d.email,

@@ -10,6 +10,7 @@ export type ActionResult = { ok: true } | { ok: false; error: string };
 
 const learnerSchema = z.object({
   id: z.string().uuid().optional(),
+  photoUrl: z.string().url().nullable(),
   firstName: z.string().min(1),
   lastName: z.string().min(1),
   phone: z.string().nullable(),
@@ -32,6 +33,7 @@ export async function upsertLearner(raw: z.infer<typeof learnerSchema>): Promise
 
   const row = {
     org_id: orgId,
+    photo_url: d.photoUrl,
     first_name: d.firstName,
     last_name: d.lastName,
     phone: d.phone,

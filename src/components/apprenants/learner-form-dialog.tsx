@@ -14,9 +14,11 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Pencil } from "lucide-react";
+import { PhotoUpload, initials } from "@/components/ui/photo-upload";
 
 export type LearnerFormValues = {
   id?: string;
+  photoUrl: string | null;
   firstName: string;
   lastName: string;
   phone: string;
@@ -28,6 +30,7 @@ export type LearnerFormValues = {
 };
 
 const EMPTY: LearnerFormValues = {
+  photoUrl: null,
   firstName: "",
   lastName: "",
   phone: "",
@@ -66,6 +69,7 @@ export function LearnerFormDialog({
     startTransition(async () => {
       const result = await upsertLearner({
         id: values.id,
+        photoUrl: values.photoUrl,
         firstName: values.firstName.trim(),
         lastName: values.lastName.trim(),
         phone: values.phone.trim() || null,
@@ -114,6 +118,12 @@ export function LearnerFormDialog({
           <DialogTitle>{isEdit ? "Modifier l'apprenant" : "Nouvel apprenant"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
+          <PhotoUpload
+            url={values.photoUrl}
+            fallback={initials(`${values.firstName} ${values.lastName}`) || "?"}
+            folder="apprenants"
+            onChange={(url) => set("photoUrl", url)}
+          />
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Prénom</Label>

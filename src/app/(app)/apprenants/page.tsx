@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -71,7 +72,15 @@ export default async function ApprenantsPage() {
               return (
                 <TableRow key={l.id}>
                   <TableCell className="font-medium">
-                    {l.first_name} {l.last_name}
+                    <span className="flex items-center gap-2">
+                      <Avatar className="h-8 w-8">
+                        {l.photo_url && <AvatarImage src={l.photo_url} alt="" className="object-cover" />}
+                        <AvatarFallback className="text-xs">
+                          {`${l.first_name[0] ?? ""}${l.last_name[0] ?? ""}`.toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      {l.first_name} {l.last_name}
+                    </span>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {[l.phone, l.email].filter(Boolean).join(" · ") || "—"}
@@ -109,6 +118,7 @@ export default async function ApprenantsPage() {
                     <LearnerFormDialog
                       initial={{
                         id: l.id,
+                        photoUrl: l.photo_url ?? null,
                         firstName: l.first_name,
                         lastName: l.last_name,
                         phone: l.phone ?? "",

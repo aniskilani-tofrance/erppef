@@ -39,6 +39,7 @@ export default async function FormateurPage({ params }: { params: Promise<{ id: 
           <TrainerFormDialog
             initial={{
               id: trainer.id,
+              photoUrl: trainer.photo_url ?? null,
               firstName: trainer.first_name,
               lastName: trainer.last_name ?? "",
               email: trainer.email ?? "",

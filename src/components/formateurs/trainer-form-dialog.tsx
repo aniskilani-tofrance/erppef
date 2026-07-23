@@ -14,9 +14,11 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Plus, Pencil } from "lucide-react";
+import { PhotoUpload, initials } from "@/components/ui/photo-upload";
 
 export type TrainerFormValues = {
   id?: string;
+  photoUrl: string | null;
   firstName: string;
   lastName: string;
   email: string;
@@ -31,6 +33,7 @@ export type TrainerFormValues = {
 };
 
 const EMPTY: TrainerFormValues = {
+  photoUrl: null,
   firstName: "",
   lastName: "",
   email: "",
@@ -58,6 +61,7 @@ export function TrainerFormDialog({ initial }: { initial?: TrainerFormValues }) 
     startTransition(async () => {
       const result = await upsertTrainer({
         id: values.id,
+        photoUrl: values.photoUrl,
         firstName: values.firstName,
         lastName: values.lastName,
         email: values.email || null,
@@ -110,6 +114,12 @@ export function TrainerFormDialog({ initial }: { initial?: TrainerFormValues }) 
           <DialogTitle>{isEdit ? "Modifier le formateur" : "Nouveau formateur"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
+          <PhotoUpload
+            url={values.photoUrl}
+            fallback={initials(`${values.firstName} ${values.lastName}`) || "?"}
+            folder="formateurs"
+            onChange={(url) => set("photoUrl", url)}
+          />
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Prénom">
               <Input value={values.firstName} onChange={(e) => set("firstName", e.target.value)} />

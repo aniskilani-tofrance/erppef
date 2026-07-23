@@ -92,6 +92,33 @@ const commitSchema = z.object({
 
 export type CommitResult = { ok: true; groupId: string } | { ok: false; error: string };
 
+export type SimpleResult = { ok: true } | { ok: false; error: string };
+
+// Ouvre (ou régénère) l'enquête de satisfaction anonyme du groupe.
+export async function openSurvey(groupId: string): Promise<SimpleResult> {
+  if (!z.string().uuid().safeParse(groupId).success) return { ok: false, error: "Groupe invalide" };
+  await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("groups")
+    .update({ survey_token: crypto.randomUUID() })
+    .eq("id", groupId);
+  if (error) return { ok: false, error: translatePgError(error) };
+  revalidatePath(`/groupes/${groupId}`);
+  return { ok: true };
+}
+
+// Clôture l'enquête : le lien public cesse de fonctionner, les réponses restent.
+export async function closeSurvey(groupId: string): Promise<SimpleResult> {
+  if (!z.string().uuid().safeParse(groupId).success) return { ok: false, error: "Groupe invalide" };
+  await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+  const { error } = await supabase.from("groups").update({ survey_token: null }).eq("id", groupId);
+  if (error) return { ok: false, error: translatePgError(error) };
+  revalidatePath(`/groupes/${groupId}`);
+  return { ok: true };
+}
+
 // Commit transactionnel via la RPC : si une contrainte d'exclusion saute
 // (conflit apparu depuis la proposition), tout est rollback et l'erreur est traduite.
 export async function commitProposal(raw: z.infer<typeof commitSchema>): Promise<CommitResult> {

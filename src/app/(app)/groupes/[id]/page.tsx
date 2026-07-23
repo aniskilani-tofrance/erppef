@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { headers } from "next/headers";
+import QRCode from "qrcode";
 import { requireSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +12,7 @@ import {
 } from "@/components/ui/table";
 import { utcToLocalTime } from "@/lib/dates";
 import { EnrollmentManager } from "@/components/groupes/enrollment-manager";
+import { SurveyManager } from "@/components/groupes/survey-manager";
 import {
   ABSENCE_ALERT_THRESHOLD,
   computeLearnerStats,
@@ -22,7 +25,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
   const { role } = await requireSession();
   const supabase = await createClient();
 
-  const [{ data: group }, { data: sessions }, { data: hours }, { data: enrollments }, { data: learners }, { data: attendanceRows }] =
+  const [{ data: group }, { data: sessions }, { data: hours }, { data: enrollments }, { data: learners }, { data: attendanceRows }, { data: surveyRows }] =
     await Promise.all([
       supabase
         .from("groups")
@@ -46,6 +49,10 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
         .select("learner_id, status, sessions!inner(starts_at, ends_at, attendance_closed_at, group_id)")
         .eq("sessions.group_id", id)
         .not("sessions.attendance_closed_at", "is", null),
+      supabase
+        .from("survey_responses")
+        .select("overall, teaching, organization, premises, progress, comment")
+        .eq("group_id", id),
     ]);
 
   if (!group) notFound();
@@ -64,6 +71,30 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
   const available = (learners ?? [])
     .filter((l) => !enrolledIds.has(l.id))
     .map((l) => ({ id: l.id, name: `${l.first_name} ${l.last_name}` }));
+
+  // Enquête satisfaction : stats agrégées + lien public si ouverte
+  const avg = (key: "overall" | "teaching" | "organization" | "premises" | "progress") => {
+    const vals = (surveyRows ?? []).map((r) => r[key]).filter((v): v is number => v != null);
+    return vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : null;
+  };
+  const surveyStats = {
+    count: (surveyRows ?? []).length,
+    averages: [
+      { label: "Satisfaction globale", value: avg("overall") },
+      { label: "Qualité pédagogique", value: avg("teaching") },
+      { label: "Organisation", value: avg("organization") },
+      { label: "Locaux et matériel", value: avg("premises") },
+      { label: "Progression ressentie", value: avg("progress") },
+    ],
+    comments: (surveyRows ?? []).map((r) => r.comment).filter((c): c is string => Boolean(c)),
+  };
+  let surveyUrl: string | null = null;
+  let surveyQr: string | null = null;
+  if (group.survey_token) {
+    const h = await headers();
+    surveyUrl = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}/enquete/${group.survey_token}`;
+    surveyQr = await QRCode.toDataURL(surveyUrl, { width: 220, margin: 1 });
+  }
 
   const records: AttendanceRecord[] = (attendanceRows ?? []).map((a) => {
     const s = a.sessions as unknown as { starts_at: string; ends_at: string };
@@ -174,6 +205,23 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
           )}
         </CardContent>
       </Card>
+
+      {canWrite && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Enquête de satisfaction (Qualiopi)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <SurveyManager
+              groupId={id}
+              isOpen={Boolean(group.survey_token)}
+              publicUrl={surveyUrl}
+              qrDataUrl={surveyQr}
+              stats={surveyStats}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

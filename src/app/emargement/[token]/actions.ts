@@ -11,6 +11,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export type SheetLearner = {
   id: string;
   name: string;
+  photoUrl: string | null;
   signedAt: string | null;
 };
 
@@ -50,7 +51,7 @@ export async function fetchSheet(token: string): Promise<Sheet | null> {
   const [{ data: enrollments }, { data: attendances }] = await Promise.all([
     supabase
       .from("enrollments")
-      .select("learner_id, learners(first_name, last_name)")
+      .select("learner_id, learners(first_name, last_name, photo_url)")
       .eq("group_id", session.group_id)
       .eq("status", "inscrit"),
     supabase
@@ -64,10 +65,11 @@ export async function fetchSheet(token: string): Promise<Sheet | null> {
 
   const learners: SheetLearner[] = (enrollments ?? [])
     .map((e) => {
-      const l = e.learners as unknown as { first_name: string; last_name: string } | null;
+      const l = e.learners as unknown as { first_name: string; last_name: string; photo_url: string | null } | null;
       return {
         id: e.learner_id,
         name: l ? `${l.first_name} ${l.last_name}` : "—",
+        photoUrl: l?.photo_url ?? null,
         signedAt: signedAt.get(e.learner_id) ?? null,
       };
     })
