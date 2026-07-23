@@ -80,6 +80,37 @@ export async function moveSession(raw: z.infer<typeof moveSchema>): Promise<Move
   return { ok: true };
 }
 
+const createSchema = z.object({
+  groupId: z.string().uuid(),
+  trainerId: z.string().uuid().nullable(),
+  roomId: z.string().uuid().nullable(),
+  startsAt: z.string(),
+  endsAt: z.string(),
+});
+
+// Séance ponctuelle (rattrapage, événement isolé) créée directement depuis le planning.
+// Postgres tranche les conflits (contraintes d'exclusion) comme pour le drag & drop.
+export async function createSession(raw: z.infer<typeof createSchema>): Promise<MoveResult> {
+  const parsed = createSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Paramètres invalides" };
+
+  const { orgId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+
+  const { error } = await supabase.from("sessions").insert({
+    org_id: orgId,
+    group_id: parsed.data.groupId,
+    trainer_id: parsed.data.trainerId,
+    room_id: parsed.data.roomId,
+    starts_at: parsed.data.startsAt,
+    ends_at: parsed.data.endsAt,
+    generated: false,
+  });
+
+  if (error) return { ok: false, error: translatePgError(error) };
+  return { ok: true };
+}
+
 const updateSchema = z.object({
   sessionId: z.string().uuid(),
   trainerId: z.string().uuid().nullable(),

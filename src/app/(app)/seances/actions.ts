@@ -135,12 +135,15 @@ export async function closeAttendanceSheet(raw: z.infer<typeof closeSchema>): Pr
     if (error) return { ok: false, error: error.message };
   }
 
+  // La clôture de l'émargement atteste la tenue de la séance : elle passe en « réalisée »
+  // (heures réalisées du dashboard exactes sans saisie manuelle).
   const { error } = await supabase
     .from("sessions")
     .update({
       attendance_closed_at: new Date().toISOString(),
       trainer_signature: d.trainerSignature,
       attendance_token: null,
+      status: "realisee",
     })
     .eq("id", d.sessionId)
     .eq("org_id", orgId);

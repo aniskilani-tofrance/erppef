@@ -15,7 +15,15 @@ export type Enrolled = {
   learnerId: string;
   name: string;
   level: string | null;
+  stats?: {
+    rate: number;
+    total: number;
+    consecutiveAbsences: number;
+  } | null;
 };
+
+// Seuil aligné sur ABSENCE_ALERT_THRESHOLD (lib/attendance-stats).
+const ALERT_STREAK = 3;
 
 // Inscriptions d'un groupe : liste des inscrits, ajout d'un apprenant existant,
 // ou création + inscription en un seul geste via le dialog apprenant.
@@ -45,14 +53,23 @@ export function EnrollmentManager({
     });
   }
 
-  function remove(enrollmentId: string) {
+  function remove(e: Enrolled) {
     startTransition(async () => {
-      const result = await unenrollLearner(enrollmentId);
+      const result = await unenrollLearner(e.enrollmentId);
       if (!result.ok) {
         toast.error(result.error);
         return;
       }
-      toast.success("Inscription retirée.");
+      toast.success(`${e.name} retiré du groupe.`, {
+        action: {
+          label: "Annuler",
+          onClick: async () => {
+            const undo = await enrollLearner({ groupId, learnerId: e.learnerId });
+            if (undo.ok) toast.success(`${e.name} réinscrit.`);
+            else toast.error(undo.error);
+          },
+        },
+      });
     });
   }
 
@@ -65,8 +82,18 @@ export function EnrollmentManager({
               <span>
                 <span className="font-medium">{e.name}</span>
                 {e.level && <span className="ml-2 text-muted-foreground">{e.level}</span>}
+                {e.stats && (
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    {e.stats.rate} % · {e.stats.total} séance{e.stats.total > 1 ? "s" : ""}
+                  </span>
+                )}
+                {e.stats && e.stats.consecutiveAbsences >= ALERT_STREAK && (
+                  <span className="ml-2 rounded bg-destructive px-1.5 py-0.5 text-xs font-medium text-white">
+                    {e.stats.consecutiveAbsences} absences de suite
+                  </span>
+                )}
               </span>
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => remove(e.enrollmentId)} disabled={pending} title="Retirer du groupe">
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => remove(e)} disabled={pending} title="Retirer du groupe">
                 <UserMinus className="h-3.5 w-3.5 text-muted-foreground" />
               </Button>
             </li>

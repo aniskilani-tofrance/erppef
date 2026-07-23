@@ -7,8 +7,9 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import multiMonthPlugin from "@fullcalendar/multimonth";
+import listPlugin from "@fullcalendar/list";
 import frLocale from "@fullcalendar/core/locales/fr";
-import type { EventDropArg } from "@fullcalendar/core";
+import type { DateSelectArg, EventDropArg } from "@fullcalendar/core";
 import type { EventResizeDoneArg } from "@fullcalendar/interaction";
 import { toast } from "sonner";
 import {
@@ -21,6 +22,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { SessionSheet } from "./session-sheet";
+import { SessionCreateDialog, type GroupOption } from "./session-create-dialog";
 
 type Filters = { trainerId: string; roomId: string; funderId: string };
 type Option = { id: string; name: string };
@@ -33,17 +35,22 @@ export function PlanningCalendar({
   rooms,
   funders,
   closures = [],
+  groups = [],
 }: {
   canEdit: boolean;
   trainers: Option[];
   rooms: Option[];
   funders: FunderOption[];
   closures?: ClosureBand[];
+  groups?: GroupOption[];
 }) {
   const queryClient = useQueryClient();
   const [range, setRange] = useState<{ from: string; to: string } | null>(null);
   const [filters, setFilters] = useState<Filters>({ trainerId: "all", roomId: "all", funderId: "all" });
   const [selected, setSelected] = useState<CalendarSession | null>(null);
+  const [newSlot, setNewSlot] = useState<{ startsAt: string; endsAt: string } | null>(null);
+  // Sur mobile, la grille horaire est illisible : vue agenda (liste) par défaut.
+  const [isMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
 
   const { data: sessions = [] } = useQuery({
     queryKey: ["sessions", range],
@@ -149,12 +156,14 @@ export function PlanningCalendar({
 
       <div className="rounded-lg border bg-background p-3 [&_.fc]:text-sm">
         <FullCalendar
-          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, multiMonthPlugin]}
-          initialView="timeGridWeek"
+          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, multiMonthPlugin, listPlugin]}
+          initialView={isMobile ? "listWeek" : "timeGridWeek"}
           headerToolbar={{
             left: "prev,next today",
             center: "title",
-            right: "timeGridWeek,dayGridMonth,multiMonthYear",
+            right: isMobile
+              ? "listWeek,dayGridMonth"
+              : "timeGridWeek,dayGridMonth,multiMonthYear",
           }}
           locale={frLocale}
           timeZone="Europe/Paris"
@@ -165,6 +174,11 @@ export function PlanningCalendar({
           nowIndicator
           events={events}
           editable={canEdit}
+          selectable={canEdit}
+          select={(arg: DateSelectArg) => {
+            if (arg.view.type !== "timeGridWeek") return;
+            setNewSlot({ startsAt: arg.start.toISOString(), endsAt: arg.end.toISOString() });
+          }}
           eventDrop={handleMove}
           eventResize={handleMove}
           datesSet={(arg) =>
@@ -176,6 +190,18 @@ export function PlanningCalendar({
           }}
         />
       </div>
+
+      <SessionCreateDialog
+        slot={newSlot}
+        groups={groups}
+        trainers={trainers}
+        rooms={rooms}
+        onClose={() => setNewSlot(null)}
+        onCreated={() => {
+          setNewSlot(null);
+          queryClient.invalidateQueries({ queryKey: ["sessions"] });
+        }}
+      />
 
       <SessionSheet
         session={selected}

@@ -6,16 +6,33 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { LearnerFormDialog } from "@/components/apprenants/learner-form-dialog";
+import {
+  ABSENCE_ALERT_THRESHOLD,
+  computeLearnerStats,
+  type AttendanceRecord,
+} from "@/lib/attendance-stats";
 
 export default async function ApprenantsPage() {
   await requireRole(["admin", "coordinator"]);
   const supabase = await createClient();
 
-  const [{ data: learners }, { data: enrollments }, { data: groups }] = await Promise.all([
+  const [{ data: learners }, { data: enrollments }, { data: groups }, { data: attendanceRows }] = await Promise.all([
     supabase.from("learners").select("*").order("last_name").order("first_name"),
     supabase.from("enrollments").select("id, learner_id, group_id, status, groups(name)"),
     supabase.from("groups").select("id, name").in("status", ["en_attente", "ouvert"]).order("starts_on", { ascending: false }),
+    supabase
+      .from("attendances")
+      .select("learner_id, status, sessions!inner(starts_at, attendance_closed_at)")
+      .not("sessions.attendance_closed_at", "is", null),
   ]);
+
+  const stats = computeLearnerStats(
+    (attendanceRows ?? []).map((a) => ({
+      learnerId: a.learner_id,
+      status: a.status as AttendanceRecord["status"],
+      startsAt: (a.sessions as unknown as { starts_at: string }).starts_at,
+    })),
+  );
 
   const groupOptions = (groups ?? []).map((g) => ({ id: g.id, name: g.name }));
 
@@ -35,13 +52,14 @@ export default async function ApprenantsPage() {
               <TableHead>Langue</TableHead>
               <TableHead>Niveau</TableHead>
               <TableHead>Groupes</TableHead>
+              <TableHead>Assiduité</TableHead>
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {(learners ?? []).length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
                   Aucun apprenant. Créez le premier avec « Nouvel apprenant » — vous pourrez
                   l&apos;inscrire dans un groupe au passage.
                 </TableCell>
@@ -49,6 +67,7 @@ export default async function ApprenantsPage() {
             )}
             {(learners ?? []).map((l) => {
               const mine = (enrollments ?? []).filter((e) => e.learner_id === l.id && e.status === "inscrit");
+              const st = stats.get(l.id);
               return (
                 <TableRow key={l.id}>
                   <TableCell className="font-medium">
@@ -70,6 +89,21 @@ export default async function ApprenantsPage() {
                         </Badge>
                       ))}
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    {st ? (
+                      <span className="text-sm">
+                        {st.rate} %
+                        <span className="ml-1 text-xs text-muted-foreground">({st.total})</span>
+                        {st.consecutiveAbsences >= ABSENCE_ALERT_THRESHOLD && (
+                          <Badge variant="destructive" className="ml-2">
+                            {st.consecutiveAbsences} abs. de suite
+                          </Badge>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">—</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <LearnerFormDialog

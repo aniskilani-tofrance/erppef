@@ -10,13 +10,19 @@ import {
 } from "@/components/ui/table";
 import { utcToLocalTime } from "@/lib/dates";
 import { EnrollmentManager } from "@/components/groupes/enrollment-manager";
+import {
+  ABSENCE_ALERT_THRESHOLD,
+  computeLearnerStats,
+  sessionHours,
+  type AttendanceRecord,
+} from "@/lib/attendance-stats";
 
 export default async function GroupePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { role } = await requireSession();
   const supabase = await createClient();
 
-  const [{ data: group }, { data: sessions }, { data: hours }, { data: enrollments }, { data: learners }] =
+  const [{ data: group }, { data: sessions }, { data: hours }, { data: enrollments }, { data: learners }, { data: attendanceRows }] =
     await Promise.all([
       supabase
         .from("groups")
@@ -35,6 +41,11 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
         .eq("group_id", id)
         .eq("status", "inscrit"),
       supabase.from("learners").select("id, first_name, last_name").order("last_name"),
+      supabase
+        .from("attendances")
+        .select("learner_id, status, sessions!inner(starts_at, ends_at, attendance_closed_at, group_id)")
+        .eq("sessions.group_id", id)
+        .not("sessions.attendance_closed_at", "is", null),
     ]);
 
   if (!group) notFound();
@@ -53,6 +64,17 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
   const available = (learners ?? [])
     .filter((l) => !enrolledIds.has(l.id))
     .map((l) => ({ id: l.id, name: `${l.first_name} ${l.last_name}` }));
+
+  const records: AttendanceRecord[] = (attendanceRows ?? []).map((a) => {
+    const s = a.sessions as unknown as { starts_at: string; ends_at: string };
+    return {
+      learnerId: a.learner_id,
+      status: a.status as AttendanceRecord["status"],
+      startsAt: s.starts_at,
+      hours: sessionHours(s.starts_at, s.ends_at),
+    };
+  });
+  const attendanceStats = computeLearnerStats(records);
 
   const done = hours ? Number(hours.hours_done) : 0;
   const scheduled = hours ? Number(hours.hours_scheduled) : 0;
@@ -108,7 +130,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base">
             Apprenants ({enrolled.length}
             {group.capacity ? ` / ${group.capacity}` : ""})
@@ -116,19 +138,38 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
               <Badge variant="destructive" className="ml-2">Capacité dépassée</Badge>
             )}
           </CardTitle>
+          {canWrite && attendanceStats.size > 0 && (
+            <Link href={`/groupes/${id}/assiduite`} className="text-sm text-muted-foreground hover:underline">
+              Export assiduité (CSV) →
+            </Link>
+          )}
         </CardHeader>
         <CardContent>
           {canWrite ? (
-            <EnrollmentManager groupId={id} groupName={group.name} enrolled={enrolled} available={available} />
+            <EnrollmentManager
+              groupId={id}
+              groupName={group.name}
+              enrolled={enrolled.map((e) => ({ ...e, stats: attendanceStats.get(e.learnerId) ?? null }))}
+              available={available}
+            />
           ) : (
             <ul className="space-y-1 text-sm">
               {enrolled.length === 0 && <li className="text-muted-foreground">Aucun apprenant inscrit.</li>}
-              {enrolled.map((e) => (
-                <li key={e.enrollmentId}>
-                  {e.name}
-                  {e.level && <span className="ml-2 text-muted-foreground">{e.level}</span>}
-                </li>
-              ))}
+              {enrolled.map((e) => {
+                const st = attendanceStats.get(e.learnerId);
+                return (
+                  <li key={e.enrollmentId}>
+                    {e.name}
+                    {e.level && <span className="ml-2 text-muted-foreground">{e.level}</span>}
+                    {st && <span className="ml-2 text-muted-foreground">{st.rate} % de présence</span>}
+                    {st && st.consecutiveAbsences >= ABSENCE_ALERT_THRESHOLD && (
+                      <Badge variant="destructive" className="ml-2">
+                        {st.consecutiveAbsences} absences de suite
+                      </Badge>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </CardContent>

@@ -37,14 +37,23 @@ export function ClosureManager({ closures }: { closures: OrgClosure[] }) {
     });
   }
 
-  function remove(id: string) {
+  function remove(c: OrgClosure) {
     startTransition(async () => {
-      const result = await deleteClosure(id);
+      const result = await deleteClosure(c.id);
       if (!result.ok) {
         toast.error(result.error);
         return;
       }
-      toast.success("Fermeture supprimée.");
+      toast.success(`Fermeture « ${c.label} » supprimée.`, {
+        action: {
+          label: "Annuler",
+          onClick: async () => {
+            const undo = await upsertClosure({ label: c.label, startsOn: c.startsOn, endsOn: c.endsOn });
+            if (undo.ok) toast.success("Fermeture rétablie.");
+            else toast.error(undo.error);
+          },
+        },
+      });
     });
   }
 
@@ -61,7 +70,7 @@ export function ClosureManager({ closures }: { closures: OrgClosure[] }) {
                   {c.endsOn !== c.startsOn ? ` → ${formatDate(c.endsOn)}` : ""}
                 </span>
               </span>
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => remove(c.id)} disabled={pending}>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => remove(c)} disabled={pending}>
                 <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
               </Button>
             </li>

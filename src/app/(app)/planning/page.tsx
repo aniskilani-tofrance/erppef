@@ -11,13 +11,18 @@ export default async function PlanningPage() {
       ? supabase.from("trainers").select("id, first_name, last_name").eq("is_active", true).order("priority")
       : supabase.from("v_trainers_public").select("id, first_name, last_name").eq("is_active", true);
 
-  const [{ data: trainers }, { data: rooms }, { data: funders }, { data: org }, { data: closures }] =
+  const [{ data: trainers }, { data: rooms }, { data: funders }, { data: org }, { data: closures }, { data: groups }] =
     await Promise.all([
       trainersQuery,
       supabase.from("rooms").select("id, name").eq("is_active", true).order("name"),
       supabase.from("funders").select("id, name, color").eq("is_active", true).order("name"),
       supabase.from("organizations").select("school_holiday_zone").eq("id", orgId).single(),
       supabase.from("calendar_closures").select("id, kind, zone, label, starts_on, ends_on"),
+      supabase
+        .from("groups")
+        .select("id, name, trainer_id, room_id")
+        .in("status", ["en_attente", "ouvert", "complet"])
+        .order("starts_on", { ascending: false }),
     ]);
 
   // Même filtre que le moteur : globales (fériés + vacances de notre zone) + fermetures de l'org.
@@ -42,6 +47,12 @@ export default async function PlanningPage() {
           label: c.label,
           startsOn: c.starts_on,
           endsOn: c.ends_on,
+        }))}
+        groups={(groups ?? []).map((g) => ({
+          id: g.id,
+          name: g.name,
+          trainerId: g.trainer_id,
+          roomId: g.room_id,
         }))}
       />
     </div>
