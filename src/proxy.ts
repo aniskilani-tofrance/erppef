@@ -33,7 +33,9 @@ export async function proxy(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/login") ||
     request.nextUrl.pathname.startsWith("/auth") ||
     // Page de signature publique : le token d'émargement est le secret, pas de compte.
-    request.nextUrl.pathname.startsWith("/emargement");
+    request.nextUrl.pathname.startsWith("/emargement") ||
+    // Crons Vercel : protégés par CRON_SECRET dans la route elle-même.
+    request.nextUrl.pathname.startsWith("/api/cron");
 
   if (!user && !isAuthRoute) {
     const url = request.nextUrl.clone();
