@@ -9,6 +9,20 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+// Petit bonjour audio après connexion (fichiers générés une fois via
+// scripts/generate-greetings.mjs). Déclenché par le clic : l'autoplay est autorisé,
+// et l'objet Audio survit à la navigation client. Silencieux si les fichiers manquent.
+function playGreeting() {
+  try {
+    const n = 1 + Math.floor(Math.random() * 4);
+    const audio = new Audio(`/audio/greeting-${n}.mp3`);
+    audio.volume = 0.6;
+    audio.play().catch(() => {});
+  } catch {
+    // jamais bloquant pour la connexion
+  }
+}
+
 export function LoginForm() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -27,6 +41,7 @@ export function LoginForm() {
       setLoading(false);
       return;
     }
+    playGreeting();
     router.push("/dashboard");
     router.refresh();
   }

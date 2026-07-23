@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { Camera, X } from "lucide-react";
+import { Camera, ImagePlus, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,8 @@ export function PhotoUpload({
   folder: "formateurs" | "apprenants";
   onChange: (url: string | null) => void;
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
 
   async function handleFile(file: File) {
@@ -48,10 +49,15 @@ export function PhotoUpload({
         {url && <AvatarImage src={url} alt="" className="object-cover" />}
         <AvatarFallback className="text-lg">{fallback}</AvatarFallback>
       </Avatar>
-      <div className="flex gap-2">
-        <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => inputRef.current?.click()}>
+      <div className="flex flex-wrap gap-2">
+        {/* Sur mobile/tablette, ouvre directement l'appareil photo ; sur ordinateur, le sélecteur. */}
+        <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => cameraRef.current?.click()}>
           <Camera className="mr-2 h-3.5 w-3.5" />
-          {busy ? "Chargement…" : url ? "Changer la photo" : "Ajouter une photo"}
+          {busy ? "Chargement…" : "Prendre une photo"}
+        </Button>
+        <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => fileRef.current?.click()}>
+          <ImagePlus className="mr-2 h-3.5 w-3.5" />
+          Importer
         </Button>
         {url && (
           <Button type="button" variant="ghost" size="sm" onClick={() => onChange(null)} disabled={busy}>
@@ -61,10 +67,21 @@ export function PhotoUpload({
         )}
       </div>
       <input
-        ref={inputRef}
+        ref={cameraRef}
         type="file"
         accept="image/*"
         capture="environment"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) handleFile(f);
+          e.target.value = "";
+        }}
+      />
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
         className="hidden"
         onChange={(e) => {
           const f = e.target.files?.[0];
