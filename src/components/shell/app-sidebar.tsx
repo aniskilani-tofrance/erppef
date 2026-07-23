@@ -6,6 +6,7 @@ import {
   BadgeCheck,
   BookUser,
   CalendarDays,
+  CircleHelp,
   CircleUser,
   DoorOpen,
   GraduationCap,
@@ -52,6 +53,12 @@ export function AppSidebar({ role, orgName }: { role: AppRole; orgName: string }
   const footer = (
     <div className="space-y-1 border-t p-3">
       <Button asChild variant="ghost" size="sm" className="w-full justify-start gap-2">
+        <Link href="/aide" onClick={() => setOpen(false)}>
+          <CircleHelp className="h-4 w-4" />
+          Aide
+        </Link>
+      </Button>
+      <Button asChild variant="ghost" size="sm" className="w-full justify-start gap-2">
         <Link href="/compte" onClick={() => setOpen(false)}>
           <CircleUser className="h-4 w-4" />
           Mon compte
@@ -95,7 +102,7 @@ export function AppSidebar({ role, orgName }: { role: AppRole; orgName: string }
   return (
     <>
       {/* Mobile : barre supérieure + tiroir */}
-      <div className="fixed inset-x-0 top-0 z-40 flex items-center gap-2 border-b bg-background p-2 md:hidden">
+      <div className="fixed inset-x-0 top-0 z-40 flex items-center gap-2 border-b bg-background p-2 md:hidden print:hidden">
         <Button variant="ghost" size="icon" onClick={() => setOpen(!open)}>
           <Menu className="h-5 w-5" />
         </Button>
@@ -109,7 +116,7 @@ export function AppSidebar({ role, orgName }: { role: AppRole; orgName: string }
       )}
 
       {/* Desktop */}
-      <aside className="sticky top-0 hidden h-screen w-56 flex-col border-r bg-background md:flex">
+      <aside className="sticky top-0 hidden h-screen w-56 flex-col border-r bg-background md:flex print:!hidden">
         <div className="flex items-center gap-3 border-b p-4">
           {/* eslint-disable-next-line @next/next/no-img-element -- asset statique */}
           <img src="/logo-pef.png" alt="ParlerEmploi Formation" className="h-10 w-auto" />
