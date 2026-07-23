@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  BadgeCheck,
   BookUser,
   CalendarDays,
   CircleUser,
@@ -29,6 +30,7 @@ const NAV = [
   { href: "/apprenants", label: "Apprenants", icon: BookUser, roles: ["admin", "coordinator"] },
   { href: "/formateurs", label: "Formateurs", icon: Users, roles: ["admin", "coordinator"] },
   { href: "/salles", label: "Salles", icon: DoorOpen, roles: ["admin", "coordinator"] },
+  { href: "/qualite", label: "Qualité", icon: BadgeCheck, roles: ["admin", "coordinator"] },
   { href: "/examens", label: "Examens", icon: GraduationCap, roles: ["admin", "coordinator"], soon: true },
   { href: "/finance", label: "Finance", icon: Wallet, roles: ["admin", "coordinator"], soon: true },
   { href: "/parametres", label: "Paramètres", icon: Settings, roles: ["admin"] },

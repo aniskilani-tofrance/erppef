@@ -8,20 +8,30 @@ import { TrainerFormDialog } from "@/components/formateurs/trainer-form-dialog";
 import { AvailabilityEditor } from "@/components/formateurs/availability-editor";
 import { AbsenceManager } from "@/components/formateurs/absence-manager";
 import { InviteTrainerButton } from "@/components/formateurs/invite-trainer-button";
+import { TrainerDocuments } from "@/components/formateurs/trainer-documents";
 
 export default async function FormateurPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   await requireRole(["admin", "coordinator"]);
   const supabase = await createClient();
 
-  const [{ data: trainer }, { data: availabilities }, { data: absences }, { data: membership }] = await Promise.all([
+  const [{ data: trainer }, { data: availabilities }, { data: absences }, { data: membership }, { data: docs }] = await Promise.all([
     supabase.from("trainers").select("*").eq("id", id).single(),
     supabase.from("trainer_availabilities").select("*").eq("trainer_id", id).order("weekday").order("start_time"),
     supabase.from("trainer_absences").select("*").eq("trainer_id", id).order("starts_on", { ascending: false }),
     supabase.from("memberships").select("id").eq("trainer_id", id).maybeSingle(),
+    supabase.from("trainer_documents").select("id, label, file_path").eq("trainer_id", id).order("created_at"),
   ]);
 
   if (!trainer) notFound();
+
+  // Bucket privé : liens de consultation signés, valables 1 h.
+  const documents = await Promise.all(
+    (docs ?? []).map(async (d) => {
+      const { data } = await supabase.storage.from("documents").createSignedUrl(d.file_path, 3600);
+      return { id: d.id, label: d.label, signedUrl: data?.signedUrl ?? null };
+    }),
+  );
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -81,6 +91,15 @@ export default async function FormateurPage({ params }: { params: Promise<{ id: 
               end: a.end_time.slice(0, 5),
             }))}
           />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Qualifications et documents (Qualiopi ind. 21-22)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <TrainerDocuments trainerId={trainer.id} documents={documents} />
         </CardContent>
       </Card>
 

@@ -109,6 +109,54 @@ export async function inviteTrainerAccount(trainerId: string): Promise<ActionRes
   return { ok: true };
 }
 
+const documentSchema = z.object({
+  trainerId: z.string().uuid(),
+  label: z.string().min(1),
+  filePath: z.string().min(1).startsWith("formateurs/"),
+});
+
+// Référence un document (CV, diplôme…) déjà uploadé dans le bucket privé « documents ».
+export async function addTrainerDocument(raw: z.infer<typeof documentSchema>): Promise<ActionResult> {
+  const parsed = documentSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Données invalides" };
+  const d = parsed.data;
+
+  const { orgId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+
+  const { error } = await supabase.from("trainer_documents").insert({
+    org_id: orgId,
+    trainer_id: d.trainerId,
+    label: d.label,
+    file_path: d.filePath,
+  });
+  if (error) return { ok: false, error: translatePgError(error) };
+  revalidatePath(`/formateurs/${d.trainerId}`);
+  return { ok: true };
+}
+
+export async function deleteTrainerDocument(id: string, trainerId: string): Promise<ActionResult> {
+  if (!z.string().uuid().safeParse(id).success) return { ok: false, error: "Document invalide" };
+
+  const { orgId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+
+  const { data: doc } = await supabase
+    .from("trainer_documents")
+    .select("file_path")
+    .eq("id", id)
+    .eq("org_id", orgId)
+    .single();
+  if (!doc) return { ok: false, error: "Document introuvable" };
+
+  const { error } = await supabase.from("trainer_documents").delete().eq("id", id);
+  if (error) return { ok: false, error: translatePgError(error) };
+  await createAdminClient().storage.from("documents").remove([doc.file_path]);
+
+  revalidatePath(`/formateurs/${trainerId}`);
+  return { ok: true };
+}
+
 const availabilitySchema = z.object({
   trainerId: z.string().uuid(),
   slots: z.array(

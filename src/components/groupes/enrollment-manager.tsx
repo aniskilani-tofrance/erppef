@@ -93,9 +93,20 @@ export function EnrollmentManager({
                   </span>
                 )}
               </span>
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => remove(e)} disabled={pending} title="Retirer du groupe">
-                <UserMinus className="h-3.5 w-3.5 text-muted-foreground" />
-              </Button>
+              <span className="flex items-center gap-2">
+                {e.stats && e.stats.total > 0 && (
+                  <a
+                    href={`/groupes/${groupId}/certificat/${e.learnerId}`}
+                    className="text-xs text-muted-foreground hover:underline"
+                    title="Certificat de réalisation (PDF)"
+                  >
+                    Certificat
+                  </a>
+                )}
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => remove(e)} disabled={pending} title="Retirer du groupe">
+                  <UserMinus className="h-3.5 w-3.5 text-muted-foreground" />
+                </Button>
+              </span>
             </li>
           ))}
         </ul>
