@@ -9,17 +9,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-// Petit bonjour audio après connexion (fichiers générés une fois via
-// scripts/generate-greetings.mjs). Déclenché par le clic : l'autoplay est autorisé,
-// et l'objet Audio survit à la navigation client. Silencieux si les fichiers manquent.
+// Petit bonjour audio après connexion (MP3 ElevenLabs fourni par Anis).
+// Déclenché par le clic : l'autoplay est autorisé, et l'objet Audio survit
+// à la navigation client. Jamais bloquant pour la connexion.
 function playGreeting() {
   try {
-    const n = 1 + Math.floor(Math.random() * 4);
-    const audio = new Audio(`/audio/greeting-${n}.mp3`);
-    audio.volume = 0.6;
+    const audio = new Audio("/audio/greeting.mp3");
+    audio.volume = 0.7;
     audio.play().catch(() => {});
   } catch {
-    // jamais bloquant pour la connexion
+    // silencieux
   }
 }
 
