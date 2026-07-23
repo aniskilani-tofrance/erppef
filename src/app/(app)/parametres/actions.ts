@@ -5,8 +5,28 @@ import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { translatePgError } from "@/lib/pg-errors";
+import { gcalConfigured, syncTrainerCalendars, type GcalSyncStats } from "@/lib/gcal";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
+
+export type GcalSyncResult = { ok: true; stats: GcalSyncStats } | { ok: false; error: string };
+
+// Pousse toutes les séances futures vers les agendas Google des formateurs.
+export async function syncGoogleCalendars(): Promise<GcalSyncResult> {
+  const { orgId } = await requireRole(["admin"]);
+
+  if (!gcalConfigured()) {
+    return { ok: false, error: "Compte de service Google non configuré (variables GDRIVE_* manquantes)." };
+  }
+
+  try {
+    const stats = await syncTrainerCalendars(orgId);
+    return { ok: true, stats };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "erreur inconnue";
+    return { ok: false, error: `Synchronisation impossible : ${message}` };
+  }
+}
 
 const programSchema = z.object({
   id: z.string().uuid().optional(),

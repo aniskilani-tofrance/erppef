@@ -8,6 +8,7 @@ import {
 import { ProgramFormDialog } from "@/components/parametres/program-form-dialog";
 import { FunderFormDialog } from "@/components/parametres/funder-form-dialog";
 import { ClosureManager } from "@/components/parametres/closure-manager";
+import { GcalSyncCard } from "@/components/parametres/gcal-sync-card";
 
 export default async function ParametresPage() {
   const { orgId } = await requireRole(["admin"]);
@@ -137,6 +138,8 @@ export default async function ParametresPage() {
           </p>
         </CardContent>
       </Card>
+
+      <GcalSyncCard />
 
       <Card>
         <CardHeader>
