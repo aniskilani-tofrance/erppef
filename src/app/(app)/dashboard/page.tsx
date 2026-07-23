@@ -3,19 +3,26 @@ import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { OccupancyChart } from "@/components/dashboard/occupancy-chart";
+import { TrainerDashboard } from "@/components/dashboard/trainer-dashboard";
+import { ViewerDashboard } from "@/components/dashboard/viewer-dashboard";
 import { weekStartOf } from "@/lib/dates";
 import { CalendarDays, DoorOpen, Users, UsersRound } from "lucide-react";
 
+// Une vue par type de compte : le formateur voit SA journée, pas les taux
+// d'occupation ; le lecteur voit l'essentiel ; l'équipe voit le pilotage complet.
 export default async function DashboardPage() {
-  const { role } = await requireSession();
+  const { role, userId } = await requireSession();
+  if (role === "trainer") return <TrainerDashboard userId={userId} />;
+  if (role === "viewer") return <ViewerDashboard />;
+
   const supabase = await createClient();
   const today = new Date().toISOString().slice(0, 10);
   const weekStart = weekStartOf(today);
 
-  const trainersQuery =
-    role === "admin" || role === "coordinator"
-      ? supabase.from("trainers").select("id, first_name, last_name, weekly_hours_max").eq("is_active", true)
-      : supabase.from("v_trainers_public").select("id, first_name, last_name, weekly_hours_max").eq("is_active", true);
+  const trainersQuery = supabase
+    .from("trainers")
+    .select("id, first_name, last_name, weekly_hours_max")
+    .eq("is_active", true);
 
   const [groups, weekLoads, roomLoads, trainers, rooms] = await Promise.all([
     supabase.from("groups").select("id, status", { count: "exact" }).in("status", ["ouvert", "complet", "en_attente"]),

@@ -1,6 +1,7 @@
 {
   "regions": ["cdg1"],
   "crons": [
-    { "path": "/api/cron/sync-gcal", "schedule": "0 4 * * *" }
+    { "path": "/api/cron/sync-gcal", "schedule": "0 4 * * *" },
+    { "path": "/api/cron/alertes", "schedule": "30 5 * * *" }
   ]
 }

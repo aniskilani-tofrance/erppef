@@ -7,6 +7,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { LearnerFormDialog } from "@/components/apprenants/learner-form-dialog";
+import { LearnerImportDialog } from "@/components/apprenants/learner-import-dialog";
 import {
   ABSENCE_ALERT_THRESHOLD,
   computeLearnerStats,
@@ -41,7 +42,10 @@ export default async function ApprenantsPage() {
     <div className="mx-auto max-w-5xl space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Apprenants</h1>
-        <LearnerFormDialog groups={groupOptions} />
+        <div className="flex gap-2">
+          <LearnerImportDialog groups={groupOptions} />
+          <LearnerFormDialog groups={groupOptions} />
+        </div>
       </div>
 
       <div className="rounded-lg border bg-background">

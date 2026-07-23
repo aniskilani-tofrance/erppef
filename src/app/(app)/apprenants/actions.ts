@@ -66,6 +66,67 @@ export async function upsertLearner(raw: z.infer<typeof learnerSchema>): Promise
   return { ok: true };
 }
 
+const importSchema = z.object({
+  rows: z
+    .array(
+      z.object({
+        firstName: z.string().min(1),
+        lastName: z.string().min(1),
+        phone: z.string().nullable(),
+        email: z.string().nullable(),
+        firstLanguage: z.string().nullable(),
+        levelAssessed: z.string().nullable(),
+      }),
+    )
+    .min(1)
+    .max(200),
+  enrollGroupId: z.string().uuid().nullable(),
+});
+
+export type ImportResult = { ok: true; imported: number; enrolled: number } | { ok: false; error: string };
+
+// Import en lot (rentrée de cohorte) : création des apprenants + inscription
+// optionnelle dans un groupe, en une passe.
+export async function importLearners(raw: z.infer<typeof importSchema>): Promise<ImportResult> {
+  const parsed = importSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Lignes invalides (prénom et nom obligatoires)" };
+  const d = parsed.data;
+
+  const { orgId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+
+  const { data: created, error } = await supabase
+    .from("learners")
+    .insert(
+      d.rows.map((r) => ({
+        org_id: orgId,
+        first_name: r.firstName,
+        last_name: r.lastName,
+        phone: r.phone,
+        email: r.email,
+        first_language: r.firstLanguage,
+        level_assessed: r.levelAssessed,
+      })),
+    )
+    .select("id");
+  if (error) return { ok: false, error: translatePgError(error) };
+
+  let enrolled = 0;
+  if (d.enrollGroupId && created?.length) {
+    const { error: enrollError } = await supabase.from("enrollments").insert(
+      created.map((c) => ({ org_id: orgId, group_id: d.enrollGroupId!, learner_id: c.id })),
+    );
+    if (enrollError) {
+      return { ok: false, error: `${created.length} apprenants créés, mais inscription impossible : ${translatePgError(enrollError)}` };
+    }
+    enrolled = created.length;
+  }
+
+  revalidatePath("/apprenants");
+  if (d.enrollGroupId) revalidatePath(`/groupes/${d.enrollGroupId}`);
+  return { ok: true, imported: created?.length ?? 0, enrolled };
+}
+
 const enrollSchema = z.object({
   groupId: z.string().uuid(),
   learnerId: z.string().uuid(),
