@@ -9,9 +9,11 @@ import { ProgramFormDialog } from "@/components/parametres/program-form-dialog";
 import { FunderFormDialog } from "@/components/parametres/funder-form-dialog";
 import { ClosureManager } from "@/components/parametres/closure-manager";
 import { GcalSyncCard } from "@/components/parametres/gcal-sync-card";
+import { UsersManager } from "@/components/parametres/users-manager";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export default async function ParametresPage() {
-  const { orgId } = await requireRole(["admin"]);
+  const { orgId, userId } = await requireRole(["admin"]);
   const supabase = await createClient();
 
   const [{ data: org }, { data: funders }, { data: programs }, { data: members }, { data: closures }] =
@@ -19,7 +21,7 @@ export default async function ParametresPage() {
       supabase.from("organizations").select("*").single(),
       supabase.from("funders").select("*").order("name"),
       supabase.from("programs").select("*, funders(name)").order("name"),
-      supabase.from("memberships").select("role, profiles(full_name)"),
+      supabase.from("memberships").select("id, user_id, role, trainer_id, profiles(full_name)"),
       supabase
         .from("calendar_closures")
         .select("id, label, starts_on, ends_on")
@@ -27,6 +29,21 @@ export default async function ParametresPage() {
         .eq("kind", "fermeture_org")
         .order("starts_on"),
     ]);
+
+  // Les emails vivent dans auth.users : accessibles via l'API admin uniquement (page admin).
+  const { data: authUsers } = await createAdminClient().auth.admin.listUsers({ page: 1, perPage: 1000 });
+  const emailById = new Map((authUsers?.users ?? []).map((u) => [u.id, u.email ?? null]));
+
+  const memberRows = (members ?? [])
+    .map((m) => ({
+      membershipId: m.id,
+      name: (m.profiles as unknown as { full_name: string } | null)?.full_name ?? "—",
+      email: emailById.get(m.user_id) ?? null,
+      role: m.role as "admin" | "coordinator" | "trainer" | "viewer",
+      isSelf: m.user_id === userId,
+      trainerLinked: Boolean(m.trainer_id),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name, "fr"));
 
   const funderOptions = (funders ?? []).map((f) => ({ id: f.id, name: f.name }));
 
@@ -143,20 +160,10 @@ export default async function ParametresPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Utilisateurs</CardTitle>
+          <CardTitle className="text-base">Utilisateurs et rôles</CardTitle>
         </CardHeader>
         <CardContent>
-          <ul className="space-y-2 text-sm">
-            {(members ?? []).map((m, i) => (
-              <li key={i} className="flex items-center gap-2">
-                <span>{(m.profiles as unknown as { full_name: string } | null)?.full_name ?? "—"}</span>
-                <Badge variant="outline">{roleLabel(m.role)}</Badge>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-4 text-xs text-muted-foreground">
-            Les invitations par email arrivent avec la gestion des utilisateurs (prochaine itération).
-          </p>
+          <UsersManager members={memberRows} />
         </CardContent>
       </Card>
     </div>
@@ -169,16 +176,5 @@ function Info({ label, value }: { label: string; value: string }) {
       <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className="mt-1 font-medium">{value}</p>
     </div>
-  );
-}
-
-function roleLabel(role: string): string {
-  return (
-    {
-      admin: "Administrateur",
-      coordinator: "Coordinateur",
-      trainer: "Formateur",
-      viewer: "Lecture seule",
-    }[role] ?? role
   );
 }

@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { translatePgError } from "@/lib/pg-errors";
+import { inviteUser } from "@/lib/invitations";
 
 const trainerSchema = z.object({
   id: z.string().uuid().optional(),
@@ -22,8 +24,11 @@ const trainerSchema = z.object({
 });
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
+export type TrainerUpsertResult =
+  | { ok: true; invitation: "envoyee" | "compte_existant" | "sans_email" | "echec" }
+  | { ok: false; error: string };
 
-export async function upsertTrainer(raw: z.infer<typeof trainerSchema>): Promise<ActionResult> {
+export async function upsertTrainer(raw: z.infer<typeof trainerSchema>): Promise<TrainerUpsertResult> {
   const parsed = trainerSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "Données invalides" };
   const d = parsed.data;
@@ -46,12 +51,59 @@ export async function upsertTrainer(raw: z.infer<typeof trainerSchema>): Promise
     is_active: d.isActive,
   };
 
-  const { error } = d.id
-    ? await supabase.from("trainers").update(row).eq("id", d.id)
-    : await supabase.from("trainers").insert(row);
+  let trainerId = d.id ?? null;
+  if (d.id) {
+    const { error } = await supabase.from("trainers").update(row).eq("id", d.id);
+    if (error) return { ok: false, error: translatePgError(error) };
+  } else {
+    const { data: created, error } = await supabase.from("trainers").insert(row).select("id").single();
+    if (error) return { ok: false, error: translatePgError(error) };
+    trainerId = created.id;
+  }
 
-  if (error) return { ok: false, error: translatePgError(error) };
+  // Nouveau formateur avec email → compte d'accès invité automatiquement (rôle formateur).
+  let invitation: Extract<TrainerUpsertResult, { ok: true }>["invitation"] = "sans_email";
+  if (!d.id && d.email && trainerId) {
+    const invite = await inviteUser({
+      orgId,
+      email: d.email,
+      fullName: `${d.firstName} ${d.lastName}`.trim(),
+      role: "trainer",
+      trainerId,
+    });
+    invitation = invite.ok ? (invite.alreadyHadAccount ? "compte_existant" : "envoyee") : "echec";
+  }
+
   revalidatePath("/formateurs");
+  return { ok: true, invitation };
+}
+
+// (Ré)invitation d'un formateur existant depuis sa fiche.
+export async function inviteTrainerAccount(trainerId: string): Promise<ActionResult> {
+  if (!z.string().uuid().safeParse(trainerId).success) return { ok: false, error: "Formateur invalide" };
+
+  const { orgId } = await requireRole(["admin", "coordinator"]);
+  const admin = createAdminClient();
+
+  const { data: trainer } = await admin
+    .from("trainers")
+    .select("id, first_name, last_name, email")
+    .eq("id", trainerId)
+    .eq("org_id", orgId)
+    .single();
+  if (!trainer) return { ok: false, error: "Formateur introuvable" };
+  if (!trainer.email) return { ok: false, error: "Renseignez d'abord l'email sur la fiche du formateur." };
+
+  const result = await inviteUser({
+    orgId,
+    email: trainer.email,
+    fullName: `${trainer.first_name} ${trainer.last_name ?? ""}`.trim(),
+    role: "trainer",
+    trainerId: trainer.id,
+  });
+  if (!result.ok) return result;
+
+  revalidatePath(`/formateurs/${trainerId}`);
   return { ok: true };
 }
 

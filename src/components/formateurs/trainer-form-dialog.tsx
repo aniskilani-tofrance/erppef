@@ -74,7 +74,17 @@ export function TrainerFormDialog({ initial }: { initial?: TrainerFormValues }) 
         toast.error(result.error);
         return;
       }
-      toast.success(isEdit ? "Formateur mis à jour." : "Formateur créé.");
+      if (isEdit) {
+        toast.success("Formateur mis à jour.");
+      } else {
+        const suffix = {
+          envoyee: " Invitation envoyée par email : il pourra se connecter à l'ERP.",
+          compte_existant: " Un compte existait déjà : accès formateur rattaché.",
+          echec: " ⚠️ L'invitation par email a échoué — réessayez depuis sa fiche.",
+          sans_email: " Ajoutez un email pour l'inviter à se connecter.",
+        }[result.invitation];
+        toast.success(`Formateur créé.${suffix}`);
+      }
       setOpen(false);
       if (!isEdit) setValues(EMPTY);
     });

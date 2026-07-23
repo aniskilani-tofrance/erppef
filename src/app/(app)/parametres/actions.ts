@@ -4,12 +4,75 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { translatePgError } from "@/lib/pg-errors";
 import { gcalConfigured, syncTrainerCalendars, type GcalSyncStats } from "@/lib/gcal";
+import { inviteUser } from "@/lib/invitations";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
 export type GcalSyncResult = { ok: true; stats: GcalSyncStats } | { ok: false; error: string };
+
+const inviteSchema = z.object({
+  email: z.string().email(),
+  fullName: z.string().min(1),
+  role: z.enum(["admin", "coordinator", "trainer", "viewer"]),
+});
+
+// Invitation d'un utilisateur par l'admin, avec le rôle choisi.
+export async function inviteMember(raw: z.infer<typeof inviteSchema>): Promise<ActionResult> {
+  const parsed = inviteSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Données invalides" };
+
+  const { orgId } = await requireRole(["admin"]);
+  const result = await inviteUser({ orgId, ...parsed.data });
+  if (!result.ok) return result;
+
+  revalidatePath("/parametres");
+  return { ok: true };
+}
+
+const roleSchema = z.object({
+  membershipId: z.string().uuid(),
+  role: z.enum(["admin", "coordinator", "trainer", "viewer"]),
+});
+
+// Changement de rôle par l'admin. Garde-fous : pas son propre rôle, jamais zéro admin.
+export async function updateMemberRole(raw: z.infer<typeof roleSchema>): Promise<ActionResult> {
+  const parsed = roleSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Données invalides" };
+
+  const { orgId, userId } = await requireRole(["admin"]);
+  const admin = createAdminClient();
+
+  const { data: membership } = await admin
+    .from("memberships")
+    .select("id, user_id, role")
+    .eq("id", parsed.data.membershipId)
+    .eq("org_id", orgId)
+    .single();
+  if (!membership) return { ok: false, error: "Utilisateur introuvable" };
+  if (membership.user_id === userId) {
+    return { ok: false, error: "Vous ne pouvez pas modifier votre propre rôle." };
+  }
+  if (membership.role === "admin" && parsed.data.role !== "admin") {
+    const { count } = await admin
+      .from("memberships")
+      .select("id", { count: "exact", head: true })
+      .eq("org_id", orgId)
+      .eq("role", "admin");
+    if ((count ?? 0) <= 1) return { ok: false, error: "Impossible : ce serait le dernier administrateur." };
+  }
+
+  const { error } = await admin
+    .from("memberships")
+    .update({ role: parsed.data.role })
+    .eq("id", parsed.data.membershipId);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/parametres");
+  return { ok: true };
+}
 
 // Pousse toutes les séances futures vers les agendas Google des formateurs.
 export async function syncGoogleCalendars(): Promise<GcalSyncResult> {

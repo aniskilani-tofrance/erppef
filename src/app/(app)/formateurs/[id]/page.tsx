@@ -7,16 +7,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrainerFormDialog } from "@/components/formateurs/trainer-form-dialog";
 import { AvailabilityEditor } from "@/components/formateurs/availability-editor";
 import { AbsenceManager } from "@/components/formateurs/absence-manager";
+import { InviteTrainerButton } from "@/components/formateurs/invite-trainer-button";
 
 export default async function FormateurPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   await requireRole(["admin", "coordinator"]);
   const supabase = await createClient();
 
-  const [{ data: trainer }, { data: availabilities }, { data: absences }] = await Promise.all([
+  const [{ data: trainer }, { data: availabilities }, { data: absences }, { data: membership }] = await Promise.all([
     supabase.from("trainers").select("*").eq("id", id).single(),
     supabase.from("trainer_availabilities").select("*").eq("trainer_id", id).order("weekday").order("start_time"),
     supabase.from("trainer_absences").select("*").eq("trainer_id", id).order("starts_on", { ascending: false }),
+    supabase.from("memberships").select("id").eq("trainer_id", id).maybeSingle(),
   ]);
 
   if (!trainer) notFound();
@@ -29,7 +31,11 @@ export default async function FormateurPage({ params }: { params: Promise<{ id: 
         </h1>
         <Badge variant="outline">{trainer.contract_type === "salarie" ? "Salarié" : "Vacataire"}</Badge>
         {!trainer.is_active && <Badge variant="destructive">Inactif</Badge>}
+        {membership && <Badge variant="secondary">Compte ERP actif</Badge>}
         <div className="ml-auto flex items-center gap-2">
+          {trainer.email && (
+            <InviteTrainerButton trainerId={trainer.id} hasAccount={Boolean(membership)} />
+          )}
           <TrainerFormDialog
             initial={{
               id: trainer.id,
