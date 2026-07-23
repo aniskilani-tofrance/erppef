@@ -20,6 +20,7 @@ export default function BienvenuePage() {
 function BienvenueInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const isReset = searchParams.get("mode") === "reset";
   const [ready, setReady] = useState<"loading" | "ok" | "invalid">("loading");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -67,9 +68,13 @@ function BienvenueInner() {
         <div className="mb-8 text-center">
           {/* eslint-disable-next-line @next/next/no-img-element -- asset statique */}
           <img src="/logo-pef.png" alt="" className="mx-auto mb-4 h-20 w-auto" />
-          <h1 className="text-2xl font-semibold tracking-tight">Bienvenue !</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {isReset ? "Réinitialisation" : "Bienvenue !"}
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Choisissez votre mot de passe pour accéder à l&apos;ERP ParlerEmploi Formation.
+            {isReset
+              ? "Choisissez un nouveau mot de passe pour votre compte."
+              : "Choisissez votre mot de passe pour accéder à l'ERP ParlerEmploi Formation."}
           </p>
         </div>
         <Card>
@@ -80,8 +85,9 @@ function BienvenueInner() {
             {ready === "loading" && <p className="text-sm text-muted-foreground">Vérification du lien…</p>}
             {ready === "invalid" && (
               <p className="text-sm text-destructive">
-                Lien d&apos;invitation invalide ou expiré. Demandez à votre administrateur de
-                renvoyer l&apos;invitation.
+                {isReset
+                  ? "Lien invalide ou expiré. Refaites une demande depuis « Mot de passe oublié »."
+                  : "Lien d'invitation invalide ou expiré. Demandez à votre administrateur de renvoyer l'invitation."}
               </p>
             )}
             {ready === "ok" && (

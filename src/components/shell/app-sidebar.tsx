@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   BookUser,
   CalendarDays,
+  CircleUser,
   DoorOpen,
   GraduationCap,
   LayoutDashboard,
@@ -46,6 +47,21 @@ export function AppSidebar({ role, orgName }: { role: AppRole; orgName: string }
 
   const items = NAV.filter((item) => (item.roles as readonly string[]).includes(role));
 
+  const footer = (
+    <div className="space-y-1 border-t p-3">
+      <Button asChild variant="ghost" size="sm" className="w-full justify-start gap-2">
+        <Link href="/compte" onClick={() => setOpen(false)}>
+          <CircleUser className="h-4 w-4" />
+          Mon compte
+        </Link>
+      </Button>
+      <Button variant="ghost" size="sm" className="w-full justify-start gap-2" onClick={logout}>
+        <LogOut className="h-4 w-4" />
+        Déconnexion
+      </Button>
+    </div>
+  );
+
   const nav = (
     <nav className="flex flex-1 flex-col gap-1 p-3">
       {items.map((item) => {
@@ -84,7 +100,10 @@ export function AppSidebar({ role, orgName }: { role: AppRole; orgName: string }
         <span className="text-sm font-semibold">{orgName}</span>
       </div>
       {open && (
-        <div className="fixed inset-0 z-30 bg-background pt-12 md:hidden">{nav}</div>
+        <div className="fixed inset-0 z-30 flex flex-col bg-background pt-12 md:hidden">
+          {nav}
+          {footer}
+        </div>
       )}
 
       {/* Desktop */}
@@ -98,12 +117,7 @@ export function AppSidebar({ role, orgName }: { role: AppRole; orgName: string }
           </div>
         </div>
         {nav}
-        <div className="border-t p-3">
-          <Button variant="ghost" size="sm" className="w-full justify-start gap-2" onClick={logout}>
-            <LogOut className="h-4 w-4" />
-            Déconnexion
-          </Button>
-        </div>
+        {footer}
       </aside>
       {/* Décalage du contenu sous la barre mobile */}
       <div className="h-12 md:hidden" />
