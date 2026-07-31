@@ -41,7 +41,7 @@ const EMPTY: LearnerFormValues = {
   notes: "",
 };
 
-const LEVELS = ["Non évalué", "A1.1", "A1", "A2", "B1", "B2"];
+const LEVELS = ["Non évalué", "A1.1", "A1", "A2", "B1", "B2", "C1", "C2"];
 
 export function LearnerFormDialog({
   initial,

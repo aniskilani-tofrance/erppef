@@ -38,7 +38,7 @@ const EMPTY: ProgramFormValues = {
   isActive: true,
 };
 
-const LEVELS = ["A1.1", "A1", "A2", "B1", "B2"];
+const LEVELS = ["A1.1", "A1", "A2", "B1", "B2", "C1", "C2"];
 
 export function ProgramFormDialog({
   initial,
