@@ -98,7 +98,8 @@ const programSchema = z.object({
   totalHours: z.number().positive(),
   defaultWeeklyHours: z.number().positive().nullable(),
   defaultFunderId: z.string().uuid().nullable(),
-  level: z.string().nullable(),
+  entryLevel: z.string().nullable(),
+  level: z.string().nullable(), // niveau visé (sortie)
   modality: z.enum(["presentiel", "distanciel", "hybride"]),
   isActive: z.boolean(),
 });
@@ -118,6 +119,7 @@ export async function upsertProgram(raw: z.infer<typeof programSchema>): Promise
     total_hours: d.totalHours,
     default_weekly_hours: d.defaultWeeklyHours,
     default_funder_id: d.defaultFunderId,
+    entry_level: d.entryLevel,
     level: d.level,
     modality: d.modality,
     is_active: d.isActive,
@@ -127,6 +129,46 @@ export async function upsertProgram(raw: z.infer<typeof programSchema>): Promise
     ? await supabase.from("programs").update(row).eq("id", d.id)
     : await supabase.from("programs").insert(row);
 
+  if (error) return { ok: false, error: translatePgError(error) };
+  revalidatePath("/parametres");
+  return { ok: true };
+}
+
+// Suppression d'un dispositif : uniquement s'il n'est utilisé par AUCUN groupe.
+// Avec des groupes (et leurs séances émargées = registre légal), on désactive au
+// lieu de supprimer : l'historique reste intact.
+export async function deleteProgram(id: string): Promise<ActionResult> {
+  if (!z.string().uuid().safeParse(id).success) return { ok: false, error: "Dispositif invalide" };
+
+  const { orgId } = await requireRole(["admin"]);
+  const supabase = await createClient();
+
+  const { count } = await supabase
+    .from("groups")
+    .select("id", { count: "exact", head: true })
+    .eq("program_id", id);
+  if ((count ?? 0) > 0) {
+    return {
+      ok: false,
+      error: `Impossible : ${count} groupe${count! > 1 ? "s" : ""} (et leurs séances) utilisent ce dispositif. Désactivez-le à la place.`,
+    };
+  }
+
+  const { error } = await supabase.from("programs").delete().eq("id", id).eq("org_id", orgId);
+  if (error) return { ok: false, error: translatePgError(error) };
+  revalidatePath("/parametres");
+  return { ok: true };
+}
+
+export async function deactivateProgram(id: string): Promise<ActionResult> {
+  if (!z.string().uuid().safeParse(id).success) return { ok: false, error: "Dispositif invalide" };
+  const { orgId } = await requireRole(["admin"]);
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("programs")
+    .update({ is_active: false })
+    .eq("id", id)
+    .eq("org_id", orgId);
   if (error) return { ok: false, error: translatePgError(error) };
   revalidatePath("/parametres");
   return { ok: true };

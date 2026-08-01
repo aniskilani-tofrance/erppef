@@ -22,6 +22,7 @@ export type ProgramFormValues = {
   totalHours: string;
   defaultWeeklyHours: string;
   defaultFunderId: string;
+  entryLevel: string;
   level: string;
   modality: "presentiel" | "distanciel" | "hybride";
   isActive: boolean;
@@ -33,12 +34,19 @@ const EMPTY: ProgramFormValues = {
   totalHours: "",
   defaultWeeklyHours: "",
   defaultFunderId: "none",
+  entryLevel: "none",
   level: "",
   modality: "presentiel",
   isActive: true,
 };
 
 const LEVELS = ["A1.1", "A1", "A2", "B1", "B2", "C1", "C2"];
+
+// Niveau CECRL suivant : préremplit le niveau visé quand on choisit le niveau de base.
+function nextLevel(level: string): string {
+  const i = LEVELS.indexOf(level);
+  return i >= 0 && i < LEVELS.length - 1 ? LEVELS[i + 1] : level;
+}
 
 export function ProgramFormDialog({
   initial,
@@ -65,6 +73,7 @@ export function ProgramFormDialog({
         totalHours: Number(values.totalHours),
         defaultWeeklyHours: values.defaultWeeklyHours ? Number(values.defaultWeeklyHours) : null,
         defaultFunderId: values.defaultFunderId === "none" ? null : values.defaultFunderId,
+        entryLevel: values.entryLevel === "none" || !values.entryLevel ? null : values.entryLevel,
         level: values.level === "none" || !values.level ? null : values.level,
         modality: values.modality,
         isActive: values.isActive,
@@ -120,7 +129,31 @@ export function ProgramFormDialog({
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label>Niveau visé</Label>
+              <Label>Niveau de base (entrée)</Label>
+              <Select
+                value={values.entryLevel || "none"}
+                onValueChange={(v) =>
+                  setValues((s) => ({
+                    ...s,
+                    entryLevel: v,
+                    // Préremplit le niveau visé avec le niveau suivant du CECRL
+                    level: v !== "none" ? nextLevel(v) : s.level,
+                  }))
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">—</SelectItem>
+                  {LEVELS.map((l) => (
+                    <SelectItem key={l} value={l}>{l}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Niveau visé (sortie)</Label>
               <Select value={values.level || "none"} onValueChange={(v) => set("level", v)}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
@@ -133,6 +166,8 @@ export function ProgramFormDialog({
                 </SelectContent>
               </Select>
             </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Modalité</Label>
               <Select value={values.modality} onValueChange={(v) => set("modality", v as ProgramFormValues["modality"])}>

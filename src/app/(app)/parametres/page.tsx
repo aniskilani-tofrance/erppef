@@ -9,6 +9,7 @@ import { ProgramFormDialog } from "@/components/parametres/program-form-dialog";
 import { FunderFormDialog } from "@/components/parametres/funder-form-dialog";
 import { ClosureManager } from "@/components/parametres/closure-manager";
 import { GcalSyncCard } from "@/components/parametres/gcal-sync-card";
+import { DeleteProgramButton } from "@/components/parametres/delete-program-button";
 import { UsersManager } from "@/components/parametres/users-manager";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -16,12 +17,13 @@ export default async function ParametresPage() {
   const { orgId, userId } = await requireRole(["admin"]);
   const supabase = await createClient();
 
-  const [{ data: org }, { data: funders }, { data: programs }, { data: members }, { data: closures }] =
+  const [{ data: org }, { data: funders }, { data: programs }, { data: members }, { data: groupRefs }, { data: closures }] =
     await Promise.all([
       supabase.from("organizations").select("*").single(),
       supabase.from("funders").select("*").order("name"),
       supabase.from("programs").select("*, funders(name)").order("name"),
       supabase.from("memberships").select("id, user_id, role, trainer_id, profiles(full_name)"),
+      supabase.from("groups").select("program_id"),
       supabase
         .from("calendar_closures")
         .select("id, label, starts_on, ends_on")
@@ -46,6 +48,10 @@ export default async function ParametresPage() {
     .sort((a, b) => a.name.localeCompare(b.name, "fr"));
 
   const funderOptions = (funders ?? []).map((f) => ({ id: f.id, name: f.name }));
+  const groupCountByProgram = new Map<string, number>();
+  for (const g of groupRefs ?? []) {
+    groupCountByProgram.set(g.program_id, (groupCountByProgram.get(g.program_id) ?? 0) + 1);
+  }
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -95,7 +101,7 @@ export default async function ParametresPage() {
                 <TableHead>Dispositif</TableHead>
                 <TableHead>Volume</TableHead>
                 <TableHead>Rythme</TableHead>
-                <TableHead>Niveau</TableHead>
+                <TableHead>Niveaux</TableHead>
                 <TableHead>Financeur par défaut</TableHead>
                 <TableHead className="w-10" />
               </TableRow>
@@ -111,7 +117,11 @@ export default async function ParametresPage() {
                   </TableCell>
                   <TableCell>{Number(p.total_hours)} h</TableCell>
                   <TableCell>{p.default_weekly_hours ? `${Number(p.default_weekly_hours)} h/sem` : "—"}</TableCell>
-                  <TableCell>{p.level ?? "—"}</TableCell>
+                  <TableCell>
+                    {p.entry_level || p.level
+                      ? `${p.entry_level ?? "?"} → ${p.level ?? "?"}`
+                      : "—"}
+                  </TableCell>
                   <TableCell>{(p.funders as unknown as { name: string } | null)?.name ?? "—"}</TableCell>
                   <TableCell>
                     <ProgramFormDialog
@@ -123,10 +133,16 @@ export default async function ParametresPage() {
                         totalHours: String(Number(p.total_hours)),
                         defaultWeeklyHours: p.default_weekly_hours ? String(Number(p.default_weekly_hours)) : "",
                         defaultFunderId: p.default_funder_id ?? "none",
+                        entryLevel: p.entry_level ?? "none",
                         level: p.level ?? "none",
                         modality: p.modality,
                         isActive: p.is_active,
                       }}
+                    />
+                    <DeleteProgramButton
+                      programId={p.id}
+                      name={p.name}
+                      groupCount={groupCountByProgram.get(p.id) ?? 0}
                     />
                   </TableCell>
                 </TableRow>
