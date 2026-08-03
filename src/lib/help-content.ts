@@ -40,6 +40,14 @@ export const HELP_SECTIONS: HelpSection[] = [
         ],
       },
       {
+        title: "Se former à l'outil",
+        steps: [
+          "Menu « Formation » : des parcours interactifs par rôle (leçons courtes, exercices réels, quiz de validation).",
+          "Comptez 30 minutes pour le parcours Formateur, 1 h 20 pour le parcours Coordinateur — à votre rythme, la progression est mémorisée.",
+          "Refaites un module quand vous voulez : c'est la meilleure façon de découvrir une fonction que vous n'utilisez pas encore.",
+        ],
+      },
+      {
         title: "S'y retrouver dans le menu",
         steps: [
           "Dashboard : votre page d'accueil — elle s'adapte à votre rôle.",
