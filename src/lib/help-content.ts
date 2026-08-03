@@ -191,7 +191,7 @@ export const HELP_SECTIONS: HelpSection[] = [
         steps: [
           "Page Qualité → « Registre des réclamations » : consignez chaque réclamation et surtout l'action corrective (ind. 31-32).",
           "La page Qualité regroupe vos indicateurs (assiduité, heures, satisfaction) et un tableau « où sont les preuves » par indicateur Qualiopi : c'est l'écran à montrer à l'auditeur.",
-          "Les alertes décrochage (3 absences de suite) y apparaissent : contactez l'apprenant et notez l'action dans sa fiche.",
+          "Les alertes assiduité apparaissent sur le Dashboard et la page Qualité : apprenant sous 70 % de présence ou 3 absences de suite. Contactez-le et notez l'action dans sa fiche.",
         ],
       },
     ],
