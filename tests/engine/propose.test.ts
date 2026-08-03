@@ -65,6 +65,7 @@ const salle12: RoomData = {
   name: "Salle 12",
   capacity: 12,
   isActive: true,
+  availabilities: [],
   unavailabilities: [],
   busy: [],
 };
@@ -174,6 +175,29 @@ describe("proposeGroupPlan", () => {
     expect(p.room?.roomId).toBe("salle13"); // 12 < 14 → salle 12 écartée
     const s12 = p.roomAlternatives.find((r) => r.roomId === "salle12");
     expect(s12?.hardViolations.some((v) => v.includes("Capacité"))).toBe(true);
+  });
+
+  it("écarte une salle fermée sur le créneau demandé (horaires d'ouverture)", () => {
+    // Salle 12 ouverte uniquement les matins : un motif après-midi doit l'écarter.
+    const morningOnly: RoomData = {
+      ...salle12,
+      availabilities: [1, 2, 3, 4, 5].map((weekday) => ({ weekday, start: "09:00", end: "12:00" })),
+    };
+    const p = proposeGroupPlan(
+      {
+        ...input,
+        totalHours: 15,
+        weeklyPattern: [1, 2, 3, 4, 5].map((weekday) => ({
+          weekday: weekday as 1 | 2 | 3 | 4 | 5,
+          start: "13:00",
+          end: "16:00",
+        })),
+      },
+      data([marie()], [morningOnly, salle13]),
+    );
+    expect(p.room?.roomId).toBe("salle13");
+    const s12 = p.roomAlternatives.find((r) => r.roomId === "salle12");
+    expect(s12?.hardViolations.some((v) => v.includes("fermée"))).toBe(true);
   });
 
   it("privilégie la continuité pédagogique à coût égal", () => {

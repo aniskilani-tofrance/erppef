@@ -7,7 +7,7 @@ import type { Closure, EngineData, RoomData, TrainerData } from "./types";
 export async function loadEngineData(orgId: string, fromDate: string): Promise<EngineData> {
   const supabase = createAdminClient();
 
-  const [org, trainers, availabilities, absences, rooms, roomUnavail, sessions, groups, closures] =
+  const [org, trainers, availabilities, absences, rooms, roomUnavail, roomAvail, sessions, groups, closures] =
     await Promise.all([
       supabase.from("organizations").select("timezone, school_holiday_zone").eq("id", orgId).single(),
       supabase.from("trainers").select("*").eq("org_id", orgId),
@@ -15,6 +15,7 @@ export async function loadEngineData(orgId: string, fromDate: string): Promise<E
       supabase.from("trainer_absences").select("*").eq("org_id", orgId).gte("ends_on", fromDate),
       supabase.from("rooms").select("*").eq("org_id", orgId),
       supabase.from("room_unavailabilities").select("*").eq("org_id", orgId).gte("ends_on", fromDate),
+      supabase.from("room_availabilities").select("*").eq("org_id", orgId),
       supabase
         .from("sessions")
         .select("trainer_id, room_id, group_id, starts_at, ends_at")
@@ -32,6 +33,8 @@ export async function loadEngineData(orgId: string, fromDate: string): Promise<E
   const firstError =
     org.error ?? trainers.error ?? availabilities.error ?? absences.error ?? rooms.error ??
     roomUnavail.error ?? sessions.error ?? groups.error ?? closures.error;
+  // room_availabilities peut ne pas exister tant que la migration n'est pas appliquée :
+  // on la traite comme vide plutôt que d'échouer.
   if (firstError) throw new Error(`Chargement des données moteur : ${firstError.message}`);
   if (!org.data) throw new Error("Organisation introuvable");
 
@@ -89,6 +92,13 @@ export async function loadEngineData(orgId: string, fromDate: string): Promise<E
     name: r.name,
     capacity: r.capacity,
     isActive: r.is_active,
+    availabilities: (roomAvail.data ?? [])
+      .filter((a) => a.room_id === r.id)
+      .map((a) => ({
+        weekday: a.weekday,
+        start: a.start_time.slice(0, 5),
+        end: a.end_time.slice(0, 5),
+      })),
     unavailabilities: (roomUnavail.data ?? [])
       .filter((u) => u.room_id === r.id)
       .map((u) => ({ startsOn: u.starts_on, endsOn: u.ends_on })),

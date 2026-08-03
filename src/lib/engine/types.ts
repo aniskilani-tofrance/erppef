@@ -48,6 +48,8 @@ export type RoomData = {
   name: string;
   capacity: number;
   isActive: boolean;
+  // Horaires d'ouverture hebdo ; vide = ouverte sur les horaires de l'organisme.
+  availabilities: { weekday: number; start: string; end: string }[];
   unavailabilities: { startsOn: string; endsOn: string }[];
   busy: Interval[];
 };

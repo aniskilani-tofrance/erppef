@@ -5,7 +5,11 @@ défaut de Supabase. Pour les franciser (une seule fois) :
 
 **Dashboard Supabase → projet `zkpmbbuuvbkcoelnrcyo` → Authentication → Email Templates**,
 puis remplacer le sujet et le corps de chaque template ci-dessous.
-Ne pas toucher aux variables `{{ .ConfirmationURL }}` : c'est le lien magique.
+
+⚠️ IMPORTANT : ces templates utilisent des liens `token_hash` (et non `{{ .ConfirmationURL }}`) :
+ils fonctionnent quel que soit le navigateur où le lien est ouvert — cela corrige
+les erreurs « lien invalide ou expiré » quand l'email s'ouvre dans un autre navigateur
+que celui de la demande.
 
 ## Invite user (invitation)
 
@@ -15,8 +19,8 @@ Sujet : `Votre accès à l'ERP ParlerEmploi Formation`
 <h2>Bienvenue !</h2>
 <p>Un compte vient d'être créé pour vous sur l'ERP de ParlerEmploi Formation
 (planning, émargements, suivi des groupes).</p>
-<p><a href="{{ .ConfirmationURL }}">Cliquez ici pour choisir votre mot de passe
-et accéder à l'ERP</a>.</p>
+<p><a href="{{ .SiteURL }}/auth/bienvenue?token_hash={{ .TokenHash }}&type=invite">Cliquez ici
+pour choisir votre mot de passe et accéder à l'ERP</a>.</p>
 <p>Ce lien est personnel et à usage unique. Si vous n'êtes pas concerné(e) par
 ce message, ignorez-le simplement.</p>
 <p>— L'équipe ParlerEmploi Formation</p>
@@ -30,7 +34,7 @@ Sujet : `Réinitialisation de votre mot de passe — ERP PEF`
 <h2>Réinitialisation de mot de passe</h2>
 <p>Une demande de réinitialisation a été faite pour votre compte ERP
 ParlerEmploi Formation.</p>
-<p><a href="{{ .ConfirmationURL }}">Choisir un nouveau mot de passe</a></p>
+<p><a href="{{ .SiteURL }}/auth/bienvenue?mode=reset&token_hash={{ .TokenHash }}&type=recovery">Choisir un nouveau mot de passe</a></p>
 <p>Si vous n'êtes pas à l'origine de cette demande, ignorez ce message :
 votre mot de passe reste inchangé.</p>
 <p>— L'équipe ParlerEmploi Formation</p>

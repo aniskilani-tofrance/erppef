@@ -30,16 +30,51 @@ function BienvenueInner() {
   useEffect(() => {
     const supabase = createClient();
     const code = searchParams.get("code");
+    const tokenHash = searchParams.get("token_hash");
+    const otpType = searchParams.get("type"); // recovery | invite (templates personnalisés)
+    let settled = false;
+    const settle = (state: "ok" | "invalid") => {
+      if (!settled) {
+        settled = true;
+        setReady(state);
+      }
+    };
+
+    // La session peut arriver de façon asynchrone (fragment #access_token consommé
+    // par le client) : on écoute plutôt que de vérifier une seule fois.
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) settle("ok");
+    });
+
     (async () => {
-      if (code) {
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
-        setReady(error ? "invalid" : "ok");
+      // Lien robuste (templates personnalisés) : marche quel que soit le navigateur.
+      if (tokenHash) {
+        const { error } = await supabase.auth.verifyOtp({
+          type: otpType === "invite" ? "invite" : "recovery",
+          token_hash: tokenHash,
+        });
+        settle(error ? "invalid" : "ok");
         return;
       }
-      // Flux à fragment (#access_token…) : le client le consomme automatiquement.
-      const { data } = await supabase.auth.getSession();
-      setReady(data.session ? "ok" : "invalid");
+      // Flux PKCE : nécessite le même navigateur que la demande.
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        settle(error ? "invalid" : "ok");
+        return;
+      }
+      // Flux à fragment : laisser le temps au client de le consommer.
+      for (let i = 0; i < 10 && !settled; i++) {
+        const { data } = await supabase.auth.getSession();
+        if (data.session) {
+          settle("ok");
+          return;
+        }
+        await new Promise((r) => setTimeout(r, 300));
+      }
+      settle("invalid");
     })();
+
+    return () => sub.subscription.unsubscribe();
   }, [searchParams]);
 
   function submit() {

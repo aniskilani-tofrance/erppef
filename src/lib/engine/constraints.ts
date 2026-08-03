@@ -115,12 +115,26 @@ export function trainerSoftNotes(
 // Filtres durs d'une salle.
 export function roomHardViolations(
   room: RoomData,
+  pattern: SlotPattern[],
   sessions: ProposedSession[],
   expectedHeadcount?: number,
 ): string[] {
   const violations: string[] = [];
 
   if (!room.isActive) violations.push("Salle inactive");
+
+  // Horaires d'ouverture : s'ils sont définis, chaque créneau du motif doit tomber dedans.
+  if (room.availabilities.length > 0) {
+    for (const slot of pattern) {
+      const open = room.availabilities.some(
+        (a) => a.weekday === slot.weekday && a.start <= slot.start && a.end >= slot.end,
+      );
+      if (!open) {
+        const jours = ["", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"];
+        violations.push(`Salle fermée le ${jours[slot.weekday]} ${slot.start}–${slot.end}`);
+      }
+    }
+  }
 
   if (expectedHeadcount != null && room.capacity < expectedHeadcount) {
     violations.push(`Capacité insuffisante (${room.capacity} < ${expectedHeadcount})`);

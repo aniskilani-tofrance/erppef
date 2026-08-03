@@ -101,7 +101,7 @@ export function proposeGroupPlan(input: ProposalInput, data: EngineData): Propos
 
   // 4. Classement des salles : plus petite salle suffisante d'abord (préserver les grandes).
   const rankedRooms: RankedRoom[] = data.rooms.map((r) => {
-    const hardViolations = roomHardViolations(r, recurrence.sessions, input.expectedHeadcount);
+    const hardViolations = roomHardViolations(r, pattern, recurrence.sessions, input.expectedHeadcount);
     const softNotes: string[] = [];
     if (input.preferredRoomId === r.id) softNotes.push("Salle demandée par le coordinateur");
     return { roomId: r.id, name: r.name, capacity: r.capacity, hardViolations, softNotes };

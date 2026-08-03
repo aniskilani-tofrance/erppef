@@ -97,6 +97,7 @@ export const HELP_SECTIONS: HelpSection[] = [
           "Supprimer un dispositif : possible seulement s'il n'a servi à aucun groupe ; sinon l'ERP propose de le désactiver (l'historique est conservé).",
           "Paramètres → « Financeurs » : chaque financeur a une couleur, celle des séances dans le planning.",
           "Salles : nom, capacité, équipements. Une salle inactive n'est plus proposée par le moteur.",
+          "Horaires d'ouverture par salle : bouton « Horaires » sur la carte de la salle — définissez ses créneaux (ex. lundi 9h-12h) si elle n'est pas disponible en continu ; sans créneau, elle suit les horaires de l'organisme.",
           "Paramètres → « Fermetures » : posez vos fermetures exceptionnelles ; fériés et vacances scolaires zone C sont déjà connus.",
         ],
       },
@@ -264,6 +265,11 @@ export const FAQ: FaqItem[] = [
   {
     q: "L'ERP est-il sauvegardé ?",
     a: "Oui : chaque dimanche matin, une sauvegarde complète des données (apprenants, séances, émargements, enquêtes…) est déposée automatiquement dans le Drive partagé, dossier « Sauvegardes ». La base Supabase a en plus ses propres sauvegardes.",
+    roles: TEAM,
+  },
+  {
+    q: "Une salle n'est disponible que certains jours ou certaines heures.",
+    a: "Page Salles → bouton « Horaires » de la salle : ajoutez ses créneaux d'ouverture (jour + heures). Le moteur de planification n'y placera plus aucune séance en dehors, et l'expliquera dans les alternatives (« Salle fermée le… »).",
     roles: TEAM,
   },
   {

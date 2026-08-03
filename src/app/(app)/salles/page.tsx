@@ -5,7 +5,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { weekStartOf } from "@/lib/dates";
 import { RoomFormDialog } from "@/components/salles/room-form-dialog";
+import { RoomHoursDialog } from "@/components/salles/room-hours-dialog";
 import { DoorOpen } from "lucide-react";
+
+const DAY_SHORT = ["", "lun", "mar", "mer", "jeu", "ven", "sam", "dim"];
 
 // 45 h de plage utile hebdo (9h-18h × 5 j) : approximation V1 du taux d'occupation
 const WEEKLY_CAPACITY_HOURS = 45;
@@ -15,9 +18,11 @@ export default async function SallesPage() {
   const supabase = await createClient();
   const weekStart = weekStartOf(new Date().toISOString().slice(0, 10));
 
-  const [{ data: rooms }, { data: loads }] = await Promise.all([
+  const [{ data: rooms }, { data: loads }, { data: hours }] = await Promise.all([
     supabase.from("rooms").select("*").order("name"),
     supabase.from("v_room_week_load").select("*").eq("week_start", weekStart),
+    // Tolérant si la migration room_availabilities n'est pas encore appliquée (data = null)
+    supabase.from("room_availabilities").select("*").order("weekday").order("start_time"),
   ]);
 
   return (
@@ -52,8 +57,29 @@ export default async function SallesPage() {
                           isActive: r.is_active,
                         }}
                       />
+                      <RoomHoursDialog
+                        roomId={r.id}
+                        roomName={r.name}
+                        initial={(hours ?? [])
+                          .filter((h) => h.room_id === r.id)
+                          .map((h) => ({
+                            weekday: h.weekday,
+                            start: h.start_time.slice(0, 5),
+                            end: h.end_time.slice(0, 5),
+                          }))}
+                      />
                     </div>
-                    <p className="text-xs text-muted-foreground">{r.capacity} places</p>
+                    <p className="text-xs text-muted-foreground">
+                      {r.capacity} places
+                      {(() => {
+                        const mine = (hours ?? []).filter((h) => h.room_id === r.id);
+                        return mine.length
+                          ? ` · ouverte ${mine
+                              .map((h) => `${DAY_SHORT[h.weekday]} ${h.start_time.slice(0, 5)}-${h.end_time.slice(0, 5)}`)
+                              .join(", ")}`
+                          : " · horaires de l'organisme";
+                      })()}
+                    </p>
                   </div>
                 </div>
                 <div className="mt-4 space-y-1">
