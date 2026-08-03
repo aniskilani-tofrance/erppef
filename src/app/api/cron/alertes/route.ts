@@ -1,9 +1,45 @@
+import { gzipSync } from "node:zlib";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { driveConfigured, uploadBufferToDrive } from "@/lib/emargement/gdrive";
 import {
   ABSENCE_ALERT_THRESHOLD,
   computeLearnerStats,
   type AttendanceRecord,
 } from "@/lib/attendance-stats";
+
+// Sauvegarde logique hebdomadaire de la base (registre légal d'assiduité) vers le
+// Drive partagé, dossier « Sauvegardes » : un JSON gzippé par semaine, écrasé si relancé.
+const BACKUP_TABLES = [
+  "organizations", "funders", "programs", "trainers", "trainer_availabilities",
+  "trainer_absences", "trainer_documents", "rooms", "room_unavailabilities",
+  "groups", "sessions", "learners", "enrollments", "attendances",
+  "survey_responses", "complaints", "memberships", "profiles", "calendar_closures",
+] as const;
+
+async function runWeeklyBackup(): Promise<string> {
+  const supabase = createAdminClient();
+  const dump: Record<string, unknown[]> = {};
+  for (const table of BACKUP_TABLES) {
+    const rows: unknown[] = [];
+    // Pagination : les signatures d'émargement rendent `attendances` volumineuse.
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await supabase.from(table).select("*").range(from, from + 999);
+      if (error) throw new Error(`${table}: ${error.message}`);
+      rows.push(...(data ?? []));
+      if (!data || data.length < 1000) break;
+    }
+    dump[table] = rows;
+  }
+  const day = new Date().toLocaleDateString("fr-CA", { timeZone: "Europe/Paris" });
+  const payload = gzipSync(Buffer.from(JSON.stringify({ exportedAt: new Date().toISOString(), tables: dump })));
+  await uploadBufferToDrive({
+    folderName: "Sauvegardes",
+    fileName: `sauvegarde_erp_${day}.json.gz`,
+    data: payload,
+    mimeType: "application/gzip",
+  });
+  return `${Math.round(payload.length / 1024)} Ko`;
+}
 
 // Cron du matin : email récapitulatif au coordinateur si quelque chose mérite action —
 // apprenants en risque de décrochage, feuilles d'émargement de la veille non clôturées.
@@ -17,6 +53,16 @@ export async function GET(request: Request) {
 
   const supabase = createAdminClient();
   const now = new Date();
+
+  // Dimanche : sauvegarde hebdomadaire avant les alertes (jamais bloquante).
+  let backup: string | null = null;
+  if (now.getUTCDay() === 0 && driveConfigured()) {
+    try {
+      backup = await runWeeklyBackup();
+    } catch (e) {
+      backup = `échec : ${e instanceof Error ? e.message : "erreur"}`;
+    }
+  }
 
   const [{ data: attendanceRows }, { data: unclosed }, { data: learners }] = await Promise.all([
     supabase
@@ -56,7 +102,7 @@ export async function GET(request: Request) {
   });
 
   if (atRisk.length === 0 && sheets.length === 0) {
-    return Response.json({ sent: false, reason: "rien à signaler" });
+    return Response.json({ sent: false, reason: "rien à signaler", backup });
   }
 
   const lines = [

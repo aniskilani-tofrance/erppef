@@ -91,7 +91,10 @@ export const HELP_SECTIONS: HelpSection[] = [
       {
         title: "Le socle : dispositifs, financeurs, salles, fermetures",
         steps: [
-          "Paramètres → « Catalogue des dispositifs » : créez vos formations (code, volume d'heures, rythme par défaut, niveau).",
+          "Paramètres → « Catalogue des dispositifs » : créez vos formations (code, volume d'heures, rythme par défaut).",
+          "Niveaux : indiquez le niveau de base (entrée) — le niveau visé se remplit automatiquement avec le niveau CECRL suivant (modifiable, jusqu'au C2).",
+          "Vous pouvez désigner un « formateur à privilégier » : il sera présélectionné à chaque création de groupe sur ce dispositif.",
+          "Supprimer un dispositif : possible seulement s'il n'a servi à aucun groupe ; sinon l'ERP propose de le désactiver (l'historique est conservé).",
           "Paramètres → « Financeurs » : chaque financeur a une couleur, celle des séances dans le planning.",
           "Salles : nom, capacité, équipements. Une salle inactive n'est plus proposée par le moteur.",
           "Paramètres → « Fermetures » : posez vos fermetures exceptionnelles ; fériés et vacances scolaires zone C sont déjà connus.",
@@ -110,6 +113,9 @@ export const HELP_SECTIONS: HelpSection[] = [
         title: "Gérer les comptes et les rôles",
         steps: [
           "Paramètres → « Utilisateurs et rôles » : la liste des comptes, avec le rôle modifiable (admin seulement).",
+          "Le badge « Jamais connecté » signale un compte non activé ; « vu il y a X jours » indique la dernière connexion.",
+          "Menu ⋯ de chaque utilisateur : renvoyer l'invitation, envoyer un lien de réinitialisation de mot de passe, renommer, ou retirer l'accès.",
+          "Retirer l'accès est réversible : la personne ne peut plus se connecter mais sa fiche et son historique restent ; vous pouvez la réinviter plus tard.",
           "« Inviter un utilisateur » pour un non-formateur (coordinateur, lecture seule).",
           "Un changement de rôle s'applique à la prochaine connexion de la personne.",
         ],
@@ -126,7 +132,8 @@ export const HELP_SECTIONS: HelpSection[] = [
         steps: [
           "Groupes → « Nouveau groupe » : dispositif, financeur, date de début, effectif attendu.",
           "Cochez ou non « Pas de cours pendant les vacances scolaires » selon le public.",
-          "Besoin d'horaires précis ? « Définir les créneaux manuellement » (cadre : 9h-12h / 13h-20h).",
+          "Cadrage du calendrier : choisissez un rythme type (Matins 9h-12h, Après-midis 13h-16h, Journées, ou Personnalisé) et les jours de cours — décochez un jour pour limiter les déplacements des apprenants.",
+          "Indiquez si besoin un formateur et une salle à privilégier : le moteur les favorise sans les imposer, et explique s'il doit s'en écarter.",
           "« Proposer un planning optimal » : le moteur choisit formateur et salle, saute fériés/vacances, et explique ses choix.",
           "Vérifiez la proposition (alternatives, coûts, avertissements) puis validez : toutes les séances sont créées d'un coup.",
         ],
@@ -146,6 +153,14 @@ export const HELP_SECTIONS: HelpSection[] = [
           "Cliquez une séance pour changer formateur, salle, ou l'annuler.",
           "Sélectionnez un créneau vide pour créer une séance ponctuelle (rattrapage).",
           "Les vacances et fériés apparaissent en fond grisé.",
+        ],
+      },
+      {
+        title: "Faire vivre le groupe (statut, rattrapages)",
+        steps: [
+          "Fiche du groupe → « Modifier » : renommez, changez le financeur, la capacité, les notes, et le statut (En attente, Ouvert, Complet, Terminé, Annulé).",
+          "Clôturez un groupe en fin de parcours en passant son statut à « Terminé ».",
+          "Si des séances ont été annulées, un bandeau rouge affiche les heures manquantes : « Replanifier automatiquement » ajoute des séances de rattrapage à la suite du planning, sur le même rythme.",
         ],
       },
     ],
@@ -234,6 +249,21 @@ export const FAQ: FaqItem[] = [
   {
     q: "Comment préparer un contrôle ou un audit Qualiopi ?",
     a: "Ouvrez la page Qualité : les indicateurs y sont à jour en continu, et le tableau « où sont les preuves » pointe l'écran qui prouve chaque indicateur (assiduité, satisfaction, réclamations, qualifications des formateurs). Complétez avec les PDF du Drive.",
+    roles: TEAM,
+  },
+  {
+    q: "Une séance a été annulée : comment rattraper les heures ?",
+    a: "Ouvrez la fiche du groupe : un bandeau rouge indique les heures manquantes par rapport au volume du dispositif. « Replanifier automatiquement » ajoute des séances de rattrapage à la suite du planning (même rythme, mêmes formateur et salle). En cas de conflit, ajustez ensuite dans le planning.",
+    roles: TEAM,
+  },
+  {
+    q: "Comment clôturer un groupe terminé ?",
+    a: "Fiche du groupe → « Modifier » → statut « Terminé ». Le groupe sort des listes actives mais tout son historique (émargements, assiduité, certificats) reste consultable et exportable.",
+    roles: TEAM,
+  },
+  {
+    q: "L'ERP est-il sauvegardé ?",
+    a: "Oui : chaque dimanche matin, une sauvegarde complète des données (apprenants, séances, émargements, enquêtes…) est déposée automatiquement dans le Drive partagé, dossier « Sauvegardes ». La base Supabase a en plus ses propres sauvegardes.",
     roles: TEAM,
   },
   {

@@ -40,6 +40,17 @@ export async function uploadSheetToDrive(opts: {
   fileName: string;
   pdf: Uint8Array;
 }): Promise<{ link: string | null }> {
+  return uploadBufferToDrive({ ...opts, data: opts.pdf, mimeType: "application/pdf" });
+}
+
+// Upload générique dans le Drive partagé : <racine>/<folderName>/<fileName>,
+// remplacement si le fichier existe déjà.
+export async function uploadBufferToDrive(opts: {
+  folderName: string;
+  fileName: string;
+  data: Uint8Array;
+  mimeType: string;
+}): Promise<{ link: string | null }> {
   const drive = driveClient();
   const rootId = process.env.GDRIVE_EMARGEMENTS_FOLDER_ID!;
   const common = { supportsAllDrives: true, includeItemsFromAllDrives: true };
@@ -60,8 +71,8 @@ export async function uploadSheetToDrive(opts: {
     folderId = created.id!;
   }
 
-  // Même séance redéposée = même nom de fichier → on remplace au lieu de dupliquer.
-  const media = { mimeType: "application/pdf", body: Readable.from(Buffer.from(opts.pdf)) };
+  // Même nom de fichier → on remplace au lieu de dupliquer.
+  const media = { mimeType: opts.mimeType, body: Readable.from(Buffer.from(opts.data)) };
   const { data: existing } = await drive.files.list({
     q: `name = '${escapeQuery(opts.fileName)}' and '${folderId}' in parents and trashed = false`,
     fields: "files(id)",

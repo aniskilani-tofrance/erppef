@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/table";
 import { utcToLocalTime } from "@/lib/dates";
 import { EnrollmentManager } from "@/components/groupes/enrollment-manager";
+import { GroupEditDialog } from "@/components/groupes/group-edit-dialog";
+import { ReplanButton } from "@/components/groupes/replan-button";
 import { SurveyManager } from "@/components/groupes/survey-manager";
 import {
   ABSENCE_ALERT_THRESHOLD,
@@ -25,7 +27,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
   const { role } = await requireSession();
   const supabase = await createClient();
 
-  const [{ data: group }, { data: sessions }, { data: hours }, { data: enrollments }, { data: learners }, { data: attendanceRows }, { data: surveyRows }] =
+  const [{ data: group }, { data: sessions }, { data: hours }, { data: enrollments }, { data: learners }, { data: allFunders }, { data: attendanceRows }, { data: surveyRows }] =
     await Promise.all([
       supabase
         .from("groups")
@@ -44,6 +46,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
         .eq("group_id", id)
         .eq("status", "inscrit"),
       supabase.from("learners").select("id, first_name, last_name").order("last_name"),
+      supabase.from("funders").select("id, name").eq("is_active", true).order("name"),
       supabase
         .from("attendances")
         .select("learner_id, status, sessions!inner(starts_at, ends_at, attendance_closed_at, group_id)")
@@ -120,9 +123,24 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
         {funder && (
           <Badge style={{ backgroundColor: funder.color, color: "white" }}>{funder.name}</Badge>
         )}
-        <Link href="/groupes" className="ml-auto text-sm text-muted-foreground hover:underline">
-          ← Tous les groupes
-        </Link>
+        <span className="ml-auto flex items-center gap-3">
+          {canWrite && (
+            <GroupEditDialog
+              groupId={id}
+              initial={{
+                name: group.name,
+                status: group.status,
+                funderId: group.funder_id,
+                capacity: group.capacity,
+                notes: group.notes,
+              }}
+              funders={allFunders ?? []}
+            />
+          )}
+          <Link href="/groupes" className="text-sm text-muted-foreground hover:underline">
+            ← Tous les groupes
+          </Link>
+        </span>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -159,6 +177,20 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
           </p>
         </CardContent>
       </Card>
+
+      {canWrite && total - scheduled > 0.01 && group.status !== "termine" && group.status !== "annule" && (
+        <Card className="border-destructive/50">
+          <CardContent className="flex flex-wrap items-center gap-3 pt-6">
+            <p className="text-sm">
+              ⚠️ <span className="font-medium">{Math.round((total - scheduled) * 10) / 10} h manquantes</span>{" "}
+              au planning (séances annulées ou volume incomplet) sur les {total} h du dispositif.
+            </p>
+            <span className="ml-auto">
+              <ReplanButton groupId={id} />
+            </span>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">

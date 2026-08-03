@@ -5,6 +5,8 @@ import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { loadEngineData } from "@/lib/engine/loader";
 import { proposeGroupPlan } from "@/lib/engine/propose";
+import { generateSessions } from "@/lib/engine/recurrence";
+import { nextDay, utcToLocalDate } from "@/lib/dates";
 import type { Proposal } from "@/lib/engine/types";
 import { createClient } from "@/lib/supabase/server";
 import { translatePgError } from "@/lib/pg-errors";
@@ -93,6 +95,117 @@ const commitSchema = z.object({
 export type CommitResult = { ok: true; groupId: string } | { ok: false; error: string };
 
 export type SimpleResult = { ok: true } | { ok: false; error: string };
+
+const groupUpdateSchema = z.object({
+  groupId: z.string().uuid(),
+  name: z.string().min(1),
+  status: z.enum(["en_attente", "ouvert", "complet", "termine", "annule"]),
+  funderId: z.string().uuid().nullable(),
+  capacity: z.number().int().positive().nullable(),
+  notes: z.string().nullable(),
+});
+
+// Édition d'un groupe après création : nom, statut (clôture, annulation), financeur,
+// capacité, notes. Les séances ne bougent pas (elles s'éditent dans le planning).
+export async function updateGroup(raw: z.infer<typeof groupUpdateSchema>): Promise<SimpleResult> {
+  const parsed = groupUpdateSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Données invalides" };
+  const d = parsed.data;
+
+  await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("groups")
+    .update({
+      name: d.name,
+      status: d.status,
+      funder_id: d.funderId,
+      capacity: d.capacity,
+      notes: d.notes,
+    })
+    .eq("id", d.groupId);
+  if (error) return { ok: false, error: translatePgError(error) };
+
+  revalidatePath(`/groupes/${d.groupId}`);
+  revalidatePath("/groupes");
+  return { ok: true };
+}
+
+// Replanifie les heures manquantes d'un groupe (séances annulées, volume incomplet) :
+// reprend le motif hebdo du groupe et ajoute des séances À LA SUITE de la dernière
+// séance existante, en sautant les fermetures applicables.
+export async function replanMissingHours(groupId: string): Promise<SimpleResult> {
+  if (!z.string().uuid().safeParse(groupId).success) return { ok: false, error: "Groupe invalide" };
+
+  const { orgId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+
+  const [{ data: group }, { data: hours }, { data: lastSession }] = await Promise.all([
+    supabase.from("groups").select("*").eq("id", groupId).single(),
+    supabase.from("v_group_hours").select("*").eq("group_id", groupId).single(),
+    supabase
+      .from("sessions")
+      .select("starts_at")
+      .eq("group_id", groupId)
+      .neq("status", "annulee")
+      .order("starts_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+  if (!group) return { ok: false, error: "Groupe introuvable" };
+
+  const missing = Number(group.total_hours) - Number(hours?.hours_scheduled ?? 0);
+  if (missing <= 0.01) return { ok: false, error: "Rien à replanifier : le volume d'heures est complet." };
+
+  const pattern = (group.weekly_pattern ?? []) as { weekday: number; start: string; end: string }[];
+  if (!pattern.length) return { ok: false, error: "Ce groupe n'a pas de motif hebdomadaire enregistré." };
+
+  // Reprise le lendemain de la dernière séance planifiée (ou à la date de début du groupe)
+  const startsOn = lastSession
+    ? nextDay(utcToLocalDate(lastSession.starts_at))
+    : group.starts_on;
+
+  const data = await loadEngineData(orgId, startsOn);
+  const closures =
+    group.skip_school_holidays === false
+      ? data.closures.filter((c) => c.kind !== "vacances_scolaires")
+      : data.closures;
+
+  const recurrence = generateSessions({
+    pattern: pattern as Parameters<typeof generateSessions>[0]["pattern"],
+    startsOn,
+    totalHours: missing,
+    closures,
+    tz: data.timezone,
+  });
+  if (!recurrence.sessions.length) return { ok: false, error: "Aucune séance générée : vérifiez le motif hebdo." };
+
+  const { error } = await supabase.from("sessions").insert(
+    recurrence.sessions.map((s) => ({
+      org_id: orgId,
+      group_id: groupId,
+      trainer_id: group.trainer_id,
+      room_id: group.room_id,
+      starts_at: s.startsAt,
+      ends_at: s.endsAt,
+      generated: true,
+    })),
+  );
+  if (error) {
+    return {
+      ok: false,
+      error: `Conflit lors de la replanification (${translatePgError(error)}). Ajustez le planning à la main ou changez de salle/formateur.`,
+    };
+  }
+
+  const lastDate = recurrence.sessions[recurrence.sessions.length - 1].localDate;
+  await supabase.from("groups").update({ ends_on: lastDate }).eq("id", groupId);
+
+  revalidatePath(`/groupes/${groupId}`);
+  revalidatePath("/planning");
+  return { ok: true };
+}
 
 // Ouvre (ou régénère) l'enquête de satisfaction anonyme du groupe.
 export async function openSurvey(groupId: string): Promise<SimpleResult> {
