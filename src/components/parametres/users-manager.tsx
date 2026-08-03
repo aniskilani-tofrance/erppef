@@ -2,13 +2,22 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { UserPlus } from "lucide-react";
-import { inviteMember, updateMemberRole } from "@/app/(app)/parametres/actions";
+import { MoreHorizontal, UserPlus } from "lucide-react";
+import {
+  inviteMember,
+  removeMember,
+  renameMember,
+  sendPasswordLink,
+  updateMemberRole,
+} from "@/app/(app)/parametres/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -22,6 +31,7 @@ export type Member = {
   role: "admin" | "coordinator" | "trainer" | "viewer";
   isSelf: boolean;
   trainerLinked: boolean;
+  lastSignInAt: string | null; // null = jamais connecté
 };
 
 const ROLES = [
@@ -31,17 +41,30 @@ const ROLES = [
   { value: "viewer", label: "Lecture seule" },
 ] as const;
 
+function lastSeen(iso: string): string {
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+  if (days === 0) return "aujourd'hui";
+  if (days === 1) return "hier";
+  if (days < 30) return `il y a ${days} j`;
+  return new Date(iso).toLocaleDateString("fr-FR");
+}
+
 export function UsersManager({ members }: { members: Member[] }) {
   const [pending, startTransition] = useTransition();
+  const [renaming, setRenaming] = useState<Member | null>(null);
+  const [removing, setRemoving] = useState<Member | null>(null);
+  const [newName, setNewName] = useState("");
 
-  function changeRole(membershipId: string, role: Member["role"]) {
+  function run(action: () => Promise<{ ok: true } | { ok: false; error: string }>, success: string) {
     startTransition(async () => {
-      const result = await updateMemberRole({ membershipId, role });
+      const result = await action();
       if (!result.ok) {
         toast.error(result.error);
         return;
       }
-      toast.success("Rôle mis à jour. Il s'appliquera à sa prochaine connexion.");
+      toast.success(success);
+      setRenaming(null);
+      setRemoving(null);
     });
   }
 
@@ -55,16 +78,27 @@ export function UsersManager({ members }: { members: Member[] }) {
                 {m.name}
                 {m.isSelf && <span className="ml-2 text-xs text-muted-foreground">(vous)</span>}
               </p>
-              {m.email && <p className="truncate text-xs text-muted-foreground">{m.email}</p>}
+              <p className="truncate text-xs text-muted-foreground">
+                {m.email ?? "—"}
+                {m.lastSignInAt
+                  ? ` · vu ${lastSeen(m.lastSignInAt)}`
+                  : ""}
+              </p>
             </div>
-            {m.trainerLinked && <Badge variant="outline">Fiche formateur liée</Badge>}
-            <div className="ml-auto">
+            {!m.lastSignInAt && <Badge variant="outline">Jamais connecté</Badge>}
+            {m.trainerLinked && <Badge variant="outline">Fiche formateur</Badge>}
+            <div className="ml-auto flex items-center gap-1">
               <Select
                 value={m.role}
-                onValueChange={(v) => changeRole(m.membershipId, v as Member["role"])}
+                onValueChange={(v) =>
+                  run(
+                    () => updateMemberRole({ membershipId: m.membershipId, role: v as Member["role"] }),
+                    "Rôle mis à jour. Il s'appliquera à sa prochaine connexion.",
+                  )
+                }
                 disabled={pending || m.isSelf}
               >
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-36">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -73,6 +107,40 @@ export function UsersManager({ members }: { members: Member[] }) {
                   ))}
                 </SelectContent>
               </Select>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" disabled={pending}>
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() =>
+                      run(
+                        () => sendPasswordLink(m.membershipId),
+                        m.lastSignInAt
+                          ? `Lien de réinitialisation envoyé à ${m.email}.`
+                          : `Invitation renvoyée à ${m.email}.`,
+                      )
+                    }
+                  >
+                    {m.lastSignInAt ? "Envoyer un lien de réinitialisation" : "Renvoyer l'invitation"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setNewName(m.name);
+                      setRenaming(m);
+                    }}
+                  >
+                    Renommer
+                  </DropdownMenuItem>
+                  {!m.isSelf && (
+                    <DropdownMenuItem className="text-destructive" onClick={() => setRemoving(m)}>
+                      Retirer l&apos;accès
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </li>
         ))}
@@ -82,6 +150,60 @@ export function UsersManager({ members }: { members: Member[] }) {
         L&apos;invité reçoit un email avec un lien pour définir son mot de passe. Un changement
         de rôle prend effet à la prochaine connexion de l&apos;utilisateur.
       </p>
+
+      {/* Renommer */}
+      <Dialog open={renaming !== null} onOpenChange={(o) => !o && setRenaming(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Renommer l&apos;utilisateur</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input value={newName} onChange={(e) => setNewName(e.target.value)} />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setRenaming(null)} disabled={pending}>Annuler</Button>
+              <Button
+                disabled={pending || !newName.trim()}
+                onClick={() =>
+                  run(
+                    () => renameMember({ membershipId: renaming!.membershipId, fullName: newName }),
+                    "Nom mis à jour.",
+                  )
+                }
+              >
+                Enregistrer
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Retirer l'accès */}
+      <Dialog open={removing !== null} onOpenChange={(o) => !o && setRemoving(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Retirer l&apos;accès de {removing?.name} ?</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              La personne ne pourra plus se connecter à l&apos;ERP. Sa fiche formateur, ses
+              séances passées et ses émargements sont conservés. Vous pourrez la réinviter
+              plus tard si besoin.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setRemoving(null)} disabled={pending}>Annuler</Button>
+              <Button
+                variant="destructive"
+                disabled={pending}
+                onClick={() =>
+                  run(() => removeMember(removing!.membershipId), "Accès retiré.")
+                }
+              >
+                Retirer l&apos;accès
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

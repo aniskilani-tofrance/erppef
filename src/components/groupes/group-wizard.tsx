@@ -24,10 +24,37 @@ type Program = {
   default_weekly_hours: number | null;
   default_funder_id: string | null;
   level: string | null;
+  preferred_trainer_id?: string | null;
 };
 type Funder = { id: string; name: string; color: string };
+type Option = { id: string; name: string };
 
-export function GroupWizard({ programs, funders }: { programs: Program[]; funders: Funder[] }) {
+// Calendriers type : le cadrage (rythme × jours) génère le motif hebdo
+// à l'intérieur des fenêtres d'ouverture (9h-12h / 13h-20h).
+const RHYTHMS = [
+  { key: "matins", label: "Matins (9h-12h)", slots: [{ start: "09:00", end: "12:00" }] },
+  { key: "apres-midis", label: "Après-midis (13h-16h)", slots: [{ start: "13:00", end: "16:00" }] },
+  { key: "journees", label: "Journées (9h-12h et 13h-16h)", slots: [{ start: "09:00", end: "12:00" }, { start: "13:00", end: "16:00" }] },
+  { key: "custom", label: "Personnalisé", slots: [] },
+] as const;
+type RhythmKey = (typeof RHYTHMS)[number]["key"];
+
+const WEEKDAYS = [
+  { value: 1, label: "Lun" }, { value: 2, label: "Mar" }, { value: 3, label: "Mer" },
+  { value: 4, label: "Jeu" }, { value: 5, label: "Ven" }, { value: 6, label: "Sam" },
+] as const;
+
+export function GroupWizard({
+  programs,
+  funders,
+  trainers = [],
+  rooms = [],
+}: {
+  programs: Program[];
+  funders: Funder[];
+  trainers?: Option[];
+  rooms?: Option[];
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
@@ -37,7 +64,11 @@ export function GroupWizard({ programs, funders }: { programs: Program[]; funder
   const [startsOn, setStartsOn] = useState("");
   const [headcount, setHeadcount] = useState("");
   const [skipHolidays, setSkipHolidays] = useState(true);
-  // null = créneaux automatiques (matinées 9h-12h puis après-midis 13h-16h)
+  const [rhythm, setRhythm] = useState<RhythmKey | "auto">("auto");
+  const [days, setDays] = useState<number[]>([1, 2, 3, 4, 5]);
+  const [preferredTrainerId, setPreferredTrainerId] = useState("auto");
+  const [preferredRoomId, setPreferredRoomId] = useState("auto");
+  // Créneaux personnalisés (rhythm === "custom")
   const [customSlots, setCustomSlots] = useState<SlotPattern[] | null>(null);
   const [proposal, setProposal] = useState<Proposal | null>(null);
 
@@ -48,6 +79,7 @@ export function GroupWizard({ programs, funders }: { programs: Program[]; funder
     const p = programs.find((x) => x.id === id);
     if (p) {
       if (p.default_funder_id) setFunderId(p.default_funder_id);
+      if (p.preferred_trainer_id) setPreferredTrainerId(p.preferred_trainer_id);
       if (!name) {
         const month = new Date().toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
         setName(`${p.name} — ${month.charAt(0).toUpperCase()}${month.slice(1)}`);
@@ -60,9 +92,25 @@ export function GroupWizard({ programs, funders }: { programs: Program[]; funder
       toast.error("Choisissez un dispositif et une date de début.");
       return;
     }
-    if (customSlots?.some((s) => s.end <= s.start)) {
+    if (rhythm === "custom" && customSlots?.some((s) => s.end <= s.start)) {
       toast.error("Un créneau se termine avant de commencer : corrigez les horaires.");
       return;
+    }
+    // Motif hebdo issu du cadrage : rythme × jours retenus (ordre chronologique)
+    let weeklyPattern: SlotPattern[] | undefined;
+    if (rhythm === "custom") {
+      weeklyPattern = customSlots?.length ? customSlots : undefined;
+    } else if (rhythm !== "auto") {
+      const def = RHYTHMS.find((r) => r.key === rhythm)!;
+      weeklyPattern = days
+        .sort((a, b) => a - b)
+        .flatMap((d) =>
+          def.slots.map((slot) => ({ weekday: d as SlotPattern["weekday"], start: slot.start, end: slot.end })),
+        );
+      if (!weeklyPattern.length) {
+        toast.error("Choisissez au moins un jour de cours.");
+        return;
+      }
     }
     startTransition(async () => {
       const result = await proposePlan({
@@ -70,7 +118,9 @@ export function GroupWizard({ programs, funders }: { programs: Program[]; funder
         startsOn,
         expectedHeadcount: headcount ? Number(headcount) : undefined,
         skipSchoolHolidays: skipHolidays,
-        weeklyPattern: customSlots?.length ? customSlots : undefined,
+        weeklyPattern,
+        preferredTrainerId: preferredTrainerId !== "auto" ? preferredTrainerId : undefined,
+        preferredRoomId: preferredRoomId !== "auto" ? preferredRoomId : undefined,
       });
       if (!result.ok) {
         toast.error(result.error);
@@ -176,30 +226,57 @@ export function GroupWizard({ programs, funders }: { programs: Program[]; funder
           </div>
         </div>
 
-        <div className="space-y-1">
-          <label className="flex items-center gap-2 text-sm">
-            <Checkbox
-              checked={customSlots !== null}
-              onCheckedChange={(c) =>
-                setCustomSlots(c === true ? [{ weekday: 1, start: "09:00", end: "12:00" }] : null)
-              }
-            />
-            Définir les créneaux hebdomadaires manuellement
-          </label>
-          <p className="pl-6 text-xs text-muted-foreground">
-            {customSlots
-              ? "Horaires d'ouverture : 9h-12h et 13h-20h. Un créneau en dehors sera signalé."
-              : "Sinon : matinées 9h-12h puis après-midis 13h-16h, selon le rythme du dispositif."}
-          </p>
-          {customSlots && (
-            <div className="space-y-2 pl-6 pt-2">
-              {customSlots.map((slot, i) => (
+        <div className="space-y-3 rounded-md border p-4">
+          <p className="text-sm font-medium">Cadrage du calendrier</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Rythme</Label>
+              <Select value={rhythm} onValueChange={(v) => setRhythm(v as typeof rhythm)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="auto">Automatique (selon le dispositif)</SelectItem>
+                  {RHYTHMS.map((r) => (
+                    <SelectItem key={r.key} value={r.key}>{r.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {rhythm !== "auto" && rhythm !== "custom" && (
+              <div className="space-y-2">
+                <Label>Jours de cours</Label>
+                <div className="flex flex-wrap gap-3 pt-1">
+                  {WEEKDAYS.map((d) => (
+                    <label key={d.value} className="flex items-center gap-1.5 text-sm">
+                      <Checkbox
+                        checked={days.includes(d.value)}
+                        onCheckedChange={(c) =>
+                          setDays((prev) =>
+                            c === true ? [...prev, d.value] : prev.filter((x) => x !== d.value),
+                          )
+                        }
+                      />
+                      {d.label}
+                    </label>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Décochez un jour pour limiter les déplacements des apprenants.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {rhythm === "custom" && (
+            <div className="space-y-2 pt-1">
+              {(customSlots ?? []).map((slot, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <Select
                     value={String(slot.weekday)}
                     onValueChange={(v) =>
                       setCustomSlots((s) =>
-                        s!.map((x, j) => (j === i ? { ...x, weekday: Number(v) as SlotPattern["weekday"] } : x)),
+                        (s ?? []).map((x, j) => (j === i ? { ...x, weekday: Number(v) as SlotPattern["weekday"] } : x)),
                       )
                     }
                   >
@@ -215,19 +292,19 @@ export function GroupWizard({ programs, funders }: { programs: Program[]; funder
                   <Input
                     type="time" className="w-28" value={slot.start} step={900}
                     onChange={(e) =>
-                      setCustomSlots((s) => s!.map((x, j) => (j === i ? { ...x, start: e.target.value } : x)))
+                      setCustomSlots((s) => (s ?? []).map((x, j) => (j === i ? { ...x, start: e.target.value } : x)))
                     }
                   />
                   <span className="text-sm text-muted-foreground">→</span>
                   <Input
                     type="time" className="w-28" value={slot.end} step={900}
                     onChange={(e) =>
-                      setCustomSlots((s) => s!.map((x, j) => (j === i ? { ...x, end: e.target.value } : x)))
+                      setCustomSlots((s) => (s ?? []).map((x, j) => (j === i ? { ...x, end: e.target.value } : x)))
                     }
                   />
                   <Button
                     variant="ghost" size="icon" className="h-8 w-8"
-                    onClick={() => setCustomSlots((s) => s!.filter((_, j) => j !== i))}
+                    onClick={() => setCustomSlots((s) => (s ?? []).filter((_, j) => j !== i))}
                   >
                     <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
                   </Button>
@@ -236,14 +313,53 @@ export function GroupWizard({ programs, funders }: { programs: Program[]; funder
               <Button
                 variant="outline" size="sm"
                 onClick={() =>
-                  setCustomSlots((s) => [...(s ?? []), { weekday: 1, start: "13:00", end: "16:00" }])
+                  setCustomSlots((s) => [...(s ?? []), { weekday: 1, start: "09:00", end: "12:00" }])
                 }
               >
                 <Plus className="mr-2 h-3.5 w-3.5" />
                 Ajouter un créneau
               </Button>
+              <p className="text-xs text-muted-foreground">
+                Horaires d'ouverture : 9h-12h et 13h-20h. Un créneau en dehors sera signalé.
+              </p>
             </div>
           )}
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Formateur à privilégier</Label>
+              <Select value={preferredTrainerId} onValueChange={setPreferredTrainerId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="auto">Laisser le moteur choisir</SelectItem>
+                  {trainers.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Salle à privilégier</Label>
+              <Select value={preferredRoomId} onValueChange={setPreferredRoomId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="auto">Laisser le moteur choisir</SelectItem>
+                  {rooms.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Ces préférences guident le moteur sans le contraindre : s'il ne peut pas les
+            respecter (conflit, indisponibilité), il propose la meilleure alternative en
+            expliquant pourquoi.
+          </p>
         </div>
 
         <div className="space-y-1">

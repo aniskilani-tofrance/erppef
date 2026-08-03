@@ -32,6 +32,99 @@ export async function inviteMember(raw: z.infer<typeof inviteSchema>): Promise<A
   return { ok: true };
 }
 
+// Retrouve l'email auth d'un membership de l'org (les emails vivent dans auth.users).
+async function findMemberEmail(membershipId: string, orgId: string) {
+  const admin = createAdminClient();
+  const { data: membership } = await admin
+    .from("memberships")
+    .select("id, user_id, role")
+    .eq("id", membershipId)
+    .eq("org_id", orgId)
+    .single();
+  if (!membership) return null;
+  const { data } = await admin.auth.admin.getUserById(membership.user_id);
+  return data?.user?.email ? { membership, email: data.user.email } : null;
+}
+
+// Renvoie un lien « définir mon mot de passe » (sert de renvoi d'invitation pour un
+// compte jamais connecté, et de réinitialisation déclenchée par l'admin sinon).
+export async function sendPasswordLink(membershipId: string): Promise<ActionResult> {
+  if (!z.string().uuid().safeParse(membershipId).success) return { ok: false, error: "Utilisateur invalide" };
+
+  const { orgId } = await requireRole(["admin"]);
+  const found = await findMemberEmail(membershipId, orgId);
+  if (!found) return { ok: false, error: "Utilisateur introuvable" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(found.email, {
+    redirectTo: "https://pef-erp.vercel.app/auth/bienvenue?mode=reset",
+  });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+// Retire l'accès à l'ERP : supprime le membership (le compte auth subsiste mais,
+// sans organisation, il ne peut plus rien voir). La fiche formateur éventuelle reste.
+export async function removeMember(membershipId: string): Promise<ActionResult> {
+  if (!z.string().uuid().safeParse(membershipId).success) return { ok: false, error: "Utilisateur invalide" };
+
+  const { orgId, userId } = await requireRole(["admin"]);
+  const admin = createAdminClient();
+
+  const { data: membership } = await admin
+    .from("memberships")
+    .select("id, user_id, role")
+    .eq("id", membershipId)
+    .eq("org_id", orgId)
+    .single();
+  if (!membership) return { ok: false, error: "Utilisateur introuvable" };
+  if (membership.user_id === userId) return { ok: false, error: "Vous ne pouvez pas retirer votre propre accès." };
+  if (membership.role === "admin") {
+    const { count } = await admin
+      .from("memberships")
+      .select("id", { count: "exact", head: true })
+      .eq("org_id", orgId)
+      .eq("role", "admin");
+    if ((count ?? 0) <= 1) return { ok: false, error: "Impossible : ce serait le dernier administrateur." };
+  }
+
+  const { error } = await admin.from("memberships").delete().eq("id", membershipId);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/parametres");
+  return { ok: true };
+}
+
+const renameSchema = z.object({
+  membershipId: z.string().uuid(),
+  fullName: z.string().min(1).max(120),
+});
+
+export async function renameMember(raw: z.infer<typeof renameSchema>): Promise<ActionResult> {
+  const parsed = renameSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Nom invalide" };
+
+  const { orgId } = await requireRole(["admin"]);
+  const admin = createAdminClient();
+
+  const { data: membership } = await admin
+    .from("memberships")
+    .select("user_id")
+    .eq("id", parsed.data.membershipId)
+    .eq("org_id", orgId)
+    .single();
+  if (!membership) return { ok: false, error: "Utilisateur introuvable" };
+
+  const { error } = await admin
+    .from("profiles")
+    .update({ full_name: parsed.data.fullName.trim() })
+    .eq("id", membership.user_id);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/parametres");
+  return { ok: true };
+}
+
 const roleSchema = z.object({
   membershipId: z.string().uuid(),
   role: z.enum(["admin", "coordinator", "trainer", "viewer"]),
@@ -100,6 +193,7 @@ const programSchema = z.object({
   defaultFunderId: z.string().uuid().nullable(),
   entryLevel: z.string().nullable(),
   level: z.string().nullable(), // niveau visé (sortie)
+  preferredTrainerId: z.string().uuid().nullable(),
   modality: z.enum(["presentiel", "distanciel", "hybride"]),
   isActive: z.boolean(),
 });
@@ -121,6 +215,7 @@ export async function upsertProgram(raw: z.infer<typeof programSchema>): Promise
     default_funder_id: d.defaultFunderId,
     entry_level: d.entryLevel,
     level: d.level,
+    preferred_trainer_id: d.preferredTrainerId,
     modality: d.modality,
     is_active: d.isActive,
   };

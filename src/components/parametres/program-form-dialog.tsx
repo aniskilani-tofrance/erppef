@@ -24,6 +24,7 @@ export type ProgramFormValues = {
   defaultFunderId: string;
   entryLevel: string;
   level: string;
+  preferredTrainerId: string;
   modality: "presentiel" | "distanciel" | "hybride";
   isActive: boolean;
 };
@@ -36,6 +37,7 @@ const EMPTY: ProgramFormValues = {
   defaultFunderId: "none",
   entryLevel: "none",
   level: "",
+  preferredTrainerId: "none",
   modality: "presentiel",
   isActive: true,
 };
@@ -51,9 +53,11 @@ function nextLevel(level: string): string {
 export function ProgramFormDialog({
   initial,
   funders,
+  trainers = [],
 }: {
   initial?: ProgramFormValues;
   funders: { id: string; name: string }[];
+  trainers?: { id: string; name: string }[];
 }) {
   const [open, setOpen] = useState(false);
   const [values, setValues] = useState<ProgramFormValues>(initial ?? EMPTY);
@@ -74,6 +78,7 @@ export function ProgramFormDialog({
         defaultWeeklyHours: values.defaultWeeklyHours ? Number(values.defaultWeeklyHours) : null,
         defaultFunderId: values.defaultFunderId === "none" ? null : values.defaultFunderId,
         entryLevel: values.entryLevel === "none" || !values.entryLevel ? null : values.entryLevel,
+        preferredTrainerId: values.preferredTrainerId === "none" ? null : values.preferredTrainerId,
         level: values.level === "none" || !values.level ? null : values.level,
         modality: values.modality,
         isActive: values.isActive,
@@ -181,6 +186,23 @@ export function ProgramFormDialog({
                 </SelectContent>
               </Select>
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Formateur à privilégier</Label>
+            <Select value={values.preferredTrainerId} onValueChange={(v) => set("preferredTrainerId", v)}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Aucun (le moteur choisit)</SelectItem>
+                {trainers.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Prérempli à la création d&apos;un groupe sur ce dispositif.
+            </p>
           </div>
           <div className="space-y-2">
             <Label>Financeur par défaut</Label>

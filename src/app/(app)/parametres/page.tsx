@@ -17,13 +17,14 @@ export default async function ParametresPage() {
   const { orgId, userId } = await requireRole(["admin"]);
   const supabase = await createClient();
 
-  const [{ data: org }, { data: funders }, { data: programs }, { data: members }, { data: groupRefs }, { data: closures }] =
+  const [{ data: org }, { data: funders }, { data: programs }, { data: members }, { data: groupRefs }, { data: trainersData }, { data: closures }] =
     await Promise.all([
       supabase.from("organizations").select("*").single(),
       supabase.from("funders").select("*").order("name"),
       supabase.from("programs").select("*, funders(name)").order("name"),
       supabase.from("memberships").select("id, user_id, role, trainer_id, profiles(full_name)"),
       supabase.from("groups").select("program_id"),
+      supabase.from("trainers").select("id, first_name, last_name").eq("is_active", true).order("priority"),
       supabase
         .from("calendar_closures")
         .select("id, label, starts_on, ends_on")
@@ -32,22 +33,26 @@ export default async function ParametresPage() {
         .order("starts_on"),
     ]);
 
-  // Les emails vivent dans auth.users : accessibles via l'API admin uniquement (page admin).
+  // Les emails et dates de connexion vivent dans auth.users (API admin, page admin).
   const { data: authUsers } = await createAdminClient().auth.admin.listUsers({ page: 1, perPage: 1000 });
-  const emailById = new Map((authUsers?.users ?? []).map((u) => [u.id, u.email ?? null]));
+  const authById = new Map(
+    (authUsers?.users ?? []).map((u) => [u.id, { email: u.email ?? null, lastSignInAt: u.last_sign_in_at ?? null }]),
+  );
 
   const memberRows = (members ?? [])
     .map((m) => ({
       membershipId: m.id,
       name: (m.profiles as unknown as { full_name: string } | null)?.full_name ?? "—",
-      email: emailById.get(m.user_id) ?? null,
+      email: authById.get(m.user_id)?.email ?? null,
       role: m.role as "admin" | "coordinator" | "trainer" | "viewer",
       isSelf: m.user_id === userId,
       trainerLinked: Boolean(m.trainer_id),
+      lastSignInAt: authById.get(m.user_id)?.lastSignInAt ?? null,
     }))
     .sort((a, b) => a.name.localeCompare(b.name, "fr"));
 
   const funderOptions = (funders ?? []).map((f) => ({ id: f.id, name: f.name }));
+  const trainerOptions = (trainersData ?? []).map((t) => ({ id: t.id, name: `${t.first_name} ${t.last_name ?? ""}`.trim() }));
   const groupCountByProgram = new Map<string, number>();
   for (const g of groupRefs ?? []) {
     groupCountByProgram.set(g.program_id, (groupCountByProgram.get(g.program_id) ?? 0) + 1);
@@ -92,7 +97,7 @@ export default async function ParametresPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base">Catalogue des dispositifs</CardTitle>
-          <ProgramFormDialog funders={funderOptions} />
+          <ProgramFormDialog funders={funderOptions} trainers={trainerOptions} />
         </CardHeader>
         <CardContent>
           <Table>
@@ -126,6 +131,7 @@ export default async function ParametresPage() {
                   <TableCell>
                     <ProgramFormDialog
                       funders={funderOptions}
+                      trainers={trainerOptions}
                       initial={{
                         id: p.id,
                         code: p.code,
@@ -135,6 +141,7 @@ export default async function ParametresPage() {
                         defaultFunderId: p.default_funder_id ?? "none",
                         entryLevel: p.entry_level ?? "none",
                         level: p.level ?? "none",
+                        preferredTrainerId: p.preferred_trainer_id ?? "none",
                         modality: p.modality,
                         isActive: p.is_active,
                       }}
