@@ -75,8 +75,8 @@ export const TRAINING_MODULES: TrainingModule[] = [
     quiz: [
       {
         question: "Où retrouvez-vous vos séances du jour en un coup d'œil ?",
-        choices: ["Dans le menu Planning uniquement", "Sur mon Dashboard, dès la connexion", "En demandant au coordinateur"],
-        answerIndex: 1,
+        choices: ["Sur mon Dashboard, dès la connexion", "Dans le menu Planning uniquement", "En demandant au coordinateur"],
+        answerIndex: 0,
         explanation: "Le Dashboard du formateur affiche directement vos séances du jour avec le bouton Émargement.",
       },
       {
@@ -87,8 +87,8 @@ export const TRAINING_MODULES: TrainingModule[] = [
       },
       {
         question: "Comment changer votre mot de passe quand vous êtes connecté(e) ?",
-        choices: ["Menu « Mon compte » en bas à gauche", "Impossible, il faut demander à l'admin", "En se réinscrivant"],
-        answerIndex: 0,
+        choices: ["Impossible, il faut demander à l'admin", "En se réinscrivant", "Menu « Mon compte » en bas à gauche"],
+        answerIndex: 2,
         explanation: "« Mon compte » permet de changer son mot de passe à tout moment (l'actuel est demandé par sécurité).",
       },
     ],
@@ -148,14 +148,14 @@ export const TRAINING_MODULES: TrainingModule[] = [
     quiz: [
       {
         question: "Que deviennent les inscrits qui n'ont ni signé ni reçu de statut au moment de la clôture ?",
-        choices: ["Ils restent « en attente »", "Ils sont marqués absents automatiquement", "La clôture est bloquée"],
-        answerIndex: 1,
+        choices: ["Ils restent « en attente »", "La clôture est bloquée", "Ils sont marqués absents automatiquement"],
+        answerIndex: 2,
         explanation: "La clôture complète la feuille : les non-signés sans statut deviennent absents — la feuille est toujours complète.",
       },
       {
         question: "Un apprenant arrive 40 minutes en retard. Que faites-vous ?",
-        choices: ["Il ne peut plus signer", "Il signe à son arrivée et vous posez le statut « Retard »", "Vous signez à sa place"],
-        answerIndex: 1,
+        choices: ["Il signe à son arrivée et vous posez le statut « Retard »", "Il ne peut plus signer", "Vous signez à sa place"],
+        answerIndex: 0,
         explanation: "Le lien reste actif jusqu'à la clôture. On ne signe JAMAIS à la place d'un apprenant.",
       },
       {
@@ -208,8 +208,8 @@ export const TRAINING_MODULES: TrainingModule[] = [
     quiz: [
       {
         question: "Vous êtes malade demain matin. Quel est le bon réflexe ?",
-        choices: ["Annuler la séance moi-même dans l'ERP", "Prévenir le coordinateur au plus tôt", "Ne rien faire, l'ERP le détectera"],
-        answerIndex: 1,
+        choices: ["Annuler la séance moi-même dans l'ERP", "Ne rien faire, l'ERP le détectera", "Prévenir le coordinateur au plus tôt"],
+        answerIndex: 2,
         explanation: "C'est le coordinateur qui gère le planning (annulation, remplacement, rattrapage) : prévenez-le dès que possible.",
       },
       {
@@ -259,8 +259,8 @@ export const TRAINING_MODULES: TrainingModule[] = [
     quiz: [
       {
         question: "Que se passe-t-il si vous déplacez une séance sur un créneau où la salle est déjà prise ?",
-        choices: ["Les deux séances cohabitent", "L'ERP refuse le déplacement et explique le conflit", "La première séance est écrasée"],
-        answerIndex: 1,
+        choices: ["L'ERP refuse le déplacement et explique le conflit", "Les deux séances cohabitent", "La première séance est écrasée"],
+        answerIndex: 0,
         explanation: "La base de données elle-même interdit les conflits : la séance revient à sa place avec un message explicite.",
       },
       {
@@ -310,8 +310,8 @@ export const TRAINING_MODULES: TrainingModule[] = [
     quiz: [
       {
         question: "Vous choisissez « A2 » comme niveau de base d'un dispositif. Que fait l'ERP ?",
-        choices: ["Rien de plus", "Il propose automatiquement « B1 » comme niveau visé", "Il refuse sans niveau visé saisi"],
-        answerIndex: 1,
+        choices: ["Rien de plus", "Il refuse sans niveau visé saisi", "Il propose automatiquement « B1 » comme niveau visé"],
+        answerIndex: 2,
         explanation: "Le niveau visé se préremplit avec le niveau CECRL suivant — modifiable si votre formation vise plus loin.",
       },
       {
@@ -322,8 +322,8 @@ export const TRAINING_MODULES: TrainingModule[] = [
       },
       {
         question: "Pourquoi ne peut-on pas supprimer un dispositif déjà utilisé par des groupes ?",
-        choices: ["Un bug connu", "Pour préserver l'historique légal (séances, émargements)", "Il faut être administrateur"],
-        answerIndex: 1,
+        choices: ["Pour préserver l'historique légal (séances, émargements)", "Un bug connu", "Il faut être administrateur"],
+        answerIndex: 0,
         explanation: "Les émargements sont un registre légal : on désactive le dispositif (il disparaît des nouveaux groupes), on ne détruit jamais l'historique.",
       },
     ],
@@ -356,6 +356,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
         steps: [
           "Un par un : « Nouvel apprenant » — photo à la caméra, langue première, niveau évalué (positionnement d'entrée, ind. 8), et inscription immédiate à un groupe.",
           "En masse : « Importer une liste » — collez les colonnes depuis Excel (Prénom;Nom;Téléphone;Email;Langue;Niveau), aperçu, et inscription groupée. Une cohorte de 12 en 30 secondes.",
+          "Sans niveau renseigné, un test de positionnement est généré automatiquement : copiez son lien depuis la liste et envoyez-le à l'apprenant — son niveau remplira sa fiche tout seul (« Test fait »).",
           "La colonne Assiduité de la liste se remplit toute seule au fil des émargements.",
         ],
         practice: {
@@ -374,8 +375,8 @@ export const TRAINING_MODULES: TrainingModule[] = [
       },
       {
         question: "Comment inscrire 12 nouveaux apprenants le jour de la rentrée ?",
-        choices: ["Fiche par fiche obligatoirement", "« Importer une liste » : coller le tableau Excel + inscription groupée", "Demander au formateur"],
-        answerIndex: 1,
+        choices: ["Fiche par fiche obligatoirement", "Demander au formateur", "« Importer une liste » : coller le tableau Excel + inscription groupée"],
+        answerIndex: 2,
         explanation: "L'import CSV crée les fiches et inscrit tout le monde dans le groupe choisi, en une seule opération.",
       },
     ],
@@ -430,17 +431,17 @@ export const TRAINING_MODULES: TrainingModule[] = [
       {
         question: "Un groupe de salariés doit avoir cours uniquement mardi et jeudi après le travail. Quel cadrage ?",
         choices: [
-          "Impossible dans l'ERP",
           "Rythme « Personnalisé » avec des créneaux mardi/jeudi en fin de journée (dans le cadre 13h-20h)",
+          "Impossible dans l'ERP",
           "Créer deux groupes",
         ],
-        answerIndex: 1,
+        answerIndex: 0,
         explanation: "Le rythme Personnalisé accepte n'importe quels créneaux dans les fenêtres d'ouverture — ex. mardi et jeudi 18h-20h.",
       },
       {
         question: "Valider la proposition d'un groupe crée…",
-        choices: ["Uniquement le groupe, les séances restent à créer", "Le groupe ET toutes ses séances, salle réservée et formateur affecté", "Un brouillon"],
-        answerIndex: 1,
+        choices: ["Uniquement le groupe, les séances restent à créer", "Un brouillon", "Le groupe ET toutes ses séances, salle réservée et formateur affecté"],
+        answerIndex: 2,
         explanation: "La validation est transactionnelle : tout est créé d'un coup, ou rien (en cas de conflit apparu entre-temps).",
       },
     ],
@@ -508,20 +509,20 @@ export const TRAINING_MODULES: TrainingModule[] = [
         question: "France Travail demande la preuve d'assiduité d'un stagiaire. Vous produisez…",
         choices: [
           "Une attestation sur l'honneur",
-          "Le certificat de réalisation + l'export d'assiduité, générés depuis les émargements signés",
           "Une capture d'écran du planning",
+          "Le certificat de réalisation + l'export d'assiduité, générés depuis les émargements signés",
         ],
-        answerIndex: 1,
+        answerIndex: 2,
         explanation: "Ces documents sont calculés depuis les signatures horodatées : c'est la preuve la plus solide possible.",
       },
       {
         question: "Un apprenant apparaît en rouge sur le Dashboard avec « 62 % de présence ». Le bon réflexe ?",
         choices: [
-          "Le désinscrire",
           "Le contacter rapidement et tracer l'action (risque de décrochage, ind. 12 Qualiopi)",
+          "Le désinscrire",
           "Attendre la fin du parcours",
         ],
-        answerIndex: 1,
+        answerIndex: 0,
         explanation: "L'alerte sert à agir tôt : un appel tracé dans sa fiche est à la fois la bonne pratique pédagogique et la preuve du suivi.",
       },
     ],

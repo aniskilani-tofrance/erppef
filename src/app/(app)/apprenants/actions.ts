@@ -8,6 +8,17 @@ import { translatePgError } from "@/lib/pg-errors";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
+// Crée un test de positionnement en attente pour l'apprenant (tolérant si la
+// table n'est pas encore migrée : la création d'apprenant ne doit jamais échouer).
+async function createTestFor(orgId: string, learnerIds: string[]): Promise<void> {
+  if (!learnerIds.length) return;
+  const supabase = await createClient();
+  await supabase
+    .from("placement_tests")
+    .insert(learnerIds.map((id) => ({ org_id: orgId, learner_id: id })))
+    .then(() => undefined, () => undefined);
+}
+
 const learnerSchema = z.object({
   id: z.string().uuid().optional(),
   photoUrl: z.string().url().nullable(),
@@ -50,6 +61,9 @@ export async function upsertLearner(raw: z.infer<typeof learnerSchema>): Promise
   } else {
     const { data: created, error } = await supabase.from("learners").insert(row).select("id").single();
     if (error) return { ok: false, error: translatePgError(error) };
+
+    // Pas de niveau connu → test de positionnement généré automatiquement.
+    if (!d.levelAssessed) await createTestFor(orgId, [created.id]);
 
     if (d.enrollGroupId) {
       const { error: enrollError } = await supabase
@@ -111,6 +125,11 @@ export async function importLearners(raw: z.infer<typeof importSchema>): Promise
     .select("id");
   if (error) return { ok: false, error: translatePgError(error) };
 
+  const withoutLevel = (created ?? [])
+    .filter((_, i) => !d.rows[i].levelAssessed)
+    .map((c) => c.id);
+  await createTestFor(orgId, withoutLevel);
+
   let enrolled = 0;
   if (d.enrollGroupId && created?.length) {
     const { error: enrollError } = await supabase.from("enrollments").insert(
@@ -125,6 +144,24 @@ export async function importLearners(raw: z.infer<typeof importSchema>): Promise
   revalidatePath("/apprenants");
   if (d.enrollGroupId) revalidatePath(`/groupes/${d.enrollGroupId}`);
   return { ok: true, imported: created?.length ?? 0, enrolled };
+}
+
+// (Re)génère un lien de test pour un apprenant (nouveau jeton, nouvelle tentative).
+export async function createPlacementTest(learnerId: string): Promise<{ ok: true; token: string } | { ok: false; error: string }> {
+  if (!z.string().uuid().safeParse(learnerId).success) return { ok: false, error: "Apprenant invalide" };
+
+  const { orgId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("placement_tests")
+    .insert({ org_id: orgId, learner_id: learnerId })
+    .select("token")
+    .single();
+  if (error) return { ok: false, error: translatePgError(error) };
+
+  revalidatePath("/apprenants");
+  return { ok: true, token: data.token };
 }
 
 const enrollSchema = z.object({

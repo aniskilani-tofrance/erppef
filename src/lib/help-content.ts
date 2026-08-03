@@ -276,6 +276,11 @@ export const FAQ: FaqItem[] = [
     roles: TEAM,
   },
   {
+    q: "Comment fonctionne le test de positionnement ?",
+    a: "Chaque apprenant créé sans niveau reçoit un lien personnel (colonne « Test de positionnement » → Copier le lien, à lui envoyer). Le test (~30 min : écoute, lecture, écriture, corrigé en partie par IA) attribue un niveau A1 à B2 qui remplit automatiquement sa fiche, avec la mention « Test fait » et le score. Le niveau reste modifiable après entretien, et « Générer le test » crée une nouvelle tentative si besoin.",
+    roles: TEAM,
+  },
+  {
     q: "Une salle n'est disponible que certains jours ou certaines heures.",
     a: "Page Salles → bouton « Horaires » de la salle : ajoutez ses créneaux d'ouverture (jour + heures). Le moteur de planification n'y placera plus aucune séance en dehors, et l'expliquera dans les alternatives (« Salle fermée le… »).",
     roles: TEAM,

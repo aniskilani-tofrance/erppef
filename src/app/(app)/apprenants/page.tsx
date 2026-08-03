@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/table";
 import { LearnerFormDialog } from "@/components/apprenants/learner-form-dialog";
 import { LearnerImportDialog } from "@/components/apprenants/learner-import-dialog";
+import { PlacementTestCell, type PlacementInfo } from "@/components/apprenants/placement-test-cell";
 import {
   ABSENCE_ALERT_THRESHOLD,
   computeLearnerStats,
@@ -18,7 +19,7 @@ export default async function ApprenantsPage() {
   await requireRole(["admin", "coordinator"]);
   const supabase = await createClient();
 
-  const [{ data: learners }, { data: enrollments }, { data: groups }, { data: attendanceRows }] = await Promise.all([
+  const [{ data: learners }, { data: enrollments }, { data: groups }, { data: attendanceRows }, { data: placementRows }] = await Promise.all([
     supabase.from("learners").select("*").order("last_name").order("first_name"),
     supabase.from("enrollments").select("id, learner_id, group_id, status, groups(name)"),
     supabase.from("groups").select("id, name").in("status", ["en_attente", "ouvert"]).order("starts_on", { ascending: false }),
@@ -26,7 +27,25 @@ export default async function ApprenantsPage() {
       .from("attendances")
       .select("learner_id, status, sessions!inner(starts_at, attendance_closed_at)")
       .not("sessions.attendance_closed_at", "is", null),
+    // Tolérant tant que la migration placement_tests n'est pas appliquée (data null)
+    supabase
+      .from("placement_tests")
+      .select("learner_id, status, token, level, score, created_at")
+      .order("created_at", { ascending: false }),
   ]);
+
+  // Dernier test par apprenant (le plus récent prime)
+  const testByLearner = new Map<string, PlacementInfo>();
+  for (const t of placementRows ?? []) {
+    if (!testByLearner.has(t.learner_id)) {
+      testByLearner.set(t.learner_id, {
+        status: t.status as "en_attente" | "fait",
+        token: t.token,
+        level: t.level,
+        score: t.score === null ? null : Number(t.score),
+      });
+    }
+  }
 
   const stats = computeLearnerStats(
     (attendanceRows ?? []).map((a) => ({
@@ -58,13 +77,14 @@ export default async function ApprenantsPage() {
               <TableHead>Niveau</TableHead>
               <TableHead>Groupes</TableHead>
               <TableHead>Assiduité</TableHead>
+              <TableHead>Test de positionnement</TableHead>
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {(learners ?? []).length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
+                <TableCell colSpan={8} className="py-8 text-center text-muted-foreground">
                   Aucun apprenant. Créez le premier avec « Nouvel apprenant » — vous pourrez
                   l&apos;inscrire dans un groupe au passage.
                 </TableCell>
@@ -117,6 +137,9 @@ export default async function ApprenantsPage() {
                     ) : (
                       <span className="text-sm text-muted-foreground">—</span>
                     )}
+                  </TableCell>
+                  <TableCell>
+                    <PlacementTestCell learnerId={l.id} test={testByLearner.get(l.id) ?? null} />
                   </TableCell>
                   <TableCell>
                     <LearnerFormDialog

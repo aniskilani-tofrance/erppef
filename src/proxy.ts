@@ -36,6 +36,8 @@ export async function proxy(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/emargement") ||
     // Enquête de satisfaction anonyme : même principe.
     request.nextUrl.pathname.startsWith("/enquete") ||
+    // Test de positionnement : lien personnel à jeton.
+    request.nextUrl.pathname.startsWith("/test") ||
     // Crons Vercel : protégés par CRON_SECRET dans la route elle-même.
     request.nextUrl.pathname.startsWith("/api/cron");
 
