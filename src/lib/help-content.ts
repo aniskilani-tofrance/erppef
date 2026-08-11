@@ -116,6 +116,7 @@ export const HELP_SECTIONS: HelpSection[] = [
           "Renseignez ses disponibilités récurrentes sur sa fiche : le moteur ne le placera jamais en dehors.",
           "Si vous saisissez son email, il reçoit automatiquement une invitation à se connecter (rôle formateur, lié à sa fiche).",
           "Sur sa fiche, déposez CV et diplômes (« Qualifications ») : c'est votre preuve Qualiopi ind. 21-22.",
+          "Supprimer un formateur (admin, icône poubelle sur sa fiche) : possible seulement s'il n'a ni groupe ni séance ; sinon l'ERP propose de le désactiver — il disparaît du moteur et des listes, l'historique des heures et émargements est conservé.",
         ],
       },
       {
@@ -156,11 +157,23 @@ export const HELP_SECTIONS: HelpSection[] = [
         ],
       },
       {
+        title: "Positionner un apprenant (test de français)",
+        steps: [
+          "À la création d'un apprenant SANS niveau évalué, un test de positionnement est généré automatiquement (page Apprenants, colonne « Test de positionnement »).",
+          "« Copier le lien » : envoyez-le à l'apprenant par le canal de votre choix (WhatsApp, SMS, email). Le lien est personnel et à usage unique.",
+          "L'apprenant passe le test seul (~30 min : écoute, lecture, écriture — activé pour téléphone). Ses productions écrites sont corrigées par IA.",
+          "Dès qu'il termine : « Test fait · niveau » et le score apparaissent dans la liste, et son « Niveau évalué » se remplit automatiquement sur sa fiche.",
+          "Le niveau (A1 à B2) reste modifiable à la main après votre entretien de positionnement — le test est une aide, pas une sentence.",
+          "« Générer le test » relance une nouvelle tentative (nouveau lien) si besoin — par exemple après plusieurs mois de cours.",
+        ],
+      },
+      {
         title: "Ajuster le planning",
         steps: [
           "Glissez-déposez une séance pour la déplacer : si le créneau est pris (salle ou formateur), elle revient avec un message — impossible de créer un conflit.",
           "Cliquez une séance pour changer formateur, salle, ou l'annuler.",
           "Sélectionnez un créneau vide pour créer une séance ponctuelle (rattrapage).",
+          "Supprimer une séance : lien discret en bas de sa fiche, en deux clics de confirmation. Refusé si elle a des émargements (registre légal) — annulez-la plutôt : l'annulation garde la trace, la suppression efface tout.",
           "Les vacances et fériés apparaissent en fond grisé.",
         ],
       },

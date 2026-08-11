@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { updateSession, type CalendarSession } from "@/app/(app)/planning/actions";
+import { deleteSession, updateSession, type CalendarSession } from "@/app/(app)/planning/actions";
 import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -35,11 +35,13 @@ export function SessionSheet({
 }) {
   const [trainerId, setTrainerId] = useState<string>(NONE);
   const [roomId, setRoomId] = useState<string>(NONE);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
     setTrainerId(session?.trainerId ?? NONE);
     setRoomId(session?.roomId ?? NONE);
+    setConfirmDelete(false);
   }, [session]);
 
   if (!session) return <Sheet open={false} />;
@@ -125,14 +127,42 @@ export function SessionSheet({
           </Link>
 
           {canEdit && (
-            <div className="flex gap-2 pt-2">
-              <Button onClick={() => save("planifiee")} disabled={pending} className="flex-1">
-                {pending ? "Enregistrement…" : "Enregistrer"}
-              </Button>
-              <Button variant="destructive" onClick={() => save("annulee")} disabled={pending}>
-                Annuler la séance
-              </Button>
-            </div>
+            <>
+              <div className="flex gap-2 pt-2">
+                <Button onClick={() => save("planifiee")} disabled={pending} className="flex-1">
+                  {pending ? "Enregistrement…" : "Enregistrer"}
+                </Button>
+                <Button variant="destructive" onClick={() => save("annulee")} disabled={pending}>
+                  Annuler la séance
+                </Button>
+              </div>
+              {/* Suppression définitive en deux temps ; refusée côté serveur si la séance est émargée. */}
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => {
+                  if (!confirmDelete) {
+                    setConfirmDelete(true);
+                    return;
+                  }
+                  startTransition(async () => {
+                    const result = await deleteSession(session!.id);
+                    if (!result.ok) {
+                      toast.error(result.error);
+                      setConfirmDelete(false);
+                      return;
+                    }
+                    toast.success("Séance supprimée définitivement.");
+                    onChanged();
+                  });
+                }}
+                className="w-full text-center text-xs text-muted-foreground underline-offset-2 hover:text-destructive hover:underline disabled:opacity-50"
+              >
+                {confirmDelete
+                  ? "Cliquez à nouveau pour confirmer la suppression DÉFINITIVE"
+                  : "Supprimer définitivement cette séance (préférez « Annuler » pour garder la trace)"}
+              </button>
+            </>
           )}
         </div>
       </SheetContent>

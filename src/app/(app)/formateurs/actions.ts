@@ -238,3 +238,43 @@ export async function deleteAbsence(id: string, trainerId: string): Promise<Acti
   revalidatePath(`/formateurs/${trainerId}`);
   return { ok: true };
 }
+
+// Suppression DÉFINITIVE d'un formateur : possible seulement s'il n'est référencé par
+// aucune séance ni aucun groupe (l'historique sert aux coûts et au registre d'assiduité).
+// Sinon, la désactivation est la bonne opération : il disparaît du moteur et des listes.
+export async function deleteTrainer(id: string): Promise<ActionResult> {
+  if (!z.string().uuid().safeParse(id).success) return { ok: false, error: "Formateur invalide" };
+  const { orgId } = await requireRole(["admin"]);
+  const supabase = await createClient();
+
+  const [{ count: sessionCount }, { count: groupCount }] = await Promise.all([
+    supabase.from("sessions").select("id", { count: "exact", head: true }).eq("trainer_id", id),
+    supabase.from("groups").select("id", { count: "exact", head: true }).eq("trainer_id", id),
+  ]);
+  if ((sessionCount ?? 0) > 0 || (groupCount ?? 0) > 0) {
+    return {
+      ok: false,
+      error: `Suppression impossible : ce formateur est référencé par ${groupCount ?? 0} groupe(s) et ${sessionCount ?? 0} séance(s). Désactivez-le à la place pour préserver l'historique.`,
+    };
+  }
+
+  const { error } = await supabase.from("trainers").delete().eq("id", id).eq("org_id", orgId);
+  if (error) return { ok: false, error: translatePgError(error) };
+  revalidatePath("/formateurs");
+  return { ok: true };
+}
+
+export async function deactivateTrainer(id: string): Promise<ActionResult> {
+  if (!z.string().uuid().safeParse(id).success) return { ok: false, error: "Formateur invalide" };
+  const { orgId } = await requireRole(["admin"]);
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("trainers")
+    .update({ is_active: false })
+    .eq("id", id)
+    .eq("org_id", orgId);
+  if (error) return { ok: false, error: translatePgError(error) };
+  revalidatePath("/formateurs");
+  revalidatePath(`/formateurs/${id}`);
+  return { ok: true };
+}

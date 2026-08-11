@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole, requireSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -136,5 +137,30 @@ export async function updateSession(raw: z.infer<typeof updateSchema>): Promise<
     .eq("id", parsed.data.sessionId);
 
   if (error) return { ok: false, error: translatePgError(error) };
+  return { ok: true };
+}
+
+// Suppression DÉFINITIVE d'une séance : interdite dès qu'un émargement existe
+// (registre légal d'assiduité — la cascade le détruirait). Utiliser l'annulation sinon.
+export async function deleteSession(sessionId: string): Promise<MoveResult> {
+  if (!z.string().uuid().safeParse(sessionId).success) return { ok: false, error: "Séance invalide" };
+  await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+
+  const { count } = await supabase
+    .from("attendances")
+    .select("id", { count: "exact", head: true })
+    .eq("session_id", sessionId);
+  if ((count ?? 0) > 0) {
+    return {
+      ok: false,
+      error: `Suppression impossible : ${count} émargement(s) enregistrés sur cette séance. Annulez-la plutôt — l'historique est conservé.`,
+    };
+  }
+
+  const { error } = await supabase.from("sessions").delete().eq("id", sessionId);
+  if (error) return { ok: false, error: translatePgError(error) };
+  revalidatePath("/planning");
+  revalidatePath("/groupes");
   return { ok: true };
 }

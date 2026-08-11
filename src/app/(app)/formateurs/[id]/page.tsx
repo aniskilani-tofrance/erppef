@@ -9,18 +9,21 @@ import { AvailabilityEditor } from "@/components/formateurs/availability-editor"
 import { AbsenceManager } from "@/components/formateurs/absence-manager";
 import { InviteTrainerButton } from "@/components/formateurs/invite-trainer-button";
 import { TrainerDocuments } from "@/components/formateurs/trainer-documents";
+import { DeleteTrainerButton } from "@/components/formateurs/delete-trainer-button";
 
 export default async function FormateurPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   await requireRole(["admin", "coordinator"]);
   const supabase = await createClient();
 
-  const [{ data: trainer }, { data: availabilities }, { data: absences }, { data: membership }, { data: docs }] = await Promise.all([
+  const [{ data: trainer }, { data: availabilities }, { data: absences }, { data: membership }, { data: docs }, { count: sessionCount }, { count: groupCount }] = await Promise.all([
     supabase.from("trainers").select("*").eq("id", id).single(),
     supabase.from("trainer_availabilities").select("*").eq("trainer_id", id).order("weekday").order("start_time"),
     supabase.from("trainer_absences").select("*").eq("trainer_id", id).order("starts_on", { ascending: false }),
     supabase.from("memberships").select("id").eq("trainer_id", id).maybeSingle(),
     supabase.from("trainer_documents").select("id, label, file_path").eq("trainer_id", id).order("created_at"),
+    supabase.from("sessions").select("id", { count: "exact", head: true }).eq("trainer_id", id),
+    supabase.from("groups").select("id", { count: "exact", head: true }).eq("trainer_id", id),
   ]);
 
   if (!trainer) notFound();
@@ -62,6 +65,13 @@ export default async function FormateurPage({ params }: { params: Promise<{ id: 
               languages: (trainer.languages ?? []).join(", "),
               isActive: trainer.is_active,
             }}
+          />
+          <DeleteTrainerButton
+            trainerId={trainer.id}
+            name={`${trainer.first_name} ${trainer.last_name ?? ""}`.trim()}
+            sessionCount={sessionCount ?? 0}
+            groupCount={groupCount ?? 0}
+            isActive={trainer.is_active}
           />
           <Link href="/formateurs" className="text-sm text-muted-foreground hover:underline">
             ← Tous les formateurs

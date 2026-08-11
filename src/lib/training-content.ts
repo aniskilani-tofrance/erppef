@@ -351,6 +351,25 @@ export const TRAINING_MODULES: TrainingModule[] = [
         tip: "Le moteur choisit dans l'ordre : salarié avant vacataire, coût croissant, puis votre priorité manuelle.",
       },
       {
+        id: "positionnement",
+        title: "Le test de positionnement",
+        intro: "Fini le test papier : chaque apprenant reçoit un lien personnel, et son niveau arrive tout seul dans sa fiche.",
+        steps: [
+          "Créez un apprenant sans renseigner son niveau : un test est généré automatiquement (visible colonne « Test de positionnement »).",
+          "« Copier le lien » → envoyez-le par WhatsApp, SMS ou email. Le lien est personnel : pas besoin de compte pour l'apprenant.",
+          "Le test dure ~30 minutes (écoute, lecture, écriture) et fonctionne très bien sur téléphone. Les écrits sont corrigés par IA.",
+          "À la fin : « Test fait · niveau » + score dans la liste, et le « Niveau évalué » de la fiche est rempli automatiquement (A1 à B2).",
+          "Complétez toujours par votre entretien : le niveau reste modifiable à la main — le test prépare l'entretien, il ne le remplace pas.",
+          "Besoin de re-tester quelqu'un (après plusieurs mois de cours) ? « Générer le test » crée une nouvelle tentative.",
+        ],
+        tip: "Pour un import CSV de cohorte, laissez la colonne Niveau vide : tous les apprenants auront leur test généré d'un coup — il ne reste qu'à envoyer les liens.",
+        practice: {
+          instruction: "Sur la liste Apprenants, repérez la colonne « Test de positionnement » et copiez un lien de test (ou générez-en un sur une fiche de test).",
+          href: "/apprenants",
+          hrefLabel: "Ouvrir les Apprenants",
+        },
+      },
+      {
         id: "apprenants",
         title: "Apprenants : fiche, photo, import",
         steps: [
@@ -372,6 +391,26 @@ export const TRAINING_MODULES: TrainingModule[] = [
         choices: ["Sa photo", "Ses disponibilités récurrentes (et son plafond hebdo)", "Son ancienneté"],
         answerIndex: 1,
         explanation: "Disponibilités, absences et plafond hebdo sont des contraintes dures : jamais de séance en dehors.",
+      },
+      {
+        question: "Vous créez un apprenant sans renseigner son niveau. Que se passe-t-il ?",
+        choices: [
+          "Un test de positionnement est généré automatiquement, prêt à être envoyé",
+          "Rien : il faut demander un test par email",
+          "L'ERP refuse de créer la fiche",
+        ],
+        answerIndex: 0,
+        explanation: "Sans niveau connu, l'ERP prépare le test tout seul : il ne reste qu'à copier le lien et l'envoyer à l'apprenant.",
+      },
+      {
+        question: "L'apprenant a terminé son test de positionnement. Où atterrit son niveau ?",
+        choices: [
+          "Nulle part : il faut le recopier depuis un email",
+          "Uniquement dans un rapport PDF",
+          "Directement dans le « Niveau évalué » de sa fiche, avec « Test fait » et le score",
+        ],
+        answerIndex: 2,
+        explanation: "Le résultat remplit la fiche automatiquement — et reste modifiable après votre entretien de positionnement.",
       },
       {
         question: "Comment inscrire 12 nouveaux apprenants le jour de la rentrée ?",
