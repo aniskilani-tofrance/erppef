@@ -30,6 +30,19 @@ const learnerSchema = z.object({
   levelAssessed: z.string().nullable(),
   franceTravailId: z.string().nullable(),
   notes: z.string().nullable(),
+  // Typologie (bilans financeurs) — tout optionnel, saisie progressive.
+  birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+  gender: z.enum(["femme", "homme", "autre"]).nullable(),
+  nationality: z.string().nullable(),
+  city: z.string().nullable(),
+  postalCode: z.string().nullable(),
+  qpv: z.boolean().nullable(),
+  activityStatus: z
+    .enum(["demandeur_emploi", "rsa", "salarie", "scolaire_etudiant", "inactif_autre"])
+    .nullable(),
+  rqth: z.boolean().nullable(),
+  educationLevel: z.enum(["non_scolarise", "primaire", "secondaire", "superieur"]).nullable(),
+  prescriber: z.string().nullable(),
   // Flux « créer et inscrire » : à la création, inscrit directement dans ce groupe.
   enrollGroupId: z.string().uuid().nullable(),
 });
@@ -53,6 +66,16 @@ export async function upsertLearner(raw: z.infer<typeof learnerSchema>): Promise
     level_assessed: d.levelAssessed,
     france_travail_id: d.franceTravailId,
     notes: d.notes,
+    birth_date: d.birthDate,
+    gender: d.gender,
+    nationality: d.nationality,
+    city: d.city,
+    postal_code: d.postalCode,
+    qpv: d.qpv,
+    activity_status: d.activityStatus,
+    rqth: d.rqth,
+    education_level: d.educationLevel,
+    prescriber: d.prescriber,
   };
 
   if (d.id) {
@@ -184,6 +207,41 @@ export async function enrollLearner(raw: z.infer<typeof enrollSchema>): Promise<
 
   if (error) return { ok: false, error: translatePgError(error) };
   revalidatePath(`/groupes/${parsed.data.groupId}`);
+  revalidatePath("/apprenants");
+  return { ok: true };
+}
+
+const enrollmentStatusSchema = z.object({
+  enrollmentId: z.string().uuid(),
+  status: z.enum(["inscrit", "abandon", "termine"]),
+  leftOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+  leaveReason: z.string().nullable(),
+});
+
+// Sortie de parcours (abandon/terminé) : changement de statut DATÉ, jamais une
+// suppression — les bilans financeurs comptent les sorties. Repasser en « inscrit »
+// efface la date et le motif.
+export async function updateEnrollmentStatus(
+  raw: z.infer<typeof enrollmentStatusSchema>,
+): Promise<ActionResult> {
+  const parsed = enrollmentStatusSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Données invalides" };
+  const d = parsed.data;
+
+  await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("enrollments")
+    .update({
+      status: d.status,
+      left_on: d.status === "inscrit" ? null : (d.leftOn ?? new Date().toISOString().slice(0, 10)),
+      leave_reason: d.status === "inscrit" ? null : d.leaveReason,
+    })
+    .eq("id", d.enrollmentId);
+
+  if (error) return { ok: false, error: translatePgError(error) };
+  revalidatePath("/groupes", "layout");
   revalidatePath("/apprenants");
   return { ok: true };
 }

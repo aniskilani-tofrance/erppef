@@ -42,7 +42,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
       supabase.from("v_group_hours").select("*").eq("group_id", id).single(),
       supabase
         .from("enrollments")
-        .select("id, learner_id, status, learners(first_name, last_name, level_assessed)")
+        .select("id, learner_id, status, left_on, learners(first_name, last_name, level_assessed)")
         .eq("group_id", id)
         .eq("status", "inscrit"),
       supabase.from("learners").select("id, first_name, last_name").order("last_name"),
@@ -68,6 +68,8 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
       learnerId: e.learner_id,
       name: l ? `${l.first_name} ${l.last_name}` : "—",
       level: l?.level_assessed ?? null,
+      status: e.status as "inscrit" | "abandon" | "termine",
+      leftOn: e.left_on ?? null,
     };
   });
   const enrolledIds = new Set(enrolled.map((e) => e.learnerId));

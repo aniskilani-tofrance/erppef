@@ -2,19 +2,29 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { enrollLearner, unenrollLearner } from "@/app/(app)/apprenants/actions";
+import {
+  enrollLearner,
+  unenrollLearner,
+  updateEnrollmentStatus,
+} from "@/app/(app)/apprenants/actions";
 import { LearnerFormDialog } from "@/components/apprenants/learner-form-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { UserMinus } from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 
 export type Enrolled = {
   enrollmentId: string;
   learnerId: string;
   name: string;
   level: string | null;
+  status: "inscrit" | "abandon" | "termine";
+  leftOn: string | null;
   stats?: {
     rate: number;
     total: number;
@@ -24,6 +34,10 @@ export type Enrolled = {
 
 // Seuil aligné sur ABSENCE_ALERT_THRESHOLD (lib/attendance-stats).
 const ALERT_STREAK = 3;
+
+function fmtDay(day: string): string {
+  return new Date(`${day}T12:00:00Z`).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" });
+}
 
 // Inscriptions d'un groupe : liste des inscrits, ajout d'un apprenant existant,
 // ou création + inscription en un seul geste via le dialog apprenant.
@@ -60,7 +74,7 @@ export function EnrollmentManager({
         toast.error(result.error);
         return;
       }
-      toast.success(`${e.name} retiré du groupe.`, {
+      toast.success(`${e.name} retiré du groupe (inscription effacée).`, {
         action: {
           label: "Annuler",
           onClick: async () => {
@@ -73,6 +87,29 @@ export function EnrollmentManager({
     });
   }
 
+  // Sortie de parcours : statut daté, conservé dans les bilans financeurs.
+  function setStatus(e: Enrolled, status: "inscrit" | "abandon" | "termine") {
+    startTransition(async () => {
+      const result = await updateEnrollmentStatus({
+        enrollmentId: e.enrollmentId,
+        status,
+        leftOn: null, // date du jour côté serveur
+        leaveReason: null,
+      });
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(
+        status === "inscrit"
+          ? `${e.name} réinscrit dans le parcours.`
+          : status === "abandon"
+            ? `${e.name} marqué en abandon.`
+            : `Parcours de ${e.name} marqué terminé.`,
+      );
+    });
+  }
+
   return (
     <div className="space-y-4">
       {enrolled.length > 0 ? (
@@ -80,7 +117,13 @@ export function EnrollmentManager({
           {enrolled.map((e) => (
             <li key={e.enrollmentId} className="flex items-center justify-between rounded-md border px-3 py-1.5">
               <span>
-                <span className="font-medium">{e.name}</span>
+                <span className={e.status === "abandon" ? "font-medium line-through opacity-60" : "font-medium"}>{e.name}</span>
+                {e.status === "abandon" && (
+                  <Badge variant="destructive" className="ml-2 text-xs">Abandon{e.leftOn ? ` le ${fmtDay(e.leftOn)}` : ""}</Badge>
+                )}
+                {e.status === "termine" && (
+                  <Badge variant="secondary" className="ml-2 text-xs">Terminé{e.leftOn ? ` le ${fmtDay(e.leftOn)}` : ""}</Badge>
+                )}
                 {e.level && <span className="ml-2 text-muted-foreground">{e.level}</span>}
                 {e.stats && (
                   <span className="ml-2 text-xs text-muted-foreground">
@@ -103,9 +146,34 @@ export function EnrollmentManager({
                     Certificat
                   </a>
                 )}
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => remove(e)} disabled={pending} title="Retirer du groupe">
-                  <UserMinus className="h-3.5 w-3.5 text-muted-foreground" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" disabled={pending} title="Gérer l'inscription">
+                      <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {e.status !== "termine" && (
+                      <DropdownMenuItem onClick={() => setStatus(e, "termine")}>
+                        Marquer le parcours terminé
+                      </DropdownMenuItem>
+                    )}
+                    {e.status !== "abandon" && (
+                      <DropdownMenuItem onClick={() => setStatus(e, "abandon")}>
+                        Marquer en abandon
+                      </DropdownMenuItem>
+                    )}
+                    {e.status !== "inscrit" && (
+                      <DropdownMenuItem onClick={() => setStatus(e, "inscrit")}>
+                        Réinscrire dans le parcours
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem variant="destructive" onClick={() => remove(e)}>
+                      Supprimer (erreur de saisie)
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </span>
             </li>
           ))}

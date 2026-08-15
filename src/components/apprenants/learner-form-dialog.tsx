@@ -27,6 +27,17 @@ export type LearnerFormValues = {
   levelAssessed: string;
   franceTravailId: string;
   notes: string;
+  // Typologie (bilans financeurs) — "" ou "nc" = non renseigné
+  birthDate: string;
+  gender: string;
+  nationality: string;
+  city: string;
+  postalCode: string;
+  qpv: string; // 'nc' | 'oui' | 'non'
+  activityStatus: string;
+  rqth: string; // 'nc' | 'oui' | 'non'
+  educationLevel: string;
+  prescriber: string;
 };
 
 const EMPTY: LearnerFormValues = {
@@ -39,7 +50,44 @@ const EMPTY: LearnerFormValues = {
   levelAssessed: "",
   franceTravailId: "",
   notes: "",
+  birthDate: "",
+  gender: "nc",
+  nationality: "",
+  city: "",
+  postalCode: "",
+  qpv: "nc",
+  activityStatus: "nc",
+  rqth: "nc",
+  educationLevel: "nc",
+  prescriber: "",
 };
+
+const GENDERS = [
+  { value: "nc", label: "Non renseigné" },
+  { value: "femme", label: "Femme" },
+  { value: "homme", label: "Homme" },
+  { value: "autre", label: "Autre" },
+];
+const ACTIVITIES = [
+  { value: "nc", label: "Non renseignée" },
+  { value: "demandeur_emploi", label: "Demandeur d'emploi" },
+  { value: "rsa", label: "Bénéficiaire du RSA" },
+  { value: "salarie", label: "Salarié" },
+  { value: "scolaire_etudiant", label: "Scolaire / étudiant" },
+  { value: "inactif_autre", label: "Inactif / autre" },
+];
+const EDUCATION = [
+  { value: "nc", label: "Non renseignée" },
+  { value: "non_scolarise", label: "Jamais scolarisé" },
+  { value: "primaire", label: "Primaire" },
+  { value: "secondaire", label: "Secondaire" },
+  { value: "superieur", label: "Supérieur" },
+];
+const YES_NO = [
+  { value: "nc", label: "Non renseigné" },
+  { value: "oui", label: "Oui" },
+  { value: "non", label: "Non" },
+];
 
 const LEVELS = ["Non évalué", "A1.1", "A1", "A2", "B1", "B2", "C1", "C2"];
 
@@ -78,6 +126,22 @@ export function LearnerFormDialog({
         levelAssessed: values.levelAssessed === "Non évalué" || !values.levelAssessed ? null : values.levelAssessed,
         franceTravailId: values.franceTravailId.trim() || null,
         notes: values.notes.trim() || null,
+        birthDate: values.birthDate || null,
+        gender: values.gender === "nc" ? null : (values.gender as "femme" | "homme" | "autre"),
+        nationality: values.nationality.trim() || null,
+        city: values.city.trim() || null,
+        postalCode: values.postalCode.trim() || null,
+        qpv: values.qpv === "nc" ? null : values.qpv === "oui",
+        activityStatus:
+          values.activityStatus === "nc"
+            ? null
+            : (values.activityStatus as "demandeur_emploi" | "rsa" | "salarie" | "scolaire_etudiant" | "inactif_autre"),
+        rqth: values.rqth === "nc" ? null : values.rqth === "oui",
+        educationLevel:
+          values.educationLevel === "nc"
+            ? null
+            : (values.educationLevel as "non_scolarise" | "primaire" | "secondaire" | "superieur"),
+        prescriber: values.prescriber.trim() || null,
         enrollGroupId: !isEdit && groupId !== "none" ? groupId : null,
       });
       if (!result.ok) {
@@ -113,7 +177,7 @@ export function LearnerFormDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{isEdit ? "Modifier l'apprenant" : "Nouvel apprenant"}</DialogTitle>
         </DialogHeader>
@@ -167,6 +231,50 @@ export function LearnerFormDialog({
             <Label>Identifiant France Travail</Label>
             <Input value={values.franceTravailId} onChange={(e) => set("franceTravailId", e.target.value)} />
           </div>
+
+          {/* Typologie : alimente les bilans financeurs. Tout est optionnel. */}
+          <div className="rounded-md border p-3">
+            <p className="mb-3 text-sm font-medium">
+              Typologie <span className="font-normal text-muted-foreground">(pour les bilans financeurs — optionnel)</span>
+            </p>
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Date de naissance</Label>
+                  <Input type="date" value={values.birthDate} onChange={(e) => set("birthDate", e.target.value)} />
+                </div>
+                <SelectField label="Sexe" value={values.gender} options={GENDERS} onChange={(v) => set("gender", v)} />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Commune de résidence</Label>
+                  <Input value={values.city} onChange={(e) => set("city", e.target.value)} placeholder="Saint-Ouen-sur-Seine" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Code postal</Label>
+                  <Input value={values.postalCode} onChange={(e) => set("postalCode", e.target.value)} placeholder="93400" />
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <SelectField label="Réside en QPV" value={values.qpv} options={YES_NO} onChange={(v) => set("qpv", v)} />
+                <SelectField label="RQTH (handicap)" value={values.rqth} options={YES_NO} onChange={(v) => set("rqth", v)} />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <SelectField label="Situation" value={values.activityStatus} options={ACTIVITIES} onChange={(v) => set("activityStatus", v)} />
+                <SelectField label="Scolarisation" value={values.educationLevel} options={EDUCATION} onChange={(v) => set("educationLevel", v)} />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Nationalité</Label>
+                  <Input value={values.nationality} onChange={(e) => set("nationality", e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Prescripteur</Label>
+                  <Input value={values.prescriber} onChange={(e) => set("prescriber", e.target.value)} placeholder="France Travail, mission locale…" />
+                </div>
+              </div>
+            </div>
+          </div>
           {!isEdit && groups.length > 0 && (
             <div className="space-y-2">
               <Label>Inscrire directement dans un groupe</Label>
@@ -198,5 +306,35 @@ export function LearnerFormDialog({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function SelectField({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger className="w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((o) => (
+            <SelectItem key={o.value} value={o.value}>
+              {o.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 }

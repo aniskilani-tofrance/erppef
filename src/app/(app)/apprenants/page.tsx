@@ -154,6 +154,16 @@ export default async function ApprenantsPage() {
                         levelAssessed: l.level_assessed ?? "",
                         franceTravailId: l.france_travail_id ?? "",
                         notes: l.notes ?? "",
+                        birthDate: l.birth_date ?? "",
+                        gender: l.gender ?? "nc",
+                        nationality: l.nationality ?? "",
+                        city: l.city ?? "",
+                        postalCode: l.postal_code ?? "",
+                        qpv: l.qpv == null ? "nc" : l.qpv ? "oui" : "non",
+                        activityStatus: l.activity_status ?? "nc",
+                        rqth: l.rqth == null ? "nc" : l.rqth ? "oui" : "non",
+                        educationLevel: l.education_level ?? "nc",
+                        prescriber: l.prescriber ?? "",
                       }}
                     />
                   </TableCell>

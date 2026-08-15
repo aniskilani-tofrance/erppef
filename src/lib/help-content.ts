@@ -201,6 +201,16 @@ export const HELP_SECTIONS: HelpSection[] = [
         ],
       },
       {
+        title: "Générer le bilan d'un financeur (Rapports)",
+        steps: [
+          "Menu « Rapports » : choisissez le financeur et la période (presets : année civile, trimestre, année de formation).",
+          "Le bilan se calcule tout seul : heures réalisées, bénéficiaires uniques, assiduité moyenne (émargements clôturés), abandons/terminés, et typologie des publics (sexe, âge, situation, QPV, RQTH, scolarisation, communes).",
+          "« Bilan PDF » = le document à joindre au compte-rendu ; « Détail CSV » = le nominatif par groupe et par bénéficiaire ; « Déposer sur le Drive » = classement automatique dans « Bilans financeurs ».",
+          "La typologie vient des fiches apprenants (section « Typologie ») : plus elle est remplie, moins le bilan affiche de « Non renseigné ». Complétez-la à l'inscription, c'est 30 secondes par personne.",
+          "Un abandon se déclare sur la fiche du groupe (menu ⋯ de l'apprenant → « Marquer en abandon ») : il reste compté dans le bilan — ne supprimez jamais une inscription réelle.",
+        ],
+      },
+      {
         title: "Mesurer la satisfaction (ind. 30)",
         steps: [
           "Fiche du groupe → « Enquête de satisfaction » → « Ouvrir l'enquête ».",
