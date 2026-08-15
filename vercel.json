@@ -1,7 +1,18 @@
 {
-  "regions": ["cdg1"],
+  "regions": [
+    "cdg1"
+  ],
   "crons": [
-    { "path": "/api/cron/sync-gcal", "schedule": "0 4 * * *" },
-    { "path": "/api/cron/alertes", "schedule": "30 5 * * *" }
-  ]
+    {
+      "path": "/api/cron/sync-gcal",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/alertes",
+      "schedule": "30 5 * * *"
+    }
+  ],
+  "git": {
+    "deploymentEnabled": false
+  }
 }
