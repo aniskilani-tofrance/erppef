@@ -520,6 +520,33 @@ function OddOneOut({ question, selectedAnswer, onSelect }) {
 }
 
 // ══════════════════════════════════════════════════════════════
+// SYNTHÈSE VOCALE (accessibilité non-lecteurs)
+// ══════════════════════════════════════════════════════════════
+
+// Niveaux où l'on lit tout à voix haute : le public alpha/débutant ne sait pas
+// forcément lire — la consigne et les réponses doivent s'écouter.
+const LOW_LEVELS = ['Pré-alpha', 'Alpha', 'A1.1', 'A1', 'A2'];
+
+export function speak(text, { rate = 0.8 } = {}) {
+  if (typeof window === 'undefined' || !window.speechSynthesis || !text) return;
+  const spaced = text.replace(/\?/g, ' ?').replace(/!/g, ' !').replace(/,/g, ', ').replace(/\./g, '. ');
+  const utterance = new SpeechSynthesisUtterance(spaced);
+  utterance.lang = 'fr-FR';
+  utterance.rate = rate;
+  utterance.pitch = 1.15;
+  const voices = window.speechSynthesis.getVoices();
+  const frVoice = voices.find(v => v.lang.startsWith('fr') && (v.name.includes('Enhanced') || v.name.includes('Google') || v.name.includes('Thomas')))
+    || voices.find(v => v.lang.startsWith('fr'));
+  if (frVoice) utterance.voice = frVoice;
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utterance);
+}
+
+// Types où écouter les OPTIONS ne fausse pas la compétence testée
+// (on n'audio-lit jamais un exercice de lecture : ce serait donner la réponse).
+const OPTION_AUDIO_TYPES = ['listen_choose', 'scenario_tree', 'safety_instruction', 'fill_in_blank', 'complete_dialogue'];
+
+// ══════════════════════════════════════════════════════════════
 // COMPOSANT PRINCIPAL
 // ══════════════════════════════════════════════════════════════
 export default function QuestionCard({ question, selectedAnswer, onSelect, questionNumber, timeLeft, onStartTimer }) {
@@ -536,6 +563,21 @@ export default function QuestionCard({ question, selectedAnswer, onSelect, quest
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
+
+  const lowLevel = LOW_LEVELS.includes(question.level) && !question.noAudio;
+  const optionAudio = lowLevel && OPTION_AUDIO_TYPES.includes(question.type);
+
+  // Bas niveaux : la consigne est lue automatiquement à l'affichage de la question
+  // (l'audio de contenu — audioText — reste déclenché par le bouton « Écouter »).
+  useEffect(() => {
+    if (!lowLevel) return;
+    const timer = setTimeout(() => speak(question.question), 400);
+    return () => {
+      clearTimeout(timer);
+      if (typeof window !== 'undefined' && window.speechSynthesis) window.speechSynthesis.cancel();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [question.id]);
 
   const playAudio = () => {
     if (!question.audioText) return;
@@ -682,8 +724,21 @@ export default function QuestionCard({ question, selectedAnswer, onSelect, quest
           </div>
         )}
 
-        {/* Question */}
-        <h2 className="text-lg md:text-2xl font-semibold text-gray-900 mb-5 md:mb-6 leading-relaxed">{question.question}</h2>
+        {/* Question (avec réécoute de la consigne pour les bas niveaux) */}
+        <div className="mb-5 md:mb-6 flex items-start gap-3">
+          <h2 className="flex-1 text-lg md:text-2xl font-semibold text-gray-900 leading-relaxed">{question.question}</h2>
+          {lowLevel && (
+            <button
+              type="button"
+              onClick={() => speak(question.question)}
+              className="mt-1 shrink-0 rounded-full bg-[#17c3b2]/10 p-2.5 text-[#00504e] transition-colors hover:bg-[#17c3b2]/25"
+              title="Écouter la consigne"
+              aria-label="Écouter la consigne"
+            >
+              <Volume2 className="h-5 w-5" />
+            </button>
+          )}
+        </div>
 
         {/* Rendu selon le type */}
         {question.type === 'oral' ? (
@@ -769,6 +824,19 @@ export default function QuestionCard({ question, selectedAnswer, onSelect, quest
                     {isSelected ? <CheckCircle2 className="w-5 h-5" /> : letters[index]}
                   </span>
                   <span className={`flex-1 font-medium ${isSelected ? 'text-[#00504e]' : 'text-gray-700'}`}>{option}</span>
+                  {optionAudio && (
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => { e.stopPropagation(); speak(option); }}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); speak(option); } }}
+                      className="shrink-0 rounded-full p-2 text-gray-400 transition-colors hover:bg-[#17c3b2]/15 hover:text-[#00504e]"
+                      title="Écouter cette réponse"
+                      aria-label="Écouter cette réponse"
+                    >
+                      <Volume2 className="h-4 w-4" />
+                    </span>
+                  )}
                 </motion.button>
               );
             })}

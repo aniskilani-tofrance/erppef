@@ -44,10 +44,10 @@ export const questions = [
     category: "Compréhension Orale",
     type: "listen_choose",
     timeLimit: 60,
-    question: "Écoutez la consigne du responsable. Que demande-t-il ?",
+    question: "Écoutez le chef. Qu'est-ce qu'il demande ?",
     audioText: "Rangez votre poste de travail avant de partir, s'il vous plaît.",
-    options: ["Appeler un collègue", "Ranger son poste de travail avant de partir", "Fermer la porte", "Vérifier l'heure de départ"],
-    correct: "Ranger son poste de travail avant de partir",
+    options: ["Appeler un collègue", "Ranger son poste", "Fermer la porte", "Regarder l'heure"],
+    correct: "Ranger son poste",
     explanation: "La consigne est clairement de ranger son poste de travail avant de partir."
   },
   {
@@ -56,10 +56,10 @@ export const questions = [
     category: "Compréhension Orale",
     type: "listen_choose",
     timeLimit: 60,
-    question: "Écoutez. Que demande le responsable ?",
+    question: "Écoutez. Qu'est-ce que le chef demande ?",
     audioText: "Pouvez-vous envoyer ce document avant seize heures s'il vous plaît ?",
-    options: ["D'imprimer un document", "D'envoyer un document avant 16h", "De rester après 16h", "D'appeler un client"],
-    correct: "D'envoyer un document avant 16h",
+    options: ["Imprimer un document", "Envoyer un document avant 16 heures", "Rester après 16 heures", "Appeler un client"],
+    correct: "Envoyer un document avant 16 heures",
     explanation: "Le responsable demande d'envoyer le document avant 16h."
   },
   {
@@ -199,10 +199,10 @@ export const questions = [
     category: "Situations Professionnelles",
     type: "scenario_tree",
     timeLimit: 60,
-    question: "Vous arrivez au travail. Votre responsable vous donne une consigne que vous n'avez pas comprise. Que faites-vous ?",
+    question: "Au travail, vous ne comprenez pas une consigne. Que faites-vous ?",
     context: "🏢 Votre premier jour dans l'entreprise.",
-    options: ["Vous faites semblant de comprendre", "Vous demandez poliment de répéter", "Vous ignorez la consigne", "Vous rentrez chez vous"],
-    correct: "Vous demandez poliment de répéter",
+    options: ["Je fais semblant de comprendre", "Je demande de répéter, s'il vous plaît", "Je ne fais rien", "Je rentre chez moi"],
+    correct: "Je demande de répéter, s'il vous plaît",
     explanation: "Il est toujours préférable de demander des clarifications plutôt que de mal exécuter une tâche."
   },
   {
@@ -211,10 +211,10 @@ export const questions = [
     category: "Situations Professionnelles",
     type: "scenario_tree",
     timeLimit: 60,
-    question: "Vous êtes malade et ne pouvez pas venir travailler. Que devez-vous faire ?",
+    question: "Vous êtes malade. Vous ne pouvez pas aller au travail. Que faites-vous ?",
     context: "📱 Il est 7h du matin.",
-    options: ["Ne rien dire", "Envoyer un message à votre responsable le plus tôt possible", "Venir quand même", "Demander à un collègue de travailler à votre place"],
-    correct: "Envoyer un message à votre responsable le plus tôt possible",
+    options: ["Je ne dis rien", "J'appelle ou j'envoie un message à mon chef", "Je viens quand même", "Un collègue prend ma place"],
+    correct: "J'appelle ou j'envoie un message à mon chef",
     explanation: "Il faut toujours prévenir son employeur en cas d'absence."
   },
   {
@@ -223,7 +223,7 @@ export const questions = [
     category: "Situations Professionnelles",
     type: "scenario_tree",
     timeLimit: 75,
-    question: "Vous arrivez en retard à une réunion. Que dites-vous ?",
+    question: "Vous arrivez en retard. Que dites-vous ?",
     context: "⏰ Vous avez 10 minutes de retard.",
     options: ["Rien, vous vous asseyez.", "Excusez-moi pour le retard.", "C'est de votre faute.", "Je suis fatigué."],
     correct: "Excusez-moi pour le retard.",
@@ -261,11 +261,11 @@ export const questions = [
     category: "Situations Professionnelles",
     type: "safety_instruction",
     timeLimit: 60,
-    question: "Vous voyez ce panneau dans l'atelier. Que signifie-t-il ?",
+    question: "Regardez ce panneau. Qu'est-ce que ça veut dire ?",
     safetyIcon: "🚫🔥",
     safetyLabel: "INTERDICTION DE FUMER",
-    options: ["Fumer est autorisé ici", "Il est interdit de fumer dans cette zone", "Fumer est obligatoire", "Allumer un feu est conseillé"],
-    correct: "Il est interdit de fumer dans cette zone",
+    options: ["On peut fumer ici", "Interdit de fumer ici", "On doit fumer", "On peut faire du feu"],
+    correct: "Interdit de fumer ici",
     explanation: "Le panneau d'interdiction de fumer signifie que toute cigarette est prohibée dans la zone."
   },
   {
@@ -274,11 +274,11 @@ export const questions = [
     category: "Situations Professionnelles",
     type: "safety_instruction",
     timeLimit: 60,
-    question: "Vous lisez cette instruction de sécurité. Que devez-vous faire ?",
+    question: "Lisez la consigne de sécurité. Que faut-il faire ?",
     safetyIcon: "⚠️",
     safetyLabel: "En cas d'incendie, ne prenez pas l'ascenseur. Utilisez les escaliers de secours.",
-    options: ["Prendre l'ascenseur pour aller plus vite", "Utiliser les escaliers de secours", "Rester dans son bureau", "Appeler ses collègues"],
-    correct: "Utiliser les escaliers de secours",
+    options: ["Prendre l'ascenseur", "Prendre les escaliers de secours", "Rester dans le bureau", "Appeler les collègues"],
+    correct: "Prendre les escaliers de secours",
     explanation: "En cas d'incendie, l'ascenseur est dangereux. Il faut toujours utiliser les escaliers de secours."
   },
 
@@ -321,18 +321,18 @@ export const questions = [
     category: "Grammaire",
     type: "complete_dialogue",
     timeLimit: 60,
-    question: "Complétez ce dialogue entre un employé et un client.",
+    question: "Au téléphone, que répondez-vous ?",
     dialogue: [
       { speaker: "Client", text: "Bonjour, je voudrais parler à M. Dupont." },
       { speaker: "Employé", text: "___" },
     ],
     options: [
       "Oui c'est moi, quoi ?",
-      "Bonjour ! Un instant s'il vous plaît, je vous le passe.",
+      "Bonjour ! Un instant s'il vous plaît.",
       "Il n'est pas là, au revoir.",
       "Appelez plus tard."
     ],
-    correct: "Bonjour ! Un instant s'il vous plaît, je vous le passe.",
+    correct: "Bonjour ! Un instant s'il vous plaît.",
     explanation: "Une réponse professionnelle au téléphone est toujours polie et propose une aide concrète."
   },
   {
@@ -383,10 +383,10 @@ export const questions = [
     category: "Vocabulaire Professionnel",
     type: "listen_choose",
     timeLimit: 45,
-    question: "Qu'est-ce qu'une « tenue de travail » ?",
+    question: "Une « tenue de travail », qu'est-ce que c'est ?",
     audioText: "Qu'est-ce qu'une tenue de travail ?",
-    options: ["Des vêtements portés pour faire du sport", "Des vêtements appropriés et propres pour travailler", "La décoration du bureau", "L'heure d'arrivée"],
-    correct: "Des vêtements appropriés et propres pour travailler",
+    options: ["Des vêtements de sport", "Des vêtements propres pour le travail", "La décoration du bureau", "L'heure d'arrivée"],
+    correct: "Des vêtements propres pour le travail",
     explanation: "La tenue de travail désigne les vêtements adaptés au poste."
   },
   {
@@ -395,7 +395,7 @@ export const questions = [
     category: "Vocabulaire Professionnel",
     type: "listen_choose",
     timeLimit: 45,
-    question: "Qu'est-ce qu'un CV ?",
+    question: "Un CV, qu'est-ce que c'est ?",
     audioText: "Comment s'appelle le document qui résume votre parcours professionnel ?",
     options: ["Une lettre", "Un contrat", "Un CV", "Une facture"],
     correct: "Un CV",
