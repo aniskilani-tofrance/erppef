@@ -137,6 +137,24 @@ export function TestPlayer({ token, firstName, questions: rawQuestions }) {
     setResult(res);
   }
 
+  // ── Entraînement littératie (E1/E2, non noté) — AVANT l'écran d'accueil :
+  // pendant l'entraînement, started est encore faux.
+  if (training && !result) {
+    return (
+      <LiteracyTraining
+        onDone={() => {
+          setTraining(false);
+          setStarted(true);
+        }}
+        onAbort={() => {
+          setTraining(false);
+          setStarted(true); // sinon l'écran d'accueil masquerait l'écran de fin
+          handleSubmit(true); // jamais de classement sur un échec d'interface
+        }}
+      />
+    );
+  }
+
   // ── Écran d'accueil ──
   if (!started) {
     return (
@@ -205,22 +223,6 @@ export function TestPlayer({ token, firstName, questions: rawQuestions }) {
           la suite de votre parcours. À bientôt !
         </p>
       </main>
-    );
-  }
-
-  // ── Entraînement littératie (E1/E2, non noté) ──
-  if (training) {
-    return (
-      <LiteracyTraining
-        onDone={() => {
-          setTraining(false);
-          setStarted(true);
-        }}
-        onAbort={() => {
-          setTraining(false);
-          handleSubmit(true); // jamais de classement sur un échec d'interface
-        }}
-      />
     );
   }
 
