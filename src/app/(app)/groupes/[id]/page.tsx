@@ -13,6 +13,7 @@ import {
 import { utcToLocalTime } from "@/lib/dates";
 import { EnrollmentManager } from "@/components/groupes/enrollment-manager";
 import { GroupEditDialog } from "@/components/groupes/group-edit-dialog";
+import { DuplicateGroupDialog } from "@/components/groupes/duplicate-group-dialog";
 import { ReplanButton } from "@/components/groupes/replan-button";
 import { SurveyManager } from "@/components/groupes/survey-manager";
 import {
@@ -44,7 +45,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
         .from("enrollments")
         .select("id, learner_id, status, left_on, learners(first_name, last_name, level_assessed)")
         .eq("group_id", id)
-        .eq("status", "inscrit"),
+        .order("status"), // abandons et terminés restent visibles (badges + bilans)
       supabase.from("learners").select("id, first_name, last_name").order("last_name"),
       supabase.from("funders").select("id, name").eq("is_active", true).order("name"),
       supabase
@@ -126,6 +127,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
           <Badge style={{ backgroundColor: funder.color, color: "white" }}>{funder.name}</Badge>
         )}
         <span className="ml-auto flex items-center gap-3">
+          {canWrite && <DuplicateGroupDialog groupId={id} groupName={group.name} />}
           {canWrite && (
             <GroupEditDialog
               groupId={id}
@@ -135,6 +137,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
                 funderId: group.funder_id,
                 capacity: group.capacity,
                 notes: group.notes,
+                remindersEnabled: group.reminders_enabled ?? false,
               }}
               funders={allFunders ?? []}
             />

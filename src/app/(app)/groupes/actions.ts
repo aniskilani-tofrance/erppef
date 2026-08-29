@@ -103,6 +103,7 @@ const groupUpdateSchema = z.object({
   funderId: z.string().uuid().nullable(),
   capacity: z.number().int().positive().nullable(),
   notes: z.string().nullable(),
+  remindersEnabled: z.boolean(),
 });
 
 // Édition d'un groupe après création : nom, statut (clôture, annulation), financeur,
@@ -123,6 +124,7 @@ export async function updateGroup(raw: z.infer<typeof groupUpdateSchema>): Promi
       funder_id: d.funderId,
       capacity: d.capacity,
       notes: d.notes,
+      reminders_enabled: d.remindersEnabled,
     })
     .eq("id", d.groupId);
   if (error) return { ok: false, error: translatePgError(error) };
@@ -275,4 +277,84 @@ export async function commitProposal(raw: z.infer<typeof commitSchema>): Promise
   revalidatePath("/planning");
   revalidatePath("/dashboard");
   return { ok: true, groupId: groupId as string };
+}
+
+const duplicateSchema = z.object({
+  groupId: z.string().uuid(),
+  startsOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
+
+export type DuplicateResult = { ok: true; groupId: string } | { ok: false; error: string };
+
+// « Reconduire le groupe » (trimestre suivant, nouvelle session…) : nouveau groupe
+// identique (dispositif, financeur, formateur, salle, rythme) dont le planning est
+// re-matérialisé depuis la nouvelle date — les nouvelles vacances et fériés sont sautés.
+// Les conflits éventuels sont tranchés par Postgres au commit (rollback complet).
+export async function duplicateGroup(raw: z.infer<typeof duplicateSchema>): Promise<DuplicateResult> {
+  const parsed = duplicateSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Paramètres invalides" };
+  const { groupId, startsOn } = parsed.data;
+
+  const { orgId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+
+  const { data: group } = await supabase
+    .from("groups")
+    .select("*, programs(default_weekly_hours)")
+    .eq("id", groupId)
+    .single();
+  if (!group) return { ok: false, error: "Groupe introuvable" };
+
+  const pattern = (group.weekly_pattern ?? []) as { weekday: number; start: string; end: string }[];
+  if (!pattern.length) return { ok: false, error: "Ce groupe n'a pas de motif hebdomadaire enregistré." };
+
+  const data = await loadEngineData(orgId, startsOn);
+  const closures =
+    group.skip_school_holidays === false
+      ? data.closures.filter((c) => c.kind !== "vacances_scolaires")
+      : data.closures;
+
+  const recurrence = generateSessions({
+    pattern: pattern as Parameters<typeof generateSessions>[0]["pattern"],
+    startsOn,
+    totalHours: Number(group.total_hours),
+    closures,
+    tz: data.timezone,
+  });
+  if (recurrence.sessions.length === 0) {
+    return { ok: false, error: "Aucune séance générée : vérifiez la date de début." };
+  }
+
+  const lastDay = recurrence.sessions[recurrence.sessions.length - 1].localDate;
+  const { data: newGroupId, error } = await supabase.rpc("create_group_with_sessions", {
+    payload: {
+      group: {
+        org_id: orgId,
+        program_id: group.program_id,
+        funder_id: group.funder_id,
+        name: `${group.name} (suite)`,
+        starts_on: startsOn,
+        ends_on: lastDay,
+        total_hours: Number(group.total_hours),
+        trainer_id: group.trainer_id,
+        room_id: group.room_id,
+        capacity: group.capacity,
+        status: "en_attente",
+        weekly_pattern: pattern,
+        notes: group.notes,
+        skip_school_holidays: group.skip_school_holidays,
+      },
+      sessions: recurrence.sessions.map((s) => ({
+        trainer_id: group.trainer_id,
+        room_id: group.room_id,
+        starts_at: s.startsAt,
+        ends_at: s.endsAt,
+      })),
+    },
+  });
+  if (error) return { ok: false, error: translatePgError(error) };
+
+  revalidatePath("/groupes");
+  revalidatePath("/planning");
+  return { ok: true, groupId: newGroupId as string };
 }

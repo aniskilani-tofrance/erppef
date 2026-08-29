@@ -1,6 +1,8 @@
 import { gzipSync } from "node:zlib";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { driveConfigured, uploadBufferToDrive } from "@/lib/emargement/gdrive";
+import { mailerConfigured, sendMail } from "@/lib/mailer";
+import { localToUtc, nextDay, utcToLocalTime } from "@/lib/dates";
 import {
   ABSENCE_ALERT_THRESHOLD,
   computeLearnerStats,
@@ -71,7 +73,7 @@ export async function GET(request: Request) {
       .not("sessions.attendance_closed_at", "is", null),
     supabase
       .from("sessions")
-      .select("id, starts_at, groups(name), trainers:trainer_id(first_name)")
+      .select("id, starts_at, groups(name), trainers:trainer_id(first_name, email)")
       .neq("status", "annulee")
       .is("attendance_closed_at", null)
       .gte("starts_at", new Date(now.getTime() - 48 * 3600_000).toISOString())
@@ -79,6 +81,23 @@ export async function GET(request: Request) {
       .order("starts_at"),
     supabase.from("learners").select("id, first_name, last_name"),
   ]);
+
+  // Rappels apprenants (séances de demain, groupes ayant activé les rappels)
+  // + relance des formateurs sur leurs feuilles non clôturées. Jamais bloquant.
+  let reminders: { sent: number; skippedNoEmail: number } = { sent: 0, skippedNoEmail: 0 };
+  let trainerRelances = 0;
+  if (mailerConfigured()) {
+    try {
+      reminders = await sendSessionReminders(supabase);
+    } catch (e) {
+      console.error("[rappels]", e instanceof Error ? e.message : e);
+    }
+    try {
+      trainerRelances = await sendTrainerRelances(unclosed ?? []);
+    } catch (e) {
+      console.error("[relances]", e instanceof Error ? e.message : e);
+    }
+  }
 
   const stats = computeLearnerStats(
     (attendanceRows ?? []).map((a) => ({
@@ -102,7 +121,7 @@ export async function GET(request: Request) {
   });
 
   if (atRisk.length === 0 && sheets.length === 0) {
-    return Response.json({ sent: false, reason: "rien à signaler", backup });
+    return Response.json({ sent: false, reason: "rien à signaler", backup, reminders, trainerRelances });
   }
 
   const lines = [
@@ -132,5 +151,108 @@ export async function GET(request: Request) {
   if (!res.ok) {
     return Response.json({ sent: false, error: await res.text() }, { status: 500 });
   }
-  return Response.json({ sent: true, atRisk: atRisk.length, unclosedSheets: sheets.length });
+  return Response.json({ sent: true, atRisk: atRisk.length, unclosedSheets: sheets.length, reminders, trainerRelances });
+}
+
+// ── Rappels de séances aux apprenants (la veille) ────────────────────────────
+// Un email par apprenant listant ses séances du lendemain, uniquement pour les
+// groupes ayant activé les rappels. Les apprenants sans email sont simplement
+// comptés (le canal SMS viendra ensuite).
+async function sendSessionReminders(
+  supabase: ReturnType<typeof createAdminClient>,
+): Promise<{ sent: number; skippedNoEmail: number }> {
+  const tomorrow = new Date(Date.now() + 24 * 3600_000)
+    .toLocaleDateString("fr-CA", { timeZone: "Europe/Paris" }); // YYYY-MM-DD local
+  const dayAfter = nextDay(tomorrow);
+
+  const { data: sessions } = await supabase
+    .from("sessions")
+    .select("group_id, starts_at, ends_at, groups!inner(name, reminders_enabled), rooms:room_id(name)")
+    .eq("status", "planifiee")
+    .eq("groups.reminders_enabled", true)
+    .gte("starts_at", localToUtc(tomorrow, "00:00"))
+    .lt("starts_at", localToUtc(dayAfter, "00:00"));
+  if (!sessions?.length) return { sent: 0, skippedNoEmail: 0 };
+
+  const groupIds = [...new Set(sessions.map((s) => s.group_id))];
+  const { data: enrollments } = await supabase
+    .from("enrollments")
+    .select("group_id, learners(id, first_name, email)")
+    .in("group_id", groupIds)
+    .eq("status", "inscrit");
+
+  // learner → ses séances de demain
+  const byLearner = new Map<string, { firstName: string; email: string | null; lines: string[] }>();
+  for (const e of enrollments ?? []) {
+    const learner = e.learners as unknown as { id: string; first_name: string; email: string | null } | null;
+    if (!learner) continue;
+    const entry = byLearner.get(learner.id) ?? { firstName: learner.first_name, email: learner.email, lines: [] };
+    for (const s of sessions.filter((x) => x.group_id === e.group_id)) {
+      const g = s.groups as unknown as { name: string };
+      const room = (s.rooms as unknown as { name: string } | null)?.name;
+      entry.lines.push(
+        `${utcToLocalTime(s.starts_at)}–${utcToLocalTime(s.ends_at)} · ${g.name}${room ? ` · ${room}` : ""}`,
+      );
+    }
+    if (entry.lines.length) byLearner.set(learner.id, entry);
+  }
+
+  const dayLabel = new Date(localToUtc(tomorrow, "12:00")).toLocaleDateString("fr-FR", {
+    weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Paris",
+  });
+  let sent = 0;
+  let skippedNoEmail = 0;
+  for (const entry of byLearner.values()) {
+    if (!entry.email) {
+      skippedNoEmail += 1;
+      continue;
+    }
+    const ok = await sendMail({
+      to: entry.email,
+      subject: `Rappel : votre cours de français demain (${dayLabel})`,
+      html: `<p>Bonjour ${entry.firstName},</p>
+<p>Vous avez cours demain <strong>${dayLabel}</strong> :</p>
+<ul>${entry.lines.map((l) => `<li>${l}</li>`).join("")}</ul>
+<p>À demain !<br/>ParlerEmploi Formation</p>`,
+    });
+    if (ok) sent += 1;
+  }
+  return { sent, skippedNoEmail };
+}
+
+// ── Relance des formateurs : feuilles d'émargement non clôturées ─────────────
+type UnclosedRow = {
+  id: string;
+  starts_at: string;
+  groups: unknown;
+  trainers: unknown;
+};
+
+async function sendTrainerRelances(unclosed: UnclosedRow[]): Promise<number> {
+  const byTrainer = new Map<string, { firstName: string; lines: string[] }>();
+  for (const s of unclosed) {
+    const trainer = s.trainers as { first_name: string; email: string | null } | null;
+    if (!trainer?.email) continue;
+    const group = (s.groups as { name: string } | null)?.name ?? "?";
+    const day = new Date(s.starts_at).toLocaleDateString("fr-FR", {
+      weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Paris",
+    });
+    const entry = byTrainer.get(trainer.email) ?? { firstName: trainer.first_name, lines: [] };
+    entry.lines.push(`${group} — séance du ${day} : https://pef-erp.vercel.app/seances/${s.id}/emargement`);
+    byTrainer.set(trainer.email, entry);
+  }
+
+  let sent = 0;
+  for (const [email, entry] of byTrainer) {
+    const ok = await sendMail({
+      to: email,
+      subject: `Feuille${entry.lines.length > 1 ? "s" : ""} d'émargement à clôturer`,
+      html: `<p>Bonjour ${entry.firstName},</p>
+<p>Il reste ${entry.lines.length > 1 ? "des feuilles" : "une feuille"} d'émargement à contre-signer et clôturer :</p>
+<ul>${entry.lines.map((l) => `<li>${l}</li>`).join("")}</ul>
+<p>Merci !<br/>ParlerEmploi Formation</p>`,
+    });
+    if (ok) sent += 1;
+  }
+  return sent;
 }

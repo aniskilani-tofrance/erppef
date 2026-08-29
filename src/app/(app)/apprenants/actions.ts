@@ -34,6 +34,7 @@ const learnerSchema = z.object({
   birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
   gender: z.enum(["femme", "homme", "autre"]).nullable(),
   nationality: z.string().nullable(),
+  address: z.string().nullable(),
   city: z.string().nullable(),
   postalCode: z.string().nullable(),
   qpv: z.boolean().nullable(),
@@ -69,6 +70,7 @@ export async function upsertLearner(raw: z.infer<typeof learnerSchema>): Promise
     birth_date: d.birthDate,
     gender: d.gender,
     nationality: d.nationality,
+    address: d.address,
     city: d.city,
     postal_code: d.postalCode,
     qpv: d.qpv,
@@ -113,6 +115,20 @@ const importSchema = z.object({
         email: z.string().nullable(),
         firstLanguage: z.string().nullable(),
         levelAssessed: z.string().nullable(),
+        // Typologie optionnelle (mêmes codes que la fiche apprenant)
+        birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+        gender: z.enum(["femme", "homme", "autre"]).nullable().optional(),
+        address: z.string().nullable().optional(),
+        city: z.string().nullable().optional(),
+        postalCode: z.string().nullable().optional(),
+        activityStatus: z
+          .enum(["demandeur_emploi", "rsa", "salarie", "scolaire_etudiant", "inactif_autre"])
+          .nullable()
+          .optional(),
+        qpv: z.boolean().nullable().optional(),
+        rqth: z.boolean().nullable().optional(),
+        educationLevel: z.enum(["non_scolarise", "primaire", "secondaire", "superieur"]).nullable().optional(),
+        prescriber: z.string().nullable().optional(),
       }),
     )
     .min(1)
@@ -143,6 +159,16 @@ export async function importLearners(raw: z.infer<typeof importSchema>): Promise
         email: r.email,
         first_language: r.firstLanguage,
         level_assessed: r.levelAssessed,
+        birth_date: r.birthDate ?? null,
+        gender: r.gender ?? null,
+        address: r.address ?? null,
+        city: r.city ?? null,
+        postal_code: r.postalCode ?? null,
+        activity_status: r.activityStatus ?? null,
+        qpv: r.qpv ?? null,
+        rqth: r.rqth ?? null,
+        education_level: r.educationLevel ?? null,
+        prescriber: r.prescriber ?? null,
       })),
     )
     .select("id");
@@ -209,6 +235,26 @@ export async function enrollLearner(raw: z.infer<typeof enrollSchema>): Promise<
   revalidatePath(`/groupes/${parsed.data.groupId}`);
   revalidatePath("/apprenants");
   return { ok: true };
+}
+
+const qpvSchema = z.object({
+  address: z.string().min(3),
+  city: z.string(),
+  postalCode: z.string(),
+});
+
+export type QpvResult =
+  | { ok: true; qpv: boolean; qpvName: string | null; matchedAddress: string }
+  | { ok: false; error: string };
+
+// Détection QPV : géocodage BAN + périmètres officiels ANCT embarqués (lib/geo/qpv).
+export async function detectQpv(raw: z.infer<typeof qpvSchema>): Promise<QpvResult> {
+  const parsed = qpvSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Renseignez d'abord l'adresse (rue + commune)." };
+
+  await requireRole(["admin", "coordinator"]);
+  const { lookupQpv } = await import("@/lib/geo/qpv");
+  return lookupQpv(parsed.data.address, parsed.data.city, parsed.data.postalCode);
 }
 
 const enrollmentStatusSchema = z.object({

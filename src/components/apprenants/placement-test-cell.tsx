@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import { toast } from "sonner";
-import { ClipboardCopy, FilePlus2 } from "lucide-react";
+import { ClipboardCopy, FilePlus2, RotateCcw } from "lucide-react";
 import { createPlacementTest } from "@/app/(app)/apprenants/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,17 @@ export function PlacementTestCell({ learnerId, test }: { learnerId: string; test
         {test.score !== null && (
           <span className="text-xs text-muted-foreground">{Math.round(test.score)}/100</span>
         )}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 px-2 text-xs"
+          onClick={generate}
+          disabled={pending}
+          title="Nouvelle tentative (nouveau lien) — l'ancien résultat est conservé"
+        >
+          <RotateCcw className="mr-1 h-3 w-3" />
+          {pending ? "…" : "Refaire"}
+        </Button>
       </span>
     );
   }

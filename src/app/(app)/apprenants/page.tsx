@@ -15,8 +15,13 @@ import {
   type AttendanceRecord,
 } from "@/lib/attendance-stats";
 
-export default async function ApprenantsPage() {
+export default async function ApprenantsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
   await requireRole(["admin", "coordinator"]);
+  const { q } = await searchParams;
   const supabase = await createClient();
 
   const [{ data: learners }, { data: enrollments }, { data: groups }, { data: attendanceRows }, { data: placementRows }] = await Promise.all([
@@ -90,7 +95,16 @@ export default async function ApprenantsPage() {
                 </TableCell>
               </TableRow>
             )}
-            {(learners ?? []).map((l) => {
+            {(learners ?? [])
+              .filter((l) => {
+                // Filtre ?q= (recherche globale ⌘K) : nom ou téléphone, sans accents
+                if (!q) return true;
+                const norm = (s: string) =>
+                  s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+                const hay = norm(`${l.first_name} ${l.last_name} ${l.phone ?? ""}`);
+                return q.trim().split(/\s+/).every((word) => hay.includes(norm(word)));
+              })
+              .map((l) => {
               const mine = (enrollments ?? []).filter((e) => e.learner_id === l.id && e.status === "inscrit");
               const st = stats.get(l.id);
               return (
@@ -157,6 +171,7 @@ export default async function ApprenantsPage() {
                         birthDate: l.birth_date ?? "",
                         gender: l.gender ?? "nc",
                         nationality: l.nationality ?? "",
+                        address: l.address ?? "",
                         city: l.city ?? "",
                         postalCode: l.postal_code ?? "",
                         qpv: l.qpv == null ? "nc" : l.qpv ? "oui" : "non",

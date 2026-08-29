@@ -52,6 +52,8 @@ export const HELP_SECTIONS: HelpSection[] = [
         steps: [
           "Dashboard : votre page d'accueil — elle s'adapte à votre rôle.",
           "Planning : le calendrier de toutes les séances (vue liste sur téléphone).",
+          "Recherche rapide : ⌘K (ou Ctrl+K), ou la loupe en haut du menu — tapez un nom d'apprenant, de groupe, de formateur ou de salle et sautez-y directement.",
+          "Le Dashboard commence par « À faire aujourd'hui » : feuilles d'émargement à clôturer, groupes qui démarrent sans salle ou sans formateur — chaque ligne est cliquable vers l'action.",
           "Groupes / Apprenants / Formateurs / Salles : les fiches de l'organisme.",
           "Qualité et Paramètres : réservés à l'équipe de coordination.",
         ],
@@ -151,6 +153,8 @@ export const HELP_SECTIONS: HelpSection[] = [
       {
         title: "Inscrire les apprenants",
         steps: [
+          "Typologie sans effort : saisissez l'adresse (rue + commune + CP) puis « Détecter depuis l'adresse » — la case QPV se coche seule (périmètres officiels ANCT 2024). Modifiable à la main.",
+          "Import en lot : les colonnes de typologie (Naissance, Sexe, Adresse, Commune, CP, Situation, QPV, RQTH, Scolarisation, Prescripteur) sont acceptées à la suite des 6 colonnes de base — les bilans financeurs se remplissent dès la rentrée.",
           "Au fil de l'eau : fiche du groupe → « Créer et inscrire » (photo possible immédiatement, à la caméra).",
           "En masse : Apprenants → « Importer une liste » — collez votre tableau Excel (Prénom;Nom;Téléphone;Email;Langue;Niveau) et inscrivez tout le monde dans un groupe en une fois.",
           "L'effectif (n / capacité) s'affiche partout ; un badge rouge signale un dépassement.",
@@ -187,6 +191,8 @@ export const HELP_SECTIONS: HelpSection[] = [
           "Fiche du groupe → « Modifier » : renommez, changez le financeur, la capacité, les notes, et le statut (En attente, Ouvert, Complet, Terminé, Annulé).",
           "Clôturez un groupe en fin de parcours en passant son statut à « Terminé ».",
           "Si des séances ont été annulées, un bandeau rouge affiche les heures manquantes : « Replanifier automatiquement » ajoute des séances de rattrapage à la suite du planning, sur le même rythme.",
+          "« Reconduire » (fiche du groupe) : crée la session suivante à l'identique — même dispositif, formateur, salle et rythme — avec un planning complet régénéré depuis la date choisie, nouvelles vacances sautées.",
+          "Rappels automatiques : « Modifier » le groupe → cochez « Rappels automatiques » — chaque apprenant AVEC email reçoit la veille la liste de ses cours du lendemain. Les formateurs reçoivent aussi une relance pour leurs feuilles d'émargement oubliées.",
         ],
       },
     ],

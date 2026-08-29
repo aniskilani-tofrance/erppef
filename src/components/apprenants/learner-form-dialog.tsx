@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { upsertLearner } from "@/app/(app)/apprenants/actions";
+import { detectQpv, upsertLearner } from "@/app/(app)/apprenants/actions";
 import { Button } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
@@ -31,6 +31,7 @@ export type LearnerFormValues = {
   birthDate: string;
   gender: string;
   nationality: string;
+  address: string;
   city: string;
   postalCode: string;
   qpv: string; // 'nc' | 'oui' | 'non'
@@ -53,6 +54,7 @@ const EMPTY: LearnerFormValues = {
   birthDate: "",
   gender: "nc",
   nationality: "",
+  address: "",
   city: "",
   postalCode: "",
   qpv: "nc",
@@ -107,10 +109,31 @@ export function LearnerFormDialog({
   const [values, setValues] = useState<LearnerFormValues>(initial ?? EMPTY);
   const [groupId, setGroupId] = useState(defaultGroupId ?? "none");
   const [pending, startTransition] = useTransition();
+  const [qpvChecking, setQpvChecking] = useState(false);
   const isEdit = Boolean(initial?.id);
 
   function set<K extends keyof LearnerFormValues>(key: K, value: LearnerFormValues[K]) {
     setValues((v) => ({ ...v, [key]: value }));
+  }
+
+  async function checkQpv() {
+    setQpvChecking(true);
+    const result = await detectQpv({
+      address: values.address.trim(),
+      city: values.city.trim(),
+      postalCode: values.postalCode.trim(),
+    });
+    setQpvChecking(false);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    set("qpv", result.qpv ? "oui" : "non");
+    toast.success(
+      result.qpv
+        ? `Adresse en QPV : ${result.qpvName} (${result.matchedAddress})`
+        : `Hors QPV (${result.matchedAddress})`,
+    );
   }
 
   function submit() {
@@ -129,6 +152,7 @@ export function LearnerFormDialog({
         birthDate: values.birthDate || null,
         gender: values.gender === "nc" ? null : (values.gender as "femme" | "homme" | "autre"),
         nationality: values.nationality.trim() || null,
+        address: values.address.trim() || null,
         city: values.city.trim() || null,
         postalCode: values.postalCode.trim() || null,
         qpv: values.qpv === "nc" ? null : values.qpv === "oui",
@@ -245,6 +269,10 @@ export function LearnerFormDialog({
                 </div>
                 <SelectField label="Sexe" value={values.gender} options={GENDERS} onChange={(v) => set("gender", v)} />
               </div>
+              <div className="space-y-2">
+                <Label>Adresse (rue)</Label>
+                <Input value={values.address} onChange={(e) => set("address", e.target.value)} placeholder="12 rue des Rosiers" />
+              </div>
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="space-y-2 sm:col-span-2">
                   <Label>Commune de résidence</Label>
@@ -256,7 +284,18 @@ export function LearnerFormDialog({
                 </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <SelectField label="Réside en QPV" value={values.qpv} options={YES_NO} onChange={(v) => set("qpv", v)} />
+                <div className="space-y-2">
+                  <SelectField label="Réside en QPV" value={values.qpv} options={YES_NO} onChange={(v) => set("qpv", v)} />
+                  <button
+                    type="button"
+                    disabled={qpvChecking || !values.address.trim()}
+                    onClick={checkQpv}
+                    className="text-xs text-muted-foreground underline-offset-2 hover:underline disabled:opacity-50"
+                    title="Vérifie l'adresse contre les périmètres officiels ANCT 2024"
+                  >
+                    {qpvChecking ? "Vérification…" : "Détecter depuis l'adresse"}
+                  </button>
+                </div>
                 <SelectField label="RQTH (handicap)" value={values.rqth} options={YES_NO} onChange={(v) => set("rqth", v)} />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">

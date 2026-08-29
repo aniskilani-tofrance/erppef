@@ -34,7 +34,10 @@ export default async function DashboardPage() {
     .select("id, first_name, last_name, weekly_hours_max")
     .eq("is_active", true);
 
-  const [groups, weekLoads, roomLoads, trainers, rooms, attendanceRows, learnersList] = await Promise.all([
+  const nowIso = new Date().toISOString();
+  const in7days = new Date(Date.now() + 7 * 86_400_000).toISOString();
+
+  const [groups, weekLoads, roomLoads, trainers, rooms, attendanceRows, learnersList, unclosedSheets, incompleteGroups, orphanSessions] = await Promise.all([
     supabase.from("groups").select("id, status", { count: "exact" }).in("status", ["ouvert", "complet", "en_attente"]),
     supabase.from("v_trainer_week_load").select("*").eq("week_start", weekStart),
     supabase.from("v_room_week_load").select("*").eq("week_start", weekStart),
@@ -45,7 +48,58 @@ export default async function DashboardPage() {
       .select("learner_id, status, sessions!inner(starts_at, attendance_closed_at)")
       .not("sessions.attendance_closed_at", "is", null),
     supabase.from("learners").select("id, first_name, last_name"),
+    // À faire : feuilles d'émargement ouvertes jamais clôturées (séance passée)
+    supabase
+      .from("sessions")
+      .select("id, starts_at, groups(name)")
+      .not("attendance_opened_at", "is", null)
+      .is("attendance_closed_at", null)
+      .lt("ends_at", nowIso)
+      .neq("status", "annulee")
+      .order("starts_at", { ascending: false })
+      .limit(5),
+    // À faire : groupes qui démarrent sous 7 jours sans formateur ou sans salle
+    supabase
+      .from("groups")
+      .select("id, name, starts_on, trainer_id, room_id")
+      .in("status", ["en_attente", "ouvert"])
+      .gte("starts_on", today)
+      .lte("starts_on", in7days.slice(0, 10))
+      .or("trainer_id.is.null,room_id.is.null"),
+    // À faire : séances des 7 prochains jours sans formateur ou sans salle
+    supabase
+      .from("sessions")
+      .select("id, starts_at, groups(name)")
+      .eq("status", "planifiee")
+      .gte("starts_at", nowIso)
+      .lte("starts_at", in7days)
+      .or("trainer_id.is.null,room_id.is.null")
+      .limit(5),
   ]);
+
+  // Liste « À faire aujourd'hui » : ce qui demande une action, avec le lien pour la faire.
+  const todos: { label: string; href: string }[] = [];
+  for (const s of unclosedSheets.data ?? []) {
+    const g = s.groups as unknown as { name: string } | null;
+    todos.push({
+      label: `Clôturer la feuille d'émargement du ${fmtShortDate(s.starts_at)} — ${g?.name ?? "groupe"}`,
+      href: `/seances/${s.id}/emargement`,
+    });
+  }
+  for (const g of incompleteGroups.data ?? []) {
+    const manque = [!g.trainer_id && "formateur", !g.room_id && "salle"].filter(Boolean).join(" ni ");
+    todos.push({
+      label: `${g.name} démarre le ${fmtShortDate(`${g.starts_on}T12:00:00Z`)} sans ${manque}`,
+      href: `/groupes/${g.id}`,
+    });
+  }
+  for (const s of orphanSessions.data ?? []) {
+    const g = s.groups as unknown as { name: string } | null;
+    todos.push({
+      label: `Séance du ${fmtShortDate(s.starts_at)} (${g?.name ?? "groupe"}) sans formateur ou sans salle`,
+      href: "/planning",
+    });
+  }
 
   // Assiduité : taux global + apprenants en alerte (série d'absences ou taux faible)
   const attendanceRecords: AttendanceRecord[] = (attendanceRows.data ?? []).map((a) => ({
@@ -116,6 +170,26 @@ export default async function DashboardPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+
+      {todos.length > 0 && (
+        <Card className="border-amber-300 bg-amber-50/50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">À faire aujourd&apos;hui ({todos.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-1.5 text-sm">
+              {todos.slice(0, 8).map((t, i) => (
+                <li key={i}>
+                  <Link href={t.href} className="flex items-start gap-2 hover:underline">
+                    <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
+                    {t.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <KpiCard icon={<UsersRound className="h-4 w-4" />} label="Groupes actifs" value={String(groups.count ?? 0)} />
@@ -208,6 +282,15 @@ function KpiCard({ icon, label, value, alert }: { icon: React.ReactNode; label: 
       </CardContent>
     </Card>
   );
+}
+
+function fmtShortDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("fr-FR", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    timeZone: "Europe/Paris",
+  });
 }
 
 function formatHours(h: number): string {

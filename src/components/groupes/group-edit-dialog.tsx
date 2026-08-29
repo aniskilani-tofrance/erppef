@@ -35,6 +35,7 @@ export function GroupEditDialog({
     funderId: string | null;
     capacity: number | null;
     notes: string | null;
+    remindersEnabled: boolean;
   };
   funders: { id: string; name: string }[];
 }) {
@@ -44,6 +45,7 @@ export function GroupEditDialog({
   const [funderId, setFunderId] = useState(initial.funderId ?? "none");
   const [capacity, setCapacity] = useState(initial.capacity ? String(initial.capacity) : "");
   const [notes, setNotes] = useState(initial.notes ?? "");
+  const [reminders, setReminders] = useState(initial.remindersEnabled);
   const [pending, startTransition] = useTransition();
 
   function submit() {
@@ -55,6 +57,7 @@ export function GroupEditDialog({
         funderId: funderId === "none" ? null : funderId,
         capacity: capacity ? Number(capacity) : null,
         notes: notes.trim() || null,
+        remindersEnabled: reminders,
       });
       if (!result.ok) {
         toast.error(result.error);
@@ -114,6 +117,22 @@ export function GroupEditDialog({
           <div className="space-y-2">
             <Label>Notes</Label>
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+          </div>
+          <div className="space-y-2">
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={reminders}
+                onChange={(e) => setReminders(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-primary"
+              />
+              <span>
+                Rappels automatiques aux apprenants
+                <span className="block text-xs text-muted-foreground">
+                  Email la veille de chaque séance (les apprenants sans email sont ignorés).
+                </span>
+              </span>
+            </label>
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setOpen(false)} disabled={pending}>Annuler</Button>

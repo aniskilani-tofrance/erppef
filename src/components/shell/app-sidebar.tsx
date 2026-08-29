@@ -24,6 +24,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
+import { GlobalSearch } from "@/components/shell/global-search";
 import type { AppRole } from "@/lib/auth";
 
 const NAV = [
@@ -77,6 +78,7 @@ export function AppSidebar({ role, orgName }: { role: AppRole; orgName: string }
 
   const nav = (
     <nav className="flex flex-1 flex-col gap-1 p-3">
+      {(role === "admin" || role === "coordinator") && <GlobalSearch />}
       {items.map((item) => {
         const active = pathname.startsWith(item.href);
         return (
