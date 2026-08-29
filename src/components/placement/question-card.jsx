@@ -654,7 +654,10 @@ export default function QuestionCard({ question, selectedAnswer, onSelect, quest
         {/* Badges niveau + timer */}
         <div className="flex items-center justify-between mb-4 gap-2">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-[#17c3b2]/10 text-[#00504e]">Niveau {question.level}</span>
+            {/* Bloc littératie : jamais de niveau affiché au candidat (restitution valorisante) */}
+            {question.block !== 'litteratie' && (
+              <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-[#17c3b2]/10 text-[#00504e]">Niveau {question.level}</span>
+            )}
             <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600">{question.category}</span>
           </div>
           {timeLeft !== null && timeLeft !== undefined && (
@@ -740,8 +743,39 @@ export default function QuestionCard({ question, selectedAnswer, onSelect, quest
           )}
         </div>
 
+        {/* Stimulus de lecture (bloc littératie) : affiché en grand, JAMAIS prononcé */}
+        {question.stimulus && (
+          <div className={`mb-6 rounded-2xl border-2 border-gray-200 bg-white px-6 py-8 text-center font-semibold tracking-wide text-gray-900 ${question.stimulus.length <= 8 ? 'text-5xl' : 'text-3xl'}`}>
+            {question.stimulus}
+          </div>
+        )}
+
         {/* Rendu selon le type */}
-        {question.type === 'oral' ? (
+        {question.type === 'big_choice' ? (
+          // Bloc littératie : très grandes tuiles tactiles (emoji, lettres, mots courts),
+          // sélection au premier appui (l'option textuelle est lue sauf noAudio).
+          <div className={`grid gap-4 ${question.options.length <= 3 ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2'}`}>
+            {question.options.map((option, index) => {
+              const isSelected = selectedAnswer === option;
+              const isEmoji = /^\p{Extended_Pictographic}/u.test(option) && option.length <= 4;
+              return (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => {
+                    onSelect(option);
+                    if (!question.noAudio && !isEmoji) speak(option);
+                  }}
+                  className={`flex min-h-[110px] items-center justify-center rounded-2xl border-4 p-4 text-center transition-all active:scale-95 ${
+                    isSelected ? 'border-[#17c3b2] bg-[#17c3b2]/10 shadow-lg' : 'border-gray-200 bg-white hover:border-[#32cf8a]'
+                  } ${isEmoji ? 'text-6xl' : question.bigText ? 'text-4xl font-bold tracking-wide' : 'text-xl font-semibold'}`}
+                >
+                  {option}
+                </button>
+              );
+            })}
+          </div>
+        ) : question.type === 'oral' ? (
           <div className="space-y-4">
             <Alert className="bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
               <Mic className="h-4 w-4 text-purple-600" />

@@ -5,11 +5,14 @@
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import { questions as QUESTIONS_RAW } from "./questions";
+import { literacyQuestions as LITERACY_RAW } from "./literacy-questions";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Question = any;
 
 export const QUESTIONS: Question[] = QUESTIONS_RAW as Question[];
+export const LITERACY_QUESTIONS: Question[] = LITERACY_RAW as Question[];
+const ALL_QUESTIONS: Question[] = [...LITERACY_QUESTIONS, ...QUESTIONS];
 
 export const FREE_RESPONSE_TYPES = ["written", "oral", "reformulate"];
 
@@ -20,7 +23,7 @@ const SECRET_FIELDS = [
 ];
 
 export function publicQuestions(): Question[] {
-  return QUESTIONS.map((q) => {
+  return ALL_QUESTIONS.map((q) => {
     const copy: Question = { ...q };
     for (const f of SECRET_FIELDS) delete copy[f];
     // email_response est un QCM dans les données : ses options restent, sa réponse non.
@@ -74,14 +77,132 @@ function fallbackFree(q: Question, answer: string): boolean {
 export type GradedAnswer = { questionId: number; answer: string; correct: boolean };
 export type GradeResult = {
   score: number;
-  level: "A1" | "A2" | "B1" | "B2";
+  level: string; // Pré-alpha | Alpha | Alpha avancé | Post-alpha (A1.1 en cours) | A1.1 | A1 | A2 | B1 | B2 | flags
   answers: GradedAnswer[];
 };
 
+// ══════════════════════════════════════════════════════════════
+// BLOC LITTÉRATIE — correction et routage (croisement oral/écrit,
+// jamais un score unique ; cf. spec A1.1/DGLFLF, garde-fous ANLCI)
+// ══════════════════════════════════════════════════════════════
+
+// Correction d'un item littératie (tous synchrones : QCM tactiles + saisie chiffrée).
+function gradeLiteracyItem(q: Question, answer: string, firstName?: string): boolean | null {
+  if (q.skill === "declaratif") return null; // route la pédagogie, ne se note pas
+  if (!answer) return false;
+  if (q.dynamicName) {
+    const norm = (s: string) => s.toUpperCase().replace(/[^A-ZÀ-Ü-]/g, "");
+    return Boolean(firstName) && norm(answer) === norm(firstName!);
+  }
+  if (q.type === "fill_keyboard") {
+    return (q.acceptedAnswers ?? []).some((a: string) => a.trim() === answer.trim());
+  }
+  return answer === q.correct;
+}
+
+type LiteracySkills = {
+  oral: number;    // /3 — OK si ≥ 2
+  l0: number;      // /3 (entrée dans l'écrit)
+  chiffres: number; // /1
+  l1: number;      // /2 (déchiffrage)
+  l2: number;      // /2 (lecture-compréhension = seuil A1.1)
+  scolFaible: boolean;
+  scolJamais: boolean;
+  langScolFr: boolean;
+};
+
+function literacySkills(byId: Record<number, string>, firstName?: string): LiteracySkills {
+  const ok = (id: number) => {
+    const q = LITERACY_QUESTIONS.find((x) => x.id === id);
+    return q && gradeLiteracyItem(q, byId[id] ?? "", firstName) === true ? 1 : 0;
+  };
+  const scol = byId[101] ?? "";
+  return {
+    oral: ok(103) + ok(104) + ok(105),
+    l0: ok(106) + ok(107) + ok(108),
+    chiffres: ok(109),
+    l1: ok(110) + ok(111),
+    l2: ok(112) + ok(113),
+    scolJamais: scol.startsWith("🏫❌"),
+    scolFaible: scol.startsWith("🏫❌") || (scol.startsWith("🏫 ") || scol.startsWith("🏫 Oui, un peu")),
+    langScolFr: (byId[102] ?? "").startsWith("🇫🇷"),
+  };
+}
+
+// Routage (spec §3). Retourne null si le profil déverrouille le test CECRL (sortie haute).
+export function routeLiteracy(byId: Record<number, string>, firstName?: string): string | null {
+  const s = literacySkills(byId, firstName);
+  const oralOk = s.oral >= 2;
+
+  if (s.l0 < 2) {
+    if (!oralOk) return "Pré-alpha";
+    if (s.langScolFr && !s.scolFaible) return "Illettrisme probable (orienter ANLCI)";
+    return "Alpha";
+  }
+  if (s.l1 === 0) return "Alpha";
+  if (s.l1 === 1 && s.l2 <= 1) return "Alpha avancé";
+  if (s.l1 === 2 && s.l2 <= 1) return "Post-alpha (A1.1 en cours)";
+  return null; // L2 = 2/2 : A1.1 écrit-réception acquis → suite du test
+}
+
+// Décisions d'arrêt anticipé côté serveur (les bonnes réponses ne quittent jamais le serveur).
+// - stage "L0" (après l'item 109) : si l'entrée dans l'écrit échoue, on saute L1/L2/production.
+// - stage "L1" (après l'item 111) : si le déchiffrage est nul, on saute L2/production.
+// - stage "L2" (après l'item 113) : seul L2 = 2/2 ouvre le test CECRL complet.
+export function literacyGateDecision(
+  byId: Record<number, string>,
+  stage: "L0" | "L1" | "L2",
+  firstName?: string,
+): { continue: boolean } {
+  const s = literacySkills(byId, firstName);
+  if (stage === "L0") return { continue: s.l0 >= 2 };
+  if (stage === "L1") return { continue: s.l1 > 0 };
+  return { continue: s.l2 === 2 };
+}
+
+export type GradeOptions = { firstName?: string };
+
 // answersByQuestionId : réponse brute du client, indexée par id de question.
-export async function gradeTest(answersByQuestionId: Record<number, string>): Promise<GradeResult> {
-  let correctCount = 0;
+export async function gradeTest(
+  answersByQuestionId: Record<number, string>,
+  options: GradeOptions = {},
+): Promise<GradeResult> {
   const details: GradedAnswer[] = [];
+
+  // ── 1. Bloc littératie (présent dès qu'au moins un item 101+ a été administré) ──
+  const literacyAnswered = LITERACY_QUESTIONS.some((q) => answersByQuestionId[q.id] != null);
+  let literacyLevel: string | null = null;
+  let literacyScore = 0;
+  if (literacyAnswered) {
+    let scorable = 0;
+    let correct = 0;
+    for (const q of LITERACY_QUESTIONS) {
+      const answer = answersByQuestionId[q.id];
+      if (answer == null) continue; // item non administré (arrêt anticipé ou skipIf)
+      const isCorrect = gradeLiteracyItem(q, answer, options.firstName);
+      // RGPD : le prénom (et ses distracteurs) ne se stocke pas dans le détail des réponses.
+      details.push({
+        questionId: q.id,
+        answer: q.dynamicName ? (isCorrect ? "(prénom reconnu)" : "(distracteur)") : answer,
+        correct: isCorrect === true,
+      });
+      if (isCorrect !== null && q.skill !== "ecriture") {
+        scorable += 1;
+        if (isCorrect) correct += 1;
+      }
+    }
+    literacyLevel = routeLiteracy(answersByQuestionId, options.firstName);
+    literacyScore = scorable > 0 ? Math.round((correct / scorable) * 100) : 0;
+  }
+
+  // Profil infra-A1 : le niveau vient du routage, le test CECRL n'a pas été passé.
+  const cecrlAnswered = QUESTIONS.some((q) => answersByQuestionId[q.id] != null);
+  if (literacyLevel !== null && !cecrlAnswered) {
+    return { score: literacyScore, level: literacyLevel, answers: details };
+  }
+
+  // ── 2. Test CECRL (barème historique, calculé sur ses 56 questions) ──
+  let correctCount = 0;
 
   for (const q of QUESTIONS) {
     const userAnswer = answersByQuestionId[q.id] ?? "";

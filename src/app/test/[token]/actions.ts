@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { gradeTest, publicQuestions } from "@/lib/placement/grading";
+import { gradeTest, literacyGateDecision, publicQuestions } from "@/lib/placement/grading";
 
 // Test de positionnement PUBLIC : le token est le secret (pattern émargement).
 // Les questions partent au client SANS les réponses ; la correction est serveur.
@@ -39,10 +39,37 @@ export async function fetchTest(token: string): Promise<TestInfo | null> {
   };
 }
 
+// Porte d'arrêt anticipé du bloc littératie : la correction reste côté serveur,
+// le client demande seulement « on continue ou on s'arrête ? » aux paliers L0/L1/L2.
+const gateSchema = z.object({
+  token: z.string().uuid(),
+  stage: z.enum(["L0", "L1", "L2"]),
+  answers: z.record(z.string(), z.string().max(5000)),
+});
+
+export async function literacyGate(
+  raw: z.infer<typeof gateSchema>,
+): Promise<{ ok: true; continue: boolean } | { ok: false; error: string }> {
+  const parsed = gateSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Requête invalide." };
+
+  const test = await findTest(parsed.data.token);
+  if (!test || test.status === "fait") return { ok: false, error: "Lien de test invalide." };
+
+  const byId: Record<number, string> = {};
+  for (const [k, v] of Object.entries(parsed.data.answers)) byId[Number(k)] = v;
+  const firstName = (test.learners as unknown as { first_name: string } | null)?.first_name;
+
+  return { ok: true, ...literacyGateDecision(byId, parsed.data.stage, firstName) };
+}
+
 const submitSchema = z.object({
   token: z.string().uuid(),
   durationSeconds: z.number().int().min(0).max(4 * 3600),
   answers: z.record(z.string(), z.string().max(5000)),
+  // Échec de l'entraînement à l'interface (E2) : on ne classe JAMAIS quelqu'un
+  // sur un échec de manipulation — statut spécial, aucun niveau émis.
+  interfaceAbort: z.boolean().optional(),
 });
 
 export type SubmitTestResult =
@@ -61,7 +88,10 @@ export async function submitTest(raw: z.infer<typeof submitSchema>): Promise<Sub
   const byId: Record<number, string> = {};
   for (const [k, v] of Object.entries(d.answers)) byId[Number(k)] = v;
 
-  const result = await gradeTest(byId);
+  const firstName = (test.learners as unknown as { first_name: string } | null)?.first_name;
+  const result = d.interfaceAbort
+    ? { score: 0, level: "À évaluer avec un accompagnant", answers: [] }
+    : await gradeTest(byId, { firstName });
   const supabase = createAdminClient();
 
   const { error } = await supabase

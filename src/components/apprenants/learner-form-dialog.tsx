@@ -89,7 +89,7 @@ const YES_NO = [
   { value: "non", label: "Non" },
 ];
 
-const LEVELS = ["Non évalué", "A1.1", "A1", "A2", "B1", "B2", "C1", "C2"];
+const LEVELS = ["Non évalué", "Pré-alpha", "Alpha", "A1.1", "A1", "A2", "B1", "B2", "C1", "C2"];
 
 export function LearnerFormDialog({
   initial,

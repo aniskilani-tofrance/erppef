@@ -6,12 +6,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
-import { submitTest } from "@/app/test/[token]/actions";
+import { literacyGate, submitTest } from "@/app/test/[token]/actions";
+import { nameDistractors } from "@/lib/placement/literacy-questions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
-import QuestionCard from "./question-card";
+import QuestionCard, { speak } from "./question-card";
+import { LiteracyTraining } from "./literacy-training";
 
 function shuffle(arr) {
   const a = [...arr];
@@ -22,18 +24,37 @@ function shuffle(arr) {
   return a;
 }
 
+// Paliers du bloc littératie où le serveur décide de continuer ou d'arrêter
+// (les bonnes réponses ne quittent jamais le serveur).
+const GATE_AFTER = { 109: "L0", 111: "L1", 114: "L2" };
+
 export function TestPlayer({ token, firstName, questions: rawQuestions }) {
-  // Anti-triche : ordre des questions et des options aléatoire par session.
-  // (order_sentences mélange ses phrases lui-même dans le composant, avec origIdx.)
-  const [questions] = useState(() =>
-    shuffle(rawQuestions).map((q) => (q.options ? { ...q, options: shuffle(q.options) } : q)),
-  );
+  // Bloc littératie EN TÊTE et dans un ordre FIXE (progression pédagogique) ;
+  // le test CECRL qui suit reste mélangé (anti-triche), options mélangées partout.
+  const [questions] = useState(() => {
+    const literacy = rawQuestions
+      .filter((q) => q.block === "litteratie")
+      .map((q) =>
+        q.dynamicName
+          ? { ...q, options: shuffle([(firstName || "").toUpperCase(), ...nameDistractors(firstName)]) }
+          : q.options && !q.stimulus
+            ? { ...q, options: shuffle(q.options) }
+            : q,
+      );
+    const cecrl = shuffle(rawQuestions.filter((q) => q.block !== "litteratie")).map((q) =>
+      q.options ? { ...q, options: shuffle(q.options) } : q,
+    );
+    return [...literacy, ...cecrl];
+  });
+  const hasLiteracy = questions.some((q) => q.block === "litteratie");
 
   const [started, setStarted] = useState(false);
+  const [training, setTraining] = useState(false); // écrans E1/E2 (non notés)
   const [consent, setConsent] = useState(false);
   const [current, setCurrent] = useState(0);
   const [answers, setAnswers] = useState({}); // questionId -> réponse (string)
   const [timeLeft, setTimeLeft] = useState(null);
+  const [gating, setGating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
@@ -42,6 +63,14 @@ export function TestPlayer({ token, firstName, questions: rawQuestions }) {
   answersRef.current = answers;
 
   const q = questions[current];
+
+  // Sauts conditionnels du bloc littératie (ex. « langue de l'école » sans objet
+  // pour quelqu'un qui n'y est jamais allé).
+  function isSkipped(question, currentAnswers) {
+    if (!question?.skipIf) return false;
+    const ref = currentAnswers[question.skipIf.questionId] ?? "";
+    return ref.startsWith(question.skipIf.answerStartsWith);
+  }
 
   // Minuteur par question (null = sans limite) : à zéro, passage automatique.
   useEffect(() => {
@@ -64,24 +93,41 @@ export function TestPlayer({ token, firstName, questions: rawQuestions }) {
     setAnswers((a) => ({ ...a, [q.id]: value }));
   }
 
-  function next() {
-    if (current < questions.length - 1) setCurrent((c) => c + 1);
+  async function next() {
+    // Palier littératie : le serveur décide (arrêt anticipé — on n'inflige pas
+    // 56 questions écrites à quelqu'un qui n'est pas entré dans l'écrit).
+    const stage = GATE_AFTER[q?.id];
+    if (stage && !gating) {
+      setGating(true);
+      const gate = await literacyGate({ token, stage, answers: answersRef.current });
+      setGating(false);
+      if (gate.ok && !gate.continue) {
+        handleSubmit();
+        return;
+      }
+    }
+    let i = current + 1;
+    while (i < questions.length && isSkipped(questions[i], answersRef.current)) i += 1;
+    if (i < questions.length) setCurrent(i);
     else handleSubmit();
   }
 
   function prev() {
-    if (current > 0) setCurrent((c) => c - 1);
+    let i = current - 1;
+    while (i >= 0 && isSkipped(questions[i], answersRef.current)) i -= 1;
+    if (i >= 0) setCurrent(i);
   }
 
-  async function handleSubmit() {
+  async function handleSubmit(interfaceAbort = false) {
     if (submitting) return;
     setSubmitting(true);
     setError(null);
-    const duration = Math.round((Date.now() - startTime.current) / 1000);
+    const duration = Math.round((Date.now() - (startTime.current ?? Date.now())) / 1000);
     const res = await submitTest({
       token,
       durationSeconds: duration,
       answers: answersRef.current,
+      interfaceAbort,
     });
     if (!res.ok) {
       setError(res.error);
@@ -127,7 +173,10 @@ export function TestPlayer({ token, firstName, questions: rawQuestions }) {
           disabled={!consent}
           onClick={() => {
             startTime.current = Date.now();
-            setStarted(true);
+            // Le clic est le geste utilisateur qui débloque la synthèse vocale (iOS/Safari).
+            speak(hasLiteracy ? "Bonjour !" : "");
+            if (hasLiteracy) setTraining(true);
+            else setStarted(true);
           }}
         >
           Commencer le test
@@ -138,19 +187,40 @@ export function TestPlayer({ token, firstName, questions: rawQuestions }) {
 
   // ── Écran de résultat ──
   if (result) {
+    // Sous A1 : jamais de niveau ni de score affiché au candidat (restitution
+    // valorisante ; le détail va au formateur, à confirmer en entretien).
+    const showLevel = ["A1", "A2", "B1", "B2"].includes(result.level);
     return (
       <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 p-6 text-center">
         <CheckCircle2 className="h-14 w-14 text-primary" />
-        <h1 className="text-2xl font-semibold">Test terminé, merci {firstName} !</h1>
-        <p className="text-lg">
-          Votre niveau : <span className="font-bold">{result.level}</span>
-          <span className="ml-2 text-sm text-muted-foreground">({result.score} / 100)</span>
-        </p>
+        <h1 className="text-2xl font-semibold">Merci {firstName} ! C&apos;est terminé. 🎉</h1>
+        {showLevel && (
+          <p className="text-lg">
+            Votre niveau : <span className="font-bold">{result.level}</span>
+            <span className="ml-2 text-sm text-muted-foreground">({result.score} / 100)</span>
+          </p>
+        )}
         <p className="text-sm text-muted-foreground">
-          Votre centre de formation a reçu votre résultat et reviendra vers vous pour
-          la suite de votre parcours. Vous pouvez fermer cette page.
+          Votre centre de formation a reçu vos réponses et reviendra vers vous pour
+          la suite de votre parcours. À bientôt !
         </p>
       </main>
+    );
+  }
+
+  // ── Entraînement littératie (E1/E2, non noté) ──
+  if (training) {
+    return (
+      <LiteracyTraining
+        onDone={() => {
+          setTraining(false);
+          setStarted(true);
+        }}
+        onAbort={() => {
+          setTraining(false);
+          handleSubmit(true); // jamais de classement sur un échec d'interface
+        }}
+      />
     );
   }
 
