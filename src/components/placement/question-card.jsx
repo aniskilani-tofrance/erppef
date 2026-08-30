@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ttsHash } from '@/lib/placement/tts-hash';
+import { ttsHash, ttsClean } from '@/lib/placement/tts-hash';
 import TTS_FILES from '@/lib/placement/tts-manifest.json';
 
 // ── MATCH PAIRS ──────────────────────────────────────────────
@@ -564,7 +564,8 @@ function speakSynthetic(text, rate, onEnd) {
   window.speechSynthesis.speak(utterance);
 }
 
-export function speak(text, { rate = 0.8, onEnd = null } = {}) {
+export function speak(rawText, { rate = 0.8, onEnd = null } = {}) {
+  const text = ttsClean(rawText ?? '');
   if (typeof window === 'undefined' || !text) return;
   // Stopper toute lecture en cours (audio ou synthèse)
   const audio = getSharedAudio();

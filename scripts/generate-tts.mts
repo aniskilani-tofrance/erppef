@@ -6,7 +6,7 @@ import { writeFileSync } from "node:fs";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import { questions } from "../src/lib/placement/questions";
 import { literacyQuestions } from "../src/lib/placement/literacy-questions";
-import { ttsHash } from "../src/lib/placement/tts-hash";
+import { ttsHash, ttsClean } from "../src/lib/placement/tts-hash";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const LOW_LEVELS = ["Pré-alpha", "Alpha", "A1.1", "A1", "A2"];
@@ -20,15 +20,16 @@ const UI_PHRASES = [
   "Merci ! Quelqu'un va vous aider pour la suite.",
 ];
 
-const texts = new Set<string>(UI_PHRASES);
+const raw = new Set<string>(UI_PHRASES);
 for (const q of [...literacyQuestions, ...questions] as any[]) {
-  if (q.question) texts.add(q.question);
-  if (q.audioText) texts.add(q.audioText);
+  if (q.question) raw.add(q.question);
+  if (q.audioText) raw.add(q.audioText);
   const optionAudio =
     (LOW_LEVELS.includes(q.level) && !q.noAudio && OPTION_AUDIO_TYPES.includes(q.type)) ||
     (q.type === "big_choice" && !q.noAudio);
-  if (optionAudio) for (const o of q.options ?? []) texts.add(o);
+  if (optionAudio) for (const o of q.options ?? []) raw.add(o);
 }
+const texts = new Set<string>([...raw].map(ttsClean).filter(Boolean));
 
 const map: Record<string, string> = {};
 for (const t of texts) map[ttsHash(t)] = t;

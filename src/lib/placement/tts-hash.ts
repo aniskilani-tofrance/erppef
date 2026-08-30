@@ -7,3 +7,13 @@ export function ttsHash(text: string): string {
   }
   return h.toString(16).padStart(8, "0");
 }
+
+// Retire tout ce qui ne doit pas être VOCALISÉ : emoji/pictogrammes (y compris
+// drapeaux, sélecteurs de variante, ZWJ). « 🇫🇷 Oui » se lit « Oui », jamais
+// « drapeau France Oui ». Un texte purement emoji devient vide (rien à dire).
+export function ttsClean(text: string): string {
+  return text
+    .replace(/[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\u{FE0F}\u{200D}\u{20E3}\u{2600}-\u{27BF}]/gu, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
