@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ttsHash } from '@/lib/placement/tts-hash';
+import TTS_FILES from '@/lib/placement/tts-manifest.json';
 
 // ── MATCH PAIRS ──────────────────────────────────────────────
 function MatchPairs({ question, selectedAnswer, onSelect }) {
@@ -527,7 +529,26 @@ function OddOneOut({ question, selectedAnswer, onSelect }) {
 // forcément lire — la consigne et les réponses doivent s'écouter.
 const LOW_LEVELS = ['Pré-alpha', 'Alpha', 'A1.1', 'A1', 'A2'];
 
-export function speak(text, { rate = 0.8 } = {}) {
+// Voix HUMAINE : tous les textes du test sont pré-enregistrés (voix neurale française,
+// public/audio/tts/<hash>.mp3, générés par scripts/generate-tts.mts). La synthèse du
+// navigateur ne sert plus que de repli si un fichier manque.
+// Un SEUL élément <audio> réutilisé : une fois débloqué par le premier geste
+// (bouton « Commencer »), iOS/Safari accepte les lectures programmées suivantes.
+const TTS_SET = new Set(TTS_FILES);
+let sharedAudio = null;
+let onSharedEnd = null;
+
+function getSharedAudio() {
+  if (!sharedAudio && typeof window !== 'undefined') {
+    sharedAudio = new window.Audio();
+    sharedAudio.addEventListener('ended', () => {
+      if (onSharedEnd) { const cb = onSharedEnd; onSharedEnd = null; cb(); }
+    });
+  }
+  return sharedAudio;
+}
+
+function speakSynthetic(text, rate, onEnd) {
   if (typeof window === 'undefined' || !window.speechSynthesis || !text) return;
   const spaced = text.replace(/\?/g, ' ?').replace(/!/g, ' !').replace(/,/g, ', ').replace(/\./g, '. ');
   const utterance = new SpeechSynthesisUtterance(spaced);
@@ -538,8 +559,30 @@ export function speak(text, { rate = 0.8 } = {}) {
   const frVoice = voices.find(v => v.lang.startsWith('fr') && (v.name.includes('Enhanced') || v.name.includes('Google') || v.name.includes('Thomas')))
     || voices.find(v => v.lang.startsWith('fr'));
   if (frVoice) utterance.voice = frVoice;
+  if (onEnd) utterance.onend = onEnd;
   window.speechSynthesis.cancel();
   window.speechSynthesis.speak(utterance);
+}
+
+export function speak(text, { rate = 0.8, onEnd = null } = {}) {
+  if (typeof window === 'undefined' || !text) return;
+  // Stopper toute lecture en cours (audio ou synthèse)
+  const audio = getSharedAudio();
+  if (audio && !audio.paused) audio.pause();
+  onSharedEnd = null;
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+
+  const hash = ttsHash(text);
+  if (audio && TTS_SET.has(hash)) {
+    onSharedEnd = onEnd;
+    audio.src = `/audio/tts/${hash}.mp3`;
+    audio.play().catch(() => {
+      onSharedEnd = null;
+      speakSynthetic(text, rate, onEnd);
+    });
+    return;
+  }
+  speakSynthetic(text, rate, onEnd);
 }
 
 // Types où écouter les OPTIONS ne fausse pas la compétence testée
@@ -582,22 +625,14 @@ export default function QuestionCard({ question, selectedAnswer, onSelect, quest
   const playAudio = () => {
     if (!question.audioText) return;
     setIsPlaying(true);
-    let text = question.audioText.replace(/\?/g, ' ?').replace(/!/g, ' !').replace(/,/g, ', ').replace(/\./g, '. ');
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'fr-FR';
-    utterance.rate = 0.8;
-    utterance.pitch = 1.15;
-    const voices = window.speechSynthesis.getVoices();
-    const frVoice = voices.find(v => v.lang.startsWith('fr') && (v.name.includes('Enhanced') || v.name.includes('Google') || v.name.includes('Thomas')))
-      || voices.find(v => v.lang.startsWith('fr'));
-    if (frVoice) utterance.voice = frVoice;
-    utterance.onend = () => {
-      setIsPlaying(false);
-      if (question.type === 'oral' && onStartTimer) onStartTimer();
-    };
-    utterance.onerror = () => setIsPlaying(false);
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
+    speak(question.audioText, {
+      onEnd: () => {
+        setIsPlaying(false);
+        if (question.type === 'oral' && onStartTimer) onStartTimer();
+      },
+    });
+    // Filet : si la lecture échoue silencieusement, on ne bloque pas le bouton
+    setTimeout(() => setIsPlaying(false), 20000);
   };
 
   const startRecording = async () => {
