@@ -110,6 +110,7 @@ export async function buildFunderReportPdf(report: FunderReport): Promise<Uint8A
   distributionBlock("Reconnaissance handicap (RQTH)", report.distributions.rqth);
   distributionBlock("Scolarisation", report.distributions.education);
   distributionBlock("Communes de résidence", report.distributions.cities.slice(0, 12));
+  distributionBlock("Quartiers (découpage municipal)", report.distributions.districts.filter((d) => d.label !== "Non renseigné").slice(0, 12));
 
   // ── Détail par groupe ──
   newPageIfNeeded(60);

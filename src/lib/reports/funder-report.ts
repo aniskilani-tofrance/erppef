@@ -35,6 +35,7 @@ export type ReportLearner = {
   gender: string | null;
   birthDate: string | null; // 'YYYY-MM-DD'
   city: string | null;
+  district: string | null;
   qpv: boolean | null;
   activityStatus: string | null;
   rqth: boolean | null;
@@ -97,6 +98,7 @@ export type FunderReport = {
     rqth: Distribution;
     education: Distribution;
     cities: Distribution; // triées par effectif décroissant
+    districts: Distribution; // quartiers (découpage du financeur municipal)
   };
   groupDetails: {
     groupId: string;
@@ -251,6 +253,7 @@ export function computeFunderReport(data: FunderReportData): FunderReport {
       rqth: distribute(learners, (l) => bool(l.rqth), { oui: "RQTH", non: "Sans RQTH" }),
       education: distribute(learners, (l) => l.educationLevel, EDUCATION_LABELS),
       cities: distribute(learners, (l) => l.city?.trim() || null),
+      districts: distribute(learners, (l) => l.district?.trim() || null),
     },
     groupDetails,
     learnerDetails,
@@ -325,7 +328,7 @@ export async function loadFunderReportData(
   const { data: learners } = learnerIds.length
     ? await supabase
         .from("learners")
-        .select("id, first_name, last_name, gender, birth_date, city, qpv, activity_status, rqth, education_level")
+        .select("id, first_name, last_name, gender, birth_date, city, district, qpv, activity_status, rqth, education_level")
         .in("id", learnerIds)
     : { data: [] };
 
@@ -359,6 +362,7 @@ export async function loadFunderReportData(
       gender: l.gender,
       birthDate: l.birth_date,
       city: l.city,
+      district: l.district ?? null,
       qpv: l.qpv,
       activityStatus: l.activity_status,
       rqth: l.rqth,

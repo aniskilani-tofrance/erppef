@@ -37,6 +37,7 @@ const learnerSchema = z.object({
   address: z.string().nullable(),
   city: z.string().nullable(),
   postalCode: z.string().nullable(),
+  district: z.string().nullable(),
   qpv: z.boolean().nullable(),
   activityStatus: z
     .enum(["demandeur_emploi", "rsa", "salarie", "scolaire_etudiant", "inactif_autre"])
@@ -73,6 +74,7 @@ export async function upsertLearner(raw: z.infer<typeof learnerSchema>): Promise
     address: d.address,
     city: d.city,
     postal_code: d.postalCode,
+    district: d.district,
     qpv: d.qpv,
     activity_status: d.activityStatus,
     rqth: d.rqth,
@@ -129,6 +131,7 @@ const importSchema = z.object({
         rqth: z.boolean().nullable().optional(),
         educationLevel: z.enum(["non_scolarise", "primaire", "secondaire", "superieur"]).nullable().optional(),
         prescriber: z.string().nullable().optional(),
+        district: z.string().nullable().optional(),
       }),
     )
     .min(1)
@@ -169,6 +172,7 @@ export async function importLearners(raw: z.infer<typeof importSchema>): Promise
         rqth: r.rqth ?? null,
         education_level: r.educationLevel ?? null,
         prescriber: r.prescriber ?? null,
+        district: r.district ?? null,
       })),
     )
     .select("id");

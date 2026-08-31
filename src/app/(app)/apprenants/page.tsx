@@ -174,6 +174,7 @@ export default async function ApprenantsPage({
                         address: l.address ?? "",
                         city: l.city ?? "",
                         postalCode: l.postal_code ?? "",
+                        district: l.district ?? "nc",
                         qpv: l.qpv == null ? "nc" : l.qpv ? "oui" : "non",
                         activityStatus: l.activity_status ?? "nc",
                         rqth: l.rqth == null ? "nc" : l.rqth ? "oui" : "non",

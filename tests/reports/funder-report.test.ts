@@ -15,6 +15,7 @@ function learner(id: string, overrides: Partial<ReportLearner> = {}): ReportLear
     gender: null,
     birthDate: null,
     city: null,
+    district: null,
     qpv: null,
     activityStatus: null,
     rqth: null,

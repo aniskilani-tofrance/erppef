@@ -42,7 +42,7 @@ const EMPTY: ProgramFormValues = {
   isActive: true,
 };
 
-const LEVELS = ["A1.1", "A1", "A2", "B1", "B2", "C1", "C2"];
+const LEVELS = ["Pré-alpha", "Alpha", "Post-alpha", "A1.1", "A1", "A2", "B1", "B2", "C1", "C2"];
 
 // Niveau CECRL suivant : préremplit le niveau visé quand on choisit le niveau de base.
 function nextLevel(level: string): string {

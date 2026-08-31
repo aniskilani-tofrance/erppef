@@ -100,6 +100,7 @@ export default async function RapportsPage({
             <DistTable title="Quartiers prioritaires" dist={report.distributions.qpv} />
             <DistTable title="Scolarisation" dist={report.distributions.education} />
             <DistTable title="Communes" dist={report.distributions.cities.slice(0, 8)} />
+            <DistTable title="Quartiers (Saint-Ouen)" dist={report.distributions.districts.filter((d) => d.label !== "Non renseigné").slice(0, 8)} />
           </div>
 
           <Card>

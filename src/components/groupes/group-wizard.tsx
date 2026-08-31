@@ -24,8 +24,18 @@ type Program = {
   default_weekly_hours: number | null;
   default_funder_id: string | null;
   level: string | null;
+  entry_level?: string | null;
   preferred_trainer_id?: string | null;
 };
+export type WizardLearner = { id: string; name: string; level: string | null; busy: boolean };
+
+// Un « Alpha avancé » rejoint un groupe d'entrée « Alpha », un « Post-alpha (A1.1 en cours) »
+// un groupe « Post-alpha » ; les niveaux CECRL se comparent à l'exact (A1.1 ≠ A1).
+export function levelMatches(learnerLevel: string | null, entryLevel: string | null): boolean {
+  if (!learnerLevel || !entryLevel) return false;
+  if (learnerLevel === entryLevel) return true;
+  return ["Pré-alpha", "Alpha", "Post-alpha"].includes(entryLevel) && learnerLevel.startsWith(entryLevel);
+}
 type Funder = { id: string; name: string; color: string };
 type Option = { id: string; name: string };
 
@@ -49,11 +59,13 @@ export function GroupWizard({
   funders,
   trainers = [],
   rooms = [],
+  learners = [],
 }: {
   programs: Program[];
   funders: Funder[];
   trainers?: Option[];
   rooms?: Option[];
+  learners?: WizardLearner[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -71,13 +83,24 @@ export function GroupWizard({
   // Créneaux personnalisés (rhythm === "custom")
   const [customSlots, setCustomSlots] = useState<SlotPattern[] | null>(null);
   const [proposal, setProposal] = useState<Proposal | null>(null);
+  const [enrollIds, setEnrollIds] = useState<Set<string>>(new Set());
 
   const program = programs.find((p) => p.id === programId);
+
+  // Groupe de niveau : les apprenants du niveau d'entrée SANS groupe actif, cochés d'office
+  const levelCandidates = program?.entry_level
+    ? learners.filter((l) => !l.busy && levelMatches(l.level, program.entry_level ?? null))
+    : [];
 
   function selectProgram(id: string) {
     setProgramId(id);
     const p = programs.find((x) => x.id === id);
     if (p) {
+      setEnrollIds(new Set(
+        p.entry_level
+          ? learners.filter((l) => !l.busy && levelMatches(l.level, p.entry_level ?? null)).map((l) => l.id)
+          : [],
+      ));
       if (p.default_funder_id) setFunderId(p.default_funder_id);
       if (p.preferred_trainer_id) setPreferredTrainerId(p.preferred_trainer_id);
       if (!name) {
@@ -146,12 +169,17 @@ export function GroupWizard({
         endsOn: p.totals.endsOn,
         skipSchoolHolidays: skipHolidays,
         sessions: p.sessions.map((s) => ({ startsAt: s.startsAt, endsAt: s.endsAt })),
+        enrollLearnerIds: [...enrollIds],
       });
       if (!result.ok) {
         toast.error(result.error);
         return;
       }
-      toast.success("Groupe créé : planning généré, salle réservée, formateur affecté.");
+      toast.success(
+        enrollIds.size > 0
+          ? `Groupe créé : planning généré et ${enrollIds.size} apprenant${enrollIds.size > 1 ? "s" : ""} inscrit${enrollIds.size > 1 ? "s" : ""}.`
+          : "Groupe créé : planning généré, salle réservée, formateur affecté.",
+      );
       router.push(`/groupes/${result.groupId}`);
     });
   }
@@ -225,6 +253,45 @@ export function GroupWizard({
             <Input id="headcount" type="number" min={1} value={headcount} onChange={(e) => setHeadcount(e.target.value)} placeholder="12" />
           </div>
         </div>
+
+        {/* Groupe de NIVEAU : inscription en un geste des apprenants du niveau d'entrée */}
+        {program?.entry_level && (
+          <div className="space-y-2 rounded-md border p-4">
+            <p className="text-sm font-medium">
+              Groupe de niveau {program.entry_level}
+              <span className="ml-2 font-normal text-muted-foreground">
+                {levelCandidates.length} apprenant{levelCandidates.length > 1 ? "s" : ""} de ce niveau sans groupe actif — {enrollIds.size} sélectionné{enrollIds.size > 1 ? "s" : ""}
+              </span>
+            </p>
+            {levelCandidates.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Aucun apprenant disponible à ce niveau (le niveau vient du test de positionnement ou de la fiche).
+              </p>
+            ) : (
+              <div className="grid max-h-44 gap-1 overflow-y-auto sm:grid-cols-2">
+                {levelCandidates.map((l) => (
+                  <label key={l.id} className="flex items-center gap-2 rounded px-1 py-0.5 text-sm hover:bg-muted/50">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 accent-primary"
+                      checked={enrollIds.has(l.id)}
+                      onChange={(e) => {
+                        setEnrollIds((prev) => {
+                          const next = new Set(prev);
+                          if (e.target.checked) next.add(l.id);
+                          else next.delete(l.id);
+                          return next;
+                        });
+                      }}
+                    />
+                    <span>{l.name}</span>
+                    <span className="ml-auto text-xs text-muted-foreground">{l.level}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="space-y-3 rounded-md border p-4">
           <p className="text-sm font-medium">Cadrage du calendrier</p>

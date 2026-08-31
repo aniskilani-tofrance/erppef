@@ -34,6 +34,7 @@ export type LearnerFormValues = {
   address: string;
   city: string;
   postalCode: string;
+  district: string; // '' = non renseigné
   qpv: string; // 'nc' | 'oui' | 'non'
   activityStatus: string;
   rqth: string; // 'nc' | 'oui' | 'non'
@@ -57,6 +58,7 @@ const EMPTY: LearnerFormValues = {
   address: "",
   city: "",
   postalCode: "",
+  district: "nc",
   qpv: "nc",
   activityStatus: "nc",
   rqth: "nc",
@@ -85,13 +87,27 @@ const EDUCATION = [
   { value: "secondaire", label: "Secondaire" },
   { value: "superieur", label: "Supérieur" },
 ];
+// Découpage Ville de Saint-Ouen (bilans territorialisés du financeur municipal)
+export const DISTRICTS = [
+  "Centre-Ville-Cordon",
+  "Les Docks",
+  "Vieux-Saint-Ouen",
+  "Debain-Michelet-Bauer",
+  "Garibaldi - Les Puces",
+  "Arago-Pasteur-Zola-Hugo",
+];
+const DISTRICT_OPTIONS = [
+  { value: "nc", label: "Non renseigné / hors Saint-Ouen" },
+  ...DISTRICTS.map((d) => ({ value: d, label: d })),
+];
+
 const YES_NO = [
   { value: "nc", label: "Non renseigné" },
   { value: "oui", label: "Oui" },
   { value: "non", label: "Non" },
 ];
 
-const LEVELS = ["Non évalué", "Pré-alpha", "Alpha", "A1.1", "A1", "A2", "B1", "B2", "C1", "C2"];
+const LEVELS = ["Non évalué", "Pré-alpha", "Alpha", "Alpha avancé", "Post-alpha (A1.1 en cours)", "A1.1", "A1", "A2", "B1", "B2", "C1", "C2"];
 
 export function LearnerFormDialog({
   initial,
@@ -154,6 +170,7 @@ export function LearnerFormDialog({
         nationality: values.nationality.trim() || null,
         address: values.address.trim() || null,
         city: values.city.trim() || null,
+        district: values.district === "nc" ? null : values.district,
         postalCode: values.postalCode.trim() || null,
         qpv: values.qpv === "nc" ? null : values.qpv === "oui",
         activityStatus:
@@ -298,6 +315,7 @@ export function LearnerFormDialog({
                 </div>
                 <SelectField label="RQTH (handicap)" value={values.rqth} options={YES_NO} onChange={(v) => set("rqth", v)} />
               </div>
+              <SelectField label="Quartier (Saint-Ouen)" value={values.district} options={DISTRICT_OPTIONS} onChange={(v) => set("district", v)} />
               <div className="grid gap-4 sm:grid-cols-2">
                 <SelectField label="Situation" value={values.activityStatus} options={ACTIVITIES} onChange={(v) => set("activityStatus", v)} />
                 <SelectField label="Scolarisation" value={values.educationLevel} options={EDUCATION} onChange={(v) => set("educationLevel", v)} />

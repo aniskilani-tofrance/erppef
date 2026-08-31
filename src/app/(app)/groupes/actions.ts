@@ -90,6 +90,7 @@ const commitSchema = z.object({
   sessions: z.array(
     z.object({ startsAt: z.string(), endsAt: z.string() }),
   ).min(1),
+  enrollLearnerIds: z.array(z.string().uuid()).max(200).optional(),
 });
 
 export type CommitResult = { ok: true; groupId: string } | { ok: false; error: string };
@@ -272,6 +273,25 @@ export async function commitProposal(raw: z.infer<typeof commitSchema>): Promise
   });
 
   if (error) return { ok: false, error: translatePgError(error) };
+
+  // Groupe de niveau : inscription immédiate des apprenants sélectionnés
+  if (d.enrollLearnerIds?.length) {
+    const { error: enrollError } = await supabase.from("enrollments").insert(
+      d.enrollLearnerIds.map((learnerId) => ({
+        org_id: orgId,
+        group_id: groupId as string,
+        learner_id: learnerId,
+      })),
+    );
+    if (enrollError) {
+      revalidatePath("/groupes");
+      return {
+        ok: false,
+        error: `Groupe créé, mais inscriptions impossibles : ${translatePgError(enrollError)} — inscrivez-les depuis la fiche du groupe.`,
+      };
+    }
+    revalidatePath("/apprenants");
+  }
 
   revalidatePath("/groupes");
   revalidatePath("/planning");

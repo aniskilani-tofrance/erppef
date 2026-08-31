@@ -34,6 +34,7 @@ type Row = {
   rqth: boolean | null;
   educationLevel: "non_scolarise" | "primaire" | "secondaire" | "superieur" | null;
   prescriber: string | null;
+  district: string | null;
 };
 
 // « 12/05/1988 » ou « 1988-05-12 » → 'YYYY-MM-DD'
@@ -91,6 +92,7 @@ function parseCsv(text: string): Row[] {
       rqth: c[13] ? parseBool(c[13]) : null,
       educationLevel: c[14] ? (EDUCATION_MAP[c[14].toLowerCase()] ?? null) : null,
       prescriber: c[15] || null,
+      district: c[16] || null,
     }));
 }
 
@@ -147,7 +149,7 @@ export function LearnerImportDialog({ groups }: { groups: { id: string; name: st
             <p className="text-xs text-muted-foreground">
               Colonnes dans l&apos;ordre : Prénom ; Nom ; Téléphone ; Email ; Langue ; Niveau ;
               Naissance (JJ/MM/AAAA) ; Sexe ; Adresse ; Commune ; CP ; Situation ; QPV (oui/non) ;
-              RQTH (oui/non) ; Scolarisation ; Prescripteur — seuls Prénom et Nom sont obligatoires.
+              RQTH (oui/non) ; Scolarisation ; Prescripteur ; Quartier — seuls Prénom et Nom sont obligatoires.
               La typologie alimente directement les bilans financeurs. Copier-coller depuis Excel fonctionne.
             </p>
           </div>

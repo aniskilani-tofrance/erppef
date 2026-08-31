@@ -146,6 +146,7 @@ export const HELP_SECTIONS: HelpSection[] = [
           "Cochez ou non « Pas de cours pendant les vacances scolaires » selon le public.",
           "Cadrage du calendrier : choisissez un rythme type (Matins 9h-12h, Après-midis 13h-16h, Journées, ou Personnalisé) et les jours de cours — décochez un jour pour limiter les déplacements des apprenants.",
           "Indiquez si besoin un formateur et une salle à privilégier : le moteur les favorise sans les imposer, et explique s'il doit s'en écarter.",
+          "GROUPE DE NIVEAU : si le dispositif a un niveau d'entrée, le formulaire liste les apprenants de ce niveau sans groupe actif (niveau issu du test de positionnement), tous cochés — décochez au besoin : ils seront inscrits à la création du groupe.",
           "« Proposer un planning optimal » : le moteur choisit formateur et salle, saute fériés/vacances, et explique ses choix.",
           "Vérifiez la proposition (alternatives, coûts, avertissements) puis validez : toutes les séances sont créées d'un coup.",
         ],
@@ -154,6 +155,7 @@ export const HELP_SECTIONS: HelpSection[] = [
         title: "Inscrire les apprenants",
         steps: [
           "Typologie sans effort : saisissez l'adresse (rue + commune + CP) puis « Détecter depuis l'adresse » — la case QPV se coche seule (périmètres officiels ANCT 2024). Modifiable à la main.",
+          "Quartier (Saint-Ouen) : sélectionnez le quartier de résidence (Centre-Ville-Cordon, Les Docks, Vieux-Saint-Ouen, Debain-Michelet-Bauer, Garibaldi - Les Puces, Arago-Pasteur-Zola-Hugo) — il alimente le bilan territorialisé de la Ville.",
           "Import en lot : les colonnes de typologie (Naissance, Sexe, Adresse, Commune, CP, Situation, QPV, RQTH, Scolarisation, Prescripteur) sont acceptées à la suite des 6 colonnes de base — les bilans financeurs se remplissent dès la rentrée.",
           "Au fil de l'eau : fiche du groupe → « Créer et inscrire » (photo possible immédiatement, à la caméra).",
           "En masse : Apprenants → « Importer une liste » — collez votre tableau Excel (Prénom;Nom;Téléphone;Email;Langue;Niveau) et inscrivez tout le monde dans un groupe en une fois.",
