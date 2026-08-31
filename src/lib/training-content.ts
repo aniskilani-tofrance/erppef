@@ -357,10 +357,12 @@ export const TRAINING_MODULES: TrainingModule[] = [
         steps: [
           "Créez un apprenant sans renseigner son niveau : un test est généré automatiquement (visible colonne « Test de positionnement »).",
           "« Copier le lien » → envoyez-le par WhatsApp, SMS ou email. Le lien est personnel : pas besoin de compte pour l'apprenant.",
-          "Le test dure ~30 minutes (écoute, lecture, écriture) et fonctionne très bien sur téléphone. Les écrits sont corrigés par IA.",
-          "À la fin : « Test fait · niveau » + score dans la liste, et le « Niveau évalué » de la fiche est rempli automatiquement (A1 à B2).",
+          "Le test commence par un bloc « littératie » 100 % audio et tactile, avec une vraie voix humaine : consignes lues, grandes tuiles, jamais de lecture imposée. Il détecte les très bas niveaux (Pré-alpha, Alpha, Post-alpha, A1.1) et s'arrête tôt pour un non-lecteur (~5 min) au lieu d'infliger 56 questions écrites.",
+          "Pour les lecteurs, le test continue (~30 minutes : écoute, lecture, écriture, très bien sur téléphone) et classe de A1 à B2. Les écrits sont corrigés par IA.",
+          "À la fin : « Test fait · niveau » + score dans la liste, et le « Niveau évalué » de la fiche est rempli automatiquement (Pré-alpha → B2).",
+          "Important : sous le niveau A1, le candidat ne voit JAMAIS son étiquette (message positif uniquement) — le profil s'affiche côté équipe, à confirmer en entretien. « À évaluer avec un accompagnant » = difficulté avec la tablette, pas un niveau de français.",
           "Complétez toujours par votre entretien : le niveau reste modifiable à la main — le test prépare l'entretien, il ne le remplace pas.",
-          "Besoin de re-tester quelqu'un (après plusieurs mois de cours) ? « Générer le test » crée une nouvelle tentative.",
+          "Re-tester quelqu'un (après plusieurs mois de cours) : bouton « Refaire » à côté du résultat — nouveau lien, l'ancien résultat est conservé.",
         ],
         tip: "Pour un import CSV de cohorte, laissez la colonne Niveau vide : tous les apprenants auront leur test généré d'un coup — il ne reste qu'à envoyer les liens.",
         practice: {
@@ -373,8 +375,10 @@ export const TRAINING_MODULES: TrainingModule[] = [
         id: "apprenants",
         title: "Apprenants : fiche, photo, import",
         steps: [
-          "Un par un : « Nouvel apprenant » — photo à la caméra, langue première, niveau évalué (positionnement d'entrée, ind. 8), et inscription immédiate à un groupe.",
-          "En masse : « Importer une liste » — collez les colonnes depuis Excel (Prénom;Nom;Téléphone;Email;Langue;Niveau), aperçu, et inscription groupée. Une cohorte de 12 en 30 secondes.",
+          "Un par un : « Nouvel apprenant » — photo à la caméra (webcam ou tablette, aperçu en direct), langue première, niveau évalué (positionnement d'entrée, ind. 8), et inscription immédiate à un groupe.",
+          "Typologie (section dédiée) : c'est elle qui remplit les bilans financeurs. Astuce : saisissez l'adresse puis « Détecter depuis l'adresse » — la case QPV se coche seule (périmètres officiels). Si la commune est Saint-Ouen, le champ Quartier apparaît (6 quartiers).",
+          "Chaque apprenant reçoit une référence unique A-0001 (sous son nom) : c'est elle qu'on met sur les dossiers papier — tapez-la dans la recherche ⌘K pour retrouver la fiche instantanément.",
+          "En masse : « Importer une liste » — collez les colonnes depuis Excel (6 colonnes de base + typologie complète jusqu'à 17 colonnes), aperçu, et inscription groupée. Une cohorte de 12 en 30 secondes.",
           "Sans niveau renseigné, un test de positionnement est généré automatiquement : copiez son lien depuis la liste et envoyez-le à l'apprenant — son niveau remplira sa fiche tout seul (« Test fait »).",
           "La colonne Assiduité de la liste se remplit toute seule au fil des émargements.",
         ],
@@ -566,9 +570,99 @@ export const TRAINING_MODULES: TrainingModule[] = [
       },
     ],
   },
+  {
+    id: "c6-pilotage",
+    track: "coordinateur",
+    order: 6,
+    title: "Piloter vite et rendre compte aux financeurs",
+    duration: "15 min",
+    objectives: [
+      "Naviguer en 2 secondes (recherche globale, références, À faire)",
+      "Composer des groupes de niveau et inscrire en lot avec filtres",
+      "Générer un bilan financeur complet en 3 clics",
+    ],
+    lessons: [
+      {
+        id: "navigation-express",
+        title: "Navigation express",
+        steps: [
+          "⌘K (ou Ctrl+K, ou la loupe du menu) : tapez un nom d'apprenant, de groupe, de formateur ou de salle — accès direct. Tapez une référence (« A-42 », « G-7 ») pour ouvrir la fiche exacte.",
+          "Le Dashboard commence par « À faire aujourd'hui » : feuilles d'émargement à clôturer, groupes qui démarrent sans salle ou sans formateur — chaque ligne mène à l'action.",
+          "Les rappels automatiques travaillent pour vous : email la veille aux apprenants (à activer par groupe dans « Modifier ») et relance des formateurs sur leurs feuilles oubliées.",
+        ],
+        practice: {
+          instruction: "Faites ⌘K et tapez « G-1 » : vous devez arriver sur votre premier groupe.",
+        },
+      },
+      {
+        id: "groupes-niveau",
+        title: "Groupes de niveau et inscriptions filtrées",
+        steps: [
+          "À la création d'un groupe dont le dispositif a un niveau d'entrée, l'encadré « Groupe de niveau » liste les apprenants de ce niveau sans groupe actif, tous cochés : décochez au besoin, ils seront inscrits avec le planning.",
+          "Sur une fiche de groupe, « Inscrire des apprenants… » ouvre le sélecteur filtré : recherche + filtres niveau, langue, quartier, commune, QPV, sexe, âge, situation, scolarisation, prescripteur — cochez, inscrivez en lot.",
+          "Sorties de parcours : menu ⋯ d'un inscrit → « Marquer en abandon » ou « terminé » (daté, compté dans les bilans). Ne supprimez une inscription QUE pour une erreur de saisie.",
+          "« Reconduire » (fiche du groupe) : la session suivante à l'identique, planning régénéré depuis la nouvelle date, vacances sautées.",
+        ],
+        tip: "Le niveau vient du test de positionnement : plus vos apprenants sont testés, plus les groupes de niveau se composent tout seuls.",
+      },
+      {
+        id: "bilans-financeurs",
+        title: "Le bilan financeur en 3 clics",
+        steps: [
+          "Menu « Rapports » : choisissez le financeur et la période (presets : année civile, trimestre, année de formation).",
+          "Tout se calcule seul : heures réalisées (émargements clôturés), bénéficiaires uniques, assiduité, abandons/terminés, et la typologie complète (sexe, âge, situation, QPV, quartiers de Saint-Ouen, scolarisation…).",
+          "« Bilan PDF » à joindre au compte-rendu, « Détail CSV » pour le nominatif (avec les références A-XXXX), « Déposer sur le Drive » pour l'archivage automatique.",
+          "Moins de « Non renseigné » = un bilan plus convaincant : la typologie se complète en 30 secondes à l'inscription de chaque apprenant.",
+        ],
+        practice: {
+          instruction: "Ouvrez Rapports, générez le bilan d'un financeur sur l'année en cours et téléchargez le PDF.",
+          href: "/rapports",
+          hrefLabel: "Ouvrir les Rapports",
+        },
+      },
+    ],
+    quiz: [
+      {
+        question: "Le plus court chemin vers la fiche du groupe G-0007 ?",
+        choices: ["Menu Groupes puis chercher dans la liste", "⌘K puis taper « G-7 »", "Demander au formateur"],
+        answerIndex: 1,
+        explanation: "La recherche globale comprend les références : « G-7 » ou « A-42 » ouvrent directement la bonne fiche.",
+      },
+      {
+        question: "La Ville veut le bilan de ses financements avec la répartition par quartier. Vous faites…",
+        choices: [
+          "Un tableau Excel à la main pendant deux jours",
+          "Rapports → financeur Ville → période → « Bilan PDF »",
+          "Une capture d'écran du Dashboard",
+        ],
+        answerIndex: 1,
+        explanation: "Le bilan agrège heures, bénéficiaires, assiduité et typologie (quartiers compris) depuis les données réelles — en quelques secondes.",
+      },
+      {
+        question: "Un apprenant arrête sa formation en cours de route. Le bon geste ?",
+        choices: [
+          "Supprimer son inscription du groupe",
+          "Menu ⋯ → « Marquer en abandon » : daté, conservé, compté dans les bilans",
+          "Ne rien faire",
+        ],
+        answerIndex: 1,
+        explanation: "La suppression efface l'historique ; l'abandon daté le préserve — les financeurs demandent le nombre de sorties.",
+      },
+      {
+        question: "Comment composer un groupe « femmes niveau Alpha du quartier Les Docks » ?",
+        choices: [
+          "C'est impossible sans export Excel",
+          "« Inscrire des apprenants… » → filtres Sexe + Niveau + Quartier → « Cocher tous les filtrés » → Inscrire",
+          "Créer un dispositif spécial",
+        ],
+        answerIndex: 1,
+        explanation: "Le sélecteur filtré croise tous les critères de la fiche apprenant et inscrit en lot.",
+      },
+    ],
+  },
 ];
 
 export const TRACKS = [
   { id: "formateur", label: "Parcours Formateur", description: "Prise en main, émargement, bons réflexes — 30 minutes.", roles: ["trainer", "admin", "coordinator"] },
-  { id: "coordinateur", label: "Parcours Coordinateur", description: "Paramétrage, groupes, planning, qualité — 1 h 20 au total, à votre rythme.", roles: ["admin", "coordinator", "viewer"] },
+  { id: "coordinateur", label: "Parcours Coordinateur", description: "Paramétrage, groupes, planning, qualité, bilans — 1 h 35 au total, à votre rythme.", roles: ["admin", "coordinator", "viewer"] },
 ] as const;
