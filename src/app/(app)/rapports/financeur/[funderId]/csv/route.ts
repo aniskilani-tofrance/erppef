@@ -33,10 +33,10 @@ export async function GET(
     ),
     "",
     "DÉTAIL PAR BÉNÉFICIAIRE",
-    "Bénéficiaire;Groupes;Heures suivies (émargées);Taux de présence",
+    "N°;Bénéficiaire;Groupes;Heures suivies (émargées);Taux de présence",
     ...report.learnerDetails.map(
       (l) =>
-        `${l.name};${l.groups.join(", ")};${fmt(l.hoursAttended)};${l.rate != null ? `${l.rate} %` : ""}`,
+        `${l.ref};${l.name};${l.groups.join(", ")};${fmt(l.hoursAttended)};${l.rate != null ? `${l.rate} %` : ""}`,
     ),
   ];
 

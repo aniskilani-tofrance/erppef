@@ -11,6 +11,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { utcToLocalTime } from "@/lib/dates";
+import { groupRef } from "@/lib/refs";
 import { EnrollmentManager } from "@/components/groupes/enrollment-manager";
 import { GroupEditDialog } from "@/components/groupes/group-edit-dialog";
 import { DuplicateGroupDialog } from "@/components/groupes/duplicate-group-dialog";
@@ -123,6 +124,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
     <div className="mx-auto max-w-5xl space-y-6">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">{group.name}</h1>
+        <span className="font-mono text-sm text-muted-foreground">{groupRef(group.group_no)}</span>
         {funder && (
           <Badge style={{ backgroundColor: funder.color, color: "white" }}>{funder.name}</Badge>
         )}

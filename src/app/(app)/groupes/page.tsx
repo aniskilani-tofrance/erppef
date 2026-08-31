@@ -7,6 +7,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Plus } from "lucide-react";
+import { groupRef } from "@/lib/refs";
 
 const STATUS_LABELS: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
   en_attente: { label: "En attente", variant: "outline" },
@@ -78,6 +79,7 @@ export default async function GroupesPage() {
                 <TableRow key={g.id}>
                   <TableCell className="font-medium">
                     <Link href={`/groupes/${g.id}`} className="hover:underline">{g.name}</Link>
+                    <span className="block font-mono text-[11px] font-normal text-muted-foreground">{groupRef(g.group_no)}</span>
                   </TableCell>
                   <TableCell>{(g.programs as unknown as { name: string } | null)?.name}</TableCell>
                   <TableCell>

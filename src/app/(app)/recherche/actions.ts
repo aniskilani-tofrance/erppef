@@ -23,6 +23,28 @@ export async function searchGlobal(rawQuery: string): Promise<SearchHit[]> {
   // Échappement des jokers PostgREST
   const q = `%${parsed.data.replace(/[%_]/g, "\\$&")}%`;
 
+  // Référence directe « A-42 » / « G-0007 » → accès immédiat par numéro
+  const refMatch = parsed.data.match(/^([agAG])-?0*(\d{1,6})$/);
+  if (refMatch) {
+    const no = Number(refMatch[2]);
+    if (refMatch[1].toLowerCase() === "a") {
+      const { data } = await supabase.from("learners").select("id, first_name, last_name, learner_no").eq("learner_no", no).limit(1);
+      return (data ?? []).map((l) => ({
+        kind: "apprenant" as const,
+        label: `${l.first_name} ${l.last_name}`,
+        sublabel: `A-${String(l.learner_no).padStart(4, "0")}`,
+        href: `/apprenants?q=${encodeURIComponent(`${l.first_name} ${l.last_name}`)}`,
+      }));
+    }
+    const { data } = await supabase.from("groups").select("id, name, group_no").eq("group_no", no).limit(1);
+    return (data ?? []).map((g) => ({
+      kind: "groupe" as const,
+      label: g.name,
+      sublabel: `G-${String(g.group_no).padStart(4, "0")}`,
+      href: `/groupes/${g.id}`,
+    }));
+  }
+
   const [learners, groups, trainers, rooms] = await Promise.all([
     supabase
       .from("learners")

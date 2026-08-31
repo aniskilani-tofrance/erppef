@@ -7,6 +7,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { LearnerFormDialog } from "@/components/apprenants/learner-form-dialog";
+import { learnerRef } from "@/lib/refs";
 import { LearnerImportDialog } from "@/components/apprenants/learner-import-dialog";
 import { PlacementTestCell, type PlacementInfo } from "@/components/apprenants/placement-test-cell";
 import {
@@ -101,7 +102,7 @@ export default async function ApprenantsPage({
                 if (!q) return true;
                 const norm = (s: string) =>
                   s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-                const hay = norm(`${l.first_name} ${l.last_name} ${l.phone ?? ""}`);
+                const hay = norm(`${l.first_name} ${l.last_name} ${l.phone ?? ""} ${learnerRef(l.learner_no)} a${l.learner_no ?? ""}`);
                 return q.trim().split(/\s+/).every((word) => hay.includes(norm(word)));
               })
               .map((l) => {
@@ -117,7 +118,12 @@ export default async function ApprenantsPage({
                           {`${l.first_name[0] ?? ""}${l.last_name[0] ?? ""}`.toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
-                      {l.first_name} {l.last_name}
+                      <span>
+                        {l.first_name} {l.last_name}
+                        <span className="block font-mono text-[11px] font-normal text-muted-foreground">
+                          {learnerRef(l.learner_no)}
+                        </span>
+                      </span>
                     </span>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">

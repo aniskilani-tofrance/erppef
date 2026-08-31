@@ -32,6 +32,7 @@ export type ReportLearner = {
   id: string;
   firstName: string;
   lastName: string;
+  learnerNo?: number | null;
   gender: string | null;
   birthDate: string | null; // 'YYYY-MM-DD'
   city: string | null;
@@ -112,6 +113,7 @@ export type FunderReport = {
   learnerDetails: {
     learnerId: string;
     name: string;
+    ref: string;
     groups: string[];
     hoursAttended: number;
     rate: number | null;
@@ -223,6 +225,7 @@ export function computeFunderReport(data: FunderReportData): FunderReport {
       return {
         learnerId: l.id,
         name: `${l.firstName} ${l.lastName}`.trim(),
+        ref: l.learnerNo != null ? `A-${String(l.learnerNo).padStart(4, "0")}` : "—",
         groups,
         hoursAttended: st ? Math.round(st.hoursAttended * 10) / 10 : 0,
         rate: st?.rate ?? null,
@@ -328,7 +331,7 @@ export async function loadFunderReportData(
   const { data: learners } = learnerIds.length
     ? await supabase
         .from("learners")
-        .select("id, first_name, last_name, gender, birth_date, city, district, qpv, activity_status, rqth, education_level")
+        .select("id, first_name, last_name, learner_no, gender, birth_date, city, district, qpv, activity_status, rqth, education_level")
         .in("id", learnerIds)
     : { data: [] };
 
@@ -359,6 +362,7 @@ export async function loadFunderReportData(
       id: l.id,
       firstName: l.first_name,
       lastName: l.last_name,
+      learnerNo: l.learner_no ?? null,
       gender: l.gender,
       birthDate: l.birth_date,
       city: l.city,

@@ -53,6 +53,7 @@ export const HELP_SECTIONS: HelpSection[] = [
           "Dashboard : votre page d'accueil — elle s'adapte à votre rôle.",
           "Planning : le calendrier de toutes les séances (vue liste sur téléphone).",
           "Recherche rapide : ⌘K (ou Ctrl+K), ou la loupe en haut du menu — tapez un nom d'apprenant, de groupe, de formateur ou de salle et sautez-y directement.",
+          "Numéros uniques : chaque apprenant a une référence A-0001 et chaque groupe une référence G-0001 (visibles dans les listes et les fiches, reprises dans les exports financeurs). Tapez « A-42 » ou « G-7 » dans la recherche pour un accès direct.",
           "Le Dashboard commence par « À faire aujourd'hui » : feuilles d'émargement à clôturer, groupes qui démarrent sans salle ou sans formateur — chaque ligne est cliquable vers l'action.",
           "Groupes / Apprenants / Formateurs / Salles : les fiches de l'organisme.",
           "Qualité et Paramètres : réservés à l'équipe de coordination.",
