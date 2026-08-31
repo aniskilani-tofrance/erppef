@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>ERP ParlerEmploi — Guide du formateur</title>
+<style>
+  :root {
+    --vert: #0F4C3A;
+    --emeraude: #2BAE7E;
+    --pale: #EAF4EF;
+    --encre: #1a2b26;
+    --gris: #6b7a75;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { font-family: "Avenir Next", "Helvetica Neue", Arial, sans-serif; color: var(--encre); }
+  .page {
+    width: 297mm; height: 209mm;
+    page-break-after: always;
+    position: relative;
+    overflow: hidden;
+    padding: 18mm 20mm 16mm;
+    background: white;
+    display: flex; flex-direction: column;
+  }
+  .page:last-child { page-break-after: avoid; }
+
+  /* Bandeau décoratif */
+  .page::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 5mm;
+    background: linear-gradient(90deg, var(--vert), var(--emeraude));
+  }
+  .footer {
+    position: absolute; bottom: 8mm; left: 20mm; right: 20mm;
+    display: flex; justify-content: space-between;
+    font-size: 8.5pt; color: var(--gris);
+    border-top: 1px solid #dfe8e4; padding-top: 3mm;
+  }
+  .kicker { font-size: 10pt; letter-spacing: 2.5px; text-transform: uppercase; color: var(--emeraude); font-weight: 700; margin-bottom: 4mm; }
+  h1 { font-size: 30pt; color: var(--vert); line-height: 1.15; }
+  h2 { font-size: 22pt; color: var(--vert); margin-bottom: 7mm; }
+  .lead { font-size: 12.5pt; color: var(--gris); line-height: 1.5; }
+
+  /* Couverture */
+  .cover { background: linear-gradient(135deg, var(--vert) 0%, #14654d 60%, var(--emeraude) 130%); color: white; justify-content: center; }
+  .cover::before { display: none; }
+  .cover .logo-badge {
+    display: inline-block; background: white; color: var(--vert);
+    font-weight: 800; font-size: 13pt; padding: 3mm 6mm; border-radius: 3mm; margin-bottom: 10mm;
+  }
+  .cover h1 { color: white; font-size: 40pt; max-width: 200mm; }
+  .cover .lead { color: #d8efe4; font-size: 15pt; margin-top: 6mm; max-width: 180mm; }
+  .cover .url { margin-top: 14mm; font-size: 17pt; font-weight: 700; color: white; background: rgba(255,255,255,.14); display: inline-block; padding: 4mm 8mm; border-radius: 3mm; letter-spacing: .5px; }
+
+  /* Grilles de cartes */
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6mm; margin-top: 2mm; }
+  .cards.two { grid-template-columns: repeat(2, 1fr); }
+  .card {
+    background: var(--pale); border-radius: 4mm; padding: 7mm;
+    border-left: 2.5mm solid var(--emeraude);
+  }
+  .card .em { font-size: 22pt; }
+  .card h3 { font-size: 13pt; color: var(--vert); margin: 3mm 0 2.5mm; }
+  .card p { font-size: 10.5pt; line-height: 1.5; color: #33463f; }
+
+  /* Étapes numérotées */
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6mm; margin-top: 2mm; }
+  .step { background: white; border: 1px solid #d7e5df; border-radius: 4mm; padding: 6mm; position: relative; }
+  .step .n {
+    position: absolute; top: -5mm; left: 6mm;
+    width: 10mm; height: 10mm; border-radius: 50%;
+    background: var(--vert); color: white; font-weight: 800; font-size: 13pt;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .step h3 { font-size: 12pt; color: var(--vert); margin: 4mm 0 2mm; }
+  .step p { font-size: 10pt; line-height: 1.45; color: #33463f; }
+
+  .tip {
+    margin-top: auto; margin-bottom: 6mm;
+    background: #fff7e6; border-left: 2.5mm solid #f0b429;
+    border-radius: 3mm; padding: 5mm 7mm; font-size: 10.5pt; line-height: 1.5;
+  }
+  .tip b { color: #92610a; }
+
+  /* Tableau simple */
+  table { width: 100%; border-collapse: collapse; margin-top: 2mm; font-size: 11pt; }
+  th { text-align: left; color: var(--vert); border-bottom: 2px solid var(--emeraude); padding: 3mm 4mm; font-size: 10.5pt; text-transform: uppercase; letter-spacing: 1px; }
+  td { padding: 4mm; border-bottom: 1px solid #e3ede8; line-height: 1.45; vertical-align: top; }
+  td:first-child { font-weight: 700; color: var(--vert); white-space: nowrap; }
+
+  .big-quote { font-size: 16pt; color: var(--vert); font-weight: 600; line-height: 1.5; max-width: 210mm; margin-top: 4mm; }
+  .pill { display: inline-block; background: var(--vert); color: white; border-radius: 10mm; padding: 1.5mm 5mm; font-size: 9.5pt; font-weight: 700; margin-right: 2mm; }
+</style>
+</head>
+<body>
+
+<!-- ═══ 1. COUVERTURE ═══ -->
+<section class="page cover">
+  <div>
+    <span class="logo-badge">ParlerEmploi Formation</span>
+    <h1>Votre nouvel outil de travail,<br>expliqué en 8 pages</h1>
+    <p class="lead">Fini les feuilles volantes et les plannings papier : vos séances, vos émargements
+    et votre agenda vivent au même endroit — pensé pour être utilisé en 2 minutes par jour.</p>
+    <div class="url">pef-erp.vercel.app</div>
+  </div>
+</section>
+
+<!-- ═══ 2. CE QUE ÇA CHANGE ═══ -->
+<section class="page">
+  <div class="kicker">Pourquoi cet outil</div>
+  <h2>Ce que ça change pour vous</h2>
+  <div class="cards">
+    <div class="card"><div class="em">📅</div><h3>Votre planning, toujours à jour</h3>
+      <p>Vos séances s'affichent dès votre connexion — et se synchronisent chaque nuit avec votre agenda Google personnel. Un changement de salle ? Vous le voyez immédiatement.</p></div>
+    <div class="card"><div class="em">✍️</div><h3>L'émargement sans papier</h3>
+      <p>Les apprenants signent au doigt sur la tablette, vous contre-signez, c'est classé. Plus de feuilles à photocopier, à faire signer, à ne pas perdre.</p></div>
+    <div class="card"><div class="em">🧘</div><h3>Moins d'administratif</h3>
+      <p>Attestations, exports d'assiduité, documents financeurs : tout est produit automatiquement à partir de vos émargements. Votre signature du jour fait tout le travail.</p></div>
+  </div>
+  <div class="tip"><b>L'essentiel à retenir :</b> votre seul geste quotidien, c'est la feuille d'émargement.
+  Ouverte en début de séance, clôturée à la fin — tout le reste en découle.</div>
+  <div class="footer"><span>ERP ParlerEmploi — Guide du formateur</span><span>2 / 8</span></div>
+</section>
+
+<!-- ═══ 3. SE CONNECTER ═══ -->
+<section class="page">
+  <div class="kicker">Premiers pas</div>
+  <h2>Se connecter (une fois, c'est réglé)</h2>
+  <div class="steps">
+    <div class="step"><span class="n">1</span><h3>Ouvrez l'adresse</h3>
+      <p><b>pef-erp.vercel.app</b><br>sur ordinateur, tablette ou téléphone — l'outil s'adapte à l'écran. Ajoutez-la à vos favoris ou à l'écran d'accueil du téléphone.</p></div>
+    <div class="step"><span class="n">2</span><h3>Votre compte</h3>
+      <p>Vous avez reçu un <b>email d'invitation</b> : cliquez sur son lien et choisissez votre mot de passe personnel. Votre identifiant, c'est votre email professionnel.</p></div>
+    <div class="step"><span class="n">3</span><h3>Mot de passe oublié ?</h3>
+      <p>Sur l'écran de connexion : « Mot de passe oublié ? » → saisissez votre email → suivez le lien reçu. Personne d'autre que vous ne connaît votre mot de passe.</p></div>
+  </div>
+  <div class="tip"><b>À votre première connexion :</b> ouvrez le menu « Formation » — un parcours interactif de 30 minutes
+  vous fait tout pratiquer avec de vrais exercices. C'est la meilleure demi-heure à investir.</div>
+  <div class="footer"><span>ERP ParlerEmploi — Guide du formateur</span><span>3 / 8</span></div>
+</section>
+
+<!-- ═══ 4. MA JOURNÉE ═══ -->
+<section class="page">
+  <div class="kicker">Au quotidien</div>
+  <h2>Votre journée en un coup d'œil</h2>
+  <div class="cards two">
+    <div class="card"><div class="em">🌅</div><h3>À la connexion : votre Dashboard</h3>
+      <p>Vos séances du jour s'affichent, chacune avec son bouton <b>« Émargement »</b>. Un encadré rouge vous signale une feuille oubliée la veille : clôturez-la en priorité — c'est un document obligatoire pour les financeurs.</p></div>
+    <div class="card"><div class="em">📆</div><h3>Le Planning</h3>
+      <p>Toutes les séances de l'organisme, colorées par financeur. Sur téléphone, la vue « liste » est plus lisible. Vos cours apparaissent aussi dans votre <b>agenda Google</b> (« Cours PEF »), mis à jour chaque nuit.</p></div>
+    <div class="card"><div class="em">📬</div><h3>Les rappels automatiques</h3>
+      <p>Si une feuille reste ouverte, vous recevez un email de relance avec le lien direct. Les apprenants, eux, reçoivent un rappel la veille de chaque cours — moins d'absents au réveil.</p></div>
+    <div class="card"><div class="em">🤒</div><h3>Un imprévu, une absence ?</h3>
+      <p>Prévenez votre coordinateur : il enregistre votre absence et déplace les séances (le planning vérifie tout seul qu'aucun conflit n'est créé). Vous n'avez rien à manipuler.</p></div>
+  </div>
+  <div class="footer"><span>ERP ParlerEmploi — Guide du formateur</span><span>4 / 8</span></div>
+</section>
+
+<!-- ═══ 5. ÉMARGEMENT PAS À PAS ═══ -->
+<section class="page">
+  <div class="kicker">Le geste essentiel</div>
+  <h2>La feuille d'émargement, pas à pas</h2>
+  <div class="steps">
+    <div class="step"><span class="n">1</span><h3>Ouvrir</h3>
+      <p>Depuis votre Dashboard (ou le Planning), ouvrez la séance → <b>« Feuille d'émargement »</b> → « Ouvrir l'émargement ». Un QR code s'affiche.</p></div>
+    <div class="step"><span class="n">2</span><h3>Faire signer</h3>
+      <p>Scannez le QR avec la tablette et faites-la circuler : chaque apprenant <b>touche son nom</b> (avec sa photo), <b>signe au doigt</b>, valide. Sa ligne se verrouille ✓.</p></div>
+    <div class="step"><span class="n">3</span><h3>Clôturer</h3>
+      <p>Posez les statuts manquants (« Retard », « Absent »), puis <b>« Contre-signer et clôturer »</b> : signez à votre tour. La séance passe en « réalisée ». C'est terminé.</p></div>
+  </div>
+  <div class="tip"><b>Pourquoi c'est important :</b> ces signatures horodatées sont LA preuve officielle des heures réalisées —
+  c'est sur elles que l'organisme est payé par les financeurs. Une feuille clôturée le jour même = des documents toujours justes.</div>
+  <div class="footer"><span>ERP ParlerEmploi — Guide du formateur</span><span>5 / 8</span></div>
+</section>
+
+<!-- ═══ 6. CAS PARTICULIERS ═══ -->
+<section class="page">
+  <div class="kicker">Les situations réelles</div>
+  <h2>Cas particuliers : les bons réflexes</h2>
+  <table>
+    <tr><th style="width:34%">Situation</th><th>Le bon geste</th></tr>
+    <tr><td>Un retardataire arrive après les signatures</td>
+        <td>Le lien de la tablette reste valable jusqu'à la clôture (au plus tard 24 h après la séance) : il signe à son arrivée, vous passez son statut en « Retard ».</td></tr>
+    <tr><td>Un apprenant n'a pas signé</td>
+        <td>À la clôture, les non-signés passent automatiquement en « Absent ». Vous pouvez corriger un statut à la main avant de contre-signer.</td></tr>
+    <tr><td>Un apprenant rate 3 séances de suite</td>
+        <td>L'outil le repère et alerte la coordination (risque de décrochage) : signalez de votre côté ce que vous observez en cours — c'est ce binôme qui fait revenir les gens.</td></tr>
+    <tr><td>Pas de tablette sous la main</td>
+        <td>Le QR se scanne aussi avec votre téléphone — la page de signature fonctionne sur n'importe quel appareil.</td></tr>
+    <tr><td>La feuille d'hier n'est pas clôturée</td>
+        <td>Encadré rouge sur votre Dashboard + email de relance avec le lien direct : deux clics et c'est réglé.</td></tr>
+  </table>
+  <div class="footer"><span>ERP ParlerEmploi — Guide du formateur</span><span>6 / 8</span></div>
+</section>
+
+<!-- ═══ 7. LE TEST DE POSITIONNEMENT ═══ -->
+<section class="page">
+  <div class="kicker">Bon à savoir</div>
+  <h2>Le test de positionnement (nouveaux apprenants)</h2>
+  <p class="lead" style="max-width:230mm">Avant d'arriver dans votre groupe, chaque apprenant passe un test en ligne
+  qui établit son niveau — c'est lui qui alimente la composition des groupes de niveau.</p>
+  <div class="cards" style="margin-top:8mm">
+    <div class="card"><div class="em">🔊</div><h3>Accessible aux non-lecteurs</h3>
+      <p>Le test commence par un bloc 100 % audio et tactile, avec une <b>voix humaine naturelle</b> : consignes lues à voix haute, grandes tuiles à toucher. Personne n'est mis en échec par la lecture des consignes.</p></div>
+    <div class="card"><div class="em">📊</div><h3>Toute l'échelle</h3>
+      <p>De <b>Pré-alpha à B2</b> : le test détecte aussi les personnes jamais scolarisées, avec un parcours court (~5 min) qui ne les épuise pas. Le résultat va directement dans la fiche de l'apprenant.</p></div>
+    <div class="card"><div class="em">🤝</div><h3>Votre regard compte</h3>
+      <p>Le test est un <b>repérage</b>, pas un verdict : le niveau reste ajustable après l'entretien et vos premières séances. Si un apprenant vous semble mal positionné, dites-le à la coordination.</p></div>
+  </div>
+  <div class="tip"><b>À l'accueil :</b> si vous faites passer le test sur tablette, appuyez sur « Commencer » <b>avec</b> la personne
+  (c'est ce geste qui active le son) et montrez-lui le premier écran d'entraînement : toucher le rond vert.</div>
+  <div class="footer"><span>ERP ParlerEmploi — Guide du formateur</span><span>7 / 8</span></div>
+</section>
+
+<!-- ═══ 8. AIDE ═══ -->
+<section class="page">
+  <div class="kicker">On ne vous laisse pas seuls</div>
+  <h2>Besoin d'aide ?</h2>
+  <div class="cards">
+    <div class="card"><div class="em">🎓</div><h3>Le parcours Formation</h3>
+      <p>Menu « Formation » : leçons courtes, exercices réels, quiz. 30 minutes pour être autonome — refaites un module quand vous voulez, votre progression est mémorisée.</p></div>
+    <div class="card"><div class="em">❓</div><h3>L'aide intégrée</h3>
+      <p>Menu « Aide » : le mode d'emploi pas à pas et la foire aux questions, filtrés sur ce qui VOUS concerne. Une version imprimable existe pour la salle des formateurs.</p></div>
+    <div class="card"><div class="em">💬</div><h3>La coordination</h3>
+      <p>Un doute, un blocage, une idée d'amélioration ? Parlez-en — l'outil évolue chaque semaine à partir de vos retours de terrain.</p></div>
+  </div>
+  <div class="big-quote">« Votre métier, c'est la pédagogie.<br>Le travail de l'outil, c'est tout le reste. »</div>
+  <div class="footer"><span>ERP ParlerEmploi — pef-erp.vercel.app</span><span>8 / 8</span></div>
+</section>
+
+</body>
+</html>
