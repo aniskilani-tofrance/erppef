@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { UserPlus } from "lucide-react";
 import { enrollLearners } from "@/app/(app)/apprenants/actions";
+import { DISTRICTS } from "@/components/apprenants/learner-form-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
@@ -73,10 +74,11 @@ export function EnrollmentPicker({
       const values = [...new Set(available.map(key).filter((v): v is string => Boolean(v)))].sort();
       return values.map((v) => ({ value: v, label: labels?.[v] ?? v }));
     };
+    const observedDistricts = new Set(available.map((l) => l.district).filter(Boolean) as string[]);
     return {
       level: collect((l) => l.level),
       language: collect((l) => l.language),
-      district: collect((l) => l.district),
+      district: [...new Set([...DISTRICTS, ...observedDistricts])].map((d) => ({ value: d, label: d })),
       city: collect((l) => l.city),
       gender: collect((l) => l.gender, GENDER_LABELS),
       activity: collect((l) => l.activity, ACTIVITY_LABELS),

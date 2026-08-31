@@ -101,6 +101,13 @@ const DISTRICT_OPTIONS = [
   ...DISTRICTS.map((d) => ({ value: d, label: d })),
 ];
 
+// Le champ Quartier ne concerne que les résidents de Saint-Ouen (93400)
+function isSaintOuen(city: string, postalCode: string): boolean {
+  if (postalCode.trim() === "93400") return true;
+  const c = city.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  return /saint[\s-]?ouen/.test(c) && !c.includes("aumone");
+}
+
 const YES_NO = [
   { value: "nc", label: "Non renseigné" },
   { value: "oui", label: "Oui" },
@@ -170,7 +177,10 @@ export function LearnerFormDialog({
         nationality: values.nationality.trim() || null,
         address: values.address.trim() || null,
         city: values.city.trim() || null,
-        district: values.district === "nc" ? null : values.district,
+        district:
+          values.district === "nc" || !isSaintOuen(values.city, values.postalCode)
+            ? null
+            : values.district,
         postalCode: values.postalCode.trim() || null,
         qpv: values.qpv === "nc" ? null : values.qpv === "oui",
         activityStatus:
@@ -315,7 +325,9 @@ export function LearnerFormDialog({
                 </div>
                 <SelectField label="RQTH (handicap)" value={values.rqth} options={YES_NO} onChange={(v) => set("rqth", v)} />
               </div>
-              <SelectField label="Quartier (Saint-Ouen)" value={values.district} options={DISTRICT_OPTIONS} onChange={(v) => set("district", v)} />
+              {isSaintOuen(values.city, values.postalCode) && (
+                <SelectField label="Quartier (Saint-Ouen)" value={values.district} options={DISTRICT_OPTIONS} onChange={(v) => set("district", v)} />
+              )}
               <div className="grid gap-4 sm:grid-cols-2">
                 <SelectField label="Situation" value={values.activityStatus} options={ACTIVITIES} onChange={(v) => set("activityStatus", v)} />
                 <SelectField label="Scolarisation" value={values.educationLevel} options={EDUCATION} onChange={(v) => set("educationLevel", v)} />
