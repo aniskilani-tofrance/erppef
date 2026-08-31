@@ -309,3 +309,29 @@ export async function unenrollLearner(enrollmentId: string): Promise<ActionResul
   revalidatePath("/apprenants");
   return { ok: true };
 }
+
+const bulkEnrollSchema = z.object({
+  groupId: z.string().uuid(),
+  learnerIds: z.array(z.string().uuid()).min(1).max(200),
+});
+
+export type BulkEnrollResult = { ok: true; enrolled: number } | { ok: false; error: string };
+
+// Inscription en lot depuis le sélecteur filtré de la fiche groupe.
+export async function enrollLearners(raw: z.infer<typeof bulkEnrollSchema>): Promise<BulkEnrollResult> {
+  const parsed = bulkEnrollSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Données invalides" };
+  const d = parsed.data;
+
+  const { orgId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+
+  const { error } = await supabase.from("enrollments").insert(
+    d.learnerIds.map((learnerId) => ({ org_id: orgId, group_id: d.groupId, learner_id: learnerId })),
+  );
+  if (error) return { ok: false, error: translatePgError(error) };
+
+  revalidatePath(`/groupes/${d.groupId}`);
+  revalidatePath("/apprenants");
+  return { ok: true, enrolled: d.learnerIds.length };
+}

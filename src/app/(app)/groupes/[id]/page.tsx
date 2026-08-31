@@ -33,7 +33,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
     await Promise.all([
       supabase
         .from("groups")
-        .select("*, programs(name, level), funders(name, color), trainers:trainer_id(first_name, last_name), rooms:room_id(name)")
+        .select("*, programs(name, level, entry_level), funders(name, color), trainers:trainer_id(first_name, last_name), rooms:room_id(name)")
         .eq("id", id)
         .single(),
       supabase
@@ -47,7 +47,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
         .select("id, learner_id, status, left_on, learners(first_name, last_name, level_assessed)")
         .eq("group_id", id)
         .order("status"), // abandons et terminés restent visibles (badges + bilans)
-      supabase.from("learners").select("id, first_name, last_name").order("last_name"),
+      supabase.from("learners").select("id, first_name, last_name, learner_no, level_assessed, first_language, city, district, qpv, gender, activity_status, education_level, prescriber, birth_date").order("last_name"),
       supabase.from("funders").select("id, name").eq("is_active", true).order("name"),
       supabase
         .from("attendances")
@@ -77,7 +77,21 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
   const enrolledIds = new Set(enrolled.map((e) => e.learnerId));
   const available = (learners ?? [])
     .filter((l) => !enrolledIds.has(l.id))
-    .map((l) => ({ id: l.id, name: `${l.first_name} ${l.last_name}` }));
+    .map((l) => ({
+      id: l.id,
+      name: `${l.first_name} ${l.last_name}`,
+      ref: l.learner_no != null ? `A-${String(l.learner_no).padStart(4, "0")}` : "—",
+      level: l.level_assessed,
+      language: l.first_language,
+      city: l.city,
+      district: l.district,
+      qpv: l.qpv,
+      gender: l.gender,
+      activity: l.activity_status,
+      education: l.education_level,
+      prescriber: l.prescriber,
+      birthDate: l.birth_date,
+    }));
 
   // Enquête satisfaction : stats agrégées + lien public si ouverte
   const avg = (key: "overall" | "teaching" | "organization" | "premises" | "progress") => {
@@ -221,6 +235,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
               groupName={group.name}
               enrolled={enrolled.map((e) => ({ ...e, stats: attendanceStats.get(e.learnerId) ?? null }))}
               available={available}
+              suggestedLevel={(group.programs as unknown as { entry_level?: string | null } | null)?.entry_level ?? null}
             />
           ) : (
             <ul className="space-y-1 text-sm">

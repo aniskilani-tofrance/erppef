@@ -24,7 +24,7 @@ export default async function GroupesPage() {
   const [{ data: groups }, { data: hours }, { data: enrollments }] = await Promise.all([
     supabase
       .from("groups")
-      .select("id, name, status, starts_on, ends_on, total_hours, capacity, programs(name), funders(name, color), trainers:trainer_id(first_name), rooms:room_id(name)")
+      .select("id, name, group_no, status, starts_on, ends_on, total_hours, capacity, programs(name), funders(name, color), trainers:trainer_id(first_name), rooms:room_id(name)")
       .order("starts_on", { ascending: false }),
     supabase.from("v_group_hours").select("*"),
     supabase.from("enrollments").select("group_id").eq("status", "inscrit"),

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { toast } from "sonner";
 import {
   enrollLearner,
@@ -8,14 +8,12 @@ import {
   updateEnrollmentStatus,
 } from "@/app/(app)/apprenants/actions";
 import { LearnerFormDialog } from "@/components/apprenants/learner-form-dialog";
+import { EnrollmentPicker, type PickerLearner } from "@/components/groupes/enrollment-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
 import { MoreHorizontal } from "lucide-react";
 
 export type Enrolled = {
@@ -46,26 +44,15 @@ export function EnrollmentManager({
   groupName,
   enrolled,
   available,
+  suggestedLevel = null,
 }: {
   groupId: string;
   groupName: string;
   enrolled: Enrolled[];
-  available: { id: string; name: string }[];
+  available: PickerLearner[];
+  suggestedLevel?: string | null;
 }) {
-  const [selectedId, setSelectedId] = useState("");
   const [pending, startTransition] = useTransition();
-
-  function add() {
-    startTransition(async () => {
-      const result = await enrollLearner({ groupId, learnerId: selectedId });
-      if (!result.ok) {
-        toast.error(result.error);
-        return;
-      }
-      toast.success("Apprenant inscrit.");
-      setSelectedId("");
-    });
-  }
 
   function remove(e: Enrolled) {
     startTransition(async () => {
@@ -183,24 +170,7 @@ export function EnrollmentManager({
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        <Select value={selectedId} onValueChange={setSelectedId}>
-          <SelectTrigger className="w-64">
-            <SelectValue placeholder="Inscrire un apprenant existant…" />
-          </SelectTrigger>
-          <SelectContent>
-            {available.length === 0 && (
-              <SelectItem value="empty" disabled>
-                Tous les apprenants sont déjà inscrits
-              </SelectItem>
-            )}
-            {available.map((l) => (
-              <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button onClick={add} disabled={pending || !selectedId}>
-          {pending ? "Inscription…" : "Inscrire"}
-        </Button>
+        <EnrollmentPicker groupId={groupId} available={available} suggestedLevel={suggestedLevel} />
         <LearnerFormDialog
           groups={[{ id: groupId, name: groupName }]}
           defaultGroupId={groupId}

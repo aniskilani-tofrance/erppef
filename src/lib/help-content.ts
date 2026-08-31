@@ -156,6 +156,7 @@ export const HELP_SECTIONS: HelpSection[] = [
         title: "Inscrire les apprenants",
         steps: [
           "Typologie sans effort : saisissez l'adresse (rue + commune + CP) puis « Détecter depuis l'adresse » — la case QPV se coche seule (périmètres officiels ANCT 2024). Modifiable à la main.",
+          "« Inscrire des apprenants… » (fiche du groupe) : recherche + filtres sur tous les critères (niveau, langue, quartier, commune, QPV, sexe, âge, situation, scolarisation, prescripteur), cases à cocher, inscription en lot. Le niveau d'entrée du dispositif est pré-filtré.",
           "Quartier (Saint-Ouen) : sélectionnez le quartier de résidence (Centre-Ville-Cordon, Les Docks, Vieux-Saint-Ouen, Debain-Michelet-Bauer, Garibaldi - Les Puces, Arago-Pasteur-Zola-Hugo) — il alimente le bilan territorialisé de la Ville.",
           "Import en lot : les colonnes de typologie (Naissance, Sexe, Adresse, Commune, CP, Situation, QPV, RQTH, Scolarisation, Prescripteur) sont acceptées à la suite des 6 colonnes de base — les bilans financeurs se remplissent dès la rentrée.",
           "Au fil de l'eau : fiche du groupe → « Créer et inscrire » (photo possible immédiatement, à la caméra).",
