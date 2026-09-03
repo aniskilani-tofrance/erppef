@@ -78,12 +78,12 @@ export default async function ApprenantsPage({
           <TableHeader>
             <TableRow>
               <TableHead>Nom</TableHead>
-              <TableHead>Contact</TableHead>
-              <TableHead>Langue</TableHead>
               <TableHead>Niveau</TableHead>
+              <TableHead>Test de positionnement</TableHead>
               <TableHead>Groupes</TableHead>
               <TableHead>Assiduité</TableHead>
-              <TableHead>Test de positionnement</TableHead>
+              <TableHead className="hidden lg:table-cell">Contact</TableHead>
+              <TableHead className="hidden xl:table-cell">Langue</TableHead>
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
@@ -126,11 +126,10 @@ export default async function ApprenantsPage({
                       </span>
                     </span>
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {[l.phone, l.email].filter(Boolean).join(" · ") || "—"}
-                  </TableCell>
-                  <TableCell>{l.first_language ?? "—"}</TableCell>
                   <TableCell>{l.level_assessed ?? "—"}</TableCell>
+                  <TableCell>
+                    <PlacementTestCell learnerId={l.id} test={testByLearner.get(l.id) ?? null} />
+                  </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
                       {mine.length === 0 && <span className="text-sm text-muted-foreground">—</span>}
@@ -158,9 +157,10 @@ export default async function ApprenantsPage({
                       <span className="text-sm text-muted-foreground">—</span>
                     )}
                   </TableCell>
-                  <TableCell>
-                    <PlacementTestCell learnerId={l.id} test={testByLearner.get(l.id) ?? null} />
+                  <TableCell className="hidden text-sm text-muted-foreground lg:table-cell">
+                    {[l.phone, l.email].filter(Boolean).join(" · ") || "—"}
                   </TableCell>
+                  <TableCell className="hidden xl:table-cell">{l.first_language ?? "—"}</TableCell>
                   <TableCell>
                     <LearnerFormDialog
                       initial={{
