@@ -91,12 +91,14 @@ export function PlanningCalendar({
   const events = [
     ...filtered.map((s) => ({
       id: s.id,
-      title: `${s.groupName}${s.roomName ? ` · ${s.roomName}` : ""}${s.trainerName ? ` · ${s.trainerName}` : ""}`,
+      title: s.groupName,
       start: s.startsAt,
       end: s.endsAt,
       backgroundColor: s.funderColor,
-      borderColor: s.funderColor,
+      borderColor: "rgba(0,0,0,.18)",
+      textColor: "#ffffff",
       editable: canEdit && s.status === "planifiee",
+      extendedProps: { room: s.roomName, trainer: s.trainerName },
     })),
     // Vacances, fériés et fermetures en fond grisé (ends_on inclusif → end exclusif).
     ...closures.map((c) => ({
@@ -154,7 +156,7 @@ export function PlanningCalendar({
         </div>
       </div>
 
-      <div className="rounded-lg border bg-background p-3 [&_.fc]:text-sm">
+      <div className="rounded-lg border bg-background p-3 [&_.fc]:text-sm [&_.fc-timegrid-event]:rounded-md [&_.fc-timegrid-event]:shadow-sm [&_.fc-daygrid-event]:rounded [&_.fc-col-header-cell-cushion]:py-1.5 [&_.fc-col-header-cell-cushion]:font-semibold [&_.fc-timegrid-slot]:h-8 [&_.fc-day-today]:bg-amber-50/60">
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, multiMonthPlugin, listPlugin]}
           initialView={isMobile ? "listWeek" : "timeGridWeek"}
@@ -167,12 +169,42 @@ export function PlanningCalendar({
           }}
           locale={frLocale}
           timeZone="Europe/Paris"
-          slotMinTime="09:00:00"
+          slotMinTime="08:00:00"
           slotMaxTime="20:00:00"
+          scrollTime="08:30:00"
+          slotDuration="00:30:00"
+          slotLabelInterval="01:00"
+          slotEventOverlap={false}
+          allDaySlot={false}
+          expandRows
+          dayMaxEventRows={3}
+          stickyHeaderDates
+          eventTimeFormat={{ hour: "2-digit", minute: "2-digit", hour12: false }}
           weekends={false}
           height="auto"
           nowIndicator
           events={events}
+          eventContent={(arg) => {
+            // Fond grisé (vacances/fériés) : rendu par défaut
+            if (arg.event.display === "background") return undefined;
+            const { room, trainer } = arg.event.extendedProps as { room?: string; trainer?: string };
+            const details = [room, trainer].filter(Boolean).join(" · ");
+            if (arg.view.type.startsWith("list")) {
+              return (
+                <span>
+                  <b>{arg.event.title}</b>
+                  {details && <span className="ml-2 opacity-75">{details}</span>}
+                </span>
+              );
+            }
+            return (
+              <div className="flex h-full flex-col overflow-hidden px-1 py-0.5 leading-tight">
+                <div className="truncate text-[11px] font-semibold">{arg.event.title}</div>
+                {details && <div className="truncate text-[10px] opacity-85">{details}</div>}
+                {arg.timeText && <div className="mt-auto truncate text-[9px] opacity-70">{arg.timeText}</div>}
+              </div>
+            );
+          }}
           editable={canEdit}
           selectable={canEdit}
           select={(arg: DateSelectArg) => {
