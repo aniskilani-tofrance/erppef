@@ -13,6 +13,12 @@ import { DriveSyncButton } from "@/components/apprenants/drive-sync-button";
 import { PlacementTestCell, type PlacementInfo } from "@/components/apprenants/placement-test-cell";
 import { DeleteLearnerButton } from "@/components/apprenants/delete-learner-button";
 import {
+  BulkDeleteLearnersButton,
+  LearnerSelectAllCheckbox,
+  LearnerSelectCheckbox,
+  LearnerSelectionProvider,
+} from "@/components/apprenants/learner-selection";
+import {
   ABSENCE_ALERT_THRESHOLD,
   computeLearnerStats,
   type AttendanceRecord,
@@ -68,11 +74,29 @@ export default async function ApprenantsPage({
 
   const groupOptions = (groups ?? []).map((g) => ({ id: g.id, name: g.name }));
 
+  // Filtre ?q= (recherche globale ⌘K) : nom ou téléphone, sans accents
+  const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  const visible = (learners ?? []).filter((l) => {
+    if (!q) return true;
+    const hay = norm(`${l.first_name} ${l.last_name} ${l.phone ?? ""} ${learnerRef(l.learner_no)} a${l.learner_no ?? ""}`);
+    return q.trim().split(/\s+/).every((word) => hay.includes(norm(word)));
+  });
+  const enrollmentCountByLearner = new Map<string, number>();
+  for (const e of enrollments ?? []) {
+    enrollmentCountByLearner.set(e.learner_id, (enrollmentCountByLearner.get(e.learner_id) ?? 0) + 1);
+  }
+  // Apprenants cochables pour la suppression en lot = affichés ET sans aucune inscription
+  const selectableRows = visible
+    .filter((l) => !enrollmentCountByLearner.has(l.id))
+    .map((l) => ({ id: l.id, name: `${l.first_name} ${l.last_name}` }));
+
   return (
+    <LearnerSelectionProvider>
     <div className="mx-auto max-w-5xl space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Apprenants</h1>
         <div className="flex gap-2">
+          <BulkDeleteLearnersButton />
           <DriveSyncButton />
           <LearnerImportDialog groups={groupOptions} />
           <LearnerFormDialog groups={groupOptions} />
@@ -83,6 +107,9 @@ export default async function ApprenantsPage({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-8">
+                <LearnerSelectAllCheckbox rows={selectableRows} />
+              </TableHead>
               <TableHead>Nom</TableHead>
               <TableHead>Niveau</TableHead>
               <TableHead>Test de positionnement</TableHead>
@@ -96,27 +123,21 @@ export default async function ApprenantsPage({
           <TableBody>
             {(learners ?? []).length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} className="py-8 text-center text-muted-foreground">
+                <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">
                   Aucun apprenant. Créez le premier avec « Nouvel apprenant » — vous pourrez
                   l&apos;inscrire dans un groupe au passage.
                 </TableCell>
               </TableRow>
             )}
-            {(learners ?? [])
-              .filter((l) => {
-                // Filtre ?q= (recherche globale ⌘K) : nom ou téléphone, sans accents
-                if (!q) return true;
-                const norm = (s: string) =>
-                  s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-                const hay = norm(`${l.first_name} ${l.last_name} ${l.phone ?? ""} ${learnerRef(l.learner_no)} a${l.learner_no ?? ""}`);
-                return q.trim().split(/\s+/).every((word) => hay.includes(norm(word)));
-              })
-              .map((l) => {
-              const all = (enrollments ?? []).filter((e) => e.learner_id === l.id);
-              const mine = all.filter((e) => e.status === "inscrit");
+            {visible.map((l) => {
+              const mine = (enrollments ?? []).filter((e) => e.learner_id === l.id && e.status === "inscrit");
+              const enrollmentCount = enrollmentCountByLearner.get(l.id) ?? 0;
               const st = stats.get(l.id);
               return (
                 <TableRow key={l.id}>
+                  <TableCell>
+                    <LearnerSelectCheckbox id={l.id} name={`${l.first_name} ${l.last_name}`} enrollmentCount={enrollmentCount} />
+                  </TableCell>
                   <TableCell className="font-medium">
                     <span className="flex items-center gap-2">
                       <Avatar className="h-8 w-8">
@@ -202,7 +223,7 @@ export default async function ApprenantsPage({
                     <DeleteLearnerButton
                       learnerId={l.id}
                       name={`${l.first_name} ${l.last_name}`}
-                      enrollmentCount={all.length}
+                      enrollmentCount={enrollmentCount}
                     />
                     </span>
                   </TableCell>
@@ -213,5 +234,6 @@ export default async function ApprenantsPage({
         </Table>
       </div>
     </div>
+    </LearnerSelectionProvider>
   );
 }

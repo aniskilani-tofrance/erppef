@@ -165,6 +165,7 @@ export const HELP_SECTIONS: HelpSection[] = [
           "En masse : Apprenants → « Importer une liste » — collez votre tableau Excel (Prénom;Nom;Téléphone;Email;Langue;Niveau) et inscrivez tout le monde dans un groupe en une fois.",
           "L'effectif (n / capacité) s'affiche partout ; un badge rouge signale un dépassement.",
           "Supprimer un apprenant (icône poubelle, page Apprenants) : possible seulement s'il n'est inscrit dans aucun groupe et n'a jamais émargé — sa fiche, sa photo et son test sont alors effacés. Inscrit ? Retirez-le d'abord du groupe (fiche du groupe → « Retirer ») ou marquez sa sortie de parcours pour garder l'historique.",
+          "Supprimer plusieurs apprenants : cochez-les dans la première colonne (la case d'en-tête coche tous les apprenants sans groupe affichés — combinez avec la recherche ⌘K pour cibler), puis « Supprimer (n) » en haut de la page. Les apprenants inscrits ne sont pas cochables.",
         ],
       },
       {

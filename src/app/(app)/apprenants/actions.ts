@@ -334,35 +334,66 @@ export async function unenrollLearner(enrollmentId: string): Promise<ActionResul
 // un groupe (aucune inscription, quel que soit son statut) ni émargé — sinon on détruirait
 // l'historique qui sert aux bilans financeurs et aux preuves Qualiopi. Un apprenant
 // inscrit se retire d'abord du groupe (fiche groupe), puis devient supprimable.
+const DELETE_BLOCKED =
+  "Suppression impossible : cet apprenant est ou a été inscrit dans un groupe. Retirez-le du groupe depuis la fiche du groupe, ou marquez sa sortie de parcours pour conserver l'historique.";
+
+async function deleteOneLearner(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  orgId: string,
+  id: string,
+): Promise<{ ok: true; name: string } | { ok: false; name: string | null; error: string }> {
+  const [{ count: enrollmentCount }, { count: attendanceCount }, { data: learner }] = await Promise.all([
+    supabase.from("enrollments").select("id", { count: "exact", head: true }).eq("learner_id", id),
+    supabase.from("attendances").select("id", { count: "exact", head: true }).eq("learner_id", id),
+    supabase.from("learners").select("first_name, last_name, photo_url").eq("id", id).eq("org_id", orgId).single(),
+  ]);
+  if (!learner) return { ok: false, name: null, error: "Apprenant introuvable" };
+  const name = `${learner.first_name} ${learner.last_name}`;
+  if ((enrollmentCount ?? 0) > 0 || (attendanceCount ?? 0) > 0) return { ok: false, name, error: DELETE_BLOCKED };
+
+  // Le test de positionnement éventuel est supprimé en cascade (FK on delete cascade).
+  const { error } = await supabase.from("learners").delete().eq("id", id).eq("org_id", orgId);
+  if (error) return { ok: false, name, error: translatePgError(error) };
+
+  // Photo du bucket public « photos » : nettoyage best-effort (chemin après /photos/).
+  const photoPath = learner.photo_url?.split("/storage/v1/object/public/photos/")[1];
+  if (photoPath) await supabase.storage.from("photos").remove([decodeURIComponent(photoPath)]).catch(() => undefined);
+  return { ok: true, name };
+}
+
 export async function deleteLearner(id: string): Promise<ActionResult> {
   if (!z.string().uuid().safeParse(id).success) return { ok: false, error: "Apprenant invalide" };
   const { orgId } = await requireRole(["admin", "coordinator"]);
   const supabase = await createClient();
 
-  const [{ count: enrollmentCount }, { count: attendanceCount }, { data: learner }] = await Promise.all([
-    supabase.from("enrollments").select("id", { count: "exact", head: true }).eq("learner_id", id),
-    supabase.from("attendances").select("id", { count: "exact", head: true }).eq("learner_id", id),
-    supabase.from("learners").select("photo_url").eq("id", id).eq("org_id", orgId).single(),
-  ]);
-  if (!learner) return { ok: false, error: "Apprenant introuvable" };
-  if ((enrollmentCount ?? 0) > 0 || (attendanceCount ?? 0) > 0) {
-    return {
-      ok: false,
-      error:
-        "Suppression impossible : cet apprenant est ou a été inscrit dans un groupe. Retirez-le du groupe depuis la fiche du groupe, ou marquez sa sortie de parcours pour conserver l'historique.",
-    };
-  }
-
-  // Le test de positionnement éventuel est supprimé en cascade (FK on delete cascade).
-  const { error } = await supabase.from("learners").delete().eq("id", id).eq("org_id", orgId);
-  if (error) return { ok: false, error: translatePgError(error) };
-
-  // Photo du bucket public « photos » : nettoyage best-effort (chemin après /photos/).
-  const photoPath = learner.photo_url?.split("/storage/v1/object/public/photos/")[1];
-  if (photoPath) await supabase.storage.from("photos").remove([decodeURIComponent(photoPath)]).catch(() => undefined);
-
+  const result = await deleteOneLearner(supabase, orgId, id);
+  if (!result.ok) return { ok: false, error: result.error };
   revalidatePath("/apprenants");
   return { ok: true };
+}
+
+export type BulkDeleteResult =
+  | { ok: true; deleted: number; blocked: string[] }
+  | { ok: false; error: string };
+
+// Suppression en lot (cases à cocher de la liste) : chaque apprenant passe par les
+// mêmes garde-fous ; ceux qui sont inscrits/émargés sont simplement listés comme
+// « non supprimés », les autres sont effacés.
+export async function deleteLearners(ids: string[]): Promise<BulkDeleteResult> {
+  const parsed = z.array(z.string().uuid()).min(1).max(200).safeParse(ids);
+  if (!parsed.success) return { ok: false, error: "Sélection invalide" };
+  const { orgId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+
+  let deleted = 0;
+  const blocked: string[] = [];
+  for (const id of parsed.data) {
+    const result = await deleteOneLearner(supabase, orgId, id);
+    if (result.ok) deleted += 1;
+    else blocked.push(result.name ?? "apprenant introuvable");
+  }
+  revalidatePath("/apprenants");
+  return { ok: true, deleted, blocked };
 }
 
 const bulkEnrollSchema = z.object({
