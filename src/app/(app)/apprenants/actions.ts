@@ -6,7 +6,12 @@ import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { translatePgError } from "@/lib/pg-errors";
 import { ADMISSION_STATUS_CODES } from "@/lib/admission/status";
-import { LEVELS } from "@/lib/referentiels";
+import { CONTACT_SOURCES, LEVELS } from "@/lib/referentiels";
+
+const CONTACT_SOURCE_CODES = CONTACT_SOURCES.map((s) => s.code) as [
+  (typeof CONTACT_SOURCES)[number]["code"],
+  ...(typeof CONTACT_SOURCES)[number]["code"][],
+];
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -60,6 +65,9 @@ const learnerSchema = z.object({
     .nullable(),
   entryNeed: z.string().nullable(),
   entryInterviewOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+  // Canal par lequel la personne nous a contactés (+ précision libre)
+  contactSource: z.enum(CONTACT_SOURCE_CODES).nullable().optional(),
+  contactSourceDetail: z.string().nullable().optional(),
   // Parcours d'admission + test oral d'entrée
   admissionStatus: z.enum(ADMISSION_STATUS_CODES).optional(),
   oralTestOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
@@ -104,6 +112,8 @@ export async function upsertLearner(raw: z.infer<typeof learnerSchema>): Promise
     entry_goal: d.entryGoal,
     entry_need: d.entryNeed,
     entry_interview_on: d.entryInterviewOn,
+    ...(d.contactSource !== undefined ? { contact_source: d.contactSource } : {}),
+    ...(d.contactSourceDetail !== undefined ? { contact_source_detail: d.contactSourceDetail?.trim() || null } : {}),
     ...(d.admissionStatus ? { admission_status: d.enrollGroupId ? "inscrit" : d.admissionStatus } : {}),
     ...(d.oralTestOn !== undefined ? { oral_test_on: d.oralTestOn } : {}),
     ...(d.oralTestLevel !== undefined ? { oral_test_level: d.oralTestLevel } : {}),
@@ -167,6 +177,8 @@ const importSchema = z.object({
           .nullable()
           .optional(),
         entryNeed: z.string().nullable().optional(),
+        contactSource: z.enum(CONTACT_SOURCE_CODES).nullable().optional(),
+        contactSourceDetail: z.string().nullable().optional(),
       }),
     )
     .min(1)
@@ -214,6 +226,8 @@ export async function importLearners(raw: z.infer<typeof importSchema>): Promise
         district: r.district ?? null,
         entry_goal: r.entryGoal ?? null,
         entry_need: r.entryNeed ?? null,
+        contact_source: r.contactSource ?? null,
+        contact_source_detail: r.contactSourceDetail ?? null,
       })),
     )
     .select("id");

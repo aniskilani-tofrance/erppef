@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Mic, Pencil } from "lucide-react";
-import { recordOralTest } from "@/app/(app)/admission/actions";
+import { recordOralTest } from "@/app/(app)/apprenants/admission/actions";
 import { LEVELS } from "@/lib/referentiels";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";

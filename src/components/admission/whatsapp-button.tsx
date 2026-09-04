@@ -4,7 +4,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { MessageCircle } from "lucide-react";
-import { logContact, markInvitationSent } from "@/app/(app)/admission/actions";
+import { logContact, markInvitationSent } from "@/app/(app)/apprenants/admission/actions";
 import { toWhatsAppNumber } from "@/lib/admission/phone";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";

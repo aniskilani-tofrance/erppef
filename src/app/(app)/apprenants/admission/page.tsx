@@ -9,10 +9,12 @@ import {
 import { AdmissionBadge } from "@/components/admission/admission-badge";
 import { ContactDialog, type ContactEntry } from "@/components/admission/contact-dialog";
 import { MeetingFormDialog } from "@/components/admission/meeting-form-dialog";
+import { LearnersTabs } from "@/components/apprenants/learners-tabs";
 import { WhatsAppButton } from "@/components/admission/whatsapp-button";
 import { buildFirstContactMessage, formatMeetingWhen } from "@/lib/admission/messages";
 import { formatPhone } from "@/lib/admission/phone";
 import { ADMISSION_STATUSES, admissionBadgeClass } from "@/lib/admission/status";
+import { CONTACT_SOURCES } from "@/lib/referentiels";
 import { learnerRef } from "@/lib/refs";
 
 // Parcours d'admission : qui contacter aujourd'hui (WhatsApp en un clic), les réunions
@@ -114,7 +116,7 @@ export default async function AdmissionPage() {
   const [{ data: learners }, { data: contacts }, { data: meetingRows }, { data: rooms }, { data: profile }] = await Promise.all([
     supabase
       .from("learners")
-      .select("id, first_name, last_name, learner_no, phone, email, admission_status, level_assessed, created_at")
+      .select("id, first_name, last_name, learner_no, phone, email, admission_status, level_assessed, created_at, contact_source")
       .order("created_at", { ascending: true }),
     supabase
       .from("learner_contacts")
@@ -166,6 +168,17 @@ export default async function AdmissionPage() {
     .filter((l) => l.admission_status === "contacte")
     .sort((a, b) => (lastContactAt(a.id) ?? "").localeCompare(lastContactAt(b.id) ?? ""));
 
+  // D'où viennent les demandes : canal de premier contact (total + 30 derniers jours)
+  const since30 = new Date(new Date().getTime() - 30 * 86_400_000).toISOString();
+  const sourceRows = [...CONTACT_SOURCES.map((s) => ({ code: s.code as string, label: s.label })), { code: "nc", label: "Non renseigné" }]
+    .map((s) => {
+      const mine = (learners ?? []).filter((l) => (l.contact_source ?? "nc") === s.code);
+      return { ...s, total: mine.length, recent: mine.filter((l) => l.created_at >= since30).length };
+    })
+    .filter((s) => s.total > 0)
+    .sort((a, b) => b.total - a.total);
+  const sourceTotal = sourceRows.reduce((acc, s) => acc + s.total, 0);
+
   const now = new Date().getTime();
   const meetings = ((meetingRows ?? []) as unknown as MeetingRow[]).map((m) => {
     const st = m.info_meeting_invitations ?? [];
@@ -186,14 +199,15 @@ export default async function AdmissionPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Admission</h1>
-          <p className="text-sm text-muted-foreground">
-            Prise de contact sur WhatsApp, réunions d&apos;information, test oral — jusqu&apos;à l&apos;inscription.
-          </p>
-        </div>
+        <h1 className="text-2xl font-semibold tracking-tight">Apprenants</h1>
         <MeetingFormDialog rooms={rooms ?? []} />
       </div>
+
+      <LearnersTabs active="admission" toContact={toContact.length} />
+
+      <p className="text-sm text-muted-foreground">
+        Prise de contact sur WhatsApp, réunions d&apos;information, test oral — jusqu&apos;à l&apos;inscription.
+      </p>
 
       {/* Entonnoir */}
       <div className="flex flex-wrap gap-2">
@@ -230,7 +244,7 @@ export default async function AdmissionPage() {
                 {upcoming.map((m) => (
                   <TableRow key={m.id}>
                     <TableCell className="font-medium">
-                      <Link href={`/admission/${m.id}`} className="hover:underline">
+                      <Link href={`/apprenants/reunions/${m.id}`} className="hover:underline">
                         {formatMeetingWhen({ startsAt: m.starts_at, endsAt: m.ends_at })}
                       </Link>
                       {m.title !== "Réunion d'information" && (
@@ -257,7 +271,7 @@ export default async function AdmissionPage() {
               <ul className="mt-2 space-y-1 text-sm">
                 {past.map((m) => (
                   <li key={m.id}>
-                    <Link href={`/admission/${m.id}`} className="hover:underline">
+                    <Link href={`/apprenants/reunions/${m.id}`} className="hover:underline">
                       {formatMeetingWhen({ startsAt: m.starts_at })}
                     </Link>
                     <span className="text-muted-foreground"> — {m.invited} convoqués, {m.present} présents</span>
@@ -265,6 +279,43 @@ export default async function AdmissionPage() {
                 ))}
               </ul>
             </details>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">D&apos;où viennent les demandes</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Canal par lequel la personne nous a contactés (champ « Nous a contactés par » de la fiche, colonne « Canal de contact » du tableur).
+          </p>
+        </CardHeader>
+        <CardContent>
+          {sourceRows.length === 0 ? (
+            <p className="py-2 text-sm text-muted-foreground">Aucun canal renseigné pour l&apos;instant.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Canal</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="hidden text-right sm:table-cell">Part</TableHead>
+                  <TableHead className="text-right">30 derniers jours</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sourceRows.map((s) => (
+                  <TableRow key={s.code}>
+                    <TableCell className={s.code === "nc" ? "text-muted-foreground" : "font-medium"}>{s.label}</TableCell>
+                    <TableCell className="text-right">{s.total}</TableCell>
+                    <TableCell className="hidden text-right text-muted-foreground sm:table-cell">
+                      {sourceTotal ? Math.round((s.total / sourceTotal) * 100) : 0} %
+                    </TableCell>
+                    <TableCell className="text-right">{s.recent || "—"}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>

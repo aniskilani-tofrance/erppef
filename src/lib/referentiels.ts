@@ -66,6 +66,23 @@ export const GOALS = [
   { code: "autre", label: "Autre projet", aliases: ["autre"] },
 ] as const;
 
+// Canal par lequel la personne NOUS a contactés (≠ prescripteur = qui l'oriente).
+// Sert à savoir d'où viennent les demandes (page Admission, bilans financeurs).
+// NB : pas de virgule dans les labels (menus Excel inline).
+export const CONTACT_SOURCES = [
+  { code: "bouche_a_oreille", label: "Bouche-à-oreille", aliases: ["bouche a oreille", "bouche à oreille", "connaissance", "ami", "famille", "ancien apprenant"] },
+  { code: "passage_accueil", label: "Passage à l'accueil", aliases: ["accueil", "sur place", "passage", "venu sur place"] },
+  { code: "telephone", label: "Appel téléphonique", aliases: ["téléphone", "telephone", "appel", "tel"] },
+  { code: "whatsapp", label: "WhatsApp", aliases: ["wa", "message whatsapp"] },
+  { code: "email", label: "Email", aliases: ["mail", "courriel", "e-mail"] },
+  { code: "site_web", label: "Site internet", aliases: ["site", "internet", "web", "formulaire", "formulaire du site"] },
+  { code: "reseaux_sociaux", label: "Réseaux sociaux", aliases: ["facebook", "instagram", "tiktok", "linkedin", "réseaux", "reseaux"] },
+  { code: "france_travail", label: "France Travail", aliases: ["pôle emploi", "pole emploi", "ft", "conseiller france travail"] },
+  { code: "partenaire", label: "Orienté par un partenaire", aliases: ["partenaire", "association", "mairie", "ccas", "mission locale", "cip", "assistante sociale"] },
+  { code: "affiche_flyer", label: "Affiche / flyer", aliases: ["affiche", "flyer", "tract", "prospectus"] },
+  { code: "autre", label: "Autre canal", aliases: ["autre"] },
+] as const;
+
 export const PRESCRIBERS = [
   "France Travail",
   "Mission locale",

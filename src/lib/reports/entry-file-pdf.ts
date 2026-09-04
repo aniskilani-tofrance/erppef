@@ -1,6 +1,6 @@
 import { PDFDocument, PDFFont, StandardFonts, rgb } from "pdf-lib";
 import { LOGO_PEF_BASE64 } from "@/lib/emargement/logo-data";
-import { GOALS } from "@/lib/referentiels";
+import { CONTACT_SOURCES, GOALS } from "@/lib/referentiels";
 import { learnerRef } from "@/lib/refs";
 
 // Dossier d'entrée d'un apprenant (Qualiopi ind. 4) : identité, besoin exprimé,
@@ -26,6 +26,8 @@ export type EntryFileData = {
   firstLanguage: string | null;
   city: string | null;
   prescriber: string | null;
+  contactSource?: string | null;
+  contactSourceDetail?: string | null;
   activityStatus: string | null;
   entryGoal: string | null;
   entryNeed: string | null;
@@ -133,6 +135,10 @@ export async function buildEntryFilePdf(data: EntryFileData): Promise<Uint8Array
   field("Commune de résidence", data.city ?? "—");
   field("Situation", data.activityStatus ? (ACTIVITY_LABELS[data.activityStatus] ?? data.activityStatus) : "—");
   field("Prescripteur", data.prescriber ?? "—");
+  {
+    const source = CONTACT_SOURCES.find((s) => s.code === data.contactSource)?.label;
+    field("Nous a contactés par", source ? `${source}${data.contactSourceDetail ? ` (${data.contactSourceDetail})` : ""}` : "—");
+  }
   y -= 12;
 
   // ── Analyse du besoin ──

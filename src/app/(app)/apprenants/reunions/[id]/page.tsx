@@ -106,9 +106,9 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <div>
-        <Link href="/admission" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline">
+        <Link href="/apprenants/admission" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline">
           <ArrowLeft className="h-3.5 w-3.5" />
-          Admission
+          Apprenants · Admission
         </Link>
       </div>
 

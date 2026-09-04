@@ -45,10 +45,14 @@ Principe directeur : **chaque amélioration retire des clics ou de la saisie, ja
 - **Prise de contact** : statut d'admission sur chaque apprenant (nouveau → contacté/injoignable →
   convoqué → évalué → inscrit, ou sans suite), journal des contacts (canal, résultat, note, auteur),
   bouton WhatsApp « clic pour écrire » avec message pré-rempli (lien wa.me, zéro API, zéro coût),
-  liste « À contacter » dans le menu Admission, filtre par statut dans Apprenants.
+  liste « À contacter » dans l'onglet Admission de la page Apprenants (une seule entrée de menu), filtre par statut.
 - **Réunions d'information** : création (date, salle/lieu, capacité), convoqués par cases à cocher,
   convocation WhatsApp en un clic par personne (email en second), statut envoyée/confirmée/présente,
   rappel WhatsApp la veille + rappel email automatique, alertes Dashboard et cron du matin.
+- **Canal de premier contact** (comment la personne nous a contactés) : référentiel CONTACT_SOURCES,
+  champ « Nous a contactés par » + précision sur la fiche, colonnes 20-21 du modèle Excel/Drive,
+  carte « D'où viennent les demandes » (onglet Admission), distribution dans le bilan financeur (page + PDF),
+  ligne dans le dossier d'entrée PDF.
 - **Test oral** : saisie en 20 s depuis la réunion ou la fiche (date, niveau, évaluateur,
   commentaire), recopié dans le niveau évalué ; dossier d'entrée PDF complété (test oral, réunion suivie).
 - Reste hors lot : SMS automatique (fournisseur à ouvrir, ~0,05 €/SMS) et WhatsApp Business API

@@ -12,6 +12,7 @@ import { LearnerImportDialog } from "@/components/apprenants/learner-import-dial
 import { DriveSyncButton } from "@/components/apprenants/drive-sync-button";
 import { PlacementTestCell, type PlacementInfo } from "@/components/apprenants/placement-test-cell";
 import { DeleteLearnerButton } from "@/components/apprenants/delete-learner-button";
+import { LearnersTabs } from "@/components/apprenants/learners-tabs";
 import { AdmissionBadge } from "@/components/admission/admission-badge";
 import { AdmissionFilter } from "@/components/admission/admission-filter";
 import { BulkInviteButton } from "@/components/admission/bulk-invite-button";
@@ -91,6 +92,7 @@ export default async function ApprenantsPage({
     const code = l.admission_status ?? "nouveau";
     admissionCounts[code] = (admissionCounts[code] ?? 0) + 1;
   }
+  const toContactCount = (admissionCounts.nouveau ?? 0) + (admissionCounts.injoignable ?? 0);
   const senderFirstName = profile?.full_name?.trim().split(/\s+/)[0] ?? null;
 
   // Dernier test par apprenant (le plus récent prime)
@@ -147,6 +149,8 @@ export default async function ApprenantsPage({
           <LearnerFormDialog groups={groupOptions} />
         </div>
       </div>
+
+      <LearnersTabs active="liste" toContact={toContactCount} />
 
       <div className="rounded-lg border bg-background">
         <Table>
@@ -286,6 +290,8 @@ export default async function ApprenantsPage({
                         entryGoal: l.entry_goal ?? "nc",
                         entryNeed: l.entry_need ?? "",
                         entryInterviewOn: l.entry_interview_on ?? "",
+                        contactSource: l.contact_source ?? "nc",
+                        contactSourceDetail: l.contact_source_detail ?? "",
                         admissionStatus: l.admission_status ?? "nouveau",
                         oralTestOn: l.oral_test_on ?? "",
                         oralTestLevel: l.oral_test_level ?? "nd",

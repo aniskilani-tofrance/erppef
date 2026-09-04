@@ -4,7 +4,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Mail } from "lucide-react";
-import { sendPendingInvitationEmails } from "@/app/(app)/admission/actions";
+import { sendPendingInvitationEmails } from "@/app/(app)/apprenants/admission/actions";
 import { Button } from "@/components/ui/button";
 
 // Envoi groupé par email des convocations « à envoyer » (apprenants avec email).

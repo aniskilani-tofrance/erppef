@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ACTIVITIES, EDUCATION, GENDERS, GOALS, LEVELS, DISTRICTS } from "@/lib/referentiels";
+import { ACTIVITIES, CONTACT_SOURCES, EDUCATION, GENDERS, GOALS, LEVELS, DISTRICTS } from "@/lib/referentiels";
 import { parseImportText } from "@/lib/learner-import";
 
 // Le contrat anti-divergence : TOUTE valeur proposée par les menus déroulants du
@@ -44,6 +44,20 @@ describe("référentiel unique — cohérence Excel ↔ import", () => {
     }
     // Aucun label d'objectif ne doit contenir de virgule (menus Excel inline)
     for (const g of GOALS) expect(g.label, g.label).not.toContain(",");
+  });
+
+  it("chaque libellé de Canal de contact est reconnu (alias courants aussi), la précision passe en texte libre", () => {
+    // Colonnes 20 (Canal) et 21 (Précision) : on construit la ligne par index, pas à la main
+    const line = (canal: string, detail = "") => ["Test", "Import", ...Array(17).fill(""), canal, detail].join(";");
+    for (const s of CONTACT_SOURCES) {
+      const [row] = parseImportText(line(s.label, "Page Facebook"));
+      expect(row.contactSource, s.label).toBe(s.code);
+      expect(row.contactSourceDetail).toBe("Page Facebook");
+      expect(s.label, s.label).not.toContain(",");
+    }
+    expect(parseImportText(line("facebook"))[0].contactSource).toBe("reseaux_sociaux");
+    expect(parseImportText(line("Pôle emploi"))[0].contactSource).toBe("france_travail");
+    expect(parseImportText(line("pigeon voyageur"))[0].contactSource).toBeNull();
   });
 
   it("une valeur hors menu devient « non renseigné » plutôt qu'une donnée fausse", () => {

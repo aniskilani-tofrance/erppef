@@ -15,7 +15,7 @@ export async function GET(
     supabase
       .from("learners")
       .select(
-        "learner_no, first_name, last_name, birth_date, first_language, city, prescriber, activity_status, entry_goal, entry_need, entry_interview_on, level_assessed, oral_test_on, oral_test_level, oral_test_evaluator, oral_test_comment",
+        "learner_no, first_name, last_name, birth_date, first_language, city, prescriber, activity_status, entry_goal, entry_need, entry_interview_on, level_assessed, oral_test_on, oral_test_level, oral_test_evaluator, oral_test_comment, contact_source, contact_source_detail",
       )
       .eq("id", id)
       .single(),
@@ -44,6 +44,8 @@ export async function GET(
     firstLanguage: learner.first_language,
     city: learner.city,
     prescriber: learner.prescriber,
+    contactSource: learner.contact_source,
+    contactSourceDetail: learner.contact_source_detail,
     activityStatus: learner.activity_status,
     entryGoal: learner.entry_goal,
     entryNeed: learner.entry_need,

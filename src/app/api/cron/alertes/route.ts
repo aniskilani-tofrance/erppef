@@ -207,7 +207,7 @@ async function admissionAlerts(supabase: ReturnType<typeof createAdminClient>): 
     .eq("admission_status", "nouveau")
     .lt("created_at", new Date(now - 3 * 86_400_000).toISOString());
   if (neverContacted) {
-    lines.push(`${neverContacted} nouvel${neverContacted > 1 ? "s" : ""} apprenant${neverContacted > 1 ? "s" : ""} jamais contacté${neverContacted > 1 ? "s" : ""} depuis plus de 3 jours — https://pef-erp.vercel.app/admission`);
+    lines.push(`${neverContacted} nouvel${neverContacted > 1 ? "s" : ""} apprenant${neverContacted > 1 ? "s" : ""} jamais contacté${neverContacted > 1 ? "s" : ""} depuis plus de 3 jours — https://pef-erp.vercel.app/apprenants/admission`);
   }
 
   const { data: meetings } = await supabase
@@ -221,10 +221,10 @@ async function admissionAlerts(supabase: ReturnType<typeof createAdminClient>): 
     const toSend = st.filter((i) => i.status === "a_envoyer").length;
     const hoursLeft = (new Date(m.starts_at).getTime() - now) / 3600_000;
     const when = formatMeetingWhen({ startsAt: m.starts_at });
-    if (toSend) lines.push(`Réunion d'information ${when} : ${toSend} convocation${toSend > 1 ? "s" : ""} à envoyer — https://pef-erp.vercel.app/admission/${m.id}`);
+    if (toSend) lines.push(`Réunion d'information ${when} : ${toSend} convocation${toSend > 1 ? "s" : ""} à envoyer — https://pef-erp.vercel.app/apprenants/reunions/${m.id}`);
     if (hoursLeft <= 36 && st.length) {
       const confirmed = st.filter((i) => i.status === "confirmee").length;
-      lines.push(`Réunion d'information ${when} : ${st.length} convoqué${st.length > 1 ? "s" : ""}, ${confirmed} confirmé${confirmed > 1 ? "s" : ""} — rappels WhatsApp depuis https://pef-erp.vercel.app/admission/${m.id}`);
+      lines.push(`Réunion d'information ${when} : ${st.length} convoqué${st.length > 1 ? "s" : ""}, ${confirmed} confirmé${confirmed > 1 ? "s" : ""} — rappels WhatsApp depuis https://pef-erp.vercel.app/apprenants/reunions/${m.id}`);
     }
   }
   return lines;

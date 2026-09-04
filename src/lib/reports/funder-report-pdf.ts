@@ -111,6 +111,7 @@ export async function buildFunderReportPdf(report: FunderReport): Promise<Uint8A
   distributionBlock("Scolarisation", report.distributions.education);
   distributionBlock("Communes de résidence", report.distributions.cities.slice(0, 12));
   distributionBlock("Quartiers (découpage municipal)", report.distributions.districts.filter((d) => d.label !== "Non renseigné").slice(0, 12));
+  distributionBlock("Canal de premier contact (comment ils nous ont trouvés)", report.distributions.sources);
 
   // ── Détail par groupe ──
   newPageIfNeeded(60);

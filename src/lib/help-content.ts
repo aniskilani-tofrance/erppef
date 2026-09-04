@@ -215,19 +215,20 @@ export const HELP_SECTIONS: HelpSection[] = [
       {
         title: "Prendre contact (WhatsApp d'abord)",
         steps: [
-          "Menu Admission → « À contacter » : les nouveaux (arrivés du Drive ou créés à la main) jamais contactés, puis les injoignables à relancer. Les plus anciens d'abord.",
+          "Page Apprenants → onglet « Admission » → « À contacter » : les nouveaux (arrivés du Drive ou créés à la main) jamais contactés, puis les injoignables à relancer. Les plus anciens d'abord.",
           "« Écrire » ouvre WhatsApp (application ou WhatsApp Web sur ordinateur) avec le message de premier contact déjà écrit et signé de votre prénom. Relisez, adaptez si besoin, appuyez sur Envoyer.",
           "Dès que WhatsApp s'ouvre, le contact est noté dans le journal et le statut passe à « Contacté » : la personne quitte la liste « À contacter ».",
           "Un appel, une réponse, un refus : icône carnet « Noter un contact » — canal, résultat, note, et le statut proposé (modifiable). Le journal garde qui a parlé à qui, et quand.",
           "Les statuts : Nouveau → Contacté (ou Injoignable) → Convoqué → Évalué (test oral fait) → Inscrit (dans un groupe, automatique). « Sans suite » = la personne ne donne pas suite.",
           "Le bouton WhatsApp et le carnet sont aussi dans la liste Apprenants (colonne Admission), avec un filtre par statut en haut de la page.",
           "Pas de WhatsApp ou numéro inexploitable : le bouton est grisé — appelez, puis notez le contact.",
+          "Comment la personne NOUS a contactés : fiche apprenant → bloc « Parcours d'admission » → « Nous a contactés par » (bouche-à-oreille, passage à l'accueil, téléphone, WhatsApp, email, site, réseaux sociaux, France Travail, partenaire, affiche) + une précision libre (nom du partenaire, page…). C'est aussi la colonne « Canal de contact » du tableur Drive/Excel. La carte « D'où viennent les demandes » (onglet Admission) et le bilan financeur (Rapports) en donnent la répartition.",
         ],
       },
       {
         title: "Convoquer à une réunion d'information",
         steps: [
-          "Admission → « Nouvelle réunion » : titre, date, heures, salle (ou lieu en clair), capacité. Le lieu apparaît dans le message envoyé.",
+          "Onglet Admission → « Nouvelle réunion » : titre, date, heures, salle (ou lieu en clair), capacité. Le lieu apparaît dans le message envoyé.",
           "Sur la page de la réunion : « Ajouter des convoqués » (recherche + cases à cocher ; les inscrits et « sans suite » sont masqués par défaut). Ou bien, depuis Apprenants : cochez des personnes → « Convoquer (n) ».",
           "Chaque ligne a un bouton « Convoquer » : WhatsApp s'ouvre avec la convocation prête (date, heure, lieu, petit entretien oral annoncé comme n'étant pas un examen, demande de réponse OUI/NON). Envoyez ; la ligne passe en « Envoyée » et le statut d'admission en « Convoqué ».",
           "Pour ceux qui préfèrent l'email : icône enveloppe (une personne) ou « Envoyer par email (n) » (tous ceux à envoyer qui ont une adresse). L'email part de la boîte de l'organisme.",

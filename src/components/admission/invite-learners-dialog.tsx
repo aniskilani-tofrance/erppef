@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { UserPlus } from "lucide-react";
-import { inviteToMeeting } from "@/app/(app)/admission/actions";
+import { inviteToMeeting } from "@/app/(app)/apprenants/admission/actions";
 import { AdmissionBadge } from "@/components/admission/admission-badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";

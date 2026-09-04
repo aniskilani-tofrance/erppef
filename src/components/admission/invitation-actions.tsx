@@ -8,7 +8,7 @@ import {
   removeInvitation,
   sendInvitationEmail,
   setInvitationStatus,
-} from "@/app/(app)/admission/actions";
+} from "@/app/(app)/apprenants/admission/actions";
 import { INVITATION_STATUSES } from "@/lib/admission/status";
 import { WhatsAppButton } from "@/components/admission/whatsapp-button";
 import { Button } from "@/components/ui/button";

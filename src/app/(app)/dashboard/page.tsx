@@ -117,7 +117,7 @@ export default async function DashboardPage() {
   if ((newLearners.count ?? 0) > 0) {
     todos.push({
       label: `${newLearners.count} nouvel${(newLearners.count ?? 0) > 1 ? "s" : ""} apprenant${(newLearners.count ?? 0) > 1 ? "s" : ""} jamais contacté${(newLearners.count ?? 0) > 1 ? "s" : ""} depuis plus de 3 jours — écrire sur WhatsApp`,
-      href: "/admission",
+      href: "/apprenants/admission",
     });
   }
   for (const m of upcomingMeetings.data ?? []) {
@@ -127,12 +127,12 @@ export default async function DashboardPage() {
     if (toSend > 0) {
       todos.push({
         label: `Réunion d'information du ${fmtShortDate(m.starts_at)} : ${toSend} convocation${toSend > 1 ? "s" : ""} à envoyer`,
-        href: `/admission/${m.id}`,
+        href: `/apprenants/reunions/${m.id}`,
       });
     } else if (hoursLeft > 0 && hoursLeft <= 36 && st.length > 0) {
       todos.push({
         label: `Réunion d'information du ${fmtShortDate(m.starts_at)} : ${st.length} convoqué${st.length > 1 ? "s" : ""} — envoyer les rappels WhatsApp`,
-        href: `/admission/${m.id}`,
+        href: `/apprenants/reunions/${m.id}`,
       });
     }
   }

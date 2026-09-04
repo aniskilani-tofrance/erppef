@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { CalendarPlus, Pencil, Trash2 } from "lucide-react";
-import { deleteInfoMeeting, upsertInfoMeeting } from "@/app/(app)/admission/actions";
+import { deleteInfoMeeting, upsertInfoMeeting } from "@/app/(app)/apprenants/admission/actions";
 import { Button } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
@@ -79,7 +79,7 @@ export function MeetingFormDialog({
       toast.success(isEdit ? "Réunion mise à jour." : "Réunion créée — ajoutez maintenant les convoqués.");
       setOpen(false);
       if (isEdit) router.refresh();
-      else router.push(`/admission/${result.id}`);
+      else router.push(`/apprenants/reunions/${result.id}`);
     });
   }
 
@@ -94,7 +94,7 @@ export function MeetingFormDialog({
       }
       toast.success("Réunion supprimée.");
       setOpen(false);
-      router.push("/admission");
+      router.push("/apprenants/admission");
     });
   }
 

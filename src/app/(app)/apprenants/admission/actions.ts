@@ -23,8 +23,8 @@ const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const time = z.string().regex(/^\d{2}:\d{2}$/);
 
 function revalidateAdmission(meetingId?: string | null) {
-  revalidatePath("/admission");
-  if (meetingId) revalidatePath(`/admission/${meetingId}`);
+  revalidatePath("/apprenants/admission");
+  if (meetingId) revalidatePath(`/apprenants/reunions/${meetingId}`);
   revalidatePath("/apprenants");
   revalidatePath("/dashboard");
 }

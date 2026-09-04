@@ -107,7 +107,7 @@ export function LearnerImportDialog({ groups }: { groups: { id: string; name: st
             <p className="text-xs text-muted-foreground">
               Colonnes dans l&apos;ordre : Prénom ; Nom ; Téléphone ; Email ; Langue ; Niveau ;
               Naissance (JJ/MM/AAAA) ; Sexe ; Adresse ; Commune ; CP ; Situation ; QPV (oui/non) ;
-              RQTH (oui/non) ; Scolarisation ; Prescripteur ; Quartier — seuls Prénom et Nom sont obligatoires.
+              RQTH (oui/non) ; Scolarisation ; Prescripteur ; Quartier ; Objectif ; Besoin ; Canal de contact ; Précision — seuls Prénom et Nom sont obligatoires.
               La typologie alimente directement les bilans financeurs. Copier-coller depuis Excel fonctionne.
             </p>
           </div>

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Megaphone } from "lucide-react";
-import { inviteToMeeting } from "@/app/(app)/admission/actions";
+import { inviteToMeeting } from "@/app/(app)/apprenants/admission/actions";
 import { useLearnerSelection } from "@/components/apprenants/learner-selection";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,7 +37,7 @@ export function BulkInviteButton({ meetings }: { meetings: { id: string; label: 
       toast.success(`${result.invited} convoqué${result.invited > 1 ? "s" : ""} ajouté${result.invited > 1 ? "s" : ""}.`);
       clear();
       setOpen(false);
-      router.push(`/admission/${meetingId}`);
+      router.push(`/apprenants/reunions/${meetingId}`);
     });
   }
 
@@ -54,7 +54,7 @@ export function BulkInviteButton({ meetings }: { meetings: { id: string; label: 
           </DialogHeader>
           {meetings.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Aucune réunion à venir. <Link href="/admission" className="underline">Créez d&apos;abord une réunion</Link>, puis revenez cocher les apprenants.
+              Aucune réunion à venir. <Link href="/apprenants/admission" className="underline">Créez d&apos;abord une réunion</Link>, puis revenez cocher les apprenants.
             </p>
           ) : (
             <div className="space-y-4">

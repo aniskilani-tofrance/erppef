@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { NotebookPen } from "lucide-react";
-import { logContact } from "@/app/(app)/admission/actions";
+import { logContact } from "@/app/(app)/apprenants/admission/actions";
 import {
   ADMISSION_STATUSES,
   CONTACT_CHANNELS,

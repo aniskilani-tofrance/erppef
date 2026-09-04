@@ -18,6 +18,7 @@ import { PhotoUpload, initials } from "@/components/ui/photo-upload";
 import { ADMISSION_STATUSES } from "@/lib/admission/status";
 import {
   ACTIVITIES as REF_ACTIVITIES,
+  CONTACT_SOURCES as REF_SOURCES,
   DISTRICTS as REF_DISTRICTS,
   EDUCATION as REF_EDUCATION,
   GENDERS as REF_GENDERS,
@@ -54,6 +55,8 @@ export type LearnerFormValues = {
   entryNeed: string;
   entryInterviewOn: string;
   // Parcours d'admission (prise de contact → inscription) + test oral d'entrée
+  contactSource: string; // 'nc' = non renseigné
+  contactSourceDetail: string;
   admissionStatus: string;
   oralTestOn: string;
   oralTestLevel: string; // 'nd' = non déterminé
@@ -86,6 +89,8 @@ const EMPTY: LearnerFormValues = {
   entryGoal: "nc",
   entryNeed: "",
   entryInterviewOn: "",
+  contactSource: "nc",
+  contactSourceDetail: "",
   admissionStatus: "nouveau",
   oralTestOn: "",
   oralTestLevel: "nd",
@@ -122,6 +127,7 @@ const YES_NO = [
 const LEVELS = ["Non évalué", ...REF_LEVELS];
 const ORAL_LEVEL_OPTIONS = [{ value: "nd", label: "Non déterminé" }, ...REF_LEVELS.map((l) => ({ value: l, label: l }))];
 const ADMISSION_OPTIONS = ADMISSION_STATUSES.map((s) => ({ value: s.code, label: `${s.label} — ${s.hint}` }));
+const SOURCE_OPTIONS = [{ value: "nc", label: "Non renseigné" }, ...REF_SOURCES.map((s) => ({ value: s.code, label: s.label }))];
 
 export function LearnerFormDialog({
   initial,
@@ -206,6 +212,8 @@ export function LearnerFormDialog({
             : (values.entryGoal as "acces_emploi" | "formation_qualifiante" | "autonomie" | "naturalisation" | "examen_certification" | "autre"),
         entryNeed: values.entryNeed.trim() || null,
         entryInterviewOn: values.entryInterviewOn || null,
+        contactSource: values.contactSource === "nc" ? null : (values.contactSource as (typeof REF_SOURCES)[number]["code"]),
+        contactSourceDetail: values.contactSourceDetail.trim() || null,
         admissionStatus: values.admissionStatus as (typeof ADMISSION_STATUSES)[number]["code"],
         oralTestOn: values.oralTestOn || null,
         oralTestLevel: values.oralTestLevel === "nd" ? null : (values.oralTestLevel as (typeof REF_LEVELS)[number]),
@@ -344,6 +352,17 @@ export function LearnerFormDialog({
               <span className="font-normal text-muted-foreground">(contact → réunion → test oral → inscription)</span>
             </p>
             <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <SelectField label="Nous a contactés par" value={values.contactSource} options={SOURCE_OPTIONS} onChange={(v) => set("contactSource", v)} />
+                <div className="space-y-2">
+                  <Label>Précision (optionnel)</Label>
+                  <Input
+                    value={values.contactSourceDetail}
+                    onChange={(e) => set("contactSourceDetail", e.target.value)}
+                    placeholder="Nom du partenaire, page Facebook, ancien apprenant…"
+                  />
+                </div>
+              </div>
               <SelectField label="Statut d'admission" value={values.admissionStatus} options={ADMISSION_OPTIONS} onChange={(v) => set("admissionStatus", v)} />
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
@@ -363,7 +382,7 @@ export function LearnerFormDialog({
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">
-                Prise de contact WhatsApp, convocations et réunions : menu <span className="font-medium">Admission</span>.
+                Prise de contact WhatsApp, convocations et réunions : page Apprenants → onglet <span className="font-medium">Admission</span>.
               </p>
             </div>
           </div>

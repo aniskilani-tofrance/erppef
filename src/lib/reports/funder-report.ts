@@ -8,6 +8,10 @@ import {
 // Bilan par financeur : la donnée brute (loadFunderReportData, requêtes) est
 // séparée du calcul (computeFunderReport, fonction PURE testable sans base).
 
+import { CONTACT_SOURCES } from "@/lib/referentiels";
+
+export const SOURCE_LABELS: Record<string, string> = Object.fromEntries(CONTACT_SOURCES.map((s) => [s.code, s.label]));
+
 export const GENDER_LABELS: Record<string, string> = {
   femme: "Femmes",
   homme: "Hommes",
@@ -41,6 +45,7 @@ export type ReportLearner = {
   activityStatus: string | null;
   rqth: boolean | null;
   educationLevel: string | null;
+  contactSource?: string | null; // canal par lequel la personne nous a contactés
 };
 
 export type ReportEnrollment = {
@@ -100,6 +105,7 @@ export type FunderReport = {
     education: Distribution;
     cities: Distribution; // triées par effectif décroissant
     districts: Distribution; // quartiers (découpage du financeur municipal)
+    sources: Distribution; // canal de premier contact (d'où viennent les demandes)
   };
   groupDetails: {
     groupId: string;
@@ -257,6 +263,7 @@ export function computeFunderReport(data: FunderReportData): FunderReport {
       education: distribute(learners, (l) => l.educationLevel, EDUCATION_LABELS),
       cities: distribute(learners, (l) => l.city?.trim() || null),
       districts: distribute(learners, (l) => l.district?.trim() || null),
+      sources: distribute(learners, (l) => l.contactSource ?? null, SOURCE_LABELS),
     },
     groupDetails,
     learnerDetails,
@@ -331,7 +338,7 @@ export async function loadFunderReportData(
   const { data: learners } = learnerIds.length
     ? await supabase
         .from("learners")
-        .select("id, first_name, last_name, learner_no, gender, birth_date, city, district, qpv, activity_status, rqth, education_level")
+        .select("id, first_name, last_name, learner_no, gender, birth_date, city, district, qpv, activity_status, rqth, education_level, contact_source")
         .in("id", learnerIds)
     : { data: [] };
 
@@ -371,6 +378,7 @@ export async function loadFunderReportData(
       activityStatus: l.activity_status,
       rqth: l.rqth,
       educationLevel: l.education_level,
+      contactSource: l.contact_source ?? null,
     })),
     attendanceRecords: (attendances ?? []).map((a) => {
       const s = a.sessions as unknown as { starts_at: string; ends_at: string };
