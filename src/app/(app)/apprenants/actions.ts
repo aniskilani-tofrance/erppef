@@ -335,3 +335,12 @@ export async function enrollLearners(raw: z.infer<typeof bulkEnrollSchema>): Pro
   revalidatePath("/apprenants");
   return { ok: true, enrolled: d.learnerIds.length };
 }
+
+// Synchronisation manuelle du fichier Drive partagé (le cron tourne chaque nuit).
+export async function syncFromDrive(): Promise<{ ok: boolean; message: string }> {
+  await requireRole(["admin", "coordinator"]);
+  const { syncLearnersFromDrive } = await import("@/lib/drive-sync");
+  const result = await syncLearnersFromDrive();
+  if (result.ok && result.added > 0) revalidatePath("/apprenants");
+  return { ok: result.ok, message: result.message };
+}

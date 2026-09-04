@@ -9,6 +9,7 @@ import {
 import { LearnerFormDialog } from "@/components/apprenants/learner-form-dialog";
 import { learnerRef } from "@/lib/refs";
 import { LearnerImportDialog } from "@/components/apprenants/learner-import-dialog";
+import { DriveSyncButton } from "@/components/apprenants/drive-sync-button";
 import { PlacementTestCell, type PlacementInfo } from "@/components/apprenants/placement-test-cell";
 import {
   ABSENCE_ALERT_THRESHOLD,
@@ -68,6 +69,7 @@ export default async function ApprenantsPage({
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Apprenants</h1>
         <div className="flex gap-2">
+          <DriveSyncButton />
           <LearnerImportDialog groups={groupOptions} />
           <LearnerFormDialog groups={groupOptions} />
         </div>
