@@ -7,6 +7,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { ComplaintsManager } from "@/components/qualite/complaints-manager";
+import { WatchManager, type WatchEntry } from "@/components/qualite/watch-manager";
 import {
   ABSENCE_ALERT_THRESHOLD,
   computeLearnerStats,
@@ -15,11 +16,14 @@ import {
 
 // Correspondance indicateur Qualiopi → preuve produite par l'ERP.
 const INDICATORS: { ind: string; label: string; proof: string; href: string }[] = [
+  { ind: "4", label: "Analyse du besoin du bénéficiaire", proof: "Bloc « Analyse du besoin » + dossier d'entrée PDF sur chaque fiche apprenant", href: "/apprenants" },
   { ind: "8", label: "Positionnement à l'entrée", proof: "Niveau évalué sur chaque fiche apprenant", href: "/apprenants" },
   { ind: "11", label: "Atteinte des objectifs", proof: "Avancement heures réalisées / prévues par groupe", href: "/groupes" },
   { ind: "12", label: "Engagement et assiduité", proof: "Émargement électronique, taux d'assiduité, alertes décrochage", href: "/apprenants" },
   { ind: "17", label: "Moyens mobilisés", proof: "Salles, capacités, équipements, planning", href: "/salles" },
   { ind: "21-22", label: "Compétences des formateurs", proof: "CV, diplômes et attestations sur chaque fiche formateur", href: "/formateurs" },
+  { ind: "23-25", label: "Veille (critère 6)", proof: "Registre de veille ci-dessous", href: "/qualite" },
+  { ind: "27", label: "Sous-traitance", proof: "Formateurs prestataires et leurs documents contractuels", href: "/qualite" },
   { ind: "30", label: "Recueil des appréciations", proof: "Enquêtes de satisfaction anonymes par groupe", href: "/groupes" },
   { ind: "31", label: "Traitement des réclamations", proof: "Registre des réclamations ci-dessous", href: "/qualite" },
   { ind: "32", label: "Amélioration continue", proof: "Actions correctives tracées sur chaque réclamation + résultats d'enquêtes", href: "/qualite" },
@@ -29,7 +33,7 @@ export default async function QualitePage() {
   await requireRole(["admin", "coordinator"]);
   const supabase = await createClient();
 
-  const [{ data: attendanceRows }, { data: hours }, { data: surveys }, { data: complaints }, { data: learners }] =
+  const [{ data: attendanceRows }, { data: hours }, { data: surveys }, { data: complaints }, { data: learners }, { data: watchEntries }, { data: contractors }, { data: contractorDocs }] =
     await Promise.all([
       supabase
         .from("attendances")
@@ -39,6 +43,12 @@ export default async function QualitePage() {
       supabase.from("survey_responses").select("overall"),
       supabase.from("complaints").select("*").order("received_on", { ascending: false }),
       supabase.from("learners").select("id, first_name, last_name"),
+      supabase.from("watch_entries").select("*").order("entry_date", { ascending: false }).limit(60),
+      supabase
+        .from("trainers")
+        .select("id, first_name, last_name, is_active")
+        .eq("contract_type", "prestataire"),
+      supabase.from("trainer_documents").select("trainer_id"),
     ]);
 
   // Assiduité globale + alertes décrochage
@@ -66,6 +76,11 @@ export default async function QualitePage() {
     : null;
 
   const openComplaints = (complaints ?? []).filter((c) => c.status !== "traitee").length;
+
+  const docCountByTrainer = new Map<string, number>();
+  for (const d of contractorDocs ?? []) {
+    docCountByTrainer.set(d.trainer_id, (docCountByTrainer.get(d.trainer_id) ?? 0) + 1);
+  }
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -121,6 +136,66 @@ export default async function QualitePage() {
 
       <Card>
         <CardHeader>
+          <CardTitle className="text-base">Registre de veille (critère 6, ind. 23-25)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <WatchManager
+            entries={(watchEntries ?? []).map(
+              (w): WatchEntry => ({
+                id: w.id,
+                entryDate: w.entry_date,
+                category: w.category,
+                source: w.source,
+                url: w.url,
+                summary: w.summary,
+                sharedWithTeam: w.shared_with_team,
+              }),
+            )}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Sous-traitance (ind. 27)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {(contractors ?? []).length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Aucun formateur prestataire (freelance) déclaré — c&apos;est votre réponse à
+              l&apos;indicateur 27. Si vous sous-traitez un jour, passez la fiche du formateur
+              en « Prestataire » et déposez-y son contrat.
+            </p>
+          ) : (
+            <>
+              <ul className="space-y-2">
+                {(contractors ?? []).map((t) => {
+                  const docs = docCountByTrainer.get(t.id) ?? 0;
+                  return (
+                    <li key={t.id} className="flex flex-wrap items-center gap-2 rounded-md border px-3 py-2">
+                      <Link href={`/formateurs/${t.id}`} className="min-w-0 flex-1 text-sm font-medium hover:underline">
+                        {t.first_name} {t.last_name}
+                      </Link>
+                      {!t.is_active && <Badge variant="outline">Inactif</Badge>}
+                      <Badge variant={docs > 0 ? "secondary" : "destructive"}>
+                        {docs > 0 ? `${docs} document${docs > 1 ? "s" : ""}` : "Aucun document"}
+                      </Badge>
+                    </li>
+                  );
+                })}
+              </ul>
+              <p className="mt-3 text-xs text-muted-foreground">
+                Pour chaque prestataire, déposez sur sa fiche : contrat de sous-traitance, CV,
+                attestation d&apos;assurance (et certificat Qualiopi si son activité y est soumise).
+                Un badge rouge = dossier à compléter avant l&apos;audit.
+              </p>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle className="text-base">Où sont les preuves — correspondance indicateurs</CardTitle>
         </CardHeader>
         <CardContent>
@@ -145,8 +220,8 @@ export default async function QualitePage() {
             </TableBody>
           </Table>
           <p className="mt-3 text-xs text-muted-foreground">
-            Complément hors ERP à préparer pour l&apos;audit : veille (critère 6), analyse des
-            besoins en amont (critère 2) et sous-traitance éventuelle (ind. 27).
+            Veille, analyse du besoin et sous-traitance sont désormais couvertes ci-dessus :
+            la préparation d&apos;audit se fait entièrement depuis l&apos;ERP.
           </p>
         </CardContent>
       </Card>

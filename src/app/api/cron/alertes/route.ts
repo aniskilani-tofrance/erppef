@@ -99,6 +99,32 @@ export async function GET(request: Request) {
     }
   }
 
+  // Le 1er du mois : la veille Qualiopi (critère 6) du mois écoulé a-t-elle été tenue ?
+  // L'auditeur juge la régularité — une entrée par mois est le minimum visé.
+  let watchReminder: string | null = null;
+  const paris = new Intl.DateTimeFormat("fr-CA", {
+    timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(now); // YYYY-MM-DD
+  if (paris.slice(8, 10) === "01") {
+    const { data: org } = await supabase.from("organizations").select("id").eq("slug", "pef").single();
+    if (org) {
+      const monthStart = `${paris.slice(0, 7)}-01`;
+      const prev = new Date(`${monthStart}T12:00:00Z`);
+      prev.setUTCMonth(prev.getUTCMonth() - 1);
+      const prevStart = prev.toISOString().slice(0, 8) + "01";
+      const { count } = await supabase
+        .from("watch_entries")
+        .select("id", { count: "exact", head: true })
+        .eq("org_id", org.id)
+        .gte("entry_date", prevStart)
+        .lt("entry_date", monthStart);
+      if (!count) {
+        watchReminder =
+          "📚 Veille Qualiopi (critère 6) : aucune entrée le mois dernier — ajoutez une entrée dans Qualité → Registre de veille (une source lue + 2 lignes suffisent).";
+      }
+    }
+  }
+
   const stats = computeLearnerStats(
     (attendanceRows ?? []).map((a) => ({
       learnerId: a.learner_id,
@@ -120,13 +146,14 @@ export async function GET(request: Request) {
     return `${group} (${day}${trainer ? `, ${trainer}` : ""})`;
   });
 
-  if (atRisk.length === 0 && sheets.length === 0) {
+  if (atRisk.length === 0 && sheets.length === 0 && !watchReminder) {
     return Response.json({ sent: false, reason: "rien à signaler", backup, reminders, trainerRelances });
   }
 
   const lines = [
     ...(atRisk.length ? ["⚠️ Risque de décrochage :", ...atRisk.map((l) => `  • ${l}`), ""] : []),
     ...(sheets.length ? ["📋 Feuilles d'émargement non clôturées :", ...sheets.map((l) => `  • ${l}`), ""] : []),
+    ...(watchReminder ? [watchReminder, ""] : []),
     "Détails : https://pef-erp.vercel.app/qualite",
   ];
 

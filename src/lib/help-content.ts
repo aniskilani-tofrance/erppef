@@ -218,6 +218,33 @@ export const HELP_SECTIONS: HelpSection[] = [
         ],
       },
       {
+        title: "Analyser le besoin à l'entrée (critère 2, ind. 4)",
+        steps: [
+          "Fiche apprenant → bloc « Analyse du besoin à l'entrée » : objectif visé (menu), besoin exprimé avec ses mots, date de l'entretien d'entrée.",
+          "Le test de positionnement complète ce recueil : besoin + niveau = l'analyse demandée par l'auditeur.",
+          "« Télécharger le dossier d'entrée (PDF) » (dans le même bloc) : la preuve individuelle — identité, besoin, positionnement — à classer ou imprimer.",
+          "Ces colonnes existent aussi dans le modèle Excel (Objectif, Besoin) : le recueil peut se faire dès l'inscription papier/tableur.",
+        ],
+      },
+      {
+        title: "Tenir la veille (critère 6, ind. 23-25)",
+        steps: [
+          "Qualité → « Registre de veille » → « Nouvelle entrée » : type (légale / métiers / pédagogique), source, lien, et deux lignes sur ce que vous en retenez.",
+          "Cochez « Diffusée à l'équipe » quand l'info a été partagée (réunion, mail) : c'est la preuve d'exploitation.",
+          "Visez une entrée par mois minimum — l'auditeur juge la régularité. Si un mois passe sans entrée, l'email d'alertes du 1er du mois vous le rappelle.",
+          "Sources faciles : lettre Centre Inffo (légale), France Travail / OPCO (métiers), Le français dans le monde ou fil DELF/DCL (pédagogique FLE).",
+        ],
+      },
+      {
+        title: "Déclarer la sous-traitance (ind. 27)",
+        steps: [
+          "Un formateur freelance qui vous facture = un sous-traitant : sur sa fiche, « Modifier » → contrat « Prestataire (freelance) ».",
+          "Déposez ses documents sur sa fiche : contrat de sous-traitance, CV, attestation d'assurance (et certificat Qualiopi si son activité y est soumise).",
+          "Qualité → carte « Sous-traitance » : la liste de vos prestataires avec l'état de leur dossier (badge rouge = documents manquants).",
+          "Aucun prestataire ? La carte l'affiche : c'est votre réponse à l'indicateur 27.",
+        ],
+      },
+      {
         title: "Générer le bilan d'un financeur (Rapports)",
         steps: [
           "Menu « Rapports » : choisissez le financeur et la période (presets : année civile, trimestre, année de formation).",

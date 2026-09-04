@@ -31,7 +31,7 @@ export type TrainerData = {
   id: string;
   firstName: string;
   lastName: string;
-  contractType: "salarie" | "vacataire";
+  contractType: "salarie" | "vacataire" | "prestataire";
   hourlyCost: number;
   weeklyHoursMax: number;
   priority: number;
@@ -79,7 +79,7 @@ export type EngineData = {
 export type RankedTrainer = {
   trainerId: string;
   name: string;
-  contractType: "salarie" | "vacataire";
+  contractType: "salarie" | "vacataire" | "prestataire";
   hourlyCost: number;
   priority: number;
   score: number;

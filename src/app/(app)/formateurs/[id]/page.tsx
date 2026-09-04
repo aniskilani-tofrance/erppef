@@ -4,6 +4,7 @@ import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CONTRACT_LABELS } from "@/lib/referentiels";
 import { TrainerFormDialog } from "@/components/formateurs/trainer-form-dialog";
 import { AvailabilityEditor } from "@/components/formateurs/availability-editor";
 import { AbsenceManager } from "@/components/formateurs/absence-manager";
@@ -42,7 +43,7 @@ export default async function FormateurPage({ params }: { params: Promise<{ id: 
         <h1 className="text-2xl font-semibold tracking-tight">
           {trainer.first_name} {trainer.last_name}
         </h1>
-        <Badge variant="outline">{trainer.contract_type === "salarie" ? "Salarié" : "Vacataire"}</Badge>
+        <Badge variant="outline">{CONTRACT_LABELS[trainer.contract_type] ?? trainer.contract_type}</Badge>
         {!trainer.is_active && <Badge variant="destructive">Inactif</Badge>}
         {membership && <Badge variant="secondary">Compte ERP actif</Badge>}
         <div className="ml-auto flex items-center gap-2">

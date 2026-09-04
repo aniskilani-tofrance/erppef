@@ -15,7 +15,7 @@ const trainerSchema = z.object({
   lastName: z.string(),
   email: z.string().email().nullable(),
   phone: z.string().nullable(),
-  contractType: z.enum(["salarie", "vacataire"]),
+  contractType: z.enum(["salarie", "vacataire", "prestataire"]),
   hourlyCost: z.number().positive(),
   weeklyHoursMax: z.number().positive(),
   priority: z.number().int().min(1),

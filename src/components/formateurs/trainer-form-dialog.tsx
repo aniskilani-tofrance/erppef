@@ -23,7 +23,7 @@ export type TrainerFormValues = {
   lastName: string;
   email: string;
   phone: string;
-  contractType: "salarie" | "vacataire";
+  contractType: "salarie" | "vacataire" | "prestataire";
   hourlyCost: string;
   weeklyHoursMax: string;
   priority: string;
@@ -140,7 +140,7 @@ export function TrainerFormDialog({ initial }: { initial?: TrainerFormValues }) 
             <Field label="Contrat">
               <Select
                 value={values.contractType}
-                onValueChange={(v) => set("contractType", v as "salarie" | "vacataire")}
+                onValueChange={(v) => set("contractType", v as "salarie" | "vacataire" | "prestataire")}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -148,6 +148,7 @@ export function TrainerFormDialog({ initial }: { initial?: TrainerFormValues }) 
                 <SelectContent>
                   <SelectItem value="salarie">Salarié</SelectItem>
                   <SelectItem value="vacataire">Vacataire</SelectItem>
+                  <SelectItem value="prestataire">Prestataire (freelance)</SelectItem>
                 </SelectContent>
               </Select>
             </Field>

@@ -528,6 +528,9 @@ export const TRAINING_MODULES: TrainingModule[] = [
           "Le Dashboard affiche le taux de présence global et les apprenants en alerte (moins de 70 % ou 3 absences de suite) : appelez-les, notez l'action dans leur fiche.",
           "Enquête de satisfaction : fiche du groupe → QR code anonyme en fin de session (1 minute). Les moyennes s'affichent sur la fiche.",
           "Réclamations : page Qualité → registre — consignez la réclamation ET l'action corrective (c'est elle qui compte en audit).",
+          "Analyse du besoin (ind. 4) : sur la fiche apprenant, objectif visé + besoin exprimé + date d'entretien, puis « Télécharger le dossier d'entrée (PDF) » — la preuve individuelle.",
+          "Veille (critère 6) : page Qualité → registre de veille, une entrée par mois minimum (source lue + 2 lignes) ; l'email d'alertes du 1er du mois vous rappelle si un mois est vide.",
+          "Sous-traitance (ind. 27) : un formateur freelance = contrat « Prestataire » sur sa fiche + ses documents ; la carte Sous-traitance de la page Qualité signale les dossiers incomplets.",
           "Jour d'audit : ouvrez la page Qualité — le tableau « où sont les preuves » guide l'auditeur indicateur par indicateur.",
         ],
         practice: {

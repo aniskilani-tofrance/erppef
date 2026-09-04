@@ -20,6 +20,7 @@ import {
   DISTRICTS as REF_DISTRICTS,
   EDUCATION as REF_EDUCATION,
   GENDERS as REF_GENDERS,
+  GOALS as REF_GOALS,
   LEVELS as REF_LEVELS,
 } from "@/lib/referentiels";
 
@@ -47,6 +48,10 @@ export type LearnerFormValues = {
   rqth: string; // 'nc' | 'oui' | 'non'
   educationLevel: string;
   prescriber: string;
+  // Analyse du besoin à l'entrée (Qualiopi ind. 4)
+  entryGoal: string; // 'nc' = non renseigné
+  entryNeed: string;
+  entryInterviewOn: string;
 };
 
 const EMPTY: LearnerFormValues = {
@@ -71,6 +76,9 @@ const EMPTY: LearnerFormValues = {
   rqth: "nc",
   educationLevel: "nc",
   prescriber: "",
+  entryGoal: "nc",
+  entryNeed: "",
+  entryInterviewOn: "",
 };
 
 // Listes issues du RÉFÉRENTIEL UNIQUE (src/lib/referentiels.ts) — identiques au
@@ -90,6 +98,8 @@ function isSaintOuen(city: string, postalCode: string): boolean {
   const c = city.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
   return /saint[\s-]?ouen/.test(c) && !c.includes("aumone");
 }
+
+const GOAL_OPTIONS = [{ value: "nc", label: "Non renseigné" }, ...REF_GOALS.map((g) => ({ value: g.code, label: g.label }))];
 
 const YES_NO = [
   { value: "nc", label: "Non renseigné" },
@@ -176,6 +186,12 @@ export function LearnerFormDialog({
             ? null
             : (values.educationLevel as "non_scolarise" | "primaire" | "secondaire" | "superieur"),
         prescriber: values.prescriber.trim() || null,
+        entryGoal:
+          values.entryGoal === "nc"
+            ? null
+            : (values.entryGoal as "acces_emploi" | "formation_qualifiante" | "autonomie" | "naturalisation" | "examen_certification" | "autre"),
+        entryNeed: values.entryNeed.trim() || null,
+        entryInterviewOn: values.entryInterviewOn || null,
         enrollGroupId: !isEdit && groupId !== "none" ? groupId : null,
       });
       if (!result.ok) {
@@ -264,6 +280,42 @@ export function LearnerFormDialog({
           <div className="space-y-2">
             <Label>Identifiant France Travail</Label>
             <Input value={values.franceTravailId} onChange={(e) => set("franceTravailId", e.target.value)} />
+          </div>
+
+          {/* Analyse du besoin à l'entrée : preuve individuelle Qualiopi ind. 4. */}
+          <div className="rounded-md border p-3">
+            <p className="mb-3 text-sm font-medium">
+              Analyse du besoin à l&apos;entrée{" "}
+              <span className="font-normal text-muted-foreground">(Qualiopi ind. 4 — optionnel)</span>
+            </p>
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <SelectField label="Objectif visé" value={values.entryGoal} options={GOAL_OPTIONS} onChange={(v) => set("entryGoal", v)} />
+                <div className="space-y-2">
+                  <Label>Entretien d&apos;entrée le</Label>
+                  <Input type="date" value={values.entryInterviewOn} onChange={(e) => set("entryInterviewOn", e.target.value)} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Besoin exprimé</Label>
+                <Textarea
+                  value={values.entryNeed}
+                  onChange={(e) => set("entryNeed", e.target.value)}
+                  rows={2}
+                  placeholder="Ce que la personne dit vouloir faire du français : parler à l'école des enfants, passer le permis, préparer un entretien…"
+                />
+              </div>
+              {isEdit && (
+                <a
+                  href={`/apprenants/${values.id}/dossier-entree`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-muted-foreground underline-offset-2 hover:underline"
+                >
+                  Télécharger le dossier d&apos;entrée (PDF) — identité, besoin, positionnement
+                </a>
+              )}
+            </div>
           </div>
 
           {/* Typologie : alimente les bilans financeurs. Tout est optionnel. */}

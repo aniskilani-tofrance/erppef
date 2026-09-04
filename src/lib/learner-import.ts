@@ -1,9 +1,9 @@
 // Parsing PARTAGÉ des lignes d'apprenants (dialog d'import ET synchronisation Drive).
 // Colonnes, dans l'ordre :
-// Prénom;Nom;Téléphone;Email;Langue;Niveau;Naissance;Sexe;Adresse;Commune;CP;Situation;QPV;RQTH;Scolarisation;Prescripteur;Quartier
+// Prénom;Nom;Téléphone;Email;Langue;Niveau;Naissance;Sexe;Adresse;Commune;CP;Situation;QPV;RQTH;Scolarisation;Prescripteur;Quartier;Objectif;Besoin
 // (ligne d'en-têtes optionnelle, séparateur ; , ou tabulation, tout est facultatif après Nom).
 
-import { ACTIVITIES, EDUCATION, GENDERS, buildLookup } from "@/lib/referentiels";
+import { ACTIVITIES, EDUCATION, GENDERS, GOALS, buildLookup } from "@/lib/referentiels";
 
 export type ImportRow = {
   firstName: string;
@@ -23,6 +23,8 @@ export type ImportRow = {
   educationLevel: "non_scolarise" | "primaire" | "secondaire" | "superieur" | null;
   prescriber: string | null;
   district: string | null;
+  entryGoal: (typeof GOALS)[number]["code"] | null;
+  entryNeed: string | null;
 };
 
 // « 12/05/1988 » ou « 1988-05-12 » → 'YYYY-MM-DD'
@@ -43,6 +45,7 @@ export function parseBool(v: string): boolean | null {
 const genderOf = buildLookup(GENDERS);
 const activityOf = buildLookup(ACTIVITIES);
 const educationOf = buildLookup(EDUCATION);
+const goalOf = buildLookup(GOALS);
 
 export function parseImportText(text: string): ImportRow[] {
   const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
@@ -71,6 +74,8 @@ export function parseImportText(text: string): ImportRow[] {
       educationLevel: c[14] ? (educationOf(c[14]) as ImportRow["educationLevel"]) : null,
       prescriber: c[15] || null,
       district: c[16] || null,
+      entryGoal: c[17] ? (goalOf(c[17]) as ImportRow["entryGoal"]) : null,
+      entryNeed: c[18] || null,
     }));
 }
 
@@ -105,5 +110,7 @@ export function rowToDbColumns(row: ImportRow, orgId: string) {
     education_level: row.educationLevel,
     prescriber: row.prescriber,
     district: row.district,
+    entry_goal: row.entryGoal,
+    entry_need: row.entryNeed,
   };
 }

@@ -48,6 +48,24 @@ export const DISTRICTS = [
   "Arago-Pasteur-Zola-Hugo",
 ] as const;
 
+// Types de contrat formateur (le type « prestataire » = sous-traitance, Qualiopi ind. 27)
+export const CONTRACT_LABELS: Record<string, string> = {
+  salarie: "Salarié",
+  vacataire: "Vacataire",
+  prestataire: "Prestataire",
+};
+
+// Objectifs d'entrée (analyse du besoin, Qualiopi ind. 4)
+export const GOALS = [
+  { code: "acces_emploi", label: "Accès à l'emploi", aliases: ["emploi", "trouver un emploi"] },
+  { code: "formation_qualifiante", label: "Poursuite vers une formation", aliases: ["formation", "formation qualifiante"] },
+  { code: "autonomie", label: "Autonomie de la vie quotidienne", aliases: ["autonomie quotidienne", "vie quotidienne"] },
+  { code: "naturalisation", label: "Naturalisation / titre de séjour", aliases: ["naturalisation", "titre de séjour", "titre de sejour"] },
+  // NB : pas de virgule dans les labels — les menus déroulants Excel (listes inline) se séparent dessus
+  { code: "examen_certification", label: "Préparer un examen (DELF / DCL…)", aliases: ["examen", "certification", "delf", "dcl"] },
+  { code: "autre", label: "Autre projet", aliases: ["autre"] },
+] as const;
+
 export const PRESCRIBERS = [
   "France Travail",
   "Mission locale",

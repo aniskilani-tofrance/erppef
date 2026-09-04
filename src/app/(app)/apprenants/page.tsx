@@ -188,6 +188,9 @@ export default async function ApprenantsPage({
                         rqth: l.rqth == null ? "nc" : l.rqth ? "oui" : "non",
                         educationLevel: l.education_level ?? "nc",
                         prescriber: l.prescriber ?? "",
+                        entryGoal: l.entry_goal ?? "nc",
+                        entryNeed: l.entry_need ?? "",
+                        entryInterviewOn: l.entry_interview_on ?? "",
                       }}
                     />
                   </TableCell>

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { weekStartOf } from "@/lib/dates";
+import { CONTRACT_LABELS } from "@/lib/referentiels";
 import { TrainerFormDialog } from "@/components/formateurs/trainer-form-dialog";
 
 export default async function FormateursPage() {
@@ -51,7 +52,7 @@ export default async function FormateursPage() {
                           {t.first_name} {t.last_name}
                         </p>
                         <Badge variant="outline" className="text-xs">
-                          {t.contract_type === "salarie" ? "Salarié" : "Vacataire"}
+                          {CONTRACT_LABELS[t.contract_type] ?? t.contract_type}
                         </Badge>
                         {!t.is_active && <Badge variant="destructive" className="text-xs">Inactif</Badge>}
                       </div>

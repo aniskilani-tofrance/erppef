@@ -28,6 +28,18 @@ Principe directeur : **chaque amélioration retire des clics ou de la saisie, ja
 - **Relance ciblée des feuilles non clôturées** au formateur concerné (l'alerte n'arrive
   aujourd'hui qu'à l'admin).
 
+## Lot 3 bis — Qualiopi « 100 % dans l'ERP » (livré le 04/09/2026)
+
+- **Analyse du besoin à l'entrée (ind. 4)** : bloc sur la fiche apprenant (objectif visé, besoin
+  exprimé, date d'entretien) + « dossier d'entrée » PDF individuel ; colonnes Objectif/Besoin
+  dans le modèle Excel et la synchro Drive.
+- **Registre de veille (critère 6, ind. 23-25)** : page Qualité, entrées datées et catégorisées
+  (légale / métiers / pédagogique), case « diffusée à l'équipe » ; rappel dans l'email d'alertes
+  du 1er du mois si le mois écoulé est vide.
+- **Sous-traitance (ind. 27)** : type de contrat « Prestataire » sur la fiche formateur + carte
+  Qualité listant les prestataires et l'état de leur dossier documentaire.
+- Résultat : plus aucun indicateur « hors ERP » dans le tableau des preuves.
+
 ## Lot 4 — BPF (~2 jours, à livrer en décembre pour la saison de janvier)
 
 - **Bilan Pédagogique et Financier pré-rempli** depuis les données (heures, apprenants,

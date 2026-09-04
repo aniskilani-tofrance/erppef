@@ -45,6 +45,12 @@ const learnerSchema = z.object({
   rqth: z.boolean().nullable(),
   educationLevel: z.enum(["non_scolarise", "primaire", "secondaire", "superieur"]).nullable(),
   prescriber: z.string().nullable(),
+  // Analyse du besoin à l'entrée (Qualiopi ind. 4)
+  entryGoal: z
+    .enum(["acces_emploi", "formation_qualifiante", "autonomie", "naturalisation", "examen_certification", "autre"])
+    .nullable(),
+  entryNeed: z.string().nullable(),
+  entryInterviewOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
   // Flux « créer et inscrire » : à la création, inscrit directement dans ce groupe.
   enrollGroupId: z.string().uuid().nullable(),
 });
@@ -80,6 +86,9 @@ export async function upsertLearner(raw: z.infer<typeof learnerSchema>): Promise
     rqth: d.rqth,
     education_level: d.educationLevel,
     prescriber: d.prescriber,
+    entry_goal: d.entryGoal,
+    entry_need: d.entryNeed,
+    entry_interview_on: d.entryInterviewOn,
   };
 
   if (d.id) {
@@ -132,6 +141,11 @@ const importSchema = z.object({
         educationLevel: z.enum(["non_scolarise", "primaire", "secondaire", "superieur"]).nullable().optional(),
         prescriber: z.string().nullable().optional(),
         district: z.string().nullable().optional(),
+        entryGoal: z
+          .enum(["acces_emploi", "formation_qualifiante", "autonomie", "naturalisation", "examen_certification", "autre"])
+          .nullable()
+          .optional(),
+        entryNeed: z.string().nullable().optional(),
       }),
     )
     .min(1)
@@ -177,6 +191,8 @@ export async function importLearners(raw: z.infer<typeof importSchema>): Promise
         education_level: r.educationLevel ?? null,
         prescriber: r.prescriber ?? null,
         district: r.district ?? null,
+        entry_goal: r.entryGoal ?? null,
+        entry_need: r.entryNeed ?? null,
       })),
     )
     .select("id");

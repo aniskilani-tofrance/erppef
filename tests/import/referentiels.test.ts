@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ACTIVITIES, EDUCATION, GENDERS, LEVELS, DISTRICTS } from "@/lib/referentiels";
+import { ACTIVITIES, EDUCATION, GENDERS, GOALS, LEVELS, DISTRICTS } from "@/lib/referentiels";
 import { parseImportText } from "@/lib/learner-import";
 
 // Le contrat anti-divergence : TOUTE valeur proposée par les menus déroulants du
@@ -34,6 +34,16 @@ describe("référentiel unique — cohérence Excel ↔ import", () => {
     for (const d of DISTRICTS) {
       expect(parseImportText(`Test;Import;;;;;;;;;;;;;;;${d}`)[0].district).toBe(d);
     }
+  });
+
+  it("chaque libellé d'Objectif est reconnu, le besoin passe en texte libre", () => {
+    for (const g of GOALS) {
+      const [row] = parseImportText(`Test;Import;;;;;;;;;;;;;;;;${g.label};Parler au travail`);
+      expect(row.entryGoal, g.label).toBe(g.code);
+      expect(row.entryNeed).toBe("Parler au travail");
+    }
+    // Aucun label d'objectif ne doit contenir de virgule (menus Excel inline)
+    for (const g of GOALS) expect(g.label, g.label).not.toContain(",");
   });
 
   it("une valeur hors menu devient « non renseigné » plutôt qu'une donnée fausse", () => {

@@ -49,3 +49,54 @@ export async function upsertComplaint(raw: z.infer<typeof complaintSchema>): Pro
   revalidatePath("/qualite");
   return { ok: true };
 }
+
+const watchEntrySchema = z.object({
+  id: z.string().uuid().optional(),
+  entryDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  category: z.enum(["legale", "metiers", "pedagogique"]),
+  source: z.string().min(1),
+  url: z.string().nullable(),
+  summary: z.string().min(1),
+  sharedWithTeam: z.boolean(),
+});
+
+// Registre de veille (Qualiopi critère 6, ind. 23-25) : chaque entrée = une source
+// consultée, datée et catégorisée, avec ce qu'on en retient.
+export async function upsertWatchEntry(raw: z.infer<typeof watchEntrySchema>): Promise<ActionResult> {
+  const parsed = watchEntrySchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Données invalides" };
+  const d = parsed.data;
+
+  const { orgId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+
+  const row = {
+    org_id: orgId,
+    entry_date: d.entryDate,
+    category: d.category,
+    source: d.source,
+    url: d.url,
+    summary: d.summary,
+    shared_with_team: d.sharedWithTeam,
+  };
+
+  const { error } = d.id
+    ? await supabase.from("watch_entries").update(row).eq("id", d.id)
+    : await supabase.from("watch_entries").insert(row);
+
+  if (error) return { ok: false, error: translatePgError(error) };
+  revalidatePath("/qualite");
+  return { ok: true };
+}
+
+export async function deleteWatchEntry(id: string): Promise<ActionResult> {
+  if (!z.string().uuid().safeParse(id).success) return { ok: false, error: "Identifiant invalide" };
+
+  await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+
+  const { error } = await supabase.from("watch_entries").delete().eq("id", id);
+  if (error) return { ok: false, error: translatePgError(error) };
+  revalidatePath("/qualite");
+  return { ok: true };
+}

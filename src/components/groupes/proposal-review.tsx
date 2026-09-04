@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Proposal, RankedRoom, RankedTrainer } from "@/lib/engine/types";
+import { CONTRACT_LABELS } from "@/lib/referentiels";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -159,7 +160,7 @@ function TrainerOption({
           )}
           <span className="font-medium">{trainer.name}</span>
           <Badge variant="outline" className="text-xs">
-            {trainer.contractType === "salarie" ? "Salarié" : "Vacataire"}
+            {CONTRACT_LABELS[trainer.contractType] ?? trainer.contractType}
           </Badge>
           {recommended && <Badge className="text-xs">Recommandé</Badge>}
         </div>

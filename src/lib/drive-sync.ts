@@ -101,7 +101,7 @@ export async function syncLearnersFromDrive(): Promise<SyncResult> {
         firstName: l.first_name, lastName: l.last_name, phone: l.phone, birthDate: l.birth_date,
         email: null, firstLanguage: null, levelAssessed: null, gender: null, address: null,
         city: null, postalCode: null, activityStatus: null, qpv: null, rqth: null,
-        educationLevel: null, prescriber: null, district: null,
+        educationLevel: null, prescriber: null, district: null, entryGoal: null, entryNeed: null,
       }),
     ),
   );
