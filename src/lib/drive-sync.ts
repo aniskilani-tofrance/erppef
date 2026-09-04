@@ -21,14 +21,14 @@ async function listPublicFolder(folderId: string): Promise<DriveEntry[]> {
   if (!res.ok) throw new Error(`dossier inaccessible (${res.status})`);
   const html = await res.text();
   const entries: DriveEntry[] = [];
-  const re = /href="https:\/\/(docs|drive)\.google\.com\/(?:spreadsheets\/d\/|file\/d\/|open\?id=)([A-Za-z0-9_-]{20,})[^"]*"[^>]*>[\s\S]{0,400}?flip-entry-title">([^<]+)</g;
+  const re = /href="https:\/\/(docs|drive)\.google\.com\/(?:spreadsheets\/d\/|file\/d\/|open\?id=)([A-Za-z0-9_-]{20,})[^"]*"[^>]*>[\s\S]{0,2000}?flip-entry-title">([^<]+)</g;
   for (const m of html.matchAll(re)) {
     entries.push({ id: m[2], name: m[3].trim(), isSheet: m[1] === "docs" });
   }
   if (entries.length === 0) {
     // Repli si la structure des liens change : blocs « entry-<id> … flip-entry-title »
     // (un nom sans extension = Google Sheet natif, exporté en xlsx au téléchargement)
-    const reFallback = /id="entry-([A-Za-z0-9_-]{20,})"[\s\S]{0,600}?flip-entry-title">([^<]+)</g;
+    const reFallback = /id="entry-([A-Za-z0-9_-]{20,})"[\s\S]{0,2000}?flip-entry-title">([^<]+)</g;
     for (const m of html.matchAll(reFallback)) {
       const name = m[2].trim();
       entries.push({ id: m[1], name, isSheet: !/\.\w{2,5}$/.test(name) });
@@ -144,6 +144,6 @@ export async function syncLearnersFromDrive(): Promise<SyncResult> {
     added,
     skipped,
     invalid: 0,
-    message: `${added} nouvel${added > 1 ? "s" : ""} apprenant${added > 1 ? "s" : ""} importé${added > 1 ? "s" : ""}, ${skipped} déjà connu${skipped > 1 ? "s" : ""} (fichier « ${sheet.name} »).`,
+    message: `${added} ${added > 1 ? "nouveaux apprenants importés" : "nouvel apprenant importé"}, ${skipped} déjà connu${skipped > 1 ? "s" : ""} (fichier « ${sheet.name} »).`,
   };
 }
