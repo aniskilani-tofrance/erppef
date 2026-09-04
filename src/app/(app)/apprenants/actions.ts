@@ -5,8 +5,17 @@ import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { translatePgError } from "@/lib/pg-errors";
+import { ADMISSION_STATUS_CODES } from "@/lib/admission/status";
+import { LEVELS } from "@/lib/referentiels";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
+
+// Inscription dans un groupe = fin du parcours d'admission : statut « inscrit » (définitif).
+async function markEnrolled(learnerIds: string[]): Promise<void> {
+  if (!learnerIds.length) return;
+  const supabase = await createClient();
+  await supabase.from("learners").update({ admission_status: "inscrit" }).in("id", learnerIds);
+}
 
 // Crée un test de positionnement en attente pour l'apprenant (tolérant si la
 // table n'est pas encore migrée : la création d'apprenant ne doit jamais échouer).
@@ -51,6 +60,12 @@ const learnerSchema = z.object({
     .nullable(),
   entryNeed: z.string().nullable(),
   entryInterviewOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+  // Parcours d'admission + test oral d'entrée
+  admissionStatus: z.enum(ADMISSION_STATUS_CODES).optional(),
+  oralTestOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  oralTestLevel: z.enum(LEVELS).nullable().optional(),
+  oralTestEvaluator: z.string().nullable().optional(),
+  oralTestComment: z.string().nullable().optional(),
   // Flux « créer et inscrire » : à la création, inscrit directement dans ce groupe.
   enrollGroupId: z.string().uuid().nullable(),
 });
@@ -89,6 +104,11 @@ export async function upsertLearner(raw: z.infer<typeof learnerSchema>): Promise
     entry_goal: d.entryGoal,
     entry_need: d.entryNeed,
     entry_interview_on: d.entryInterviewOn,
+    ...(d.admissionStatus ? { admission_status: d.enrollGroupId ? "inscrit" : d.admissionStatus } : {}),
+    ...(d.oralTestOn !== undefined ? { oral_test_on: d.oralTestOn } : {}),
+    ...(d.oralTestLevel !== undefined ? { oral_test_level: d.oralTestLevel } : {}),
+    ...(d.oralTestEvaluator !== undefined ? { oral_test_evaluator: d.oralTestEvaluator?.trim() || null } : {}),
+    ...(d.oralTestComment !== undefined ? { oral_test_comment: d.oralTestComment?.trim() || null } : {}),
   };
 
   if (d.id) {
@@ -108,6 +128,7 @@ export async function upsertLearner(raw: z.infer<typeof learnerSchema>): Promise
       if (enrollError) {
         return { ok: false, error: `Apprenant créé, mais inscription impossible : ${translatePgError(enrollError)}` };
       }
+      await markEnrolled([created.id]);
     }
   }
 
@@ -212,6 +233,7 @@ export async function importLearners(raw: z.infer<typeof importSchema>): Promise
       return { ok: false, error: `${created.length} apprenants créés, mais inscription impossible : ${translatePgError(enrollError)}` };
     }
     enrolled = created.length;
+    await markEnrolled(created.map((c) => c.id));
   }
 
   revalidatePath("/apprenants");
@@ -256,6 +278,7 @@ export async function enrollLearner(raw: z.infer<typeof enrollSchema>): Promise<
   });
 
   if (error) return { ok: false, error: translatePgError(error) };
+  await markEnrolled([parsed.data.learnerId]);
   revalidatePath(`/groupes/${parsed.data.groupId}`);
   revalidatePath("/apprenants");
   return { ok: true };
@@ -416,6 +439,7 @@ export async function enrollLearners(raw: z.infer<typeof bulkEnrollSchema>): Pro
     d.learnerIds.map((learnerId) => ({ org_id: orgId, group_id: d.groupId, learner_id: learnerId })),
   );
   if (error) return { ok: false, error: translatePgError(error) };
+  await markEnrolled(d.learnerIds);
 
   revalidatePath(`/groupes/${d.groupId}`);
   revalidatePath("/apprenants");

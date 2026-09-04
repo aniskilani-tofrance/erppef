@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { driveConfigured, uploadBufferToDrive } from "@/lib/emargement/gdrive";
 import { mailerConfigured, sendMail } from "@/lib/mailer";
 import { localToUtc, nextDay, utcToLocalTime } from "@/lib/dates";
+import { buildMeetingReminderMessage, formatMeetingWhen, textToHtml } from "@/lib/admission/messages";
 import {
   ABSENCE_ALERT_THRESHOLD,
   computeLearnerStats,
@@ -85,12 +86,18 @@ export async function GET(request: Request) {
   // Rappels apprenants (séances de demain, groupes ayant activé les rappels)
   // + relance des formateurs sur leurs feuilles non clôturées. Jamais bloquant.
   let reminders: { sent: number; skippedNoEmail: number } = { sent: 0, skippedNoEmail: 0 };
+  let meetingReminders: { sent: number; skippedNoEmail: number } = { sent: 0, skippedNoEmail: 0 };
   let trainerRelances = 0;
   if (mailerConfigured()) {
     try {
       reminders = await sendSessionReminders(supabase);
     } catch (e) {
       console.error("[rappels]", e instanceof Error ? e.message : e);
+    }
+    try {
+      meetingReminders = await sendMeetingReminders(supabase);
+    } catch (e) {
+      console.error("[rappels réunion]", e instanceof Error ? e.message : e);
     }
     try {
       trainerRelances = await sendTrainerRelances(unclosed ?? []);
@@ -125,6 +132,13 @@ export async function GET(request: Request) {
     }
   }
 
+  // Parcours d'admission : nouveaux jamais contactés (> 3 jours), convocations non
+  // envoyées pour une réunion sous 7 jours, réunion demain. Jamais bloquant.
+  const admissionLines = await admissionAlerts(supabase).catch((e) => {
+    console.error("[admission]", e instanceof Error ? e.message : e);
+    return [] as string[];
+  });
+
   const stats = computeLearnerStats(
     (attendanceRows ?? []).map((a) => ({
       learnerId: a.learner_id,
@@ -146,13 +160,14 @@ export async function GET(request: Request) {
     return `${group} (${day}${trainer ? `, ${trainer}` : ""})`;
   });
 
-  if (atRisk.length === 0 && sheets.length === 0 && !watchReminder) {
-    return Response.json({ sent: false, reason: "rien à signaler", backup, reminders, trainerRelances });
+  if (atRisk.length === 0 && sheets.length === 0 && !watchReminder && admissionLines.length === 0) {
+    return Response.json({ sent: false, reason: "rien à signaler", backup, reminders, meetingReminders, trainerRelances });
   }
 
   const lines = [
     ...(atRisk.length ? ["⚠️ Risque de décrochage :", ...atRisk.map((l) => `  • ${l}`), ""] : []),
     ...(sheets.length ? ["📋 Feuilles d'émargement non clôturées :", ...sheets.map((l) => `  • ${l}`), ""] : []),
+    ...(admissionLines.length ? ["🤝 Admission :", ...admissionLines.map((l) => `  • ${l}`), ""] : []),
     ...(watchReminder ? [watchReminder, ""] : []),
     "Détails : https://pef-erp.vercel.app/qualite",
   ];
@@ -170,7 +185,7 @@ export async function GET(request: Request) {
     body: JSON.stringify({
       from: process.env.ALERTS_FROM ?? "ERP PEF <onboarding@resend.dev>",
       to: [process.env.ALERTS_EMAIL],
-      subject: `ERP PEF — ${atRisk.length + sheets.length} alerte${atRisk.length + sheets.length > 1 ? "s" : ""} ce matin`,
+      subject: `ERP PEF — ${atRisk.length + sheets.length + admissionLines.length} alerte${atRisk.length + sheets.length + admissionLines.length > 1 ? "s" : ""} ce matin`,
       text: lines.join("\n"),
     }),
   });
@@ -178,7 +193,83 @@ export async function GET(request: Request) {
   if (!res.ok) {
     return Response.json({ sent: false, error: await res.text() }, { status: 500 });
   }
-  return Response.json({ sent: true, atRisk: atRisk.length, unclosedSheets: sheets.length, reminders, trainerRelances });
+  return Response.json({ sent: true, atRisk: atRisk.length, unclosedSheets: sheets.length, admission: admissionLines.length, reminders, meetingReminders, trainerRelances });
+}
+
+// ── Parcours d'admission : alertes du matin ──────────────────────────────────
+async function admissionAlerts(supabase: ReturnType<typeof createAdminClient>): Promise<string[]> {
+  const lines: string[] = [];
+  const now = Date.now();
+
+  const { count: neverContacted } = await supabase
+    .from("learners")
+    .select("id", { count: "exact", head: true })
+    .eq("admission_status", "nouveau")
+    .lt("created_at", new Date(now - 3 * 86_400_000).toISOString());
+  if (neverContacted) {
+    lines.push(`${neverContacted} nouvel${neverContacted > 1 ? "s" : ""} apprenant${neverContacted > 1 ? "s" : ""} jamais contacté${neverContacted > 1 ? "s" : ""} depuis plus de 3 jours — https://pef-erp.vercel.app/admission`);
+  }
+
+  const { data: meetings } = await supabase
+    .from("info_meetings")
+    .select("id, starts_at, info_meeting_invitations(status)")
+    .gte("starts_at", new Date(now).toISOString())
+    .lte("starts_at", new Date(now + 7 * 86_400_000).toISOString())
+    .order("starts_at");
+  for (const m of meetings ?? []) {
+    const st = (m.info_meeting_invitations as unknown as { status: string }[] | null) ?? [];
+    const toSend = st.filter((i) => i.status === "a_envoyer").length;
+    const hoursLeft = (new Date(m.starts_at).getTime() - now) / 3600_000;
+    const when = formatMeetingWhen({ startsAt: m.starts_at });
+    if (toSend) lines.push(`Réunion d'information ${when} : ${toSend} convocation${toSend > 1 ? "s" : ""} à envoyer — https://pef-erp.vercel.app/admission/${m.id}`);
+    if (hoursLeft <= 36 && st.length) {
+      const confirmed = st.filter((i) => i.status === "confirmee").length;
+      lines.push(`Réunion d'information ${when} : ${st.length} convoqué${st.length > 1 ? "s" : ""}, ${confirmed} confirmé${confirmed > 1 ? "s" : ""} — rappels WhatsApp depuis https://pef-erp.vercel.app/admission/${m.id}`);
+    }
+  }
+  return lines;
+}
+
+// ── Rappel de réunion d'information (la veille, par email) ──────────────────
+// WhatsApp reste manuel (un clic par personne depuis la page de la réunion) ; l'email
+// part tout seul pour les convoqués qui ont une adresse et une convocation envoyée/confirmée.
+async function sendMeetingReminders(
+  supabase: ReturnType<typeof createAdminClient>,
+): Promise<{ sent: number; skippedNoEmail: number }> {
+  const tomorrow = new Date(Date.now() + 24 * 3600_000).toLocaleDateString("fr-CA", { timeZone: "Europe/Paris" });
+  const dayAfter = nextDay(tomorrow);
+  const { data: meetings } = await supabase
+    .from("info_meetings")
+    .select("id, starts_at, ends_at, location, rooms:room_id(name), info_meeting_invitations(status, learners(first_name, email))")
+    .gte("starts_at", localToUtc(tomorrow, "00:00"))
+    .lt("starts_at", localToUtc(dayAfter, "00:00"));
+
+  let sent = 0;
+  let skippedNoEmail = 0;
+  for (const m of meetings ?? []) {
+    const room = (m.rooms as unknown as { name: string } | null)?.name;
+    const place = room ? `${room}${m.location ? ` — ${m.location}` : ""}` : m.location;
+    const invitations = (m.info_meeting_invitations as unknown as { status: string; learners: { first_name: string; email: string | null } | null }[] | null) ?? [];
+    for (const inv of invitations) {
+      if (!["envoyee", "confirmee"].includes(inv.status) || !inv.learners) continue;
+      if (!inv.learners.email) {
+        skippedNoEmail += 1;
+        continue;
+      }
+      const text = buildMeetingReminderMessage({
+        learnerFirstName: inv.learners.first_name,
+        senderFirstName: null,
+        meeting: { startsAt: m.starts_at, endsAt: m.ends_at, place },
+      });
+      const ok = await sendMail({
+        to: inv.learners.email,
+        subject: "Rappel : réunion d'information demain — cours de français",
+        html: textToHtml(text),
+      });
+      if (ok) sent += 1;
+    }
+  }
+  return { sent, skippedNoEmail };
 }
 
 // ── Rappels de séances aux apprenants (la veille) ────────────────────────────

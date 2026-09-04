@@ -27,7 +27,7 @@ type SelectionContextValue = {
 
 const SelectionContext = createContext<SelectionContextValue | null>(null);
 
-function useSelection(): SelectionContextValue {
+export function useLearnerSelection(): SelectionContextValue {
   const ctx = useContext(SelectionContext);
   if (!ctx) throw new Error("useSelection hors de LearnerSelectionProvider");
   return ctx;
@@ -72,7 +72,7 @@ export function LearnerSelectCheckbox({
   name: string;
   enrollmentCount: number;
 }) {
-  const { selected, toggle } = useSelection();
+  const { selected, toggle } = useLearnerSelection();
   const enrolled = enrollmentCount > 0;
   return (
     <Checkbox
@@ -80,14 +80,14 @@ export function LearnerSelectCheckbox({
       disabled={enrolled}
       onCheckedChange={(v) => toggle({ id, name }, v === true)}
       aria-label={`Sélectionner ${name}`}
-      title={enrolled ? "Inscrit dans un groupe — non supprimable" : `Sélectionner ${name}`}
+      title={enrolled ? "Inscrit dans un groupe — non sélectionnable" : `Sélectionner ${name}`}
     />
   );
 }
 
 // Case d'en-tête : coche / décoche tous les apprenants cochables affichés.
 export function LearnerSelectAllCheckbox({ rows }: { rows: Selected[] }) {
-  const { selected, setMany } = useSelection();
+  const { selected, setMany } = useLearnerSelection();
   const allOn = rows.length > 0 && rows.every((r) => selected.has(r.id));
   const someOn = rows.some((r) => selected.has(r.id));
   return (
@@ -107,7 +107,7 @@ export function LearnerSelectAllCheckbox({ rows }: { rows: Selected[] }) {
 
 // Bouton « Supprimer la sélection » : n'apparaît qu'avec au moins une case cochée.
 export function BulkDeleteLearnersButton() {
-  const { selected, clear } = useSelection();
+  const { selected, clear } = useLearnerSelection();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();

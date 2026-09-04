@@ -11,11 +11,11 @@ export async function GET(
   await requireRole(["admin", "coordinator"]);
   const supabase = await createClient();
 
-  const [{ data: learner }, { data: tests }] = await Promise.all([
+  const [{ data: learner }, { data: tests }, { data: meetings }] = await Promise.all([
     supabase
       .from("learners")
       .select(
-        "learner_no, first_name, last_name, birth_date, first_language, city, prescriber, activity_status, entry_goal, entry_need, entry_interview_on, level_assessed",
+        "learner_no, first_name, last_name, birth_date, first_language, city, prescriber, activity_status, entry_goal, entry_need, entry_interview_on, level_assessed, oral_test_on, oral_test_level, oral_test_evaluator, oral_test_comment",
       )
       .eq("id", id)
       .single(),
@@ -26,6 +26,12 @@ export async function GET(
       .eq("status", "fait")
       .order("created_at", { ascending: false })
       .limit(1),
+    // Réunion d'information suivie (présence pointée)
+    supabase
+      .from("info_meeting_invitations")
+      .select("info_meetings(starts_at)")
+      .eq("learner_id", id)
+      .eq("status", "presente"),
   ]);
   if (!learner) return new Response("Apprenant introuvable", { status: 404 });
 
@@ -43,6 +49,20 @@ export async function GET(
     entryNeed: learner.entry_need,
     entryInterviewOn: learner.entry_interview_on,
     levelAssessed: learner.level_assessed,
+    infoMeetingOn:
+      (meetings ?? [])
+        .map((m) => (m.info_meetings as unknown as { starts_at: string } | null)?.starts_at ?? null)
+        .filter((d): d is string => Boolean(d))
+        .sort()
+        .at(-1) ?? null,
+    oralTest: learner.oral_test_on
+      ? {
+          on: learner.oral_test_on,
+          level: learner.oral_test_level,
+          evaluator: learner.oral_test_evaluator,
+          comment: learner.oral_test_comment,
+        }
+      : null,
     lastTest: test
       ? {
           doneAt: test.completed_at ?? test.created_at,

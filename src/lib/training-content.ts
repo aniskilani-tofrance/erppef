@@ -337,6 +337,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
     objectives: [
       "Créer un formateur opérationnel (dispos, coût, compte)",
       "Inscrire des apprenants un par un ou en masse",
+      "Mener l'admission : contact WhatsApp, réunion d'information, test oral",
     ],
     lessons: [
       {
@@ -369,6 +370,25 @@ export const TRAINING_MODULES: TrainingModule[] = [
           instruction: "Sur la liste Apprenants, repérez la colonne « Test de positionnement » et copiez un lien de test (ou générez-en un sur une fiche de test).",
           href: "/apprenants",
           hrefLabel: "Ouvrir les Apprenants",
+        },
+      },
+      {
+        id: "admission",
+        title: "L'admission : WhatsApp, réunion d'information, test oral",
+        intro: "Entre la demande de cours et l'inscription, tout se passe dans le menu Admission — WhatsApp d'abord, parce que c'est là que le public répond.",
+        steps: [
+          "Admission → « À contacter » : les nouveaux jamais contactés et les injoignables à relancer, les plus anciens d'abord. « Écrire » ouvre WhatsApp avec le premier message déjà rédigé ; vous relisez et envoyez. Le statut passe à « Contacté » tout seul.",
+          "Un appel ou une réponse : icône carnet « Noter un contact » (canal, résultat, note). Le journal garde la mémoire de l'équipe.",
+          "« Nouvelle réunion » : date, heure, salle ou lieu, capacité. Puis « Ajouter des convoqués » (cases à cocher) ou, depuis Apprenants, cochez → « Convoquer (n) ».",
+          "Sur la réunion, chaque ligne a « Convoquer » : WhatsApp s'ouvre avec la convocation complète (date, lieu, entretien oral annoncé sans stress, réponse OUI/NON). Email possible pour ceux qui préfèrent.",
+          "Réponse OUI → « Confirmée ». La veille → « Rappel » WhatsApp (l'email de rappel part seul). Le jour J → « Présent(e) » puis « Test oral » : niveau à l'oral en 20 secondes, recopié dans la fiche.",
+          "Inscription dans un groupe = statut « Inscrit » automatique. Dossier d'entrée PDF : besoin, test en ligne, test oral, réunion suivie — la preuve complète.",
+        ],
+        tip: "Le message WhatsApp n'est que pré-rempli : adaptez-le, traduisez-le si besoin. L'ERP note seulement qu'un contact a eu lieu.",
+        practice: {
+          instruction: "Ouvrez Admission, repérez la liste « À contacter » et le bouton « Nouvelle réunion » (sans envoyer de message).",
+          href: "/admission",
+          hrefLabel: "Ouvrir l'Admission",
         },
       },
       {
@@ -415,6 +435,16 @@ export const TRAINING_MODULES: TrainingModule[] = [
         ],
         answerIndex: 2,
         explanation: "Le résultat remplit la fiche automatiquement — et reste modifiable après votre entretien de positionnement.",
+      },
+      {
+        question: "Un nouvel apprenant est arrivé du Drive hier. Quel est le premier geste ?",
+        choices: [
+          "L'inscrire tout de suite dans un groupe",
+          "Admission → « À contacter » → « Écrire » : WhatsApp s'ouvre avec le premier message prêt",
+          "Attendre qu'il appelle",
+        ],
+        answerIndex: 1,
+        explanation: "Le public répond sur WhatsApp : le premier contact part en un clic, et le statut passe à « Contacté » tout seul.",
       },
       {
         question: "Comment inscrire 12 nouveaux apprenants le jour de la rentrée ?",

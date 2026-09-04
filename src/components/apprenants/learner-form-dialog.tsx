@@ -15,6 +15,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Pencil } from "lucide-react";
 import { PhotoUpload, initials } from "@/components/ui/photo-upload";
+import { ADMISSION_STATUSES } from "@/lib/admission/status";
 import {
   ACTIVITIES as REF_ACTIVITIES,
   DISTRICTS as REF_DISTRICTS,
@@ -52,6 +53,12 @@ export type LearnerFormValues = {
   entryGoal: string; // 'nc' = non renseigné
   entryNeed: string;
   entryInterviewOn: string;
+  // Parcours d'admission (prise de contact → inscription) + test oral d'entrée
+  admissionStatus: string;
+  oralTestOn: string;
+  oralTestLevel: string; // 'nd' = non déterminé
+  oralTestEvaluator: string;
+  oralTestComment: string;
 };
 
 const EMPTY: LearnerFormValues = {
@@ -79,6 +86,11 @@ const EMPTY: LearnerFormValues = {
   entryGoal: "nc",
   entryNeed: "",
   entryInterviewOn: "",
+  admissionStatus: "nouveau",
+  oralTestOn: "",
+  oralTestLevel: "nd",
+  oralTestEvaluator: "",
+  oralTestComment: "",
 };
 
 // Listes issues du RÉFÉRENTIEL UNIQUE (src/lib/referentiels.ts) — identiques au
@@ -108,6 +120,8 @@ const YES_NO = [
 ];
 
 const LEVELS = ["Non évalué", ...REF_LEVELS];
+const ORAL_LEVEL_OPTIONS = [{ value: "nd", label: "Non déterminé" }, ...REF_LEVELS.map((l) => ({ value: l, label: l }))];
+const ADMISSION_OPTIONS = ADMISSION_STATUSES.map((s) => ({ value: s.code, label: `${s.label} — ${s.hint}` }));
 
 export function LearnerFormDialog({
   initial,
@@ -192,6 +206,11 @@ export function LearnerFormDialog({
             : (values.entryGoal as "acces_emploi" | "formation_qualifiante" | "autonomie" | "naturalisation" | "examen_certification" | "autre"),
         entryNeed: values.entryNeed.trim() || null,
         entryInterviewOn: values.entryInterviewOn || null,
+        admissionStatus: values.admissionStatus as (typeof ADMISSION_STATUSES)[number]["code"],
+        oralTestOn: values.oralTestOn || null,
+        oralTestLevel: values.oralTestLevel === "nd" ? null : (values.oralTestLevel as (typeof REF_LEVELS)[number]),
+        oralTestEvaluator: values.oralTestEvaluator.trim() || null,
+        oralTestComment: values.oralTestComment.trim() || null,
         enrollGroupId: !isEdit && groupId !== "none" ? groupId : null,
       });
       if (!result.ok) {
@@ -315,6 +334,37 @@ export function LearnerFormDialog({
                   Télécharger le dossier d&apos;entrée (PDF) — identité, besoin, positionnement
                 </a>
               )}
+            </div>
+          </div>
+
+          {/* Parcours d'admission : statut + test oral d'entrée (entretien de positionnement). */}
+          <div className="rounded-md border p-3">
+            <p className="mb-3 text-sm font-medium">
+              Parcours d&apos;admission{" "}
+              <span className="font-normal text-muted-foreground">(contact → réunion → test oral → inscription)</span>
+            </p>
+            <div className="space-y-4">
+              <SelectField label="Statut d'admission" value={values.admissionStatus} options={ADMISSION_OPTIONS} onChange={(v) => set("admissionStatus", v)} />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Test oral le</Label>
+                  <Input type="date" value={values.oralTestOn} onChange={(e) => set("oralTestOn", e.target.value)} />
+                </div>
+                <SelectField label="Niveau à l'oral" value={values.oralTestLevel} options={ORAL_LEVEL_OPTIONS} onChange={(v) => set("oralTestLevel", v)} />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Évaluateur / évaluatrice</Label>
+                  <Input value={values.oralTestEvaluator} onChange={(e) => set("oralTestEvaluator", e.target.value)} placeholder="Prénom Nom" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Commentaire du test oral</Label>
+                  <Input value={values.oralTestComment} onChange={(e) => set("oralTestComment", e.target.value)} placeholder="Comprend les questions simples…" />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Prise de contact WhatsApp, convocations et réunions : menu <span className="font-medium">Admission</span>.
+              </p>
             </div>
           </div>
 

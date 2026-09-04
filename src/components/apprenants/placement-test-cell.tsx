@@ -7,6 +7,7 @@ import { createPlacementTest } from "@/app/(app)/apprenants/actions";
 import { buildPlacementInvitation } from "@/lib/placement/invitation-message";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { WhatsAppButton } from "@/components/admission/whatsapp-button";
 
 export type PlacementInfo = {
   status: "en_attente" | "fait";
@@ -21,10 +22,12 @@ export function PlacementTestCell({
   learnerId,
   test,
   senderFirstName,
+  phone = null,
 }: {
   learnerId: string;
   test: PlacementInfo;
   senderFirstName: string | null;
+  phone?: string | null;
 }) {
   const [pending, startTransition] = useTransition();
 
@@ -72,15 +75,28 @@ export function PlacementTestCell({
 
   if (test?.status === "en_attente") {
     return (
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => copy(test.token)}
-        title="Copie un message prêt à envoyer : consignes + lien personnel du test"
-      >
-        <ClipboardCopy className="mr-1.5 h-3.5 w-3.5" />
-        Copier l&apos;invitation
-      </Button>
+      <span className="inline-flex items-center gap-1">
+        {/* WhatsApp d'abord : l'invitation part pré-remplie, sans copier-coller */}
+        <WhatsAppButton
+          phone={phone}
+          message={() =>
+            buildPlacementInvitation({ url: `${window.location.origin}/test/${test.token}`, senderFirstName })
+          }
+          trace={{ kind: "contact", learnerId, note: "Invitation au test de positionnement (WhatsApp)" }}
+          label="WhatsApp"
+          title="Envoyer l'invitation au test sur WhatsApp (message pré-rempli)"
+        />
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-xs"
+          onClick={() => copy(test.token)}
+          title="Copie un message prêt à envoyer : consignes + lien personnel du test (SMS, email…)"
+        >
+          <ClipboardCopy className="mr-1 h-3.5 w-3.5" />
+          Copier
+        </Button>
+      </span>
     );
   }
 

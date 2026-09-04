@@ -172,7 +172,8 @@ export const HELP_SECTIONS: HelpSection[] = [
         title: "Positionner un apprenant (test de français)",
         steps: [
           "À la création d'un apprenant SANS niveau évalué, un test de positionnement est généré automatiquement (page Apprenants, colonne « Test de positionnement »).",
-          "« Copier l'invitation » : copie un message prêt à envoyer — consignes (ce n'est pas une évaluation, au calme, téléphone chargé, son au maximum, 5 à 35 minutes, réunion de rentrée à venir) + le lien personnel, signé de votre prénom. Collez-le tel quel dans WhatsApp, SMS ou email. Le lien est à usage unique.",
+          "Bouton « WhatsApp » (colonne Test de positionnement) : WhatsApp s'ouvre avec l'invitation déjà écrite — consignes (ce n'est pas une évaluation, au calme, téléphone chargé, son au maximum, 5 à 35 minutes, réunion de rentrée à venir) + le lien personnel, signé de votre prénom. Relisez, appuyez sur Envoyer. Le contact est noté dans le journal d'admission.",
+          "« Copier » : même message dans le presse-papiers, pour un SMS ou un email. Le lien est à usage unique.",
           "L'apprenant passe le test seul (~30 min : écoute, lecture, écriture — activé pour téléphone). Ses productions écrites sont corrigées par IA.",
           "Le test commence par un bloc « littératie » 100 % audio et tactile (consignes lues à voix haute, grandes tuiles) qui détecte les très bas niveaux : Pré-alpha, Alpha, Post-alpha, A1.1. Quelqu'un qui ne lit pas s'arrête là en ~5 minutes — il ne subit jamais les 56 questions écrites.",
           "Les questions A1/A2 du test sont elles aussi lues à voix haute (consigne et réponses) : un petit lecteur n'est pas pénalisé par la lecture des consignes.",
@@ -202,6 +203,46 @@ export const HELP_SECTIONS: HelpSection[] = [
           "Si des séances ont été annulées, un bandeau rouge affiche les heures manquantes : « Replanifier automatiquement » ajoute des séances de rattrapage à la suite du planning, sur le même rythme.",
           "« Reconduire » (fiche du groupe) : crée la session suivante à l'identique — même dispositif, formateur, salle et rythme — avec un planning complet régénéré depuis la date choisie, nouvelles vacances sautées.",
           "Rappels automatiques : « Modifier » le groupe → cochez « Rappels automatiques » — chaque apprenant AVEC email reçoit la veille la liste de ses cours du lendemain. Les formateurs reçoivent aussi une relance pour leurs feuilles d'émargement oubliées.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "admission",
+    title: "Admission : contact, réunion d'information, test oral",
+    roles: TEAM,
+    articles: [
+      {
+        title: "Prendre contact (WhatsApp d'abord)",
+        steps: [
+          "Menu Admission → « À contacter » : les nouveaux (arrivés du Drive ou créés à la main) jamais contactés, puis les injoignables à relancer. Les plus anciens d'abord.",
+          "« Écrire » ouvre WhatsApp (application ou WhatsApp Web sur ordinateur) avec le message de premier contact déjà écrit et signé de votre prénom. Relisez, adaptez si besoin, appuyez sur Envoyer.",
+          "Dès que WhatsApp s'ouvre, le contact est noté dans le journal et le statut passe à « Contacté » : la personne quitte la liste « À contacter ».",
+          "Un appel, une réponse, un refus : icône carnet « Noter un contact » — canal, résultat, note, et le statut proposé (modifiable). Le journal garde qui a parlé à qui, et quand.",
+          "Les statuts : Nouveau → Contacté (ou Injoignable) → Convoqué → Évalué (test oral fait) → Inscrit (dans un groupe, automatique). « Sans suite » = la personne ne donne pas suite.",
+          "Le bouton WhatsApp et le carnet sont aussi dans la liste Apprenants (colonne Admission), avec un filtre par statut en haut de la page.",
+          "Pas de WhatsApp ou numéro inexploitable : le bouton est grisé — appelez, puis notez le contact.",
+        ],
+      },
+      {
+        title: "Convoquer à une réunion d'information",
+        steps: [
+          "Admission → « Nouvelle réunion » : titre, date, heures, salle (ou lieu en clair), capacité. Le lieu apparaît dans le message envoyé.",
+          "Sur la page de la réunion : « Ajouter des convoqués » (recherche + cases à cocher ; les inscrits et « sans suite » sont masqués par défaut). Ou bien, depuis Apprenants : cochez des personnes → « Convoquer (n) ».",
+          "Chaque ligne a un bouton « Convoquer » : WhatsApp s'ouvre avec la convocation prête (date, heure, lieu, petit entretien oral annoncé comme n'étant pas un examen, demande de réponse OUI/NON). Envoyez ; la ligne passe en « Envoyée » et le statut d'admission en « Convoqué ».",
+          "Pour ceux qui préfèrent l'email : icône enveloppe (une personne) ou « Envoyer par email (n) » (tous ceux à envoyer qui ont une adresse). L'email part de la boîte de l'organisme.",
+          "Quand la personne répond OUI : passez la ligne en « Confirmée ». La veille, bouton « Rappel » (WhatsApp) ; un rappel email part automatiquement le matin pour ceux qui ont un email.",
+          "Le jour J : passez chaque présent en « Présent(e) », les autres en « Absent(e) » ou « Excusé(e) ». La présence figure dans le dossier d'entrée PDF.",
+          "Le Dashboard et l'email d'alertes du matin signalent les convocations à envoyer et la réunion du lendemain.",
+        ],
+      },
+      {
+        title: "Enregistrer le test oral (entretien de positionnement)",
+        steps: [
+          "Pendant la réunion, sur la ligne de la personne : « Test oral » → date (pré-remplie), niveau à l'oral, évaluateur (pré-rempli avec votre nom), commentaire. 20 secondes.",
+          "Cochez « Retenir ce niveau comme Niveau évalué » : la fiche est mise à jour — c'est ce niveau que le sélecteur d'inscription des groupes utilise.",
+          "Le statut d'admission passe à « Évalué ». Il ne reste qu'à inscrire la personne dans un groupe (fiche du groupe → « Inscrire des apprenants… ») : le statut devient « Inscrit » tout seul.",
+          "Le test oral est aussi modifiable depuis la fiche apprenant (bloc « Parcours d'admission »), et il figure dans le dossier d'entrée PDF avec le test en ligne et le besoin exprimé (preuve Qualiopi ind. 4 et 8).",
         ],
       },
     ],
@@ -358,6 +399,16 @@ export const FAQ: FaqItem[] = [
     q: "Le son de bienvenue ne se joue pas à la connexion.",
     a: "Vérifiez le volume de l'appareil et que l'onglet n'est pas en sourdine. Certains navigateurs bloquent le son : il se jouera à la connexion suivante. Ce son est purement décoratif, rien n'est perdu.",
     roles: ALL,
+  },
+  {
+    q: "Le bouton WhatsApp ne fait rien, ou ouvre une page blanche.",
+    a: "Sur ordinateur, le lien ouvre WhatsApp Web (ou l'application WhatsApp si elle est installée) : il faut être connecté à WhatsApp sur cet appareil. Sur téléphone, l'application WhatsApp s'ouvre directement. Si le bouton est grisé, le numéro de la fiche est absent ou inexploitable (mettez-le au format 06 12 34 56 78 ou +33 6 12 34 56 78).",
+    roles: TEAM,
+  },
+  {
+    q: "Puis-je modifier le message WhatsApp avant de l'envoyer ?",
+    a: "Oui : le message n'est que pré-rempli dans WhatsApp. Vous pouvez le relire, le compléter ou le traduire avant d'appuyer sur Envoyer. L'ERP ne voit pas ce que vous envoyez : il note seulement qu'un contact a eu lieu.",
+    roles: TEAM,
   },
   {
     q: "Puis-je utiliser l'ERP sur téléphone ?",

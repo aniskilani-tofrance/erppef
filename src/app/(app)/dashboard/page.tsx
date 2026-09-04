@@ -35,9 +35,9 @@ export default async function DashboardPage() {
     .eq("is_active", true);
 
   const nowIso = new Date().toISOString();
-  const in7days = new Date(Date.now() + 7 * 86_400_000).toISOString();
+  const in7days = new Date(new Date().getTime() + 7 * 86_400_000).toISOString();
 
-  const [groups, weekLoads, roomLoads, trainers, rooms, attendanceRows, learnersList, unclosedSheets, incompleteGroups, orphanSessions] = await Promise.all([
+  const [groups, weekLoads, roomLoads, trainers, rooms, attendanceRows, learnersList, unclosedSheets, incompleteGroups, orphanSessions, newLearners, upcomingMeetings] = await Promise.all([
     supabase.from("groups").select("id, status", { count: "exact" }).in("status", ["ouvert", "complet", "en_attente"]),
     supabase.from("v_trainer_week_load").select("*").eq("week_start", weekStart),
     supabase.from("v_room_week_load").select("*").eq("week_start", weekStart),
@@ -75,6 +75,19 @@ export default async function DashboardPage() {
       .lte("starts_at", in7days)
       .or("trainer_id.is.null,room_id.is.null")
       .limit(5),
+    // À faire : nouveaux apprenants jamais contactés depuis plus de 3 jours (parcours d'admission)
+    supabase
+      .from("learners")
+      .select("id", { count: "exact", head: true })
+      .eq("admission_status", "nouveau")
+      .lt("created_at", new Date(new Date().getTime() - 3 * 86_400_000).toISOString()),
+    // À faire : réunions d'information des 7 prochains jours (convocations à envoyer, demain)
+    supabase
+      .from("info_meetings")
+      .select("id, starts_at, info_meeting_invitations(status)")
+      .gte("starts_at", new Date(new Date().getTime() - 6 * 3600_000).toISOString())
+      .lte("starts_at", in7days)
+      .order("starts_at"),
   ]);
 
   // Liste « À faire aujourd'hui » : ce qui demande une action, avec le lien pour la faire.
@@ -99,6 +112,29 @@ export default async function DashboardPage() {
       label: `Séance du ${fmtShortDate(s.starts_at)} (${g?.name ?? "groupe"}) sans formateur ou sans salle`,
       href: "/planning",
     });
+  }
+
+  if ((newLearners.count ?? 0) > 0) {
+    todos.push({
+      label: `${newLearners.count} nouvel${(newLearners.count ?? 0) > 1 ? "s" : ""} apprenant${(newLearners.count ?? 0) > 1 ? "s" : ""} jamais contacté${(newLearners.count ?? 0) > 1 ? "s" : ""} depuis plus de 3 jours — écrire sur WhatsApp`,
+      href: "/admission",
+    });
+  }
+  for (const m of upcomingMeetings.data ?? []) {
+    const st = (m.info_meeting_invitations as unknown as { status: string }[] | null) ?? [];
+    const toSend = st.filter((i) => i.status === "a_envoyer").length;
+    const hoursLeft = (new Date(m.starts_at).getTime() - new Date().getTime()) / 3600_000;
+    if (toSend > 0) {
+      todos.push({
+        label: `Réunion d'information du ${fmtShortDate(m.starts_at)} : ${toSend} convocation${toSend > 1 ? "s" : ""} à envoyer`,
+        href: `/admission/${m.id}`,
+      });
+    } else if (hoursLeft > 0 && hoursLeft <= 36 && st.length > 0) {
+      todos.push({
+        label: `Réunion d'information du ${fmtShortDate(m.starts_at)} : ${st.length} convoqué${st.length > 1 ? "s" : ""} — envoyer les rappels WhatsApp`,
+        href: `/admission/${m.id}`,
+      });
+    }
   }
 
   // Assiduité : taux global + apprenants en alerte (série d'absences ou taux faible)

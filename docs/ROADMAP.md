@@ -40,6 +40,20 @@ Principe directeur : **chaque amélioration retire des clics ou de la saisie, ja
   Qualité listant les prestataires et l'état de leur dossier documentaire.
 - Résultat : plus aucun indicateur « hors ERP » dans le tableau des preuves.
 
+## Lot 3 ter — Parcours d'admission, WhatsApp d'abord (livré le 05/09/2026)
+
+- **Prise de contact** : statut d'admission sur chaque apprenant (nouveau → contacté/injoignable →
+  convoqué → évalué → inscrit, ou sans suite), journal des contacts (canal, résultat, note, auteur),
+  bouton WhatsApp « clic pour écrire » avec message pré-rempli (lien wa.me, zéro API, zéro coût),
+  liste « À contacter » dans le menu Admission, filtre par statut dans Apprenants.
+- **Réunions d'information** : création (date, salle/lieu, capacité), convoqués par cases à cocher,
+  convocation WhatsApp en un clic par personne (email en second), statut envoyée/confirmée/présente,
+  rappel WhatsApp la veille + rappel email automatique, alertes Dashboard et cron du matin.
+- **Test oral** : saisie en 20 s depuis la réunion ou la fiche (date, niveau, évaluateur,
+  commentaire), recopié dans le niveau évalué ; dossier d'entrée PDF complété (test oral, réunion suivie).
+- Reste hors lot : SMS automatique (fournisseur à ouvrir, ~0,05 €/SMS) et WhatsApp Business API
+  (validation Meta) — le clic WhatsApp couvre le besoin sans compte ni coût.
+
 ## Lot 4 — BPF (~2 jours, à livrer en décembre pour la saison de janvier)
 
 - **Bilan Pédagogique et Financier pré-rempli** depuis les données (heures, apprenants,
