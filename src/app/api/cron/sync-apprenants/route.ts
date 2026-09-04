@@ -1,5 +1,7 @@
 import { syncLearnersFromDrive } from "@/lib/drive-sync";
 
+export const maxDuration = 60; // géocodage QPV des nouvelles lignes
+
 // Synchronisation quotidienne du fichier partagé « Apprenant ERPPEF » (Google Drive)
 // vers la liste des apprenants. Voir src/lib/drive-sync.ts.
 export async function GET(request: Request) {

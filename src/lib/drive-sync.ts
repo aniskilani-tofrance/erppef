@@ -1,6 +1,7 @@
 import * as XLSX from "xlsx";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { parseImportText, rowFingerprint, rowToDbColumns } from "@/lib/learner-import";
+import { enrichRowsWithQpv } from "@/lib/geo/enrich-qpv";
 
 // Synchronisation « fichier Drive → liste des apprenants » SANS compte de service :
 // le dossier est partagé « tous ceux qui ont le lien », on lit sa vue publique pour
@@ -120,6 +121,13 @@ export async function syncLearnersFromDrive(): Promise<SyncResult> {
 
   let added = 0;
   if (toInsert.length) {
+    // QPV automatique sur les nouvelles lignes uniquement (budget large : cron nocturne)
+    const newRows = rows.filter((r) => seen.has(rowFingerprint(r)));
+    await enrichRowsWithQpv(newRows, 30_000).catch(() => 0);
+    for (const ins of toInsert) {
+      const src = newRows.find((r) => rowFingerprint(r) === ins.import_fingerprint);
+      if (src && src.qpv != null) ins.qpv = src.qpv;
+    }
     const { data: created, error } = await supabase.from("learners").insert(toInsert).select("id, level_assessed");
     if (error) {
       return { ok: false, fileName: sheet.name, added: 0, skipped, invalid: 0, message: `Insertion impossible : ${error.message}` };

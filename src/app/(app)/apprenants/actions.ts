@@ -151,6 +151,10 @@ export async function importLearners(raw: z.infer<typeof importSchema>): Promise
   const { orgId } = await requireRole(["admin", "coordinator"]);
   const supabase = await createClient();
 
+  // QPV automatique : géocodage BAN + périmètres ANCT embarqués (best-effort, ~8 s max)
+  const { enrichRowsWithQpv } = await import("@/lib/geo/enrich-qpv");
+  await enrichRowsWithQpv(d.rows as Parameters<typeof enrichRowsWithQpv>[0]).catch(() => 0);
+
   const { data: created, error } = await supabase
     .from("learners")
     .insert(
