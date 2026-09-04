@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { FileSpreadsheet } from "lucide-react";
+import { FileSpreadsheet, Upload } from "lucide-react";
 import { importLearners } from "@/app/(app)/apprenants/actions";
 import { Button } from "@/components/ui/button";
 import {
@@ -103,6 +103,24 @@ export function LearnerImportDialog({ groups }: { groups: { id: string; name: st
   const [pending, startTransition] = useTransition();
 
   const rows = parseCsv(text);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  // Fichier Excel (.xlsx) → mêmes colonnes que le collage : converti en texte « ; »
+  // et injecté dans l'aperçu (la bibliothèque n'est chargée qu'à ce moment-là).
+  async function handleExcel(file: File) {
+    try {
+      const XLSX = await import("xlsx");
+      const wb = XLSX.read(await file.arrayBuffer(), { cellDates: false });
+      const sheetName = wb.SheetNames.find((n) => n.toLowerCase().includes("apprenant")) ?? wb.SheetNames[0];
+      const csv = XLSX.utils.sheet_to_csv(wb.Sheets[sheetName], { FS: ";", blankrows: false });
+      // Retirer les lignes d'exemple du modèle (marquées par des prénoms d'exemple en italique impossible à détecter :
+      // on garde tout — l'utilisateur les a supprimées comme l'indique la notice)
+      setText(csv.trim());
+      toast.success(`Fichier lu : feuille « ${sheetName} » — vérifiez l'aperçu puis importez.`);
+    } catch {
+      toast.error("Fichier illisible : utilisez le modèle Excel fourni (.xlsx) ou le copier-coller.");
+    }
+  }
 
   function submit() {
     startTransition(async () => {
@@ -137,6 +155,24 @@ export function LearnerImportDialog({ groups }: { groups: { id: string; name: st
           <DialogTitle>Importer des apprenants (CSV)</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
+              <Upload className="mr-2 h-3.5 w-3.5" />
+              Choisir un fichier Excel (.xlsx)
+            </Button>
+            <span className="text-xs text-muted-foreground">…ou collez vos lignes ci-dessous</span>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleExcel(f);
+                e.target.value = "";
+              }}
+            />
+          </div>
           <div className="space-y-2">
             <Label>Collez votre liste (une ligne par personne)</Label>
             <Textarea
