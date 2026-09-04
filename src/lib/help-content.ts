@@ -189,6 +189,7 @@ export const HELP_SECTIONS: HelpSection[] = [
           "Sélectionnez un créneau vide pour créer une séance ponctuelle (rattrapage).",
           "Supprimer une séance : lien discret en bas de sa fiche, en deux clics de confirmation. Refusé si elle a des émargements (registre légal) — annulez-la plutôt : l'annulation garde la trace, la suppression efface tout.",
           "Les vacances et fériés apparaissent en fond grisé.",
+          "Les absences des formateurs (congés, jours de formation…) s'affichent dans le bandeau « Absences » en haut du calendrier — et en barres colorées dans les vues mois et année. Elles se saisissent sur la fiche du formateur, et le moteur ne planifie jamais dessus.",
         ],
       },
       {

@@ -28,6 +28,23 @@ type Filters = { trainerId: string; roomId: string; funderId: string };
 type Option = { id: string; name: string };
 type FunderOption = { id: string; name: string; color: string };
 type ClosureBand = { id: string; label: string; startsOn: string; endsOn: string };
+type AbsenceBand = {
+  id: string;
+  trainerId: string;
+  trainerName: string;
+  startsOn: string;
+  endsOn: string;
+  kind: string;
+};
+
+// Libellé + couleur du bandeau d'absence. Le motif médical n'est volontairement
+// pas affiché sur le planning (visible par tous les rôles) — il reste sur la fiche.
+const ABSENCE_STYLES: Record<string, { label: string; color: string }> = {
+  formation: { label: "en formation", color: "#7c3aed" },
+  conge: { label: "en congé", color: "#d97706" },
+  maladie: { label: "absent·e", color: "#64748b" },
+  autre: { label: "absent·e", color: "#64748b" },
+};
 
 export function PlanningCalendar({
   canEdit,
@@ -35,6 +52,7 @@ export function PlanningCalendar({
   rooms,
   funders,
   closures = [],
+  absences = [],
   groups = [],
 }: {
   canEdit: boolean;
@@ -42,6 +60,7 @@ export function PlanningCalendar({
   rooms: Option[];
   funders: FunderOption[];
   closures?: ClosureBand[];
+  absences?: AbsenceBand[];
   groups?: GroupOption[];
 }) {
   const queryClient = useQueryClient();
@@ -111,6 +130,24 @@ export function PlanningCalendar({
       backgroundColor: "#94a3b8",
       editable: false,
     })),
+    // Absences formateurs en bandeau « journée » (mêmes plages inclusives que la fiche).
+    ...absences
+      .filter((a) => filters.trainerId === "all" || a.trainerId === filters.trainerId)
+      .map((a) => {
+        const style = ABSENCE_STYLES[a.kind] ?? ABSENCE_STYLES.autre;
+        return {
+          id: `absence-${a.id}`,
+          title: `${a.trainerName} — ${style.label}`,
+          start: a.startsOn,
+          end: nextDay(a.endsOn),
+          allDay: true,
+          backgroundColor: style.color,
+          borderColor: "rgba(0,0,0,.15)",
+          textColor: "#ffffff",
+          editable: false,
+          extendedProps: { absence: true },
+        };
+      }),
   ];
 
   function handleMove(arg: EventDropArg | EventResizeDoneArg) {
@@ -175,7 +212,8 @@ export function PlanningCalendar({
           slotDuration="00:30:00"
           slotLabelInterval="01:00"
           slotEventOverlap={false}
-          allDaySlot={false}
+          allDaySlot
+          allDayText="Absences"
           expandRows
           dayMaxEventRows={3}
           stickyHeaderDates
@@ -187,6 +225,13 @@ export function PlanningCalendar({
           eventContent={(arg) => {
             // Fond grisé (vacances/fériés) : rendu par défaut
             if (arg.event.display === "background") return undefined;
+            if (arg.event.extendedProps.absence) {
+              return (
+                <span className="block truncate px-1 text-[10px] font-medium leading-4">
+                  {arg.event.title}
+                </span>
+              );
+            }
             const { room, trainer } = arg.event.extendedProps as { room?: string; trainer?: string };
             const details = [room, trainer].filter(Boolean).join(" · ");
             if (arg.view.type.startsWith("list")) {
@@ -208,7 +253,7 @@ export function PlanningCalendar({
           editable={canEdit}
           selectable={canEdit}
           select={(arg: DateSelectArg) => {
-            if (arg.view.type !== "timeGridWeek") return;
+            if (arg.view.type !== "timeGridWeek" || arg.allDay) return;
             setNewSlot({ startsAt: arg.start.toISOString(), endsAt: arg.end.toISOString() });
           }}
           eventDrop={handleMove}
