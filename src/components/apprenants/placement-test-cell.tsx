@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { toast } from "sonner";
 import { ClipboardCopy, FilePlus2, RotateCcw } from "lucide-react";
 import { createPlacementTest } from "@/app/(app)/apprenants/actions";
+import { buildPlacementInvitation } from "@/lib/placement/invitation-message";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -14,14 +15,26 @@ export type PlacementInfo = {
   score: number | null;
 } | null;
 
-// Statut du test de positionnement d'un apprenant : copier le lien, voir le
-// résultat, (re)générer une tentative.
-export function PlacementTestCell({ learnerId, test }: { learnerId: string; test: PlacementInfo }) {
+// Statut du test de positionnement d'un apprenant : copier l'invitation (consignes +
+// lien, signée du prénom de la personne connectée), voir le résultat, (re)générer.
+export function PlacementTestCell({
+  learnerId,
+  test,
+  senderFirstName,
+}: {
+  learnerId: string;
+  test: PlacementInfo;
+  senderFirstName: string | null;
+}) {
   const [pending, startTransition] = useTransition();
 
   function copy(token: string) {
-    navigator.clipboard.writeText(`${window.location.origin}/test/${token}`);
-    toast.success("Lien du test copié — envoyez-le à l'apprenant (WhatsApp, SMS, email).");
+    const message = buildPlacementInvitation({
+      url: `${window.location.origin}/test/${token}`,
+      senderFirstName,
+    });
+    navigator.clipboard.writeText(message);
+    toast.success("Invitation copiée (consignes + lien) — collez-la dans WhatsApp, SMS ou email.");
   }
 
   function generate() {
@@ -59,9 +72,14 @@ export function PlacementTestCell({ learnerId, test }: { learnerId: string; test
 
   if (test?.status === "en_attente") {
     return (
-      <Button variant="outline" size="sm" onClick={() => copy(test.token)}>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => copy(test.token)}
+        title="Copie un message prêt à envoyer : consignes + lien personnel du test"
+      >
         <ClipboardCopy className="mr-1.5 h-3.5 w-3.5" />
-        Copier le lien
+        Copier l&apos;invitation
       </Button>
     );
   }

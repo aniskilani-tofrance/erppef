@@ -11,6 +11,7 @@ import { learnerRef } from "@/lib/refs";
 import { LearnerImportDialog } from "@/components/apprenants/learner-import-dialog";
 import { DriveSyncButton } from "@/components/apprenants/drive-sync-button";
 import { PlacementTestCell, type PlacementInfo } from "@/components/apprenants/placement-test-cell";
+import { DeleteLearnerButton } from "@/components/apprenants/delete-learner-button";
 import {
   ABSENCE_ALERT_THRESHOLD,
   computeLearnerStats,
@@ -22,11 +23,11 @@ export default async function ApprenantsPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
-  await requireRole(["admin", "coordinator"]);
+  const { userId } = await requireRole(["admin", "coordinator"]);
   const { q } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: learners }, { data: enrollments }, { data: groups }, { data: attendanceRows }, { data: placementRows }] = await Promise.all([
+  const [{ data: learners }, { data: enrollments }, { data: groups }, { data: attendanceRows }, { data: placementRows }, { data: profile }] = await Promise.all([
     supabase.from("learners").select("*").order("last_name").order("first_name"),
     supabase.from("enrollments").select("id, learner_id, group_id, status, groups(name)"),
     supabase.from("groups").select("id, name").in("status", ["en_attente", "ouvert"]).order("starts_on", { ascending: false }),
@@ -39,7 +40,10 @@ export default async function ApprenantsPage({
       .from("placement_tests")
       .select("learner_id, status, token, level, score, created_at")
       .order("created_at", { ascending: false }),
+    // Prénom de la personne connectée : signe le message d'invitation au test
+    supabase.from("profiles").select("full_name").eq("id", userId).single(),
   ]);
+  const senderFirstName = profile?.full_name?.trim().split(/\s+/)[0] ?? null;
 
   // Dernier test par apprenant (le plus récent prime)
   const testByLearner = new Map<string, PlacementInfo>();
@@ -108,7 +112,8 @@ export default async function ApprenantsPage({
                 return q.trim().split(/\s+/).every((word) => hay.includes(norm(word)));
               })
               .map((l) => {
-              const mine = (enrollments ?? []).filter((e) => e.learner_id === l.id && e.status === "inscrit");
+              const all = (enrollments ?? []).filter((e) => e.learner_id === l.id);
+              const mine = all.filter((e) => e.status === "inscrit");
               const st = stats.get(l.id);
               return (
                 <TableRow key={l.id}>
@@ -130,7 +135,7 @@ export default async function ApprenantsPage({
                   </TableCell>
                   <TableCell>{l.level_assessed ?? "—"}</TableCell>
                   <TableCell>
-                    <PlacementTestCell learnerId={l.id} test={testByLearner.get(l.id) ?? null} />
+                    <PlacementTestCell learnerId={l.id} test={testByLearner.get(l.id) ?? null} senderFirstName={senderFirstName} />
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
@@ -164,6 +169,7 @@ export default async function ApprenantsPage({
                   </TableCell>
                   <TableCell className="hidden xl:table-cell">{l.first_language ?? "—"}</TableCell>
                   <TableCell>
+                    <span className="inline-flex items-center gap-1">
                     <LearnerFormDialog
                       initial={{
                         id: l.id,
@@ -193,6 +199,12 @@ export default async function ApprenantsPage({
                         entryInterviewOn: l.entry_interview_on ?? "",
                       }}
                     />
+                    <DeleteLearnerButton
+                      learnerId={l.id}
+                      name={`${l.first_name} ${l.last_name}`}
+                      enrollmentCount={all.length}
+                    />
+                    </span>
                   </TableCell>
                 </TableRow>
               );

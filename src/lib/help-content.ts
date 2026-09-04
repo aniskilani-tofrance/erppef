@@ -164,13 +164,14 @@ export const HELP_SECTIONS: HelpSection[] = [
           "Au fil de l'eau : fiche du groupe → « Créer et inscrire » (photo possible immédiatement, à la caméra).",
           "En masse : Apprenants → « Importer une liste » — collez votre tableau Excel (Prénom;Nom;Téléphone;Email;Langue;Niveau) et inscrivez tout le monde dans un groupe en une fois.",
           "L'effectif (n / capacité) s'affiche partout ; un badge rouge signale un dépassement.",
+          "Supprimer un apprenant (icône poubelle, page Apprenants) : possible seulement s'il n'est inscrit dans aucun groupe et n'a jamais émargé — sa fiche, sa photo et son test sont alors effacés. Inscrit ? Retirez-le d'abord du groupe (fiche du groupe → « Retirer ») ou marquez sa sortie de parcours pour garder l'historique.",
         ],
       },
       {
         title: "Positionner un apprenant (test de français)",
         steps: [
           "À la création d'un apprenant SANS niveau évalué, un test de positionnement est généré automatiquement (page Apprenants, colonne « Test de positionnement »).",
-          "« Copier le lien » : envoyez-le à l'apprenant par le canal de votre choix (WhatsApp, SMS, email). Le lien est personnel et à usage unique.",
+          "« Copier l'invitation » : copie un message prêt à envoyer — consignes (ce n'est pas une évaluation, au calme, téléphone chargé, son au maximum, 5 à 35 minutes, réunion de rentrée à venir) + le lien personnel, signé de votre prénom. Collez-le tel quel dans WhatsApp, SMS ou email. Le lien est à usage unique.",
           "L'apprenant passe le test seul (~30 min : écoute, lecture, écriture — activé pour téléphone). Ses productions écrites sont corrigées par IA.",
           "Le test commence par un bloc « littératie » 100 % audio et tactile (consignes lues à voix haute, grandes tuiles) qui détecte les très bas niveaux : Pré-alpha, Alpha, Post-alpha, A1.1. Quelqu'un qui ne lit pas s'arrête là en ~5 minutes — il ne subit jamais les 56 questions écrites.",
           "Les questions A1/A2 du test sont elles aussi lues à voix haute (consigne et réponses) : un petit lecteur n'est pas pénalisé par la lecture des consignes.",
@@ -344,7 +345,7 @@ export const FAQ: FaqItem[] = [
   },
   {
     q: "Comment fonctionne le test de positionnement ?",
-    a: "Chaque apprenant créé sans niveau reçoit un lien personnel (colonne « Test de positionnement » → Copier le lien, à lui envoyer). Le test (~30 min : écoute, lecture, écriture, corrigé en partie par IA) attribue un niveau A1 à B2 qui remplit automatiquement sa fiche, avec la mention « Test fait » et le score. Le niveau reste modifiable après entretien, et « Générer le test » crée une nouvelle tentative si besoin.",
+    a: "Chaque apprenant créé sans niveau reçoit un lien personnel (colonne « Test de positionnement » → « Copier l'invitation » : message de consignes + lien, à coller dans WhatsApp/SMS/email). Le test (~30 min : écoute, lecture, écriture, corrigé en partie par IA) attribue un niveau A1 à B2 qui remplit automatiquement sa fiche, avec la mention « Test fait » et le score. Le niveau reste modifiable après entretien, et « Générer le test » crée une nouvelle tentative si besoin.",
     roles: TEAM,
   },
   {

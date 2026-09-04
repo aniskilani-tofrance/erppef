@@ -356,7 +356,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
         intro: "Fini le test papier : chaque apprenant reçoit un lien personnel, et son niveau arrive tout seul dans sa fiche.",
         steps: [
           "Créez un apprenant sans renseigner son niveau : un test est généré automatiquement (visible colonne « Test de positionnement »).",
-          "« Copier le lien » → envoyez-le par WhatsApp, SMS ou email. Le lien est personnel : pas besoin de compte pour l'apprenant.",
+          "« Copier l'invitation » → un message complet (consignes + lien personnel, signé de votre prénom) est dans le presse-papiers : collez-le dans WhatsApp, SMS ou email. Pas besoin de compte pour l'apprenant.",
           "Le test commence par un bloc « littératie » 100 % audio et tactile, avec une vraie voix humaine : consignes lues, grandes tuiles, jamais de lecture imposée. Il détecte les très bas niveaux (Pré-alpha, Alpha, Post-alpha, A1.1) et s'arrête tôt pour un non-lecteur (~5 min) au lieu d'infliger 56 questions écrites.",
           "Pour les lecteurs, le test continue (~30 minutes : écoute, lecture, écriture, très bien sur téléphone) et classe de A1 à B2. Les écrits sont corrigés par IA.",
           "À la fin : « Test fait · niveau » + score dans la liste, et le « Niveau évalué » de la fiche est rempli automatiquement (Pré-alpha → B2).",
