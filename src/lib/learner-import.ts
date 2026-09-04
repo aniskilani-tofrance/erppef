@@ -3,6 +3,8 @@
 // Prénom;Nom;Téléphone;Email;Langue;Niveau;Naissance;Sexe;Adresse;Commune;CP;Situation;QPV;RQTH;Scolarisation;Prescripteur;Quartier
 // (ligne d'en-têtes optionnelle, séparateur ; , ou tabulation, tout est facultatif après Nom).
 
+import { ACTIVITIES, EDUCATION, GENDERS, buildLookup } from "@/lib/referentiels";
+
 export type ImportRow = {
   firstName: string;
   lastName: string;
@@ -36,20 +38,11 @@ export function parseBool(v: string): boolean | null {
   return null;
 }
 
-const GENDER_MAP: Record<string, ImportRow["gender"]> = {
-  f: "femme", femme: "femme", h: "homme", homme: "homme", m: "homme", autre: "autre",
-};
-const ACTIVITY_MAP: Record<string, ImportRow["activityStatus"]> = {
-  "demandeur d'emploi": "demandeur_emploi", de: "demandeur_emploi", "demandeur emploi": "demandeur_emploi",
-  rsa: "rsa", salarie: "salarie", "salarié": "salarie", scolaire: "scolaire_etudiant",
-  "étudiant": "scolaire_etudiant", etudiant: "scolaire_etudiant", inactif: "inactif_autre", autre: "inactif_autre",
-};
-const EDUCATION_MAP: Record<string, ImportRow["educationLevel"]> = {
-  "jamais scolarisé": "non_scolarise", "jamais scolarise": "non_scolarise", "non scolarisé": "non_scolarise",
-  "non scolarise": "non_scolarise", primaire: "primaire", secondaire: "secondaire",
-  "collège": "secondaire", college: "secondaire", "lycée": "secondaire", lycee: "secondaire",
-  "supérieur": "superieur", superieur: "superieur",
-};
+// Correspondances texte → code : DÉRIVÉES du référentiel unique (src/lib/referentiels.ts),
+// les mêmes listes que les formulaires de l'ERP et le modèle Excel généré.
+const genderOf = buildLookup(GENDERS);
+const activityOf = buildLookup(ACTIVITIES);
+const educationOf = buildLookup(EDUCATION);
 
 export function parseImportText(text: string): ImportRow[] {
   const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
@@ -68,14 +61,14 @@ export function parseImportText(text: string): ImportRow[] {
       firstLanguage: c[4] || null,
       levelAssessed: c[5] || null,
       birthDate: c[6] ? parseDate(c[6]) : null,
-      gender: c[7] ? (GENDER_MAP[c[7].toLowerCase()] ?? null) : null,
+      gender: c[7] ? (genderOf(c[7]) as ImportRow["gender"]) : null,
       address: c[8] || null,
       city: c[9] || null,
       postalCode: c[10] || null,
-      activityStatus: c[11] ? (ACTIVITY_MAP[c[11].toLowerCase()] ?? null) : null,
+      activityStatus: c[11] ? (activityOf(c[11]) as ImportRow["activityStatus"]) : null,
       qpv: c[12] ? parseBool(c[12]) : null,
       rqth: c[13] ? parseBool(c[13]) : null,
-      educationLevel: c[14] ? (EDUCATION_MAP[c[14].toLowerCase()] ?? null) : null,
+      educationLevel: c[14] ? (educationOf(c[14]) as ImportRow["educationLevel"]) : null,
       prescriber: c[15] || null,
       district: c[16] || null,
     }));

@@ -42,7 +42,16 @@ const EMPTY: ProgramFormValues = {
   isActive: true,
 };
 
-const LEVELS = ["Pré-alpha", "Alpha", "Post-alpha", "A1.1", "A1", "A2", "B1", "B2", "C1", "C2"];
+import { LEVELS as REF_LEVELS } from "@/lib/referentiels";
+// Niveaux d'ENTRÉE de dispositif : l'échelle du référentiel unique, variantes fines
+// regroupées (« Alpha avancé » rejoint Alpha, « Post-alpha (A1.1 en cours) » → Post-alpha)
+const FINE_VARIANTS: string[] = ["Alpha avancé", "Post-alpha (A1.1 en cours)"];
+const LEVELS: string[] = [
+  "Pré-alpha",
+  "Alpha",
+  "Post-alpha",
+  ...REF_LEVELS.filter((l) => !["Pré-alpha", "Alpha", ...FINE_VARIANTS].includes(l)),
+];
 
 // Niveau CECRL suivant : préremplit le niveau visé quand on choisit le niveau de base.
 function nextLevel(level: string): string {

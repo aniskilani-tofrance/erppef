@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "modele": "npx tsx scripts/export-referentiels.mts && python3 scripts/generate-modele-apprenants.py && rm -f scripts/.referentiels.json"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

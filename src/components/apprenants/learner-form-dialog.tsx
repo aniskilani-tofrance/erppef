@@ -15,6 +15,13 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Pencil } from "lucide-react";
 import { PhotoUpload, initials } from "@/components/ui/photo-upload";
+import {
+  ACTIVITIES as REF_ACTIVITIES,
+  DISTRICTS as REF_DISTRICTS,
+  EDUCATION as REF_EDUCATION,
+  GENDERS as REF_GENDERS,
+  LEVELS as REF_LEVELS,
+} from "@/lib/referentiels";
 
 export type LearnerFormValues = {
   id?: string;
@@ -66,36 +73,12 @@ const EMPTY: LearnerFormValues = {
   prescriber: "",
 };
 
-const GENDERS = [
-  { value: "nc", label: "Non renseigné" },
-  { value: "femme", label: "Femme" },
-  { value: "homme", label: "Homme" },
-  { value: "autre", label: "Autre" },
-];
-const ACTIVITIES = [
-  { value: "nc", label: "Non renseignée" },
-  { value: "demandeur_emploi", label: "Demandeur d'emploi" },
-  { value: "rsa", label: "Bénéficiaire du RSA" },
-  { value: "salarie", label: "Salarié" },
-  { value: "scolaire_etudiant", label: "Scolaire / étudiant" },
-  { value: "inactif_autre", label: "Inactif / autre" },
-];
-const EDUCATION = [
-  { value: "nc", label: "Non renseignée" },
-  { value: "non_scolarise", label: "Jamais scolarisé" },
-  { value: "primaire", label: "Primaire" },
-  { value: "secondaire", label: "Secondaire" },
-  { value: "superieur", label: "Supérieur" },
-];
-// Découpage Ville de Saint-Ouen (bilans territorialisés du financeur municipal)
-export const DISTRICTS = [
-  "Centre-Ville-Cordon",
-  "Les Docks",
-  "Vieux-Saint-Ouen",
-  "Debain-Michelet-Bauer",
-  "Garibaldi - Les Puces",
-  "Arago-Pasteur-Zola-Hugo",
-];
+// Listes issues du RÉFÉRENTIEL UNIQUE (src/lib/referentiels.ts) — identiques au
+// modèle Excel généré et à l'interprétation des imports.
+const GENDER_OPTIONS = [{ value: "nc", label: "Non renseigné" }, ...REF_GENDERS.map((g) => ({ value: g.code, label: g.label }))];
+const ACTIVITY_OPTIONS = [{ value: "nc", label: "Non renseignée" }, ...REF_ACTIVITIES.map((a) => ({ value: a.code, label: a.label }))];
+const EDUCATION_OPTIONS = [{ value: "nc", label: "Non renseignée" }, ...REF_EDUCATION.map((e) => ({ value: e.code, label: e.label }))];
+export const DISTRICTS = [...REF_DISTRICTS];
 const DISTRICT_OPTIONS = [
   { value: "nc", label: "Non renseigné / hors Saint-Ouen" },
   ...DISTRICTS.map((d) => ({ value: d, label: d })),
@@ -114,7 +97,7 @@ const YES_NO = [
   { value: "non", label: "Non" },
 ];
 
-const LEVELS = ["Non évalué", "Pré-alpha", "Alpha", "Alpha avancé", "Post-alpha (A1.1 en cours)", "A1.1", "A1", "A2", "B1", "B2", "C1", "C2"];
+const LEVELS = ["Non évalué", ...REF_LEVELS];
 
 export function LearnerFormDialog({
   initial,
@@ -294,7 +277,7 @@ export function LearnerFormDialog({
                   <Label>Date de naissance</Label>
                   <Input type="date" value={values.birthDate} onChange={(e) => set("birthDate", e.target.value)} />
                 </div>
-                <SelectField label="Sexe" value={values.gender} options={GENDERS} onChange={(v) => set("gender", v)} />
+                <SelectField label="Sexe" value={values.gender} options={GENDER_OPTIONS} onChange={(v) => set("gender", v)} />
               </div>
               <div className="space-y-2">
                 <Label>Adresse (rue)</Label>
@@ -329,8 +312,8 @@ export function LearnerFormDialog({
                 <SelectField label="Quartier (Saint-Ouen)" value={values.district} options={DISTRICT_OPTIONS} onChange={(v) => set("district", v)} />
               )}
               <div className="grid gap-4 sm:grid-cols-2">
-                <SelectField label="Situation" value={values.activityStatus} options={ACTIVITIES} onChange={(v) => set("activityStatus", v)} />
-                <SelectField label="Scolarisation" value={values.educationLevel} options={EDUCATION} onChange={(v) => set("educationLevel", v)} />
+                <SelectField label="Situation" value={values.activityStatus} options={ACTIVITY_OPTIONS} onChange={(v) => set("activityStatus", v)} />
+                <SelectField label="Scolarisation" value={values.educationLevel} options={EDUCATION_OPTIONS} onChange={(v) => set("educationLevel", v)} />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">

@@ -31,14 +31,12 @@ export type PickerLearner = {
   birthDate: string | null;
 };
 
-const ACTIVITY_LABELS: Record<string, string> = {
-  demandeur_emploi: "Demandeur d'emploi", rsa: "RSA", salarie: "Salarié",
-  scolaire_etudiant: "Scolaire/étudiant", inactif_autre: "Inactif/autre",
-};
-const EDUCATION_LABELS: Record<string, string> = {
-  non_scolarise: "Jamais scolarisé", primaire: "Primaire", secondaire: "Secondaire", superieur: "Supérieur",
-};
-const GENDER_LABELS: Record<string, string> = { femme: "Femme", homme: "Homme", autre: "Autre" };
+import { ACTIVITIES as REF_ACTIVITIES, EDUCATION as REF_EDUCATION, GENDERS as REF_GENDERS } from "@/lib/referentiels";
+const toLabels = (entries: readonly { code: string; label: string }[]) =>
+  Object.fromEntries(entries.map((e) => [e.code, e.label]));
+const ACTIVITY_LABELS = toLabels(REF_ACTIVITIES);
+const EDUCATION_LABELS = toLabels(REF_EDUCATION);
+const GENDER_LABELS = toLabels(REF_GENDERS);
 
 function ageBucket(birthDate: string | null): string | null {
   if (!birthDate) return null;
