@@ -11,6 +11,8 @@ import { ClosureManager } from "@/components/parametres/closure-manager";
 import { GcalSyncCard } from "@/components/parametres/gcal-sync-card";
 import { DeleteProgramButton } from "@/components/parametres/delete-program-button";
 import { UsersManager } from "@/components/parametres/users-manager";
+import { SendUpdatesButton } from "@/components/parametres/updates-card";
+import { APP_UPDATES, formatUpdateDate } from "@/lib/updates-content";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export default async function ParametresPage() {
@@ -53,6 +55,13 @@ export default async function ParametresPage() {
 
   const funderOptions = (funders ?? []).map((f) => ({ id: f.id, name: f.name }));
   const trainerOptions = (trainersData ?? []).map((t) => ({ id: t.id, name: `${t.first_name} ${t.last_name ?? ""}`.trim() }));
+  // Mises à jour de l'outil : lesquelles ont déjà été annoncées à l'équipe par email
+  const announced = ((org?.settings as { updates_announced?: Record<string, { sent_at: string; recipients: number }> } | null)?.updates_announced) ?? {};
+  const updateRows = [...APP_UPDATES]
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .map((u) => ({ id: u.id, date: u.date, title: u.title, sent: announced[u.id] ?? null }));
+  const pendingUpdates = updateRows.filter((u) => !u.sent).length;
+
   const groupCountByProgram = new Map<string, number>();
   for (const g of groupRefs ?? []) {
     groupCountByProgram.set(g.program_id, (groupCountByProgram.get(g.program_id) ?? 0) + 1);
@@ -156,6 +165,37 @@ export default async function ParametresPage() {
               ))}
             </TableBody>
           </Table>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-base">Nouveautés annoncées à l&apos;équipe</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Chaque mise à jour part par email (formateurs, coordination) le matin suivant, et s&apos;affiche dans Formation → « Quoi de neuf ».
+            </p>
+          </div>
+          <SendUpdatesButton pending={pendingUpdates} />
+        </CardHeader>
+        <CardContent>
+          <ul className="space-y-1.5 text-sm">
+            {updateRows.map((u) => (
+              <li key={u.id} className="flex flex-wrap items-center justify-between gap-2">
+                <span>
+                  <span className="text-muted-foreground">{formatUpdateDate(u.date)} — </span>
+                  {u.title}
+                </span>
+                {u.sent ? (
+                  <Badge variant="secondary">
+                    envoyée le {new Date(u.sent.sent_at).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" })} · {u.sent.recipients} pers.
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800">à envoyer</Badge>
+                )}
+              </li>
+            ))}
+          </ul>
         </CardContent>
       </Card>
 

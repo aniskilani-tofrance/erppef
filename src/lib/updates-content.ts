@@ -1,0 +1,98 @@
+import type { AppRole } from "@/lib/auth";
+
+// Journal des mises à jour de l'ERP, écrit pour l'équipe (pas pour les développeurs).
+// RÈGLE : chaque livraison en production = une entrée ici + la ou les leçons de la
+// Formation mises à jour. Le cron du matin envoie alors l'email « Quoi de neuf » à
+// chaque membre de l'équipe (formateurs, coordination, admin) selon son rôle ; la page
+// Formation affiche les mêmes nouveautés avec le lien vers la leçon.
+
+export type UpdateItem = {
+  text: string;
+  roles: AppRole[]; // qui est concerné (l'email et la page filtrent par rôle)
+};
+
+export type AppUpdate = {
+  id: string; // stable, jamais réutilisé : sert à savoir si l'email est parti
+  date: string; // YYYY-MM-DD (date de mise en production)
+  title: string;
+  summary: string; // une phrase, en français simple
+  items: UpdateItem[];
+  training: { moduleId: string; lessonId: string; label: string }[]; // où l'apprendre
+};
+
+const TEAM: AppRole[] = ["admin", "coordinator"];
+const ALL: AppRole[] = ["admin", "coordinator", "trainer"];
+
+export const APP_UPDATES: AppUpdate[] = [
+  {
+    id: "2026-09-09-messages-par-etape",
+    date: "2026-09-09",
+    title: "Un message WhatsApp par étape",
+    summary: "Le bouton WhatsApp envoie désormais un message différent selon l'étape : premier contact, relance, lien du test, convocation, place proposée, inscription.",
+    items: [
+      { text: "Le message est choisi tout seul : un contacté dont le test reste à faire reçoit son lien, un convoqué reçoit la date et la salle de sa réunion, un inscrit reçoit son groupe et la date du premier cours.", roles: TEAM },
+      { text: "Bouton « Messages » dans l'onglet Admission : retouchez chaque texte, avec aperçu, sans rien demander à personne. Les emails de convocation et de rappel suivent les mêmes textes.", roles: TEAM },
+      { text: "Nouvelle carte « Évalués, à inscrire » : les personnes dont le test oral est fait et qui attendent un groupe.", roles: TEAM },
+    ],
+    training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "L'admission : WhatsApp, réunion d'information, test oral" }],
+  },
+  {
+    id: "2026-09-05-admission-whatsapp",
+    date: "2026-09-05",
+    title: "Admission sur WhatsApp, réunions d'information, test oral",
+    summary: "Tout le parcours entre la demande de cours et l'inscription se pilote dans l'onglet Admission de la page Apprenants.",
+    items: [
+      { text: "Un bouton ouvre WhatsApp avec le message déjà écrit ; le contact est noté dans un journal partagé et le statut d'admission avance tout seul (nouveau → contacté → convoqué → évalué → inscrit).", roles: TEAM },
+      { text: "Réunions d'information : convoqués par cases à cocher, convocation WhatsApp ou email en un clic, confirmation, présence, rappel la veille.", roles: TEAM },
+      { text: "Le test oral d'entrée se saisit en 20 secondes pendant la réunion : il remplit le niveau de la fiche et le dossier d'entrée PDF.", roles: TEAM },
+      { text: "Sur la fiche de chaque apprenant, vous voyez maintenant son niveau à l'oral (test d'entrée) et par quel canal il nous a contactés : utile avant le premier cours.", roles: ["trainer"] },
+      { text: "Champ « Nous a contactés par » (bouche-à-oreille, France Travail, réseaux sociaux…) et carte « D'où viennent les demandes » ; le bilan financeur montre la répartition par canal.", roles: TEAM },
+    ],
+    training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "L'admission : WhatsApp, réunion d'information, test oral" }],
+  },
+  {
+    id: "2026-09-04-qualiopi-et-invitation-test",
+    date: "2026-09-04",
+    title: "Qualiopi 100 % dans l'ERP et invitation au test prête à envoyer",
+    summary: "Analyse du besoin à l'entrée, registre de veille et sous-traitance : plus aucun indicateur Qualiopi hors de l'outil.",
+    items: [
+      { text: "Fiche apprenant : bloc « Analyse du besoin à l'entrée » (objectif, besoin exprimé, date d'entretien) et dossier d'entrée PDF à télécharger.", roles: TEAM },
+      { text: "Page Qualité : registre de veille (une entrée par mois suffit, rappel automatique le 1er du mois) et carte Sous-traitance.", roles: TEAM },
+      { text: "« Copier l'invitation » au test : le message complet (consignes + lien, signé de votre prénom) prêt à coller.", roles: TEAM },
+      { text: "Suppression sécurisée d'un apprenant, unitaire ou en lot : impossible s'il a une inscription ou un émargement.", roles: TEAM },
+    ],
+    training: [
+      { moduleId: "c5-vie-quotidienne", lessonId: "qualite", label: "Assiduité et audit Qualiopi" },
+      { moduleId: "c3-equipe", lessonId: "positionnement", label: "Le test de positionnement" },
+    ],
+  },
+  {
+    id: "2026-08-31-rappels-voix-humaine",
+    date: "2026-08-31",
+    title: "Rappels automatiques, relances et test à voix humaine",
+    summary: "Moins d'absents, moins de feuilles oubliées, et un test de positionnement que même un non-lecteur peut passer.",
+    items: [
+      { text: "Vos apprenants reçoivent la veille de chaque cours un email de rappel (groupe, heure, salle) si les rappels sont activés sur le groupe.", roles: ALL },
+      { text: "Une feuille d'émargement oubliée ? Vous recevez un email de relance avec le lien direct, et un encadré rouge sur votre Dashboard.", roles: ["trainer"] },
+      { text: "Le test de positionnement commence par un bloc 100 % audio et tactile, avec une vraie voix humaine : les personnes jamais scolarisées ne sont plus mises en échec par la lecture.", roles: ALL },
+      { text: "Vos jours de formation (université) sont dans le planning : aucune séance ne sera placée dessus.", roles: ["trainer"] },
+      { text: "Guide du formateur en 8 pages (PDF) et plaquette de l'outil disponibles auprès de la coordination.", roles: ALL },
+    ],
+    training: [
+      { moduleId: "f2-emargement", lessonId: "cloturer", label: "Clôturer : le geste qui compte" },
+      { moduleId: "f3-reflexes", lessonId: "imprevus", label: "Imprévus et changements" },
+    ],
+  },
+];
+
+// Nouveautés visibles par un rôle (au moins un point le concerne), les plus récentes d'abord.
+export function updatesForRole(role: AppRole): AppUpdate[] {
+  return APP_UPDATES
+    .map((u) => ({ ...u, items: u.items.filter((i) => i.roles.includes(role)) }))
+    .filter((u) => u.items.length > 0)
+    .sort((a, b) => b.date.localeCompare(a.date));
+}
+
+export function formatUpdateDate(day: string): string {
+  return new Date(`${day}T12:00:00Z`).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Paris" });
+}

@@ -72,6 +72,10 @@ Principe directeur : **chaque amélioration retire des clics ou de la saisie, ja
 ## Rappels transverses
 
 - Règle projet : toute nouveauté documentée dans `src/lib/help-content.ts`, même commit.
+- Règle projet (09/09/2026) : toute mise à jour livrée = entrée dans `src/lib/updates-content.ts` + leçon de
+  `training-content.ts` enrichie, même commit. L'email « Quoi de neuf » part au cron du matin
+  (`announceUpdatesEverywhere`, filtré par rôle, formateurs avec email inclus même sans compte) ou via
+  Paramètres → « Envoyer maintenant » ; la page Formation affiche la carte « Quoi de neuf ».
 - Déploiement : `vercel build --prod` + `vercel deploy --prebuilt --prod --yes` (jamais de build distant).
 - Reste hors lots (chantiers niche) : multi-sites, rôle direction, valorisation du bénévolat,
   onboarding self-service organisme.

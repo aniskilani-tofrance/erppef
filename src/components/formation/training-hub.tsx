@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { CheckCircle2, GraduationCap } from "lucide-react";
 import type { AppRole } from "@/lib/auth";
 import { TRACKS, TRAINING_MODULES } from "@/lib/training-content";
@@ -10,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 
 // Accueil de la formation : les parcours visibles selon le rôle, avec progression.
-export function TrainingHub({ role }: { role: AppRole }) {
+export function TrainingHub({ role, whatsNew }: { role: AppRole; whatsNew?: ReactNode }) {
   const { ready, lessonDone, quizPassed } = useTrainingProgress();
 
   const tracks = TRACKS.filter((t) => (t.roles as readonly string[]).includes(role));
@@ -24,6 +25,8 @@ export function TrainingHub({ role }: { role: AppRole }) {
           Votre progression est enregistrée sur cet appareil — reprenez quand vous voulez.
         </p>
       </div>
+
+      {whatsNew}
 
       {tracks.map((track) => {
         const modules = TRAINING_MODULES

@@ -168,6 +168,22 @@ export async function updateMemberRole(raw: z.infer<typeof roleSchema>): Promise
 }
 
 // Pousse toutes les séances futures vers les agendas Google des formateurs.
+// Annonce immédiate des mises à jour pas encore envoyées (sinon le cron du matin).
+export async function sendUpdateAnnouncements(): Promise<{ ok: true; message: string } | { ok: false; error: string }> {
+  const { orgId } = await requireRole(["admin"]);
+  const { mailerConfigured } = await import("@/lib/mailer");
+  if (!mailerConfigured()) return { ok: false, error: "Email non configuré (SMTP)." };
+  const { announceUpdates } = await import("@/lib/updates-announce");
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const r = await announceUpdates(createAdminClient(), orgId);
+  revalidatePath("/parametres");
+  if (r.updates === 0) return { ok: true, message: "Rien de nouveau à annoncer : tout a déjà été envoyé." };
+  return {
+    ok: true,
+    message: `${r.updates} mise${r.updates > 1 ? "s" : ""} à jour annoncée${r.updates > 1 ? "s" : ""} à ${r.sent} personne${r.sent > 1 ? "s" : ""}${r.skipped.length ? ` (échec : ${r.skipped.join(", ")})` : ""}.`,
+  };
+}
+
 export async function syncGoogleCalendars(): Promise<GcalSyncResult> {
   const { orgId } = await requireRole(["admin"]);
 

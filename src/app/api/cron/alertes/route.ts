@@ -5,6 +5,7 @@ import { mailerConfigured, sendMail } from "@/lib/mailer";
 import { localToUtc, nextDay, utcToLocalTime } from "@/lib/dates";
 import { buildMeetingReminderMessage, formatMeetingWhen, textToHtml } from "@/lib/admission/messages";
 import { loadTemplates } from "@/lib/admission/load-templates";
+import { announceUpdatesEverywhere, type AnnounceResult } from "@/lib/updates-announce";
 import {
   ABSENCE_ALERT_THRESHOLD,
   computeLearnerStats,
@@ -89,7 +90,14 @@ export async function GET(request: Request) {
   let reminders: { sent: number; skippedNoEmail: number } = { sent: 0, skippedNoEmail: 0 };
   let meetingReminders: { sent: number; skippedNoEmail: number } = { sent: 0, skippedNoEmail: 0 };
   let trainerRelances = 0;
+  // Mises à jour de l'outil pas encore annoncées → email « Quoi de neuf » à l'équipe
+  let updatesAnnounced: Record<string, AnnounceResult> = {};
   if (mailerConfigured()) {
+    try {
+      updatesAnnounced = await announceUpdatesEverywhere(supabase);
+    } catch (e) {
+      console.error("[nouveautés]", e instanceof Error ? e.message : e);
+    }
     try {
       reminders = await sendSessionReminders(supabase);
     } catch (e) {
@@ -162,7 +170,7 @@ export async function GET(request: Request) {
   });
 
   if (atRisk.length === 0 && sheets.length === 0 && !watchReminder && admissionLines.length === 0) {
-    return Response.json({ sent: false, reason: "rien à signaler", backup, reminders, meetingReminders, trainerRelances });
+    return Response.json({ sent: false, reason: "rien à signaler", backup, reminders, meetingReminders, trainerRelances, updatesAnnounced });
   }
 
   const lines = [
@@ -194,7 +202,7 @@ export async function GET(request: Request) {
   if (!res.ok) {
     return Response.json({ sent: false, error: await res.text() }, { status: 500 });
   }
-  return Response.json({ sent: true, atRisk: atRisk.length, unclosedSheets: sheets.length, admission: admissionLines.length, reminders, meetingReminders, trainerRelances });
+  return Response.json({ sent: true, atRisk: atRisk.length, unclosedSheets: sheets.length, admission: admissionLines.length, reminders, meetingReminders, trainerRelances, updatesAnnounced });
 }
 
 // ── Parcours d'admission : alertes du matin ──────────────────────────────────

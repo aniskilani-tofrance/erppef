@@ -48,6 +48,14 @@ export const HELP_SECTIONS: HelpSection[] = [
         ],
       },
       {
+        title: "Suivre les nouveautés de l'outil",
+        steps: [
+          "À chaque mise à jour, vous recevez un email « Quoi de neuf » : ce qui change pour votre rôle, en français simple, avec le lien vers la leçon de la Formation qui l'explique.",
+          "Menu « Formation » : la carte « Quoi de neuf » reprend les dernières nouveautés qui vous concernent. Refaire la leçon prend 5 minutes.",
+          "Une idée, un irritant, une question : répondez à l'email. L'outil évolue chaque semaine avec vos retours.",
+        ],
+      },
+      {
         title: "S'y retrouver dans le menu",
         steps: [
           "Dashboard : votre page d'accueil — elle s'adapte à votre rôle.",
