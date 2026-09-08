@@ -1,4 +1,6 @@
 import { LoginForm } from "./login-form";
+import { NewsTicker } from "@/components/dashboard/news-ticker";
+import { tickerItemsForRole } from "@/lib/updates-content";
 
 export default function LoginPage() {
   return (
@@ -13,6 +15,7 @@ export default function LoginPage() {
           </p>
         </div>
         <LoginForm />
+        <NewsTicker items={tickerItemsForRole(null, 3)} dismissible={false} className="mt-6" />
       </div>
     </div>
   );

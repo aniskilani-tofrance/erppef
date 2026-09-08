@@ -9,6 +9,8 @@ import { weekStartOf } from "@/lib/dates";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { CalendarDays, ClipboardCheck, DoorOpen, Users, UsersRound } from "lucide-react";
+import { NewsTicker } from "@/components/dashboard/news-ticker";
+import { tickerItemsForRole } from "@/lib/updates-content";
 import {
   ABSENCE_ALERT_THRESHOLD,
   computeLearnerStats,
@@ -22,8 +24,24 @@ const RATE_ALERT_THRESHOLD = 70;
 // d'occupation ; le lecteur voit l'essentiel ; l'équipe voit le pilotage complet.
 export default async function DashboardPage() {
   const { role, userId } = await requireSession();
-  if (role === "trainer") return <TrainerDashboard userId={userId} />;
-  if (role === "viewer") return <ViewerDashboard />;
+  // Bandeau « Nouveau » : les dernières mises à jour qui concernent ce rôle, dès la connexion
+  const ticker = <NewsTicker items={tickerItemsForRole(role)} />;
+  if (role === "trainer") {
+    return (
+      <>
+        <div className="mx-auto mb-4 max-w-3xl">{ticker}</div>
+        <TrainerDashboard userId={userId} />
+      </>
+    );
+  }
+  if (role === "viewer") {
+    return (
+      <>
+        <div className="mx-auto mb-4 max-w-3xl">{ticker}</div>
+        <ViewerDashboard />
+      </>
+    );
+  }
 
   const supabase = await createClient();
   const today = new Date().toISOString().slice(0, 10);
@@ -205,6 +223,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
+      {ticker}
       <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
 
       {todos.length > 0 && (

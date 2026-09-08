@@ -33,6 +33,7 @@ export const APP_UPDATES: AppUpdate[] = [
       { text: "Le message est choisi tout seul : un contacté dont le test reste à faire reçoit son lien, un convoqué reçoit la date et la salle de sa réunion, un inscrit reçoit son groupe et la date du premier cours.", roles: TEAM },
       { text: "Bouton « Messages » dans l'onglet Admission : retouchez chaque texte, avec aperçu, sans rien demander à personne. Les emails de convocation et de rappel suivent les mêmes textes.", roles: TEAM },
       { text: "Nouvelle carte « Évalués, à inscrire » : les personnes dont le test oral est fait et qui attendent un groupe.", roles: TEAM },
+      { text: "Un bandeau « Nouveau » défile en haut de votre Dashboard à chaque mise à jour : un clic ouvre la leçon, la croix le masque jusqu'à la prochaine nouveauté. Le même bandeau vous accueille sur l'écran de connexion.", roles: ALL },
     ],
     training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "L'admission : WhatsApp, réunion d'information, test oral" }],
   },
@@ -91,6 +92,18 @@ export function updatesForRole(role: AppRole): AppUpdate[] {
     .map((u) => ({ ...u, items: u.items.filter((i) => i.roles.includes(role)) }))
     .filter((u) => u.items.length > 0)
     .sort((a, b) => b.date.localeCompare(a.date));
+}
+
+// Éléments du bandeau « Nouveau » (Dashboard, connexion) : les plus récents d'abord.
+export function tickerItemsForRole(role: AppRole | null, limit = 3): { id: string; date: string; title: string; summary: string; href: string }[] {
+  const source = role ? updatesForRole(role) : [...APP_UPDATES].sort((a, b) => b.date.localeCompare(a.date));
+  return source.slice(0, limit).map((u) => ({
+    id: u.id,
+    date: new Date(`${u.date}T12:00:00Z`).toLocaleDateString("fr-FR", { day: "numeric", month: "long", timeZone: "Europe/Paris" }),
+    title: u.title,
+    summary: u.summary,
+    href: u.training[0] ? `/formation/${u.training[0].moduleId}` : "/formation",
+  }));
 }
 
 export function formatUpdateDate(day: string): string {

@@ -51,6 +51,7 @@ export const HELP_SECTIONS: HelpSection[] = [
         title: "Suivre les nouveautés de l'outil",
         steps: [
           "À chaque mise à jour, vous recevez un email « Quoi de neuf » : ce qui change pour votre rôle, en français simple, avec le lien vers la leçon de la Formation qui l'explique.",
+          "Dès la connexion, un bandeau « Nouveau » défile en haut du Dashboard (et sur l'écran de connexion) : un clic ouvre la leçon concernée, la croix le masque jusqu'à la prochaine nouveauté. Passez la souris dessus pour l'arrêter.",
           "Menu « Formation » : la carte « Quoi de neuf » reprend les dernières nouveautés qui vous concernent. Refaire la leçon prend 5 minutes.",
           "Une idée, un irritant, une question : répondez à l'email. L'outil évolue chaque semaine avec vos retours.",
         ],

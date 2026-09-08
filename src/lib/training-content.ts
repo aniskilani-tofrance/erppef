@@ -194,7 +194,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
         id: "aide",
         title: "Trouver de l'aide",
         steps: [
-          "À chaque mise à jour de l'outil, vous recevez un email « Quoi de neuf » et la carte du même nom, en haut de la page Formation, vous dit quelle leçon refaire (5 minutes).",
+          "À chaque mise à jour de l'outil, vous recevez un email « Quoi de neuf », un bandeau « Nouveau » défile en haut de votre Dashboard, et la carte du même nom en haut de la page Formation vous dit quelle leçon refaire (5 minutes).",
           "Menu « Aide » (en bas à gauche) : mode d'emploi par tâche et questions fréquentes, adaptés à votre rôle.",
           "Le manuel complet imprimable est dans Aide → « Manuel complet imprimable ».",
           "Cette formation reste accessible à tout moment : refaites un module quand vous voulez.",
