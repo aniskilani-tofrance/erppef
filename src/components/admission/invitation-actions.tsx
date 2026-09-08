@@ -26,12 +26,13 @@ export function InvitationActions({
 }: {
   invitation: { id: string; status: string };
   learner: { id: string; name: string; phone: string | null; email: string | null };
-  messages: { invite: string; reminder: string };
+  messages: { invite: string; reminder: string; missed: string };
   meetingUpcoming: boolean;
 }) {
   const [pending, startTransition] = useTransition();
   const router = useRouter();
   const sent = invitation.status !== "a_envoyer";
+  const missed = invitation.status === "absente" || invitation.status === "excusee";
 
   function email() {
     startTransition(async () => {
@@ -63,14 +64,24 @@ export function InvitationActions({
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <WhatsAppButton
-        phone={learner.phone}
-        message={messages.invite}
-        trace={{ kind: "invitation", invitationId: invitation.id }}
-        label={sent ? "Renvoyer" : "Convoquer"}
-        variant={sent ? "ghost" : "outline"}
-        title={sent ? "Renvoyer la convocation sur WhatsApp" : "Envoyer la convocation sur WhatsApp (message pré-rempli)"}
-      />
+      {missed ? (
+        <WhatsAppButton
+          phone={learner.phone}
+          message={messages.missed}
+          trace={{ kind: "contact", learnerId: learner.id, note: "Absent(e) à la réunion — nouvelle date proposée (WhatsApp)" }}
+          label="Nouvelle date"
+          title="Absent(e) à la réunion : proposer une autre date sur WhatsApp"
+        />
+      ) : (
+        <WhatsAppButton
+          phone={learner.phone}
+          message={messages.invite}
+          trace={{ kind: "invitation", invitationId: invitation.id }}
+          label={sent ? "Renvoyer" : "Convoquer"}
+          variant={sent ? "ghost" : "outline"}
+          title={sent ? "Renvoyer la convocation sur WhatsApp" : "Envoyer la convocation sur WhatsApp (message pré-rempli)"}
+        />
+      )}
       {learner.email && (
         <Button
           type="button"

@@ -4,6 +4,7 @@ import { driveConfigured, uploadBufferToDrive } from "@/lib/emargement/gdrive";
 import { mailerConfigured, sendMail } from "@/lib/mailer";
 import { localToUtc, nextDay, utcToLocalTime } from "@/lib/dates";
 import { buildMeetingReminderMessage, formatMeetingWhen, textToHtml } from "@/lib/admission/messages";
+import { loadTemplates } from "@/lib/admission/load-templates";
 import {
   ABSENCE_ALERT_THRESHOLD,
   computeLearnerStats,
@@ -240,13 +241,14 @@ async function sendMeetingReminders(
   const dayAfter = nextDay(tomorrow);
   const { data: meetings } = await supabase
     .from("info_meetings")
-    .select("id, starts_at, ends_at, location, rooms:room_id(name), info_meeting_invitations(status, learners(first_name, email))")
+    .select("id, org_id, starts_at, ends_at, location, rooms:room_id(name), info_meeting_invitations(status, learners(first_name, email))")
     .gte("starts_at", localToUtc(tomorrow, "00:00"))
     .lt("starts_at", localToUtc(dayAfter, "00:00"));
 
   let sent = 0;
   let skippedNoEmail = 0;
   for (const m of meetings ?? []) {
+    const templates = await loadTemplates(supabase, m.org_id);
     const room = (m.rooms as unknown as { name: string } | null)?.name;
     const place = room ? `${room}${m.location ? ` — ${m.location}` : ""}` : m.location;
     const invitations = (m.info_meeting_invitations as unknown as { status: string; learners: { first_name: string; email: string | null } | null }[] | null) ?? [];
@@ -260,6 +262,7 @@ async function sendMeetingReminders(
         learnerFirstName: inv.learners.first_name,
         senderFirstName: null,
         meeting: { startsAt: m.starts_at, endsAt: m.ends_at, place },
+        templates,
       });
       const ok = await sendMail({
         to: inv.learners.email,

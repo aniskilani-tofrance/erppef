@@ -11,7 +11,11 @@ import { ContactDialog, type ContactEntry } from "@/components/admission/contact
 import { MeetingFormDialog } from "@/components/admission/meeting-form-dialog";
 import { LearnersTabs } from "@/components/apprenants/learners-tabs";
 import { WhatsAppButton } from "@/components/admission/whatsapp-button";
-import { buildFirstContactMessage, formatMeetingWhen } from "@/lib/admission/messages";
+import { headers } from "next/headers";
+import { formatMeetingWhen } from "@/lib/admission/messages";
+import { loadTemplates } from "@/lib/admission/load-templates";
+import { messageForSituation, stageInfo, type Templates } from "@/lib/admission/templates";
+import { MessageTemplatesDialog } from "@/components/admission/message-templates-dialog";
 import { formatPhone } from "@/lib/admission/phone";
 import { ADMISSION_STATUSES, admissionBadgeClass } from "@/lib/admission/status";
 import { CONTACT_SOURCES } from "@/lib/referentiels";
@@ -52,11 +56,15 @@ function LearnerRows({
   empty,
   senderFirstName,
   history,
+  templates,
+  pendingTestUrl,
 }: {
   rows: LearnerRow[];
   empty: string;
   senderFirstName: string | null;
   history: Map<string, ContactEntry[]>;
+  templates: Templates;
+  pendingTestUrl: Map<string, string>;
 }) {
   if (rows.length === 0) return <p className="py-4 text-sm text-muted-foreground">{empty}</p>;
   const lastContactAt = (id: string) => history.get(id)?.[0]?.contactedAt ?? null;
@@ -87,13 +95,22 @@ function LearnerRows({
             </TableCell>
             <TableCell>
               <span className="inline-flex items-center gap-1">
-                <WhatsAppButton
-                  phone={l.phone}
-                  message={buildFirstContactMessage({ learnerFirstName: l.first_name, senderFirstName })}
-                  trace={{ kind: "contact", learnerId: l.id, note: "Premier contact WhatsApp" }}
-                  label="Écrire"
-                  title="Écrire sur WhatsApp — message de premier contact pré-rempli"
-                />
+                {(() => {
+                  const { stage, message } = messageForSituation(
+                    { admissionStatus: l.admission_status, pendingTestUrl: pendingTestUrl.get(l.id) ?? null, levelAssessed: l.level_assessed },
+                    { learnerFirstName: l.first_name, senderFirstName },
+                    templates,
+                  );
+                  return (
+                    <WhatsAppButton
+                      phone={l.phone}
+                      message={message}
+                      trace={{ kind: "contact", learnerId: l.id, note: `WhatsApp — ${stageInfo(stage).label}` }}
+                      label={stageInfo(stage).label}
+                      title={`WhatsApp — ${stageInfo(stage).when}`}
+                    />
+                  );
+                })()}
                 <ContactDialog
                   learnerId={l.id}
                   learnerName={`${l.first_name} ${l.last_name}`}
@@ -113,7 +130,7 @@ export default async function AdmissionPage() {
   const { userId } = await requireRole(["admin", "coordinator"]);
   const supabase = await createClient();
 
-  const [{ data: learners }, { data: contacts }, { data: meetingRows }, { data: rooms }, { data: profile }] = await Promise.all([
+  const [{ data: learners }, { data: contacts }, { data: meetingRows }, { data: rooms }, { data: profile }, { data: pendingTests }, templates, h] = await Promise.all([
     supabase
       .from("learners")
       .select("id, first_name, last_name, learner_no, phone, email, admission_status, level_assessed, created_at, contact_source")
@@ -129,8 +146,15 @@ export default async function AdmissionPage() {
       .order("starts_at", { ascending: false }),
     supabase.from("rooms").select("id, name").eq("is_active", true).order("name"),
     supabase.from("profiles").select("full_name").eq("id", userId).single(),
+    // Tests en ligne encore à faire : le message d'un « contacté » porte alors son lien
+    supabase.from("placement_tests").select("learner_id, token, created_at").eq("status", "en_attente").order("created_at", { ascending: false }),
+    loadTemplates(supabase),
+    headers(),
   ]);
   const senderFirstName = profile?.full_name?.trim().split(/\s+/)[0] ?? null;
+  const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host") ?? "pef-erp.vercel.app"}`;
+  const pendingTestUrl = new Map<string, string>();
+  for (const t of pendingTests ?? []) if (!pendingTestUrl.has(t.learner_id)) pendingTestUrl.set(t.learner_id, `${origin}/test/${t.token}`);
 
   // Journal : 5 derniers contacts par apprenant + date du dernier
   const historyByLearner = new Map<string, ContactEntry[]>();
@@ -167,6 +191,8 @@ export default async function AdmissionPage() {
   const toInvite = (learners ?? [])
     .filter((l) => l.admission_status === "contacte")
     .sort((a, b) => (lastContactAt(a.id) ?? "").localeCompare(lastContactAt(b.id) ?? ""));
+  // Évalués (test oral fait) mais pas encore inscrits dans un groupe
+  const toEnroll = (learners ?? []).filter((l) => l.admission_status === "evalue");
 
   // D'où viennent les demandes : canal de premier contact (total + 30 derniers jours)
   const since30 = new Date(new Date().getTime() - 30 * 86_400_000).toISOString();
@@ -200,7 +226,10 @@ export default async function AdmissionPage() {
     <div className="mx-auto max-w-5xl space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-semibold tracking-tight">Apprenants</h1>
-        <MeetingFormDialog rooms={rooms ?? []} />
+        <div className="flex flex-wrap gap-2">
+          <MessageTemplatesDialog templates={templates} />
+          <MeetingFormDialog rooms={rooms ?? []} />
+        </div>
       </div>
 
       <LearnersTabs active="admission" toContact={toContact.length} />
@@ -324,11 +353,11 @@ export default async function AdmissionPage() {
         <CardHeader className="pb-2">
           <CardTitle className="text-base">À contacter ({toContact.length})</CardTitle>
           <p className="text-xs text-muted-foreground">
-            Nouveaux (jamais contactés) puis injoignables à relancer. « Écrire » ouvre WhatsApp avec le message de premier contact ; le statut passe à « Contacté » tout seul.
+            Nouveaux (jamais contactés) puis injoignables à relancer. Le bouton ouvre WhatsApp avec le message de l&apos;étape : « Premier contact » ou « Relance ». Le statut passe à « Contacté » tout seul.
           </p>
         </CardHeader>
         <CardContent>
-          <LearnerRows rows={toContact} senderFirstName={senderFirstName} history={historyByLearner} empty="Personne à contacter : tous les nouveaux ont été joints. Les fiches déposées dans le Drive arrivent ici chaque nuit." />
+          <LearnerRows rows={toContact} senderFirstName={senderFirstName} history={historyByLearner} templates={templates} pendingTestUrl={pendingTestUrl} empty="Personne à contacter : tous les nouveaux ont été joints. Les fiches déposées dans le Drive arrivent ici chaque nuit." />
           {toContact.length > 80 && (
             <p className="mt-2 text-xs text-muted-foreground">
               80 premiers affichés — <Link href="/apprenants?statut=nouveau" className="underline">voir tous les nouveaux</Link>.
@@ -341,11 +370,23 @@ export default async function AdmissionPage() {
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Contactés, à convoquer ({toInvite.length})</CardTitle>
           <p className="text-xs text-muted-foreground">
-            Le vivier de la prochaine réunion : ouvrez la réunion → « Ajouter des convoqués », ou cochez-les dans Apprenants → « Convoquer (n) ».
+            Le vivier de la prochaine réunion. Le bouton envoie le lien du test s&apos;il reste à faire, sinon le message « Prochaine étape ». Pour convoquer : ouvrez la réunion → « Ajouter des convoqués », ou cochez-les dans Apprenants → « Convoquer (n) ».
           </p>
         </CardHeader>
         <CardContent>
-          <LearnerRows rows={toInvite} senderFirstName={senderFirstName} history={historyByLearner} empty="Aucun contacté en attente de convocation." />
+          <LearnerRows rows={toInvite} senderFirstName={senderFirstName} history={historyByLearner} templates={templates} pendingTestUrl={pendingTestUrl} empty="Aucun contacté en attente de convocation." />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Évalués, à inscrire ({toEnroll.length})</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Test oral fait, pas encore de groupe. Le bouton envoie « place proposée » ; l&apos;inscription se fait depuis la fiche du groupe → « Inscrire des apprenants… ».
+          </p>
+        </CardHeader>
+        <CardContent>
+          <LearnerRows rows={toEnroll} senderFirstName={senderFirstName} history={historyByLearner} templates={templates} pendingTestUrl={pendingTestUrl} empty="Personne en attente d'inscription." />
         </CardContent>
       </Card>
     </div>

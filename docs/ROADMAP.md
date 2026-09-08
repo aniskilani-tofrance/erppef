@@ -49,6 +49,11 @@ Principe directeur : **chaque amélioration retire des clics ou de la saisie, ja
 - **Réunions d'information** : création (date, salle/lieu, capacité), convoqués par cases à cocher,
   convocation WhatsApp en un clic par personne (email en second), statut envoyée/confirmée/présente,
   rappel WhatsApp la veille + rappel email automatique, alertes Dashboard et cron du matin.
+- **Un message par étape** (`src/lib/admission/templates.ts`) : premier contact, relance, lien du test,
+  prochaine étape, convocation (date + lieu), rappel, réunion manquée, place proposée, inscription
+  (groupe + 1er cours), porte ouverte — choisi selon le statut ET la situation (test en attente,
+  convocation à venir, groupe). Textes retouchables par la coordination (onglet Admission →
+  « Messages », enregistrés dans organizations.settings.whatsapp_templates, aperçu, retour au défaut).
 - **Canal de premier contact** (comment la personne nous a contactés) : référentiel CONTACT_SOURCES,
   champ « Nous a contactés par » + précision sur la fiche, colonnes 20-21 du modèle Excel/Drive,
   carte « D'où viennent les demandes » (onglet Admission), distribution dans le bilan financeur (page + PDF),

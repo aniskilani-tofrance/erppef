@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { ClipboardCopy, FilePlus2, RotateCcw } from "lucide-react";
 import { createPlacementTest } from "@/app/(app)/apprenants/actions";
 import { buildPlacementInvitation } from "@/lib/placement/invitation-message";
+import { DEFAULT_TEMPLATES } from "@/lib/admission/templates";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { WhatsAppButton } from "@/components/admission/whatsapp-button";
@@ -22,19 +23,27 @@ export function PlacementTestCell({
   learnerId,
   test,
   senderFirstName,
+  learnerFirstName = null,
   phone = null,
+  template,
 }: {
   learnerId: string;
   test: PlacementInfo;
   senderFirstName: string | null;
+  learnerFirstName?: string | null;
   phone?: string | null;
+  // Modèle « test_positionnement » de l'organisme (retouché ou non) ; défaut du code sinon
+  template?: string;
 }) {
   const [pending, startTransition] = useTransition();
 
+  const templates = template ? { ...DEFAULT_TEMPLATES, test_positionnement: template } : DEFAULT_TEMPLATES;
   function copy(token: string) {
     const message = buildPlacementInvitation({
       url: `${window.location.origin}/test/${token}`,
       senderFirstName,
+      learnerFirstName,
+      templates,
     });
     navigator.clipboard.writeText(message);
     toast.success("Invitation copiée (consignes + lien) — collez-la dans WhatsApp, SMS ou email.");
@@ -80,7 +89,7 @@ export function PlacementTestCell({
         <WhatsAppButton
           phone={phone}
           message={() =>
-            buildPlacementInvitation({ url: `${window.location.origin}/test/${test.token}`, senderFirstName })
+            buildPlacementInvitation({ url: `${window.location.origin}/test/${test.token}`, senderFirstName, learnerFirstName, templates })
           }
           trace={{ kind: "contact", learnerId, note: "Invitation au test de positionnement (WhatsApp)" }}
           label="WhatsApp"

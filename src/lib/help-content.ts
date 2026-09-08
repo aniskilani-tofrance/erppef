@@ -222,6 +222,8 @@ export const HELP_SECTIONS: HelpSection[] = [
           "Les statuts : Nouveau → Contacté (ou Injoignable) → Convoqué → Évalué (test oral fait) → Inscrit (dans un groupe, automatique). « Sans suite » = la personne ne donne pas suite.",
           "Le bouton WhatsApp et le carnet sont aussi dans la liste Apprenants (colonne Admission), avec un filtre par statut en haut de la page.",
           "Pas de WhatsApp ou numéro inexploitable : le bouton est grisé — appelez, puis notez le contact.",
+          "Un message par étape, jamais le même texte : Nouveau → « Premier contact » ; Injoignable → « Relance » ; Contacté → le lien du test s'il reste à faire, sinon « Prochaine étape » ; Convoqué → la convocation avec date et lieu ; Évalué → « Place proposée » ; Inscrit → confirmation avec le groupe et le premier cours ; Sans suite → « Porte ouverte ». Le bouton dit toujours quelle étape il envoie.",
+          "Retoucher les textes : onglet Admission → « Messages ». Un texte par étape, variables entre accolades ({prenom}, {date}, {lieu}, {groupe}…), aperçu rempli avec un exemple, « Revenir au texte d'origine » à tout moment. Enregistré pour toute l'équipe, aussi pour les emails de convocation et de rappel.",
           "Comment la personne NOUS a contactés : fiche apprenant → bloc « Parcours d'admission » → « Nous a contactés par » (bouche-à-oreille, passage à l'accueil, téléphone, WhatsApp, email, site, réseaux sociaux, France Travail, partenaire, affiche) + une précision libre (nom du partenaire, page…). C'est aussi la colonne « Canal de contact » du tableur Drive/Excel. La carte « D'où viennent les demandes » (onglet Admission) et le bilan financeur (Rapports) en donnent la répartition.",
         ],
       },

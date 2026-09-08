@@ -18,7 +18,10 @@ import { AdmissionFilter } from "@/components/admission/admission-filter";
 import { BulkInviteButton } from "@/components/admission/bulk-invite-button";
 import { ContactDialog, type ContactEntry } from "@/components/admission/contact-dialog";
 import { WhatsAppButton } from "@/components/admission/whatsapp-button";
-import { buildFirstContactMessage, formatMeetingWhen } from "@/lib/admission/messages";
+import { headers } from "next/headers";
+import { formatMeetingWhen } from "@/lib/admission/messages";
+import { loadTemplates } from "@/lib/admission/load-templates";
+import { messageForSituation, stageInfo } from "@/lib/admission/templates";
 import {
   BulkDeleteLearnersButton,
   LearnerSelectAllCheckbox,
@@ -40,9 +43,9 @@ export default async function ApprenantsPage({
   const { q, statut } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: learners }, { data: enrollments }, { data: groups }, { data: attendanceRows }, { data: placementRows }, { data: profile }, { data: contacts }, { data: upcomingMeetings }] = await Promise.all([
+  const [{ data: learners }, { data: enrollments }, { data: groups }, { data: attendanceRows }, { data: placementRows }, { data: profile }, { data: contacts }, { data: upcomingMeetings }, { data: invitationRows }, templates, h] = await Promise.all([
     supabase.from("learners").select("*").order("last_name").order("first_name"),
-    supabase.from("enrollments").select("id, learner_id, group_id, status, groups(name)"),
+    supabase.from("enrollments").select("id, learner_id, group_id, status, groups(name, starts_on, rooms:room_id(name))"),
     supabase.from("groups").select("id, name").in("status", ["en_attente", "ouvert"]).order("starts_on", { ascending: false }),
     supabase
       .from("attendances")
@@ -67,7 +70,25 @@ export default async function ApprenantsPage({
       .select("id, title, starts_at")
       .gte("starts_at", new Date(new Date().getTime() - 6 * 3600_000).toISOString())
       .order("starts_at"),
+    // Convocations à venir : le message d'un « convoqué » reprend la date et le lieu
+    supabase
+      .from("info_meeting_invitations")
+      .select("learner_id, status, info_meetings!inner(starts_at, ends_at, location, rooms:room_id(name))")
+      .gte("info_meetings.starts_at", new Date(new Date().getTime() - 6 * 3600_000).toISOString()),
+    loadTemplates(supabase),
+    headers(),
   ]);
+  const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host") ?? "pef-erp.vercel.app"}`;
+  type InvRow = { learner_id: string; status: string; info_meetings: { starts_at: string; ends_at: string | null; location: string | null; rooms: { name: string } | null } };
+  const upcomingByLearner = new Map<string, { date: string; place: string | null }>();
+  for (const r of ((invitationRows ?? []) as unknown as InvRow[]).sort((a, b) => a.info_meetings.starts_at.localeCompare(b.info_meetings.starts_at))) {
+    if (upcomingByLearner.has(r.learner_id)) continue;
+    const m = r.info_meetings;
+    const place = m.rooms?.name ? `${m.rooms.name}${m.location ? ` — ${m.location}` : ""}` : m.location;
+    upcomingByLearner.set(r.learner_id, { date: formatMeetingWhen({ startsAt: m.starts_at, endsAt: m.ends_at }), place });
+  }
+  const fmtDay = (day: string | null) =>
+    day ? new Date(`${day}T12:00:00Z`).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Paris" }) : null;
   const historyByLearner = new Map<string, ContactEntry[]>();
   for (const c of contacts ?? []) {
     const list = historyByLearner.get(c.learner_id) ?? [];
@@ -207,17 +228,35 @@ export default async function ApprenantsPage({
                   <TableCell>
                     <span className="inline-flex items-center gap-1">
                       <AdmissionBadge status={l.admission_status} />
-                      {l.admission_status !== "inscrit" && (
-                        <WhatsAppButton
-                          phone={l.phone}
-                          message={buildFirstContactMessage({ learnerFirstName: l.first_name, senderFirstName })}
-                          trace={{ kind: "contact", learnerId: l.id, note: "Message WhatsApp depuis la liste" }}
-                          iconOnly
-                          variant="ghost"
-                          size="icon"
-                          title="Écrire sur WhatsApp (message de premier contact pré-rempli)"
-                        />
-                      )}
+                      {(() => {
+                        // Message adapté à l'étape : premier contact, relance, lien du test,
+                        // convocation (date + lieu), place proposée, inscription (groupe + 1er cours)…
+                        const test = testByLearner.get(l.id);
+                        const first = mine[0];
+                        const g = first ? (first.groups as unknown as { name: string; starts_on: string | null; rooms: { name: string } | null } | null) : null;
+                        const { stage, message } = messageForSituation(
+                          {
+                            admissionStatus: l.admission_status,
+                            pendingTestUrl: test?.status === "en_attente" ? `${origin}/test/${test.token}` : null,
+                            levelAssessed: l.level_assessed,
+                            upcomingMeeting: upcomingByLearner.get(l.id) ?? null,
+                            enrollment: g ? { group: g.name, startsOn: fmtDay(g.starts_on), place: g.rooms?.name ?? null } : null,
+                          },
+                          { learnerFirstName: l.first_name, senderFirstName },
+                          templates,
+                        );
+                        return (
+                          <WhatsAppButton
+                            phone={l.phone}
+                            message={message}
+                            trace={{ kind: "contact", learnerId: l.id, note: `WhatsApp — ${stageInfo(stage).label}` }}
+                            iconOnly
+                            variant="ghost"
+                            size="icon"
+                            title={`WhatsApp — ${stageInfo(stage).label} (message pré-rempli)`}
+                          />
+                        );
+                      })()}
                       <ContactDialog
                         learnerId={l.id}
                         learnerName={`${l.first_name} ${l.last_name}`}
@@ -228,7 +267,7 @@ export default async function ApprenantsPage({
                   </TableCell>
                   <TableCell>{l.level_assessed ?? "—"}</TableCell>
                   <TableCell>
-                    <PlacementTestCell learnerId={l.id} test={testByLearner.get(l.id) ?? null} senderFirstName={senderFirstName} phone={l.phone} />
+                    <PlacementTestCell learnerId={l.id} test={testByLearner.get(l.id) ?? null} senderFirstName={senderFirstName} learnerFirstName={l.first_name} phone={l.phone} template={templates.test_positionnement} />
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">

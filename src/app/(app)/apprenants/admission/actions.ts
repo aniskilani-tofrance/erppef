@@ -14,6 +14,9 @@ import {
   type AdmissionStatus,
 } from "@/lib/admission/status";
 import { buildMeetingInvitationMessage, textToHtml } from "@/lib/admission/messages";
+import { loadTemplates } from "@/lib/admission/load-templates";
+import { DEFAULT_TEMPLATES, MESSAGE_STAGES, type Templates } from "@/lib/admission/templates";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { LEVELS } from "@/lib/referentiels";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -274,6 +277,7 @@ async function sendOneInvitationEmail(
     learnerFirstName: inv.learners.first_name,
     senderFirstName,
     meeting: { startsAt: inv.info_meetings.starts_at, endsAt: inv.info_meetings.ends_at, place: meetingPlace(inv.info_meetings) },
+    templates: await loadTemplates(supabase, orgId),
   });
   const sent = await sendMail({
     to: inv.learners.email,
@@ -371,6 +375,34 @@ export async function removeInvitation(invitationId: string): Promise<ActionResu
   const { error } = await supabase.from("info_meeting_invitations").delete().eq("id", inv.id);
   if (error) return { ok: false, error: translatePgError(error) };
   revalidateAdmission(inv.meeting_id);
+  return { ok: true };
+}
+
+// ── Modèles de messages ──────────────────────────────────────────────────────
+const templatesSchema = z.record(z.string(), z.string().max(4000));
+
+// Retouches des messages par étape, pour tout l'organisme (organizations.settings).
+// Un texte identique au défaut n'est pas stocké : le défaut du code reste la référence.
+export async function saveMessageTemplates(raw: Record<string, string>): Promise<ActionResult> {
+  const parsed = templatesSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Textes invalides (4000 caractères maximum)" };
+  const { orgId } = await requireRole(["admin", "coordinator"]);
+
+  const overrides: Partial<Templates> = {};
+  for (const s of MESSAGE_STAGES) {
+    const v = parsed.data[s.code]?.trim();
+    if (v && v !== DEFAULT_TEMPLATES[s.code]) overrides[s.code] = v;
+  }
+  // La RLS réserve la mise à jour de l'organisation à l'admin : la coordination passe par
+  // le client service_role, après requireRole, sur la seule clé whatsapp_templates.
+  const admin = createAdminClient();
+  const { data: org } = await admin.from("organizations").select("settings").eq("id", orgId).single();
+  const settings = { ...((org?.settings as Record<string, unknown> | null) ?? {}), whatsapp_templates: overrides };
+  const { error } = await admin.from("organizations").update({ settings }).eq("id", orgId);
+  if (error) return { ok: false, error: translatePgError(error) };
+
+  revalidateAdmission();
+  revalidatePath("/apprenants/reunions", "layout");
   return { ok: true };
 }
 

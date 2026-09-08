@@ -16,8 +16,10 @@ import { SendPendingEmailsButton } from "@/components/admission/send-pending-ema
 import {
   buildMeetingInvitationMessage,
   buildMeetingReminderMessage,
+  buildMissedMeetingMessage,
   formatMeetingWhen,
 } from "@/lib/admission/messages";
+import { loadTemplates } from "@/lib/admission/load-templates";
 import { formatPhone } from "@/lib/admission/phone";
 import { invitationBadgeClass, invitationLabel } from "@/lib/admission/status";
 import { utcToLocalDate, utcToLocalTime } from "@/lib/dates";
@@ -56,7 +58,7 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
   const { userId } = await requireRole(["admin", "coordinator"]);
   const supabase = await createClient();
 
-  const [{ data: meeting }, { data: invitationRows }, { data: learners }, { data: rooms }, { data: profile }] = await Promise.all([
+  const [{ data: meeting }, { data: invitationRows }, { data: learners }, { data: rooms }, { data: profile }, templates] = await Promise.all([
     supabase.from("info_meetings").select("*, rooms:room_id(name)").eq("id", id).single(),
     supabase
       .from("info_meeting_invitations")
@@ -69,6 +71,7 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
       .order("first_name"),
     supabase.from("rooms").select("id, name").eq("is_active", true).order("name"),
     supabase.from("profiles").select("full_name").eq("id", userId).single(),
+    loadTemplates(supabase),
   ]);
   if (!meeting) notFound();
 
@@ -209,8 +212,9 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
                       invitation={{ id: inv.id, status: inv.status }}
                       learner={{ id: l.id, name, phone: l.phone, email: l.email }}
                       messages={{
-                        invite: buildMeetingInvitationMessage({ learnerFirstName: l.first_name, senderFirstName, meeting: when }),
-                        reminder: buildMeetingReminderMessage({ learnerFirstName: l.first_name, senderFirstName, meeting: when }),
+                        invite: buildMeetingInvitationMessage({ learnerFirstName: l.first_name, senderFirstName, meeting: when, templates }),
+                        reminder: buildMeetingReminderMessage({ learnerFirstName: l.first_name, senderFirstName, meeting: when, templates }),
+                        missed: buildMissedMeetingMessage({ learnerFirstName: l.first_name, senderFirstName, meeting: when, templates }),
                       }}
                       meetingUpcoming={upcoming}
                     />
