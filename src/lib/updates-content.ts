@@ -25,6 +25,21 @@ const ALL: AppRole[] = ["admin", "coordinator", "trainer"];
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-09-09-conges-formateurs",
+    date: "2026-09-09",
+    title: "Congés et absences depuis votre compte",
+    summary: "Nouveau menu « Congés » : les salariés demandent leurs congés, les vacataires et prestataires déclarent leurs absences, la coordination est prévenue par email.",
+    items: [
+      { text: "Menu « Congés » ou carte « Mes congés et absences » du Dashboard : dates, motif, une précision. Salarié(e) : demande validée par la coordination, réponse par email. Vacataire ou prestataire : absence enregistrée tout de suite.", roles: ["trainer"] },
+      { text: "Une absence validée est respectée par le planning : aucune séance ne vous sera placée dessus.", roles: ["trainer"] },
+      { text: "Menu « Congés » : les demandes à valider, les absences à venir de l'équipe, l'historique. Valider / refuser en un clic avec un mot au formateur ; l'email de demande compte les séances déjà planifiées sur la période. Rappel dans « À faire aujourd'hui » et l'email du matin.", roles: TEAM },
+    ],
+    training: [
+      { moduleId: "f3-reflexes", lessonId: "imprevus", label: "Imprévus et changements" },
+      { moduleId: "c3-equipe", lessonId: "formateurs", label: "Un formateur prêt à planifier" },
+    ],
+  },
+  {
     id: "2026-09-09-planning-a-diffuser",
     date: "2026-09-09",
     title: "Le planning du groupe, prêt à envoyer",

@@ -12,7 +12,7 @@ export async function loadEngineData(orgId: string, fromDate: string): Promise<E
       supabase.from("organizations").select("timezone, school_holiday_zone").eq("id", orgId).single(),
       supabase.from("trainers").select("*").eq("org_id", orgId),
       supabase.from("trainer_availabilities").select("*").eq("org_id", orgId),
-      supabase.from("trainer_absences").select("*").eq("org_id", orgId).gte("ends_on", fromDate),
+      supabase.from("trainer_absences").select("*").eq("org_id", orgId).eq("status", "approuvee").gte("ends_on", fromDate),
       supabase.from("rooms").select("*").eq("org_id", orgId),
       supabase.from("room_unavailabilities").select("*").eq("org_id", orgId).gte("ends_on", fromDate),
       supabase.from("room_availabilities").select("*").eq("org_id", orgId),

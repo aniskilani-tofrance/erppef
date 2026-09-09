@@ -18,7 +18,7 @@ export default async function PlanningPage() {
       supabase.from("funders").select("id, name, color").eq("is_active", true).order("name"),
       supabase.from("organizations").select("school_holiday_zone").eq("id", orgId).single(),
       supabase.from("calendar_closures").select("id, kind, zone, label, starts_on, ends_on"),
-      supabase.from("trainer_absences").select("id, trainer_id, starts_on, ends_on, kind"),
+      supabase.from("trainer_absences").select("id, trainer_id, starts_on, ends_on, kind").eq("status", "approuvee"),
       supabase
         .from("groups")
         .select("id, name, trainer_id, room_id")

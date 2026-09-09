@@ -95,6 +95,15 @@ export const HELP_SECTIONS: HelpSection[] = [
         ],
       },
       {
+        title: "Poser un congé ou déclarer une absence",
+        steps: [
+          "Menu « Congés » (ou la carte « Mes congés et absences » du Dashboard) : dates, motif, une précision si besoin.",
+          "Salarié(e) : c'est une demande. La coordination la valide ou la refuse, vous recevez la réponse par email. Tant qu'elle est « À valider », vous pouvez la retirer.",
+          "Vacataire ou prestataire : l'absence est enregistrée tout de suite, sans validation. La coordination est prévenue par email et déplace vos séances si besoin.",
+          "Une absence validée est respectée par le moteur de planning : aucune séance ne vous sera placée dessus. Les séances déjà planifiées sur la période sont signalées à la coordination.",
+        ],
+      },
+      {
         title: "Signaler une absence ou un imprévu",
         steps: [
           "Prévenez votre coordinateur : il enregistre votre absence sur votre fiche, et le planning en tient compte.",
@@ -119,6 +128,15 @@ export const HELP_SECTIONS: HelpSection[] = [
           "Salles : nom, capacité, équipements. Une salle inactive n'est plus proposée par le moteur.",
           "Horaires d'ouverture par salle : bouton « Horaires » sur la carte de la salle — définissez ses créneaux (ex. lundi 9h-12h) si elle n'est pas disponible en continu ; sans créneau, elle suit les horaires de l'organisme.",
           "Paramètres → « Fermetures » : posez vos fermetures exceptionnelles ; fériés et vacances scolaires zone C sont déjà connus.",
+        ],
+      },
+      {
+        title: "Valider les congés",
+        steps: [
+          "Menu « Congés » : les demandes des salariés à valider, les absences à venir de toute l'équipe, l'historique des décisions. Aussi sur la fiche de chaque formateur (carte « Absences et congés ») et dans « À faire aujourd'hui ».",
+          "« Valider » ou « Refuser » (avec un mot pour le formateur) : il est prévenu par email. L'email de demande indique combien de séances sont déjà planifiées sur la période.",
+          "Les vacataires et prestataires déclarent sans validation : vous recevez l'email d'information et déplacez leurs séances depuis le Planning.",
+          "Seules les absences validées sont prises en compte par le moteur et affichées dans le bandeau « Absences » du Planning.",
         ],
       },
       {

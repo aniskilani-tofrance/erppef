@@ -55,7 +55,7 @@ export default async function DashboardPage() {
   const nowIso = new Date().toISOString();
   const in7days = new Date(new Date().getTime() + 7 * 86_400_000).toISOString();
 
-  const [groups, weekLoads, roomLoads, trainers, rooms, attendanceRows, learnersList, unclosedSheets, incompleteGroups, orphanSessions, newLearners, upcomingMeetings] = await Promise.all([
+  const [groups, weekLoads, roomLoads, trainers, rooms, attendanceRows, learnersList, unclosedSheets, incompleteGroups, orphanSessions, newLearners, upcomingMeetings, pendingLeaves] = await Promise.all([
     supabase.from("groups").select("id, status", { count: "exact" }).in("status", ["ouvert", "complet", "en_attente"]),
     supabase.from("v_trainer_week_load").select("*").eq("week_start", weekStart),
     supabase.from("v_room_week_load").select("*").eq("week_start", weekStart),
@@ -106,6 +106,8 @@ export default async function DashboardPage() {
       .gte("starts_at", new Date(new Date().getTime() - 6 * 3600_000).toISOString())
       .lte("starts_at", in7days)
       .order("starts_at"),
+    // À faire : demandes de congé des salariés à valider
+    supabase.from("trainer_absences").select("id", { count: "exact", head: true }).eq("status", "en_attente"),
   ]);
 
   // Liste « À faire aujourd'hui » : ce qui demande une action, avec le lien pour la faire.
@@ -132,6 +134,12 @@ export default async function DashboardPage() {
     });
   }
 
+  if ((pendingLeaves.count ?? 0) > 0) {
+    todos.push({
+      label: `${pendingLeaves.count} demande${(pendingLeaves.count ?? 0) > 1 ? "s" : ""} de congé à valider`,
+      href: "/conges",
+    });
+  }
   if ((newLearners.count ?? 0) > 0) {
     todos.push({
       label: `${newLearners.count} nouvel${(newLearners.count ?? 0) > 1 ? "s" : ""} apprenant${(newLearners.count ?? 0) > 1 ? "s" : ""} jamais contacté${(newLearners.count ?? 0) > 1 ? "s" : ""} depuis plus de 3 jours — écrire sur WhatsApp`,

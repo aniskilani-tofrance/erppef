@@ -3,7 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { utcToLocalDate, utcToLocalTime, weekStartOf, nextDay } from "@/lib/dates";
-import { ClipboardCheck } from "lucide-react";
+import { CalendarOff, ClipboardCheck } from "lucide-react";
+import { KIND_LABELS, STATUS_LABELS, type AbsenceKind, type AbsenceStatus } from "@/lib/conges/rules";
 
 // Accueil du FORMATEUR : sa journée, ses feuilles à clôturer, sa semaine.
 // Pas d'occupation de salles ni d'indicateurs de pilotage : ce n'est pas son sujet.
@@ -35,7 +36,7 @@ export async function TrainerDashboard({ userId }: { userId: string }) {
   let weekEnd = weekStart;
   for (let i = 0; i < 7; i++) weekEnd = nextDay(weekEnd);
 
-  const [{ data: weekSessions }, { data: toClose }] = await Promise.all([
+  const [{ data: weekSessions }, { data: toClose }, { data: myAbsences }] = await Promise.all([
     supabase
       .from("sessions")
       .select("id, starts_at, ends_at, status, attendance_closed_at, groups(name), rooms:room_id(name)")
@@ -53,6 +54,14 @@ export async function TrainerDashboard({ userId }: { userId: string }) {
       .gte("starts_at", new Date(now.getTime() - 7 * 86400_000).toISOString())
       .lt("ends_at", now.toISOString())
       .order("starts_at"),
+    supabase
+      .from("trainer_absences")
+      .select("id, starts_on, ends_on, kind, status")
+      .eq("trainer_id", trainerId)
+      .gte("ends_on", today)
+      .neq("status", "refusee")
+      .order("starts_on")
+      .limit(4),
   ]);
 
   const todaySessions = (weekSessions ?? []).filter((s) => utcToLocalDate(s.starts_at) === today);
@@ -122,6 +131,36 @@ export async function TrainerDashboard({ userId }: { userId: string }) {
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <CalendarOff className="h-4 w-4 text-primary" />
+            Mes congés et absences
+          </CardTitle>
+          <Link href="/conges" className="text-sm hover:underline">Demander / déclarer →</Link>
+        </CardHeader>
+        <CardContent>
+          {(myAbsences ?? []).length === 0 ? (
+            <p className="text-sm text-muted-foreground">Aucune absence à venir. Un congé, un rendez-vous ? Posez-le ici : la coordination est prévenue.</p>
+          ) : (
+            <ul className="space-y-1 text-sm">
+              {(myAbsences ?? []).map((a) => (
+                <li key={a.id} className="flex flex-wrap items-center gap-2">
+                  <span className="text-muted-foreground">
+                    {new Date(`${a.starts_on}T12:00:00Z`).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", timeZone: "Europe/Paris" })}
+                    {a.ends_on !== a.starts_on && ` → ${new Date(`${a.ends_on}T12:00:00Z`).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", timeZone: "Europe/Paris" })}`}
+                  </span>
+                  <span>{KIND_LABELS[a.kind as AbsenceKind]}</span>
+                  <Badge variant="outline" className={a.status === "en_attente" ? "border-amber-300 text-amber-800" : "border-emerald-300 text-emerald-800"}>
+                    {STATUS_LABELS[a.status as AbsenceStatus]}
+                  </Badge>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

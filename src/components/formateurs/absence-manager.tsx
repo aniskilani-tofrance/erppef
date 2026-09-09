@@ -10,6 +10,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Trash2 } from "lucide-react";
+import { DecideAbsenceButtons } from "@/components/conges/absence-actions";
+import { STATUS_LABELS, type AbsenceStatus } from "@/lib/conges/rules";
 
 type Absence = {
   id: string;
@@ -17,6 +19,9 @@ type Absence = {
   endsOn: string;
   kind: "conge" | "maladie" | "formation" | "autre";
   note: string | null;
+  status?: AbsenceStatus;
+  requestedByTrainer?: boolean;
+  decisionNote?: string | null;
 };
 
 const KIND_LABELS: Record<Absence["kind"], string> = {
@@ -89,13 +94,21 @@ export function AbsenceManager({ trainerId, absences }: { trainerId: string; abs
       ) : (
         <ul className="space-y-2">
           {absences.map((a) => (
-            <li key={a.id} className="flex items-center gap-3 rounded-md border p-2 text-sm">
+            <li key={a.id} className={`flex flex-wrap items-center gap-3 rounded-md border p-2 text-sm ${a.status === "en_attente" ? "border-amber-300 bg-amber-50/50" : a.status === "refusee" ? "opacity-60" : ""}`}>
               <Badge variant="outline">{KIND_LABELS[a.kind]}</Badge>
               <span>
                 {formatDate(a.startsOn)} → {formatDate(a.endsOn)}
               </span>
               {a.note && <span className="text-muted-foreground">{a.note}</span>}
-              <Button variant="ghost" size="icon" className="ml-auto" onClick={() => remove(a.id)} disabled={pending}>
+              {a.status && a.status !== "approuvee" && (
+                <Badge variant="outline" className={a.status === "en_attente" ? "border-amber-300 text-amber-800" : "border-red-300 text-red-700"}>
+                  {STATUS_LABELS[a.status]}
+                </Badge>
+              )}
+              {a.requestedByTrainer && a.status === "approuvee" && <span className="text-xs text-muted-foreground">déclarée par le formateur</span>}
+              {a.decisionNote && <span className="text-xs text-muted-foreground">{a.decisionNote}</span>}
+              {a.status === "en_attente" && <span className="ml-auto"><DecideAbsenceButtons id={a.id} /></span>}
+              <Button variant="ghost" size="icon" className={a.status === "en_attente" ? "" : "ml-auto"} onClick={() => remove(a.id)} disabled={pending}>
                 <Trash2 className="h-4 w-4 text-muted-foreground" />
               </Button>
             </li>

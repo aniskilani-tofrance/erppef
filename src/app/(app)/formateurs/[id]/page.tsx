@@ -127,6 +127,9 @@ export default async function FormateurPage({ params }: { params: Promise<{ id: 
               endsOn: a.ends_on,
               kind: a.kind,
               note: a.note,
+              status: a.status ?? "approuvee",
+              requestedByTrainer: Boolean(a.requested_by),
+              decisionNote: a.decision_note ?? null,
             }))}
           />
         </CardContent>

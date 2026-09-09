@@ -143,6 +143,9 @@ export async function GET(request: Request) {
 
   // Parcours d'admission : nouveaux jamais contactés (> 3 jours), convocations non
   // envoyées pour une réunion sous 7 jours, réunion demain. Jamais bloquant.
+  const { count: pendingLeaves } = await supabase.from("trainer_absences").select("id", { count: "exact", head: true }).eq("status", "en_attente");
+  const leaveLine = pendingLeaves ? `📆 ${pendingLeaves} demande${pendingLeaves > 1 ? "s" : ""} de congé à valider — https://pef-erp.vercel.app/conges` : null;
+
   const admissionLines = await admissionAlerts(supabase).catch((e) => {
     console.error("[admission]", e instanceof Error ? e.message : e);
     return [] as string[];
@@ -169,7 +172,7 @@ export async function GET(request: Request) {
     return `${group} (${day}${trainer ? `, ${trainer}` : ""})`;
   });
 
-  if (atRisk.length === 0 && sheets.length === 0 && !watchReminder && admissionLines.length === 0) {
+  if (atRisk.length === 0 && sheets.length === 0 && !watchReminder && admissionLines.length === 0 && !leaveLine) {
     return Response.json({ sent: false, reason: "rien à signaler", backup, reminders, meetingReminders, trainerRelances, updatesAnnounced });
   }
 
@@ -177,6 +180,7 @@ export async function GET(request: Request) {
     ...(atRisk.length ? ["⚠️ Risque de décrochage :", ...atRisk.map((l) => `  • ${l}`), ""] : []),
     ...(sheets.length ? ["📋 Feuilles d'émargement non clôturées :", ...sheets.map((l) => `  • ${l}`), ""] : []),
     ...(admissionLines.length ? ["🤝 Admission :", ...admissionLines.map((l) => `  • ${l}`), ""] : []),
+    ...(leaveLine ? [leaveLine, ""] : []),
     ...(watchReminder ? [watchReminder, ""] : []),
     "Détails : https://pef-erp.vercel.app/qualite",
   ];
@@ -194,7 +198,7 @@ export async function GET(request: Request) {
     body: JSON.stringify({
       from: process.env.ALERTS_FROM ?? "ERP PEF <onboarding@resend.dev>",
       to: [process.env.ALERTS_EMAIL],
-      subject: `ERP PEF — ${atRisk.length + sheets.length + admissionLines.length} alerte${atRisk.length + sheets.length + admissionLines.length > 1 ? "s" : ""} ce matin`,
+      subject: `ERP PEF — ${atRisk.length + sheets.length + admissionLines.length + (leaveLine ? 1 : 0)} alerte${atRisk.length + sheets.length + admissionLines.length + (leaveLine ? 1 : 0) > 1 ? "s" : ""} ce matin`,
       text: lines.join("\n"),
     }),
   });

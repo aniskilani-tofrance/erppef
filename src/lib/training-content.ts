@@ -185,6 +185,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
         id: "imprevus",
         title: "Imprévus et changements",
         steps: [
+          "Un congé, un rendez-vous, une formation : menu « Congés ». Salarié(e), c'est une demande validée par la coordination (réponse par email) ; vacataire ou prestataire, l'absence est enregistrée directement et la coordination est prévenue.",
           "Vous serez absent(e) ? Prévenez le coordinateur au plus tôt : il enregistre l'absence et déplace ou réaffecte les séances.",
           "Changement de salle ou d'horaire : c'est aussi le coordinateur qui modifie le planning ; votre agenda Google se met à jour dans la nuit.",
           "Un doute sur un apprenant (absences répétées…) : signalez-le — l'ERP le détecte aussi (alerte à 3 absences de suite), mais votre œil humain reste irremplaçable.",
@@ -349,6 +350,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
           "Sur sa fiche : ses disponibilités récurrentes (jours + heures). C'est LA donnée que le moteur respecte à la lettre.",
           "Email renseigné = invitation automatique : il reçoit un lien, choisit son mot de passe, et voit son planning.",
           "Déposez ses CV et diplômes (« Qualifications ») : preuve Qualiopi ind. 21-22 toujours prête.",
+          "Menu « Congés » : les demandes des salariés à valider en un clic, les absences déclarées par les vacataires, l'historique. Seules les absences validées bloquent le moteur.",
         ],
         tip: "Le moteur choisit dans l'ordre : salarié avant vacataire, coût croissant, puis votre priorité manuelle.",
       },
