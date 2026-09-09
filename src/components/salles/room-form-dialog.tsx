@@ -17,10 +17,11 @@ type RoomFormValues = {
   name: string;
   capacity: string;
   equipment: string;
+  address: string;
   isActive: boolean;
 };
 
-const EMPTY: RoomFormValues = { name: "", capacity: "12", equipment: "", isActive: true };
+const EMPTY: RoomFormValues = { name: "", capacity: "12", equipment: "", address: "", isActive: true };
 
 export function RoomFormDialog({ initial }: { initial?: RoomFormValues }) {
   const [open, setOpen] = useState(false);
@@ -35,6 +36,7 @@ export function RoomFormDialog({ initial }: { initial?: RoomFormValues }) {
         name: values.name,
         capacity: Number(values.capacity),
         equipment: values.equipment.split(",").map((s) => s.trim()).filter(Boolean),
+        address: values.address.trim() || null,
         isActive: values.isActive,
       });
       if (!result.ok) {
@@ -77,6 +79,10 @@ export function RoomFormDialog({ initial }: { initial?: RoomFormValues }) {
           <div className="space-y-2">
             <Label>Équipements (séparés par des virgules)</Label>
             <Input value={values.equipment} onChange={(e) => setValues((v) => ({ ...v, equipment: e.target.value }))} placeholder="vidéoprojecteur, tableau blanc" />
+          </div>
+          <div className="space-y-2">
+            <Label>Adresse (reprise dans les plannings et les messages aux apprenants)</Label>
+            <Input value={values.address} onChange={(e) => setValues((v) => ({ ...v, address: e.target.value }))} placeholder="1 place Martin Levasseur, 93400 Saint-Ouen" />
           </div>
           <label className="flex items-center gap-2 text-sm">
             <Checkbox checked={values.isActive} onCheckedChange={(c) => setValues((v) => ({ ...v, isActive: c === true }))} />

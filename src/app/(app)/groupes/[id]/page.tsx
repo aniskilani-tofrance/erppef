@@ -17,6 +17,10 @@ import { GroupEditDialog } from "@/components/groupes/group-edit-dialog";
 import { DuplicateGroupDialog } from "@/components/groupes/duplicate-group-dialog";
 import { ReplanButton } from "@/components/groupes/replan-button";
 import { SurveyManager } from "@/components/groupes/survey-manager";
+import { PlanningShare, type PlanningRecipient } from "@/components/groupes/planning-share";
+import { loadTemplates } from "@/lib/admission/load-templates";
+import { baseVars, buildStageMessage } from "@/lib/admission/templates";
+import { describePattern, fmtDay as fmtPlanningDay } from "@/lib/reports/group-planning";
 import {
   ABSENCE_ALERT_THRESHOLD,
   computeLearnerStats,
@@ -26,14 +30,14 @@ import {
 
 export default async function GroupePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { role } = await requireSession();
+  const { role, userId } = await requireSession();
   const supabase = await createClient();
 
-  const [{ data: group }, { data: sessions }, { data: hours }, { data: enrollments }, { data: learners }, { data: allFunders }, { data: attendanceRows }, { data: surveyRows }] =
+  const [{ data: group }, { data: sessions }, { data: hours }, { data: enrollments }, { data: learners }, { data: allFunders }, { data: attendanceRows }, { data: surveyRows }, templates, { data: profile }] =
     await Promise.all([
       supabase
         .from("groups")
-        .select("*, programs(name, level, entry_level), funders(name, color), trainers:trainer_id(first_name, last_name), rooms:room_id(name)")
+        .select("*, programs(name, level, entry_level), funders(name, color), trainers:trainer_id(first_name, last_name), rooms:room_id(name, address)")
         .eq("id", id)
         .single(),
       supabase
@@ -44,7 +48,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
       supabase.from("v_group_hours").select("*").eq("group_id", id).single(),
       supabase
         .from("enrollments")
-        .select("id, learner_id, status, left_on, learners(first_name, last_name, level_assessed)")
+        .select("id, learner_id, status, left_on, learners(first_name, last_name, level_assessed, phone, email)")
         .eq("group_id", id)
         .order("status"), // abandons et terminés restent visibles (badges + bilans)
       supabase.from("learners").select("id, first_name, last_name, learner_no, level_assessed, first_language, city, district, qpv, gender, activity_status, education_level, prescriber, birth_date").order("last_name"),
@@ -58,9 +62,36 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
         .from("survey_responses")
         .select("overall, teaching, organization, premises, progress, comment")
         .eq("group_id", id),
+      loadTemplates(supabase),
+      supabase.from("profiles").select("full_name").eq("id", userId).single(),
     ]);
 
   if (!group) notFound();
+
+  // Planning à diffuser : message WhatsApp par inscrit (horaires, dates, lieu du groupe)
+  const senderFirstName = profile?.full_name?.trim().split(/\s+/)[0] ?? null;
+  const roomInfo = group.rooms as unknown as { name: string; address: string | null } | null;
+  const planningVars = {
+    groupe: group.name,
+    horaires: describePattern(((group.weekly_pattern as { weekday: number; start: string; end: string }[] | null) ?? []), ", "),
+    date_debut: fmtPlanningDay(group.starts_on),
+    date_fin: group.ends_on ? fmtPlanningDay(group.ends_on) : null,
+    lieu: roomInfo ? [roomInfo.name, roomInfo.address].filter(Boolean).join(" — ") : null,
+    vacances: group.skip_school_holidays === false ? "Les cours ont lieu aussi pendant les vacances scolaires." : "Pas de cours pendant les vacances scolaires.",
+  };
+  const planningRecipients: PlanningRecipient[] = (enrollments ?? [])
+    .filter((e) => e.status === "inscrit")
+    .map((e) => {
+      const l = e.learners as unknown as { first_name: string; last_name: string; phone: string | null; email: string | null } | null;
+      return {
+        learnerId: e.learner_id,
+        name: l ? `${l.first_name} ${l.last_name}` : "—",
+        phone: l?.phone ?? null,
+        email: l?.email ?? null,
+        message: buildStageMessage("planning_groupe", { ...baseVars(l?.first_name, senderFirstName), ...planningVars }, templates),
+      };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, "fr"));
 
   const canWrite = role === "admin" || role === "coordinator";
   const enrolled = (enrollments ?? []).map((e) => {
@@ -212,6 +243,18 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Diffuser le planning</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Aux apprenants : WhatsApp (message pré-rempli), PDF lisible ou calendrier .ics. Au financeur : PDF prévisionnel et CSV.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <PlanningShare groupId={id} recipients={planningRecipients} canWrite={canWrite} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">

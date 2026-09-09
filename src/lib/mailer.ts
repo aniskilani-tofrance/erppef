@@ -16,6 +16,7 @@ export async function sendMail(options: {
   to: string;
   subject: string;
   html: string;
+  attachments?: { filename: string; content: Buffer | Uint8Array; contentType?: string }[];
 }): Promise<boolean> {
   if (!mailerConfigured()) return false;
 
@@ -32,6 +33,7 @@ export async function sendMail(options: {
       to: options.to,
       subject: options.subject,
       html: options.html,
+      attachments: options.attachments?.map((a) => ({ filename: a.filename, content: Buffer.from(a.content), contentType: a.contentType })),
     });
     return true;
   } catch (e) {

@@ -151,6 +151,13 @@ SCENARIOS.rattrapage = { caps: {}, groups: [
   { label: "PEF A1", code: "PEF_A1", pattern: [P(1, "09:00", "12:00"), P(2, "09:00", "12:00"), P(2, "13:00", "16:00")], trainer: "Marie", room: "Salle 12", startsOn: START, skipHolidays: false },
   { label: "Cours municipaux A1", code: "CMSTOA1", pattern: [P(1, "13:00", "16:00"), P(2, "13:00", "16:00")], trainer: "Marie Joelle", room: "Cordon", startsOn: START, skipHolidays: true },
 ] };
+// 09/09 soir : les cours municipaux font 120 h par dispositif (CM_HOURS=120) → les 3 groupes sont régénérés
+SCENARIOS.cm120 = { caps: {}, groups: [
+  { label: "Cours municipaux A1", code: "CMSTOA1", pattern: [P(1, "13:00", "16:00"), P(2, "13:00", "16:00")], trainer: "Marie Joelle", room: "Cordon", startsOn: START, skipHolidays: true },
+  { label: "Cours municipaux A2", code: "CMSTOA2", pattern: [P(2, "13:00", "16:00"), P(4, "13:00", "16:00")], trainer: "Sabrina", room: "Landy", startsOn: START, skipHolidays: true },
+  { label: "Cours municipaux B1", code: "CMSTOB1", pattern: [P(2, "18:00", "20:00"), P(6, "09:00", "12:00")], trainer: "Sabrina", room: "Berthoud", startsOn: START, skipHolidays: true },
+] };
+if (process.env.CM_HOURS) for (const p of raw.programs) if (String(p.code).startsWith("CMSTO")) p.h = Number(process.env.CM_HOURS);
 // Variante : cours municipaux AUSSI pendant les vacances scolaires (fin plus tôt)
 SCENARIOS.cmVacances = { caps: { Sabrina: 21 }, groups: SCENARIOS.base.groups.map((g) => ({ ...g, skipHolidays: false })) };
 
@@ -204,6 +211,9 @@ const ABS = process.env.ABSENCES_AS_CLOSURES === "1";
 // Les absences du formateur voulu deviennent des fermetures : le moteur saute ces jours et prolonge la fin.
 const withAbsences = (d: EngineData, t: TrainerData): EngineData =>
   ABS ? { ...d, closures: [...d.closures, ...t.absences.map((a) => ({ startsOn: a.startsOn, endsOn: a.endsOn, label: "Université", kind: "fermeture_org" as const }))] } : d;
+if (scenario === "cm120") {
+  data.trainers.find((t) => t.firstName.trim() === "Sabrina")!.availabilities.push({ weekday: 2, start: "18:00", end: "20:00" });
+}
 if (scenario === "mercredi") {
   const cordon = data.rooms.find((r) => r.name === "Cordon")!;
   cordon.availabilities.push({ weekday: 3, start: "09:00", end: "12:00" }, { weekday: 3, start: "13:00", end: "16:00" });

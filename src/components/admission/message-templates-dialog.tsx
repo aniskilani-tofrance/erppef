@@ -29,13 +29,17 @@ const VAR_HELP: Record<string, string> = {
   lieu: "salle ou adresse",
   groupe: "nom du groupe",
   date_debut: "date du premier cours",
+  date_fin: "date du dernier cours",
+  horaires: "créneaux hebdomadaires du groupe",
+  vacances: "mention vacances scolaires",
   niveau: "niveau évalué",
 };
 
 const PREVIEW_VARS = {
   prenom: "Fatima", expediteur: "Marie", signature: "Marie", organisme: "Parler Emploi Formation",
   lien: "https://pef-erp.vercel.app/test/exemple", date: "mardi 6 octobre 2026 à 14h00", lieu: "Salle 12 — 1 place Martin Levasseur",
-  groupe: "PEF A1 — Groupe 1", date_debut: "jeudi 1er octobre 2026", niveau: "A1",
+  groupe: "PEF A1 — Groupe 1", date_debut: "jeudi 1er octobre 2026", date_fin: "mardi 8 juin 2027",
+  horaires: "lundi 9h-12h · mardi 9h-12h · mardi 13h-16h", vacances: "Pas de cours pendant les vacances scolaires.", niveau: "A1",
 };
 
 // Retouche des messages, étape par étape : un texte par étape, variables entre accolades,

@@ -11,6 +11,7 @@ const roomSchema = z.object({
   name: z.string().min(1),
   capacity: z.number().int().positive(),
   equipment: z.array(z.string()),
+  address: z.string().nullable().optional(),
   isActive: z.boolean(),
 });
 
@@ -74,6 +75,7 @@ export async function upsertRoom(raw: z.infer<typeof roomSchema>): Promise<Actio
     name: d.name,
     capacity: d.capacity,
     equipment: d.equipment,
+    address: d.address?.trim() || null,
     is_active: d.isActive,
   };
 

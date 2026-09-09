@@ -10,6 +10,57 @@ import { nextDay, utcToLocalDate } from "@/lib/dates";
 import type { Proposal } from "@/lib/engine/types";
 import { createClient } from "@/lib/supabase/server";
 import { translatePgError } from "@/lib/pg-errors";
+import { mailerConfigured, sendMail } from "@/lib/mailer";
+import { loadTemplates } from "@/lib/admission/load-templates";
+import { baseVars, buildStageMessage } from "@/lib/admission/templates";
+import { textToHtml } from "@/lib/admission/messages";
+import { buildPlanningPdf, describePattern, fmtDay, loadGroupPlanning, planningFileName } from "@/lib/reports/group-planning";
+
+// Envoie le planning (message + PDF apprenants en pièce jointe) à chaque inscrit qui a un email.
+export async function emailGroupPlanning(groupId: string): Promise<{ ok: true; message: string } | { ok: false; error: string }> {
+  if (!z.string().uuid().safeParse(groupId).success) return { ok: false, error: "Groupe invalide" };
+  const { orgId, userId } = await requireRole(["admin", "coordinator"]);
+  if (!mailerConfigured()) return { ok: false, error: "Email non configuré (SMTP)." };
+  const supabase = await createClient();
+
+  const planning = await loadGroupPlanning(supabase, groupId);
+  if (!planning) return { ok: false, error: "Groupe introuvable" };
+  const [{ data: enrollments }, { data: profile }, templates] = await Promise.all([
+    supabase.from("enrollments").select("learners(first_name, last_name, email)").eq("group_id", groupId).eq("status", "inscrit"),
+    supabase.from("profiles").select("full_name").eq("id", userId).single(),
+    loadTemplates(supabase, orgId),
+  ]);
+  const sender = profile?.full_name?.trim().split(/\s+/)[0] ?? null;
+  const pdf = await buildPlanningPdf(planning, "apprenants");
+  const vars = {
+    groupe: planning.name,
+    horaires: describePattern(planning.weeklyPattern, ", "),
+    date_debut: fmtDay(planning.startsOn),
+    date_fin: planning.endsOn ? fmtDay(planning.endsOn) : null,
+    lieu: [planning.roomName, planning.roomAddress].filter(Boolean).join(" — ") || null,
+    vacances: planning.skipSchoolHolidays ? "Pas de cours pendant les vacances scolaires." : "Les cours ont lieu aussi pendant les vacances scolaires.",
+  };
+
+  let sent = 0;
+  let skipped = 0;
+  for (const e of enrollments ?? []) {
+    const l = e.learners as unknown as { first_name: string; last_name: string; email: string | null } | null;
+    if (!l?.email) {
+      skipped += 1;
+      continue;
+    }
+    const text = buildStageMessage("planning_groupe", { ...baseVars(l.first_name, sender), ...vars }, templates);
+    const ok = await sendMail({
+      to: l.email,
+      subject: `Votre planning de cours — ${planning.name}`,
+      html: textToHtml(text),
+      attachments: [{ filename: planningFileName(planning, "apprenants", "pdf"), content: pdf, contentType: "application/pdf" }],
+    });
+    if (ok) sent += 1;
+    else skipped += 1;
+  }
+  return { ok: true, message: `Planning envoyé à ${sent} inscrit${sent > 1 ? "s" : ""}${skipped ? `, ${skipped} sans email ou en échec` : ""}.` };
+}
 
 const slotSchema = z.object({
   weekday: z.union([

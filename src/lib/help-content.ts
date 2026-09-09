@@ -205,6 +205,18 @@ export const HELP_SECTIONS: HelpSection[] = [
         ],
       },
       {
+        title: "Diffuser le planning (apprenants, financeurs)",
+        steps: [
+          "Fiche du groupe → carte « Diffuser le planning ». Quatre fichiers : « PDF apprenants » (lisible, par mois, avec le lieu et le numéro à prévenir), « PDF financeur » (prévisionnel avec durées, cumul d'heures, statut des séances, mentions légales), « CSV » (tableur, une ligne par séance) et « Calendrier .ics ».",
+          "Le fichier .ics s'ouvre sur un téléphone ou dans Google Agenda / Outlook : toutes les séances s'ajoutent d'un coup. Envoyez-le par email ou WhatsApp, ou faites-le scanner.",
+          "Aux apprenants sur WhatsApp : à côté de chaque inscrit, « Planning WhatsApp » ouvre WhatsApp avec les horaires, les dates de début et de fin, le lieu et la règle des vacances déjà écrits (modèle « Planning du groupe », retouchable dans Apprenants → Admission → Messages).",
+          "Par email : « Email + PDF aux inscrits » envoie le même message avec le PDF apprenants en pièce jointe à tous les inscrits qui ont une adresse.",
+          "Au financeur : téléchargez le PDF financeur et le CSV, joignez-les à votre email. Le planning est prévisionnel ; les heures réalisées se prouvent ensuite par les feuilles d'émargement et le bilan (Rapports).",
+          "Le lieu vient de la salle : renseignez l'adresse sur la fiche de chaque salle (Salles → crayon) pour qu'elle apparaisse dans les plannings et les messages.",
+          "Le planning change (séance déplacée, rattrapage) ? Regénérez simplement les fichiers : ils reflètent toujours les séances actuelles.",
+        ],
+      },
+      {
         title: "Faire vivre le groupe (statut, rattrapages)",
         steps: [
           "Fiche du groupe → « Modifier » : renommez, changez le financeur, la capacité, les notes, et le statut (En attente, Ouvert, Complet, Terminé, Annulé).",

@@ -25,6 +25,19 @@ const ALL: AppRole[] = ["admin", "coordinator", "trainer"];
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-09-09-planning-a-diffuser",
+    date: "2026-09-09",
+    title: "Le planning du groupe, prêt à envoyer",
+    summary: "Sur chaque fiche de groupe : PDF apprenants, PDF financeur, CSV, calendrier .ics, WhatsApp par inscrit et email groupé avec le PDF.",
+    items: [
+      { text: "Carte « Diffuser le planning » sur la fiche du groupe : PDF lisible pour les apprenants (par mois, lieu, numéro à prévenir), PDF prévisionnel pour le financeur (durées, cumul, statut des séances), CSV et calendrier .ics.", roles: TEAM },
+      { text: "À côté de chaque inscrit, « Planning WhatsApp » envoie les horaires, les dates et le lieu déjà écrits ; « Email + PDF aux inscrits » envoie le tout en une fois.", roles: TEAM },
+      { text: "Votre planning de groupe est disponible en PDF et en calendrier .ics depuis la fiche du groupe : ajoutez toutes vos séances à votre téléphone en un geste.", roles: ["trainer"] },
+      { text: "Les salles ont maintenant une adresse (Salles → crayon) : elle apparaît dans les plannings et les messages aux apprenants.", roles: TEAM },
+    ],
+    training: [{ moduleId: "c5-vie-quotidienne", lessonId: "documents", label: "Les documents financeurs" }],
+  },
+  {
     id: "2026-09-09-messages-par-etape",
     date: "2026-09-09",
     title: "Un message WhatsApp par étape",

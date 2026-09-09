@@ -164,6 +164,25 @@ Merci d'arriver 10 minutes avant. Si vous ne pouvez pas venir un jour, prévenez
 {signature}`,
   },
   {
+    code: "planning_groupe",
+    label: "Planning du groupe",
+    when: "Fiche du groupe, bouton WhatsApp à côté de chaque inscrit : les horaires, les dates et le lieu du groupe sont remplis automatiquement.",
+    variables: ["prenom", "signature", "organisme", "groupe", "horaires", "date_debut", "date_fin", "lieu", "vacances"],
+    text: `Bonjour {prenom},
+
+Voici votre planning de cours de français ({groupe}) avec {organisme} :
+
+📅 {horaires}
+Du {date_debut} au {date_fin}.
+📍 {lieu}
+{vacances}
+
+Merci d'arriver 10 minutes avant. Si vous ne pouvez pas venir un jour, prévenez-nous par ce message.
+
+À bientôt,
+{signature}`,
+  },
+  {
     code: "porte_ouverte",
     label: "Porte ouverte (sans suite)",
     when: "Statut « Sans suite » : la personne n'a pas donné suite, on laisse la porte ouverte.",
@@ -202,7 +221,7 @@ export function resolveTemplates(settings: unknown): Templates {
 }
 
 export type TemplateVars = Partial<Record<
-  "prenom" | "expediteur" | "signature" | "organisme" | "lien" | "date" | "lieu" | "groupe" | "date_debut" | "niveau",
+  "prenom" | "expediteur" | "signature" | "organisme" | "lien" | "date" | "lieu" | "groupe" | "date_debut" | "date_fin" | "horaires" | "vacances" | "niveau",
   string | null | undefined
 >>;
 
