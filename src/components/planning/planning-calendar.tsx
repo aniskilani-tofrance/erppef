@@ -250,7 +250,9 @@ export function PlanningCalendar({
               : "timeGridWeek,dayGridMonth,multiMonthYear",
           }}
           locale={frLocale}
-          timeZone="Europe/Paris"
+          // Fuseau du navigateur (Paris pour l'équipe). Un fuseau NOMMÉ sans plugin de fuseau fait
+          // retomber FullCalendar en « UTC-coercion » : toutes les heures s'affichaient décalées de 1 à 2 h.
+          timeZone="local"
           slotMinTime="08:00:00"
           slotMaxTime="21:30:00"
           scrollTime="08:30:00"

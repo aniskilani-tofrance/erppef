@@ -49,6 +49,7 @@ export const APP_UPDATES: AppUpdate[] = [
       { text: "À côté de chaque inscrit, « Planning WhatsApp » envoie les horaires, les dates et le lieu déjà écrits ; « Email + PDF aux inscrits » envoie le tout en une fois.", roles: TEAM },
       { text: "Votre planning de groupe est disponible en PDF et en calendrier .ics depuis la fiche du groupe : ajoutez toutes vos séances à votre téléphone en un geste.", roles: ["trainer"] },
       { text: "Le planning affiche le samedi et les cours du soir jusqu'à 21h30 : le B1 de Berthoud (mardi soir, samedi matin) est visible.", roles: ALL },
+      { text: "Les heures affichées sur le planning sont désormais exactes : elles étaient décalées de deux heures (fuseau horaire). Les feuilles d'émargement, rappels et plannings PDF étaient déjà justes.", roles: ALL },
       { text: "Les couleurs du planning sont celles des formatrices (légende en haut) : on voit d'un coup d'œil qui est où. Un sélecteur permet de repasser aux couleurs par financeur ou par salle. La couleur se change sur la fiche de la formatrice.", roles: ALL },
       { text: "Prise de photo à la caméra réparée : l'image n'est plus noire, et si le navigateur refuse la caméra, un message l'explique et propose de choisir une photo.", roles: TEAM },
       { text: "Les salles ont maintenant une adresse et des consignes « Comment trouver la salle » (Salles → crayon) : métro, entrée, étage, interphone. Elles apparaissent dans les plannings, le calendrier et les messages aux apprenants (convocation, rappel, inscription, planning).", roles: TEAM },
