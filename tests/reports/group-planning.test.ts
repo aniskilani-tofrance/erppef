@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildPlanningCsv, buildPlanningIcs, describePattern, planningFileName, type GroupPlanning } from "@/lib/reports/group-planning";
+import { buildPlanningCsv, buildPlanningIcs, describeHolidays, describePattern, planningFileName, type GroupPlanning } from "@/lib/reports/group-planning";
 
 const planning: GroupPlanning = {
   groupId: "g1", groupNo: 4, name: "PEF A1 — 2026-27", programName: "PEF A1", funderName: "ParlerEmploi Formation",
@@ -38,6 +38,19 @@ describe("planning de groupe à diffuser", () => {
     expect(ics).toContain("DTSTART:20261005T070000Z");
     expect(ics).toContain("LOCATION:Salle 12\\, 1 place Martin Levasseur\\, Saint-Ouen");
     expect(ics).not.toContain("s2@pef-erp");
+  });
+
+  it("décrit les vacances d'après les séances réelles : travaillées, sans cours, ou mixte", () => {
+    const holidays = [
+      { label: "Toussaint 2026", startsOn: "2026-10-17", endsOn: "2026-11-01" },
+      { label: "Noël 2026", startsOn: "2026-12-19", endsOn: "2027-01-03" },
+    ];
+    const base = { ...planning, holidays, sessions: [] as GroupPlanning["sessions"] };
+    expect(describeHolidays(base)).toBe("Pas de cours pendant les vacances scolaires : Toussaint 2026 (du 17 oct. au 1 nov.), Noël 2026 (du 19 déc. au 3 janv.).");
+    const toussaint = { id: "t", startsAt: "2026-10-20T07:00:00Z", endsAt: "2026-10-20T10:00:00Z", status: "planifiee" as const, roomName: null, trainerName: null };
+    expect(describeHolidays({ ...base, sessions: [toussaint] })).toBe("Pas de cours pendant Noël 2026 (du 19 déc. au 3 janv.). Les cours continuent pendant les autres vacances (Toussaint 2026).");
+    const noel = { ...toussaint, id: "n", startsAt: "2026-12-22T07:00:00Z", endsAt: "2026-12-22T10:00:00Z" };
+    expect(describeHolidays({ ...base, sessions: [toussaint, noel] })).toBe("Les cours ont lieu aussi pendant les vacances scolaires (Toussaint 2026, Noël 2026).");
   });
 
   it("nom de fichier lisible, sans accents", () => {

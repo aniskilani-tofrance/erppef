@@ -137,6 +137,29 @@ export async function loadGroupPlanning(supabase: SupabaseClient, groupId: strin
   };
 }
 
+// Vacances scolaires de la période, classées d'après les séances réelles : travaillées ou sans cours.
+export function holidaySplit(p: GroupPlanning): { worked: GroupPlanning["holidays"]; off: GroupPlanning["holidays"] } {
+  const days = new Set(p.sessions.filter((s) => s.status !== "annulee").map((s) => localDate(s.startsAt)));
+  const worked: GroupPlanning["holidays"] = [];
+  const off: GroupPlanning["holidays"] = [];
+  for (const h of p.holidays) {
+    let hit = false;
+    for (const d of days) if (d >= h.startsOn && d <= h.endsOn) { hit = true; break; }
+    (hit ? worked : off).push(h);
+  }
+  return { worked, off };
+}
+
+// Phrase prête pour les plannings et les messages : « Pas de cours pendant les vacances de Noël … »
+export function describeHolidays(p: GroupPlanning): string {
+  const { worked, off } = holidaySplit(p);
+  const span = (h: GroupPlanning["holidays"][number]) => `${h.label} (du ${fmtDay(h.startsOn, { day: "numeric", month: "short" })} au ${fmtDay(h.endsOn, { day: "numeric", month: "short" })})`;
+  if (!p.holidays.length) return p.skipSchoolHolidays ? "Pas de cours pendant les vacances scolaires." : "Les cours ont lieu aussi pendant les vacances scolaires.";
+  if (!worked.length) return `Pas de cours pendant les vacances scolaires : ${off.map(span).join(", ")}.`;
+  if (!off.length) return `Les cours ont lieu aussi pendant les vacances scolaires (${worked.map((h) => h.label).join(", ")}).`;
+  return `Pas de cours pendant ${off.map(span).join(" ni ")}. Les cours continuent pendant les autres vacances (${worked.map((h) => h.label).join(", ")}).`;
+}
+
 export function planningFileName(p: GroupPlanning, audience: PlanningAudience, ext: "pdf" | "csv" | "ics"): string {
   return `planning_${slug(p.name)}_${audience === "financeur" ? "financeur" : "apprenants"}.${ext}`;
 }
@@ -267,11 +290,18 @@ export async function buildPlanningPdf(p: GroupPlanning, audience: PlanningAudie
   field("Formatrice", p.trainerName ?? "—");
   if (!learners) field("Financeur", p.funderName ?? "—");
   field("Volume", `${plannedHours} h planifiées sur ${p.totalHours} h · ${active.length} séances`);
-  field("Vacances scolaires", p.skipSchoolHolidays ? "pas de cours pendant les vacances scolaires" : "cours maintenus pendant les vacances scolaires");
-  if (p.skipSchoolHolidays && p.holidays.length) {
-    const list = p.holidays.map((h) => `${h.label} (du ${fmtDay(h.startsOn, { day: "numeric", month: "short" })} au ${fmtDay(h.endsOn, { day: "numeric", month: "short" })})`).join(", ");
-    text(`Pas de cours : ${list}`, MARGIN, base - 1.5, font, GRAY);
-    y -= base + 6;
+  {
+    const { worked, off } = holidaySplit(p);
+    field("Vacances scolaires", !p.holidays.length ? (p.skipSchoolHolidays ? "pas de cours pendant les vacances scolaires" : "cours maintenus pendant les vacances scolaires") : !worked.length ? "pas de cours pendant les vacances scolaires" : !off.length ? "cours maintenus pendant les vacances scolaires" : "pause à " + off.map((h) => h.label).join(" et ") + ", cours maintenus pendant les autres vacances");
+    const span = (h: GroupPlanning["holidays"][number]) => `${h.label} (du ${fmtDay(h.startsOn, { day: "numeric", month: "short" })} au ${fmtDay(h.endsOn, { day: "numeric", month: "short" })})`;
+    if (off.length) {
+      text(`Pas de cours : ${off.map(span).join(", ")}`, MARGIN, base - 1.5, font, GRAY);
+      y -= base + 6;
+    }
+    if (worked.length && off.length) {
+      text(`Cours maintenus : ${worked.map(span).join(", ")}`, MARGIN, base - 1.5, font, GRAY);
+      y -= base + 6;
+    }
   }
   y -= 8;
 

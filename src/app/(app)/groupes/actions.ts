@@ -14,7 +14,7 @@ import { mailerConfigured, sendMail } from "@/lib/mailer";
 import { loadTemplates } from "@/lib/admission/load-templates";
 import { baseVars, buildStageMessage } from "@/lib/admission/templates";
 import { textToHtml } from "@/lib/admission/messages";
-import { buildPlanningPdf, describePattern, fmtDay, loadGroupPlanning, planningFileName } from "@/lib/reports/group-planning";
+import { buildPlanningPdf, describeHolidays, describePattern, fmtDay, loadGroupPlanning, planningFileName } from "@/lib/reports/group-planning";
 
 // Envoie le planning (message + PDF apprenants en pièce jointe) à chaque inscrit qui a un email.
 export async function emailGroupPlanning(groupId: string): Promise<{ ok: true; message: string } | { ok: false; error: string }> {
@@ -38,7 +38,7 @@ export async function emailGroupPlanning(groupId: string): Promise<{ ok: true; m
     date_debut: fmtDay(planning.startsOn),
     date_fin: planning.endsOn ? fmtDay(planning.endsOn) : null,
     lieu: [planning.roomName, planning.roomAddress].filter(Boolean).join(" — ") || null,
-    vacances: planning.skipSchoolHolidays ? "Pas de cours pendant les vacances scolaires." : "Les cours ont lieu aussi pendant les vacances scolaires.",
+    vacances: describeHolidays(planning),
   };
 
   let sent = 0;

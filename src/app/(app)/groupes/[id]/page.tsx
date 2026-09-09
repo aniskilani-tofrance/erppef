@@ -20,7 +20,7 @@ import { SurveyManager } from "@/components/groupes/survey-manager";
 import { PlanningShare, type PlanningRecipient } from "@/components/groupes/planning-share";
 import { loadTemplates } from "@/lib/admission/load-templates";
 import { baseVars, buildStageMessage } from "@/lib/admission/templates";
-import { describePattern, fmtDay as fmtPlanningDay } from "@/lib/reports/group-planning";
+import { describeHolidays, describePattern, fmtDay as fmtPlanningDay, loadGroupPlanning } from "@/lib/reports/group-planning";
 import {
   ABSENCE_ALERT_THRESHOLD,
   computeLearnerStats,
@@ -67,6 +67,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
     ]);
 
   if (!group) notFound();
+  const planningData = await loadGroupPlanning(supabase, id);
 
   // Planning à diffuser : message WhatsApp par inscrit (horaires, dates, lieu du groupe)
   const senderFirstName = profile?.full_name?.trim().split(/\s+/)[0] ?? null;
@@ -77,7 +78,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
     date_debut: fmtPlanningDay(group.starts_on),
     date_fin: group.ends_on ? fmtPlanningDay(group.ends_on) : null,
     lieu: roomInfo ? [roomInfo.name, roomInfo.address].filter(Boolean).join(" — ") : null,
-    vacances: group.skip_school_holidays === false ? "Les cours ont lieu aussi pendant les vacances scolaires." : "Pas de cours pendant les vacances scolaires.",
+    vacances: planningData ? describeHolidays(planningData) : (group.skip_school_holidays === false ? "Les cours ont lieu aussi pendant les vacances scolaires." : "Pas de cours pendant les vacances scolaires."),
   };
   const planningRecipients: PlanningRecipient[] = (enrollments ?? [])
     .filter((e) => e.status === "inscrit")

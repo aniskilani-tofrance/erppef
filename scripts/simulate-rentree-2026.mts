@@ -171,6 +171,18 @@ SCENARIOS.cm240 = { caps: {}, groups: [
 SCENARIOS.bachelet = { caps: {}, groups: [
   { label: "PEF A2", code: "PEF_A2", pattern: [P(1, "14:00", "17:00"), P(2, "14:00", "17:00"), P(3, "09:00", "12:00")], trainer: "Marie Joelle", room: "Bachelet", startsOn: START, skipHolidays: false },
 ] };
+// 09/09 soir : finir les cours municipaux avant le 15 juillet 2027
+const CM_BASE = (skip: boolean, b1Pattern: SlotPattern[]): G[] => [
+  { label: "Cours municipaux A1", code: "CMSTOA1", pattern: [P(1, "09:00", "13:00"), P(2, "09:00", "13:00")], trainer: "Marie Joelle", room: "Cordon", startsOn: START, skipHolidays: skip },
+  { label: "Cours municipaux A2", code: "CMSTOA2", pattern: [P(2, "13:00", "17:00"), P(4, "13:00", "17:00")], trainer: "Sabrina", room: "Landy", startsOn: START, skipHolidays: skip },
+  { label: "Cours municipaux B1", code: "CMSTOB1", pattern: b1Pattern, trainer: "Sabrina", room: "Berthoud", startsOn: START, skipHolidays: skip },
+];
+const B1 = [P(2, "18:30", "21:00"), P(6, "09:00", "13:30")];
+const B1_JEUDI = [P(2, "18:30", "21:00"), P(4, "18:30", "21:00"), P(6, "09:00", "13:30")];
+SCENARIOS.juilletVacances = { caps: {}, groups: CM_BASE(false, B1) };          // cours pendant toutes les vacances
+SCENARIOS.juilletSaufNoel = { caps: {}, groups: CM_BASE(true, B1) };            // vacances sautées SAUF… (voir override : on ne garde que Noël + été)
+SCENARIOS.juilletJeudi = { caps: {}, groups: CM_BASE(true, B1_JEUDI) };         // vacances sautées, B1 + jeudi soir
+SCENARIOS.juilletJeudiSaufNoel = { caps: {}, groups: CM_BASE(true, B1_JEUDI) }; // B1 + jeudi soir ET cours pendant les petites vacances
 // Variante : cours municipaux AUSSI pendant les vacances scolaires (fin plus tôt)
 SCENARIOS.cmVacances = { caps: { Sabrina: 21 }, groups: SCENARIOS.base.groups.map((g) => ({ ...g, skipHolidays: false })) };
 
@@ -247,6 +259,20 @@ if (scenario === "bachelet") {
   const mj = data.trainers.find((t) => t.firstName.trim() === "Marie Joelle")!;
   mj.availabilities = mj.availabilities.map((a) => (a.weekday === 2 && a.start === "13:00" ? { ...a, end: "17:00" } : a));
   mj.availabilities.push({ weekday: 3, start: "09:00", end: "12:00" });
+}
+if (scenario.startsWith("juillet")) {
+  const room = (n: string) => data.rooms.find((r) => r.name === n)!;
+  room("Cordon").availabilities = [1, 2, 4].map((d) => ({ weekday: d, start: "09:00", end: "13:00" }));
+  room("Landy").availabilities = [1, 2, 4].map((d) => ({ weekday: d, start: "13:00", end: "17:00" }));
+  room("Berthoud").availabilities = [...[1, 2, 3, 4, 5].map((d) => ({ weekday: d, start: "18:30", end: "21:00" })), { weekday: 6, start: "09:00", end: "13:30" }];
+  const sab = data.trainers.find((t) => t.firstName.trim() === "Sabrina")!;
+  sab.availabilities = [1, 2, 3, 4, 5, 6].map((d) => ({ weekday: d, start: "09:00", end: d === 2 || d === 4 ? "21:00" : "18:00" }));
+  const mj = data.trainers.find((t) => t.firstName.trim() === "Marie Joelle")!;
+  mj.availabilities = mj.availabilities.map((a) => (a.start === "09:00" && a.end === "12:00" ? { ...a, end: "13:00" } : a));
+  if (scenario.endsWith("SaufNoel")) {
+    // petites vacances travaillées (Toussaint, hiver, printemps) ; Noël et été restent fermés
+    data.closures = data.closures.filter((c) => c.kind !== "vacances_scolaires" || /Noël|Été/.test(c.label));
+  }
 }
 if (scenario === "mercredi") {
   const cordon = data.rooms.find((r) => r.name === "Cordon")!;
