@@ -207,7 +207,7 @@ export function PlanningCalendar({
           locale={frLocale}
           timeZone="Europe/Paris"
           slotMinTime="08:00:00"
-          slotMaxTime="20:00:00"
+          slotMaxTime="21:30:00"
           scrollTime="08:30:00"
           slotDuration="00:30:00"
           slotLabelInterval="01:00"
@@ -218,7 +218,8 @@ export function PlanningCalendar({
           dayMaxEventRows={3}
           stickyHeaderDates
           eventTimeFormat={{ hour: "2-digit", minute: "2-digit", hour12: false }}
-          weekends={false}
+          weekends
+          hiddenDays={[0]}
           height="auto"
           nowIndicator
           events={events}
