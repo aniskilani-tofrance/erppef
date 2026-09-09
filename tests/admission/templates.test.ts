@@ -14,7 +14,7 @@ describe("modèles de messages par étape", () => {
   it("chaque étape a un texte différent, sans virgule parasite ni variable inconnue", () => {
     const texts = MESSAGE_STAGES.map((s) => s.text);
     expect(new Set(texts).size).toBe(texts.length);
-    const known = new Set(["prenom", "expediteur", "signature", "organisme", "lien", "date", "lieu", "groupe", "date_debut", "date_fin", "horaires", "vacances", "niveau"]);
+    const known = new Set(["prenom", "expediteur", "signature", "organisme", "lien", "date", "lieu", "acces", "groupe", "date_debut", "date_fin", "horaires", "vacances", "niveau"]);
     for (const s of MESSAGE_STAGES) {
       for (const m of s.text.matchAll(/\{([a-z_]+)\}/g)) expect(known.has(m[1]), `${s.code} : {${m[1]}}`).toBe(true);
       for (const v of s.variables) expect(s.text, `${s.code} annonce {${v}}`).toContain(`{${v}}`);

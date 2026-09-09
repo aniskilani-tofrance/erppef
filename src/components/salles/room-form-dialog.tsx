@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Plus, Pencil } from "lucide-react";
 
 type RoomFormValues = {
@@ -18,10 +19,11 @@ type RoomFormValues = {
   capacity: string;
   equipment: string;
   address: string;
+  accessNotes: string;
   isActive: boolean;
 };
 
-const EMPTY: RoomFormValues = { name: "", capacity: "12", equipment: "", address: "", isActive: true };
+const EMPTY: RoomFormValues = { name: "", capacity: "12", equipment: "", address: "", accessNotes: "", isActive: true };
 
 export function RoomFormDialog({ initial }: { initial?: RoomFormValues }) {
   const [open, setOpen] = useState(false);
@@ -37,6 +39,7 @@ export function RoomFormDialog({ initial }: { initial?: RoomFormValues }) {
         capacity: Number(values.capacity),
         equipment: values.equipment.split(",").map((s) => s.trim()).filter(Boolean),
         address: values.address.trim() || null,
+        accessNotes: values.accessNotes.trim() || null,
         isActive: values.isActive,
       });
       if (!result.ok) {
@@ -83,6 +86,16 @@ export function RoomFormDialog({ initial }: { initial?: RoomFormValues }) {
           <div className="space-y-2">
             <Label>Adresse (reprise dans les plannings et les messages aux apprenants)</Label>
             <Input value={values.address} onChange={(e) => setValues((v) => ({ ...v, address: e.target.value }))} placeholder="1 place Martin Levasseur, 93400 Saint-Ouen" />
+          </div>
+          <div className="space-y-2">
+            <Label>Comment trouver la salle (accès, étage, transports)</Label>
+            <Textarea
+              value={values.accessNotes}
+              onChange={(e) => setValues((v) => ({ ...v, accessNotes: e.target.value }))}
+              rows={3}
+              placeholder={"Métro 13 Mairie de Saint-Ouen, sortie 2. Entrer par la cour, sonner « ParlerEmploi », 2e étage. En cas de problème : 06 52 67 53 93."}
+            />
+            <p className="text-xs text-muted-foreground">Repris dans les plannings PDF, le calendrier et les messages aux apprenants. Phrases courtes, un repère par phrase.</p>
           </div>
           <label className="flex items-center gap-2 text-sm">
             <Checkbox checked={values.isActive} onCheckedChange={(c) => setValues((v) => ({ ...v, isActive: c === true }))} />

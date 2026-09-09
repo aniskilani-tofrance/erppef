@@ -43,6 +43,7 @@ export type GroupPlanning = {
   trainerName: string | null;
   roomName: string | null;
   roomAddress: string | null;
+  roomAccess: string | null; // consignes pour trouver la salle
   startsOn: string;
   endsOn: string | null;
   totalHours: number;
@@ -83,7 +84,7 @@ function slug(s: string): string {
 export async function loadGroupPlanning(supabase: SupabaseClient, groupId: string): Promise<GroupPlanning | null> {
   const { data: g } = await supabase
     .from("groups")
-    .select("id, group_no, name, starts_on, ends_on, total_hours, weekly_pattern, skip_school_holidays, notes, org_id, programs(name), funders(name), trainers:trainer_id(first_name, last_name), rooms:room_id(name, address)")
+    .select("id, group_no, name, starts_on, ends_on, total_hours, weekly_pattern, skip_school_holidays, notes, org_id, programs(name), funders(name), trainers:trainer_id(first_name, last_name), rooms:room_id(name, address, access_notes)")
     .eq("id", groupId)
     .single();
   if (!g) return null;
@@ -104,7 +105,7 @@ export async function loadGroupPlanning(supabase: SupabaseClient, groupId: strin
     .lte("starts_on", endsOn ?? g.starts_on)
     .order("starts_on");
   const t = g.trainers as unknown as { first_name: string; last_name: string } | null;
-  const r = g.rooms as unknown as { name: string; address: string | null } | null;
+  const r = g.rooms as unknown as { name: string; address: string | null; access_notes: string | null } | null;
   return {
     groupId: g.id,
     groupNo: g.group_no,
@@ -114,6 +115,7 @@ export async function loadGroupPlanning(supabase: SupabaseClient, groupId: strin
     trainerName: t ? `${t.first_name} ${t.last_name}`.trim() : null,
     roomName: r?.name ?? null,
     roomAddress: r?.address ?? null,
+    roomAccess: r?.access_notes ?? null,
     startsOn: g.starts_on,
     endsOn,
     totalHours: Number(g.total_hours),
@@ -198,7 +200,7 @@ export function buildPlanningIcs(p: GroupPlanning): string {
       `DTEND:${stamp(s.endsAt)}`,
       `SUMMARY:${esc(`Cours de français — ${p.name}`)}`,
       ...(location ? [`LOCATION:${esc(location)}`] : []),
-      `DESCRIPTION:${esc(`${ORG_LEGAL.name}${s.trainerName ?? p.trainerName ? ` · ${s.trainerName ?? p.trainerName}` : ""}`)}`,
+      `DESCRIPTION:${esc(`${ORG_LEGAL.name}${s.trainerName ?? p.trainerName ? ` · ${s.trainerName ?? p.trainerName}` : ""}${p.roomAccess ? `\n${p.roomAccess}` : ""}`)}`,
       "END:VEVENT",
     ].join("\r\n"));
   return [
@@ -287,6 +289,29 @@ export async function buildPlanningPdf(p: GroupPlanning, audience: PlanningAudie
   field("Période", `du ${fmtDay(p.startsOn)} au ${p.endsOn ? fmtDay(p.endsOn) : "—"}`);
   field("Rythme", describePattern(p.weeklyPattern) || "—");
   field(learners ? "Lieu" : "Salle", [p.roomName, p.roomAddress].filter(Boolean).join(" — ") || "—");
+  if (p.roomAccess) {
+    text("Pour trouver la salle", MARGIN, base);
+    const maxW = A4.width - 2 * MARGIN - 140;
+    let first = true;
+    for (const para of p.roomAccess.split(/\r?\n/)) {
+      let line = "";
+      for (const word of para.split(/\s+/).filter(Boolean)) {
+        const cand = line ? `${line} ${word}` : word;
+        if (font.widthOfTextAtSize(cand, base) > maxW && line) {
+          if (!first) y -= base + 3;
+          text(line, MARGIN + 140, base, font, rgb(0.15, 0.15, 0.15));
+          first = false;
+          line = word;
+        } else line = cand;
+      }
+      if (line) {
+        if (!first) y -= base + 3;
+        text(line, MARGIN + 140, base, font, rgb(0.15, 0.15, 0.15));
+        first = false;
+      }
+    }
+    y -= base + 5;
+  }
   field("Formatrice", p.trainerName ?? "—");
   if (!learners) field("Financeur", p.funderName ?? "—");
   field("Volume", `${plannedHours} h planifiées sur ${p.totalHours} h · ${active.length} séances`);

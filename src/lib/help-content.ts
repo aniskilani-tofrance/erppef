@@ -212,7 +212,7 @@ export const HELP_SECTIONS: HelpSection[] = [
           "Aux apprenants sur WhatsApp : à côté de chaque inscrit, « Planning WhatsApp » ouvre WhatsApp avec les horaires, les dates de début et de fin, le lieu et la règle des vacances déjà écrits (modèle « Planning du groupe », retouchable dans Apprenants → Admission → Messages).",
           "Par email : « Email + PDF aux inscrits » envoie le même message avec le PDF apprenants en pièce jointe à tous les inscrits qui ont une adresse.",
           "Au financeur : téléchargez le PDF financeur et le CSV, joignez-les à votre email. Le planning est prévisionnel ; les heures réalisées se prouvent ensuite par les feuilles d'émargement et le bilan (Rapports).",
-          "Le lieu vient de la salle : renseignez l'adresse sur la fiche de chaque salle (Salles → crayon) pour qu'elle apparaisse dans les plannings et les messages.",
+          "Le lieu vient de la salle : renseignez l'adresse ET « Comment trouver la salle » (métro, entrée, étage, interphone) sur la fiche de chaque salle (Salles → crayon). Les deux apparaissent dans les plannings PDF, le calendrier et les messages WhatsApp ou email : convocation, rappel, inscription, planning.",
           "Le planning change (séance déplacée, rattrapage) ? Regénérez simplement les fichiers : ils reflètent toujours les séances actuelles.",
         ],
       },

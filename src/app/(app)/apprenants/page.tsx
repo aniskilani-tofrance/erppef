@@ -45,7 +45,7 @@ export default async function ApprenantsPage({
 
   const [{ data: learners }, { data: enrollments }, { data: groups }, { data: attendanceRows }, { data: placementRows }, { data: profile }, { data: contacts }, { data: upcomingMeetings }, { data: invitationRows }, templates, h] = await Promise.all([
     supabase.from("learners").select("*").order("last_name").order("first_name"),
-    supabase.from("enrollments").select("id, learner_id, group_id, status, groups(name, starts_on, rooms:room_id(name))"),
+    supabase.from("enrollments").select("id, learner_id, group_id, status, groups(name, starts_on, rooms:room_id(name, address, access_notes))"),
     supabase.from("groups").select("id, name").in("status", ["en_attente", "ouvert"]).order("starts_on", { ascending: false }),
     supabase
       .from("attendances")
@@ -73,19 +73,19 @@ export default async function ApprenantsPage({
     // Convocations à venir : le message d'un « convoqué » reprend la date et le lieu
     supabase
       .from("info_meeting_invitations")
-      .select("learner_id, status, info_meetings!inner(starts_at, ends_at, location, rooms:room_id(name))")
+      .select("learner_id, status, info_meetings!inner(starts_at, ends_at, location, rooms:room_id(name, address, access_notes))")
       .gte("info_meetings.starts_at", new Date(new Date().getTime() - 6 * 3600_000).toISOString()),
     loadTemplates(supabase),
     headers(),
   ]);
   const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host") ?? "pef-erp.vercel.app"}`;
-  type InvRow = { learner_id: string; status: string; info_meetings: { starts_at: string; ends_at: string | null; location: string | null; rooms: { name: string } | null } };
-  const upcomingByLearner = new Map<string, { date: string; place: string | null }>();
+  type InvRow = { learner_id: string; status: string; info_meetings: { starts_at: string; ends_at: string | null; location: string | null; rooms: { name: string; address: string | null; access_notes: string | null } | null } };
+  const upcomingByLearner = new Map<string, { date: string; place: string | null; access: string | null }>();
   for (const r of ((invitationRows ?? []) as unknown as InvRow[]).sort((a, b) => a.info_meetings.starts_at.localeCompare(b.info_meetings.starts_at))) {
     if (upcomingByLearner.has(r.learner_id)) continue;
     const m = r.info_meetings;
-    const place = m.rooms?.name ? `${m.rooms.name}${m.location ? ` — ${m.location}` : ""}` : m.location;
-    upcomingByLearner.set(r.learner_id, { date: formatMeetingWhen({ startsAt: m.starts_at, endsAt: m.ends_at }), place });
+    const place = m.rooms?.name ? `${m.rooms.name}${m.location ? ` — ${m.location}` : m.rooms.address ? ` — ${m.rooms.address}` : ""}` : m.location;
+    upcomingByLearner.set(r.learner_id, { date: formatMeetingWhen({ startsAt: m.starts_at, endsAt: m.ends_at }), place, access: m.rooms?.access_notes ?? null });
   }
   const fmtDay = (day: string | null) =>
     day ? new Date(`${day}T12:00:00Z`).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Paris" }) : null;
@@ -233,14 +233,14 @@ export default async function ApprenantsPage({
                         // convocation (date + lieu), place proposée, inscription (groupe + 1er cours)…
                         const test = testByLearner.get(l.id);
                         const first = mine[0];
-                        const g = first ? (first.groups as unknown as { name: string; starts_on: string | null; rooms: { name: string } | null } | null) : null;
+                        const g = first ? (first.groups as unknown as { name: string; starts_on: string | null; rooms: { name: string; address: string | null; access_notes: string | null } | null } | null) : null;
                         const { stage, message } = messageForSituation(
                           {
                             admissionStatus: l.admission_status,
                             pendingTestUrl: test?.status === "en_attente" ? `${origin}/test/${test.token}` : null,
                             levelAssessed: l.level_assessed,
                             upcomingMeeting: upcomingByLearner.get(l.id) ?? null,
-                            enrollment: g ? { group: g.name, startsOn: fmtDay(g.starts_on), place: g.rooms?.name ?? null } : null,
+                            enrollment: g ? { group: g.name, startsOn: fmtDay(g.starts_on), place: g.rooms ? [g.rooms.name, g.rooms.address].filter(Boolean).join(" — ") : null, access: g.rooms?.access_notes ?? null } : null,
                           },
                           { learnerFirstName: l.first_name, senderFirstName },
                           templates,

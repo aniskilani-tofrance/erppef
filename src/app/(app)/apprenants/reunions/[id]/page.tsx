@@ -59,7 +59,7 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
   const supabase = await createClient();
 
   const [{ data: meeting }, { data: invitationRows }, { data: learners }, { data: rooms }, { data: profile }, templates] = await Promise.all([
-    supabase.from("info_meetings").select("*, rooms:room_id(name)").eq("id", id).single(),
+    supabase.from("info_meetings").select("*, rooms:room_id(name, address, access_notes)").eq("id", id).single(),
     supabase
       .from("info_meeting_invitations")
       .select("id, status, channel, sent_at, learners(id, first_name, last_name, learner_no, phone, email, admission_status, level_assessed, oral_test_on, oral_test_level, oral_test_evaluator, oral_test_comment)")
@@ -76,9 +76,10 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
   if (!meeting) notFound();
 
   const senderFirstName = profile?.full_name?.trim().split(/\s+/)[0] ?? null;
-  const roomName = (meeting.rooms as unknown as { name: string } | null)?.name ?? null;
-  const place = roomName ? `${roomName}${meeting.location ? ` — ${meeting.location}` : ""}` : meeting.location;
-  const when = { startsAt: meeting.starts_at as string, endsAt: meeting.ends_at as string | null, place };
+  const meetingRoom = meeting.rooms as unknown as { name: string; address: string | null; access_notes: string | null } | null;
+  const roomName = meetingRoom?.name ?? null;
+  const place = roomName ? `${roomName}${meeting.location ? ` — ${meeting.location}` : meetingRoom?.address ? ` — ${meetingRoom.address}` : ""}` : meeting.location;
+  const when = { startsAt: meeting.starts_at as string, endsAt: meeting.ends_at as string | null, place, access: meetingRoom?.access_notes ?? null };
   const upcoming = new Date(meeting.starts_at).getTime() >= new Date().getTime() - 6 * 3600_000;
   const meetingDay = utcToLocalDate(meeting.starts_at);
 

@@ -55,6 +55,7 @@ export default async function SallesPage() {
                           capacity: String(r.capacity),
                           equipment: (r.equipment ?? []).join(", "),
                           address: r.address ?? "",
+                          accessNotes: r.access_notes ?? "",
                           isActive: r.is_active,
                         }}
                       />

@@ -208,7 +208,7 @@ type InvitationRow = {
   learner_id: string;
   status: string;
   learners: { first_name: string; last_name: string; email: string | null } | null;
-  info_meetings: { starts_at: string; ends_at: string | null; location: string | null; rooms: { name: string } | null } | null;
+  info_meetings: { starts_at: string; ends_at: string | null; location: string | null; rooms: { name: string; address: string | null; access_notes: string | null } | null } | null;
 };
 
 async function loadInvitation(
@@ -218,7 +218,7 @@ async function loadInvitation(
 ): Promise<InvitationRow | null> {
   const { data } = await supabase
     .from("info_meeting_invitations")
-    .select("id, meeting_id, learner_id, status, learners(first_name, last_name, email), info_meetings(starts_at, ends_at, location, rooms:room_id(name))")
+    .select("id, meeting_id, learner_id, status, learners(first_name, last_name, email), info_meetings(starts_at, ends_at, location, rooms:room_id(name, address, access_notes))")
     .eq("id", invitationId)
     .eq("org_id", orgId)
     .single();
@@ -261,7 +261,7 @@ export async function markInvitationSent(raw: {
 }
 
 function meetingPlace(m: NonNullable<InvitationRow["info_meetings"]>): string | null {
-  return m.rooms?.name ? `${m.rooms.name}${m.location ? ` — ${m.location}` : ""}` : m.location;
+  return m.rooms?.name ? `${m.rooms.name}${m.location ? ` — ${m.location}` : m.rooms.address ? ` — ${m.rooms.address}` : ""}` : m.location;
 }
 
 async function sendOneInvitationEmail(
@@ -276,7 +276,7 @@ async function sendOneInvitationEmail(
   const text = buildMeetingInvitationMessage({
     learnerFirstName: inv.learners.first_name,
     senderFirstName,
-    meeting: { startsAt: inv.info_meetings.starts_at, endsAt: inv.info_meetings.ends_at, place: meetingPlace(inv.info_meetings) },
+    meeting: { startsAt: inv.info_meetings.starts_at, endsAt: inv.info_meetings.ends_at, place: meetingPlace(inv.info_meetings), access: inv.info_meetings.rooms?.access_notes ?? null },
     templates: await loadTemplates(supabase, orgId),
   });
   const sent = await sendMail({
@@ -328,7 +328,7 @@ export async function sendPendingInvitationEmails(meetingId: string): Promise<Bu
 
   const { data } = await supabase
     .from("info_meeting_invitations")
-    .select("id, meeting_id, learner_id, status, learners(first_name, last_name, email), info_meetings(starts_at, ends_at, location, rooms:room_id(name))")
+    .select("id, meeting_id, learner_id, status, learners(first_name, last_name, email), info_meetings(starts_at, ends_at, location, rooms:room_id(name, address, access_notes))")
     .eq("meeting_id", meetingId)
     .eq("org_id", orgId)
     .eq("status", "a_envoyer");

@@ -33,7 +33,7 @@ export const APP_UPDATES: AppUpdate[] = [
       { text: "Carte « Diffuser le planning » sur la fiche du groupe : PDF lisible pour les apprenants (par mois, lieu, numéro à prévenir), PDF prévisionnel pour le financeur (durées, cumul, statut des séances), CSV et calendrier .ics.", roles: TEAM },
       { text: "À côté de chaque inscrit, « Planning WhatsApp » envoie les horaires, les dates et le lieu déjà écrits ; « Email + PDF aux inscrits » envoie le tout en une fois.", roles: TEAM },
       { text: "Votre planning de groupe est disponible en PDF et en calendrier .ics depuis la fiche du groupe : ajoutez toutes vos séances à votre téléphone en un geste.", roles: ["trainer"] },
-      { text: "Les salles ont maintenant une adresse (Salles → crayon) : elle apparaît dans les plannings et les messages aux apprenants.", roles: TEAM },
+      { text: "Les salles ont maintenant une adresse et des consignes « Comment trouver la salle » (Salles → crayon) : métro, entrée, étage, interphone. Elles apparaissent dans les plannings, le calendrier et les messages aux apprenants (convocation, rappel, inscription, planning).", roles: TEAM },
     ],
     training: [{ moduleId: "c5-vie-quotidienne", lessonId: "documents", label: "Les documents financeurs" }],
   },

@@ -3,7 +3,7 @@ import { buildPlanningCsv, buildPlanningIcs, describeHolidays, describePattern, 
 
 const planning: GroupPlanning = {
   groupId: "g1", groupNo: 4, name: "PEF A1 — 2026-27", programName: "PEF A1", funderName: "ParlerEmploi Formation",
-  trainerName: "Marie TREGARO", roomName: "Salle 12", roomAddress: "1 place Martin Levasseur, Saint-Ouen",
+  trainerName: "Marie TREGARO", roomName: "Salle 12", roomAddress: "1 place Martin Levasseur, Saint-Ouen", roomAccess: "Sonner « ParlerEmploi », 2e étage.",
   startsOn: "2026-10-05", endsOn: "2027-06-08", totalHours: 300,
   weeklyPattern: [{ weekday: 2, start: "13:00", end: "16:00" }, { weekday: 1, start: "09:00", end: "12:00" }, { weekday: 2, start: "09:00", end: "12:00" }],
   skipSchoolHolidays: false, notes: null, holidays: [],
@@ -38,6 +38,7 @@ describe("planning de groupe à diffuser", () => {
     expect(ics).toContain("DTSTART:20261005T070000Z");
     expect(ics).toContain("LOCATION:Salle 12\\, 1 place Martin Levasseur\\, Saint-Ouen");
     expect(ics).not.toContain("s2@pef-erp");
+    expect(ics).toContain("Sonner « ParlerEmploi »\\, 2e étage.");
   });
 
   it("décrit les vacances d'après les séances réelles : travaillées, sans cours, ou mixte", () => {

@@ -38,6 +38,7 @@ export async function emailGroupPlanning(groupId: string): Promise<{ ok: true; m
     date_debut: fmtDay(planning.startsOn),
     date_fin: planning.endsOn ? fmtDay(planning.endsOn) : null,
     lieu: [planning.roomName, planning.roomAddress].filter(Boolean).join(" — ") || null,
+    acces: planning.roomAccess,
     vacances: describeHolidays(planning),
   };
 

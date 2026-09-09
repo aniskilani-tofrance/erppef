@@ -27,6 +27,7 @@ const VAR_HELP: Record<string, string> = {
   lien: "lien personnel du test",
   date: "date et heure de la réunion",
   lieu: "salle ou adresse",
+  acces: "consignes pour trouver la salle (fiche de la salle)",
   groupe: "nom du groupe",
   date_debut: "date du premier cours",
   date_fin: "date du dernier cours",
@@ -37,7 +38,8 @@ const VAR_HELP: Record<string, string> = {
 
 const PREVIEW_VARS = {
   prenom: "Fatima", expediteur: "Marie", signature: "Marie", organisme: "Parler Emploi Formation",
-  lien: "https://pef-erp.vercel.app/test/exemple", date: "mardi 6 octobre 2026 à 14h00", lieu: "Salle 12 — 1 place Martin Levasseur",
+  lien: "https://pef-erp.vercel.app/test/exemple", date: "mardi 6 octobre 2026 à 14h00", lieu: "Salle 12 — 14 rue Alexandre Bachelet, Saint-Ouen",
+  acces: "Métro 13 Mairie de Saint-Ouen. Sonner « ParlerEmploi », 2e étage.",
   groupe: "PEF A1 — Groupe 1", date_debut: "jeudi 1er octobre 2026", date_fin: "mardi 8 juin 2027",
   horaires: "lundi 9h-12h · mardi 9h-12h · mardi 13h-16h", vacances: "Pas de cours pendant les vacances scolaires.", niveau: "A1",
 };

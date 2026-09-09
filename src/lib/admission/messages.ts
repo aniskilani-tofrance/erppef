@@ -8,6 +8,7 @@ export type MeetingWhen = {
   startsAt: string; // ISO UTC
   endsAt?: string | null;
   place?: string | null; // salle ou lieu en clair
+  access?: string | null; // consignes pour trouver la salle
 };
 
 // « mardi 16 septembre 2026 à 14h00 » (+ « jusqu'à 16h00 » si une fin est connue)
@@ -56,7 +57,7 @@ export function buildMeetingInvitationMessage({
     : { ...templates, convocation: templates.convocation.replace(/^Nous faisons aussi un petit entretien oral.*\n?/m, "") };
   return buildStageMessage(
     "convocation",
-    { ...baseVars(learnerFirstName, senderFirstName), date: formatMeetingWhen(meeting), lieu: meeting.place ?? null },
+    { ...baseVars(learnerFirstName, senderFirstName), date: formatMeetingWhen(meeting), lieu: meeting.place ?? null, acces: meeting.access ?? null },
     tpl,
   );
 }
@@ -75,7 +76,7 @@ export function buildMeetingReminderMessage({
 }): string {
   return buildStageMessage(
     "rappel_reunion",
-    { ...baseVars(learnerFirstName, senderFirstName), date: formatMeetingWhen(meeting), lieu: meeting.place ?? null },
+    { ...baseVars(learnerFirstName, senderFirstName), date: formatMeetingWhen(meeting), lieu: meeting.place ?? null, acces: meeting.access ?? null },
     templates,
   );
 }

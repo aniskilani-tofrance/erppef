@@ -37,7 +37,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
     await Promise.all([
       supabase
         .from("groups")
-        .select("*, programs(name, level, entry_level), funders(name, color), trainers:trainer_id(first_name, last_name), rooms:room_id(name, address)")
+        .select("*, programs(name, level, entry_level), funders(name, color), trainers:trainer_id(first_name, last_name), rooms:room_id(name, address, access_notes)")
         .eq("id", id)
         .single(),
       supabase
@@ -71,13 +71,14 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
 
   // Planning à diffuser : message WhatsApp par inscrit (horaires, dates, lieu du groupe)
   const senderFirstName = profile?.full_name?.trim().split(/\s+/)[0] ?? null;
-  const roomInfo = group.rooms as unknown as { name: string; address: string | null } | null;
+  const roomInfo = group.rooms as unknown as { name: string; address: string | null; access_notes: string | null } | null;
   const planningVars = {
     groupe: group.name,
     horaires: describePattern(((group.weekly_pattern as { weekday: number; start: string; end: string }[] | null) ?? []), ", "),
     date_debut: fmtPlanningDay(group.starts_on),
     date_fin: group.ends_on ? fmtPlanningDay(group.ends_on) : null,
     lieu: roomInfo ? [roomInfo.name, roomInfo.address].filter(Boolean).join(" — ") : null,
+    acces: roomInfo?.access_notes ?? null,
     vacances: planningData ? describeHolidays(planningData) : (group.skip_school_holidays === false ? "Les cours ont lieu aussi pendant les vacances scolaires." : "Pas de cours pendant les vacances scolaires."),
   };
   const planningRecipients: PlanningRecipient[] = (enrollments ?? [])

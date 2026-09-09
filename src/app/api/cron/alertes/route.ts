@@ -249,7 +249,7 @@ async function sendMeetingReminders(
   const dayAfter = nextDay(tomorrow);
   const { data: meetings } = await supabase
     .from("info_meetings")
-    .select("id, org_id, starts_at, ends_at, location, rooms:room_id(name), info_meeting_invitations(status, learners(first_name, email))")
+    .select("id, org_id, starts_at, ends_at, location, rooms:room_id(name, address, access_notes), info_meeting_invitations(status, learners(first_name, email))")
     .gte("starts_at", localToUtc(tomorrow, "00:00"))
     .lt("starts_at", localToUtc(dayAfter, "00:00"));
 
@@ -257,8 +257,9 @@ async function sendMeetingReminders(
   let skippedNoEmail = 0;
   for (const m of meetings ?? []) {
     const templates = await loadTemplates(supabase, m.org_id);
-    const room = (m.rooms as unknown as { name: string } | null)?.name;
-    const place = room ? `${room}${m.location ? ` — ${m.location}` : ""}` : m.location;
+    const roomRow = m.rooms as unknown as { name: string; address: string | null; access_notes: string | null } | null;
+    const room = roomRow?.name;
+    const place = room ? `${room}${m.location ? ` — ${m.location}` : roomRow?.address ? ` — ${roomRow.address}` : ""}` : m.location;
     const invitations = (m.info_meeting_invitations as unknown as { status: string; learners: { first_name: string; email: string | null } | null }[] | null) ?? [];
     for (const inv of invitations) {
       if (!["envoyee", "confirmee"].includes(inv.status) || !inv.learners) continue;
@@ -269,7 +270,7 @@ async function sendMeetingReminders(
       const text = buildMeetingReminderMessage({
         learnerFirstName: inv.learners.first_name,
         senderFirstName: null,
-        meeting: { startsAt: m.starts_at, endsAt: m.ends_at, place },
+        meeting: { startsAt: m.starts_at, endsAt: m.ends_at, place, access: roomRow?.access_notes ?? null },
         templates,
       });
       const ok = await sendMail({

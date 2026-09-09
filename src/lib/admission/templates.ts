@@ -84,7 +84,7 @@ Je vous envoie la date très bientôt. Avez-vous des jours ou des heures impossi
     code: "convocation",
     label: "Convocation à la réunion d'information",
     when: "Depuis la page de la réunion, bouton « Convoquer » : date, heure et lieu sont remplis automatiquement.",
-    variables: ["prenom", "expediteur", "signature", "organisme", "date", "lieu"],
+    variables: ["prenom", "expediteur", "signature", "organisme", "date", "lieu", "acces"],
     text: `Bonjour {prenom},
 
 Je suis {expediteur} de {organisme}.
@@ -92,6 +92,7 @@ Je suis {expediteur} de {organisme}.
 Vous êtes invité(e) à une réunion d'information sur les cours de français :
 📅 {date}
 📍 {lieu}
+🧭 {acces}
 
 Nous vous expliquons le programme, les horaires et le fonctionnement des cours.
 Nous faisons aussi un petit entretien oral en français avec vous. Ce n'est pas un examen : c'est pour vous placer dans le bon groupe.
@@ -105,11 +106,12 @@ Merci de répondre à ce message pour confirmer votre présence : OUI ou NON.
     code: "rappel_reunion",
     label: "Rappel la veille de la réunion",
     when: "Bouton « Rappel » sur la page de la réunion, et email automatique la veille pour ceux qui ont une adresse.",
-    variables: ["prenom", "signature", "organisme", "date", "lieu"],
+    variables: ["prenom", "signature", "organisme", "date", "lieu", "acces"],
     text: `Bonjour {prenom},
 
 Petit rappel : la réunion d'information de {organisme} a lieu {date}.
 📍 {lieu}
+🧭 {acces}
 
 Nous vous attendons. Si vous ne pouvez pas venir, merci de nous prévenir en répondant à ce message.
 
@@ -150,13 +152,14 @@ Nous vous confirmons très bientôt le jour du premier cours et les horaires. R�
     code: "inscription",
     label: "Confirmation d'inscription",
     when: "Statut « Inscrit » : le groupe, le premier cours et le lieu sont remplis automatiquement.",
-    variables: ["prenom", "signature", "organisme", "groupe", "date_debut", "lieu"],
+    variables: ["prenom", "signature", "organisme", "groupe", "date_debut", "lieu", "acces"],
     text: `Bonjour {prenom},
 
 C'est confirmé : vous êtes inscrit(e) au groupe {groupe} de {organisme}.
 
 📅 Premier cours : {date_debut}
 📍 {lieu}
+🧭 {acces}
 
 Merci d'arriver 10 minutes avant. Si vous ne pouvez pas venir un jour, prévenez-nous par ce message.
 
@@ -167,7 +170,7 @@ Merci d'arriver 10 minutes avant. Si vous ne pouvez pas venir un jour, prévenez
     code: "planning_groupe",
     label: "Planning du groupe",
     when: "Fiche du groupe, bouton WhatsApp à côté de chaque inscrit : les horaires, les dates et le lieu du groupe sont remplis automatiquement.",
-    variables: ["prenom", "signature", "organisme", "groupe", "horaires", "date_debut", "date_fin", "lieu", "vacances"],
+    variables: ["prenom", "signature", "organisme", "groupe", "horaires", "date_debut", "date_fin", "lieu", "acces", "vacances"],
     text: `Bonjour {prenom},
 
 Voici votre planning de cours de français ({groupe}) avec {organisme} :
@@ -175,6 +178,7 @@ Voici votre planning de cours de français ({groupe}) avec {organisme} :
 📅 {horaires}
 Du {date_debut} au {date_fin}.
 📍 {lieu}
+🧭 {acces}
 {vacances}
 
 Merci d'arriver 10 minutes avant. Si vous ne pouvez pas venir un jour, prévenez-nous par ce message.
@@ -221,7 +225,7 @@ export function resolveTemplates(settings: unknown): Templates {
 }
 
 export type TemplateVars = Partial<Record<
-  "prenom" | "expediteur" | "signature" | "organisme" | "lien" | "date" | "lieu" | "groupe" | "date_debut" | "date_fin" | "horaires" | "vacances" | "niveau",
+  "prenom" | "expediteur" | "signature" | "organisme" | "lien" | "date" | "lieu" | "acces" | "groupe" | "date_debut" | "date_fin" | "horaires" | "vacances" | "niveau",
   string | null | undefined
 >>;
 
@@ -275,8 +279,8 @@ export type LearnerSituation = {
   admissionStatus: string | null | undefined;
   pendingTestUrl?: string | null; // lien du test en ligne encore à faire
   levelAssessed?: string | null;
-  upcomingMeeting?: { date: string; place: string | null } | null; // convocation à une réunion à venir
-  enrollment?: { group: string; startsOn: string | null; place: string | null } | null;
+  upcomingMeeting?: { date: string; place: string | null; access?: string | null } | null; // convocation à une réunion à venir
+  enrollment?: { group: string; startsOn: string | null; place: string | null; access?: string | null } | null;
 };
 
 export function pickStage(s: LearnerSituation): MessageStage {
@@ -311,6 +315,7 @@ export function messageForSituation(
     niveau: s.levelAssessed ?? null,
     date: s.upcomingMeeting?.date ?? null,
     lieu: stage === "inscription" ? (s.enrollment?.place ?? null) : (s.upcomingMeeting?.place ?? null),
+    acces: stage === "inscription" ? (s.enrollment?.access ?? null) : (s.upcomingMeeting?.access ?? null),
     groupe: s.enrollment?.group ?? null,
     date_debut: s.enrollment?.startsOn ?? null,
   };
