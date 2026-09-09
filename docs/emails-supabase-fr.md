@@ -1,5 +1,16 @@
 # Emails Supabase en français
 
+> ✅ **Appliqué en prod le 09/09/2026 via l'API Management** (`PATCH /v1/projects/<ref>/config/auth`) :
+> sujets et corps « Invite user » et « Reset password » ci-dessous, avec liens `token_hash`,
+> et durée de validité des liens portée à **24 h** (`mailer_otp_exp = 86400`). Plus rien à coller
+> à la main. Un lien reste à usage unique : un second clic donne `otp_expired` → renvoyer
+> l'invitation (fiche formateur) ou « Mot de passe oublié ».
+>
+> Dépannage sans email (compte bloqué, lien périmé) : poser un mot de passe temporaire en SQL
+> via l'API Management —
+> `update auth.users set encrypted_password = extensions.crypt('MotDePasse', extensions.gen_salt('bf', 10)), email_confirmed_at = coalesce(email_confirmed_at, now()) where email = '…'`
+> puis le transmettre par WhatsApp ; la personne le change dans « Mon compte ».
+
 Les emails d'invitation et de réinitialisation partent avec les templates anglais par
 défaut de Supabase. Pour les franciser (une seule fois) :
 
