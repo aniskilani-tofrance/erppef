@@ -140,6 +140,10 @@ const OPT2: G[] = [
   { label: "Cours municipaux B1", code: "CMSTOB1", pattern: [P(2, "18:00", "20:00"), P(6, "09:00", "12:00")], trainer: "Sabrina", room: "Berthoud", startsOn: START, skipHolidays: true },
 ];
 SCENARIOS.opt2 = { caps: {}, groups: OPT2 };
+// 09/09 soir : PEF A1 sans mercredi → lundi matin, mardi matin, mardi 13h30-16h30 (salle 12 ouverte le mardi après-midi)
+SCENARIOS.pefA1mardi = { caps: {}, groups: [
+  { label: "PEF A1", code: "PEF_A1", pattern: [P(1, "09:00", "12:00"), P(2, "09:00", "12:00"), P(2, "13:30", "16:30")], trainer: "Marie", room: "Salle 12", startsOn: START, skipHolidays: false },
+] };
 // Variante : cours municipaux AUSSI pendant les vacances scolaires (fin plus tôt)
 SCENARIOS.cmVacances = { caps: { Sabrina: 21 }, groups: SCENARIOS.base.groups.map((g) => ({ ...g, skipHolidays: false })) };
 
@@ -178,6 +182,9 @@ if (scenario === "opt2") {
   data.rooms.find((r) => r.name === "Salle 13")!.availabilities.push({ weekday: 3, start: "09:00", end: "12:00" });
   data.trainers.find((t) => t.firstName.trim() === "Sabrina")!.availabilities.push({ weekday: 2, start: "18:00", end: "20:00" });
   data.trainers.find((t) => t.firstName.trim() === "Marie Joelle")!.availabilities.push({ weekday: 3, start: "09:00", end: "12:00" });
+}
+if (scenario === "pefA1mardi") {
+  data.rooms.find((r) => r.name === "Salle 12")!.availabilities.push({ weekday: 2, start: "13:30", end: "16:30" });
 }
 if (scenario === "mercredi") {
   const cordon = data.rooms.find((r) => r.name === "Cordon")!;
