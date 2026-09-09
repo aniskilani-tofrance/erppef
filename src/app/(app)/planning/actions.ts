@@ -15,6 +15,7 @@ export type CalendarSession = {
   roomId: string | null;
   roomName: string | null;
   funderColor: string;
+  trainerColor: string | null;
   startsAt: string;
   endsAt: string;
   status: string;
@@ -28,7 +29,7 @@ export async function fetchSessions(range: { from: string; to: string }): Promis
   const { data, error } = await supabase
     .from("sessions")
     .select(
-      "id, group_id, trainer_id, room_id, starts_at, ends_at, status, groups(name, funders(color)), trainers:trainer_id(first_name, last_name), rooms:room_id(name)",
+      "id, group_id, trainer_id, room_id, starts_at, ends_at, status, groups(name, funders(color)), trainers:trainer_id(first_name, last_name, color), rooms:room_id(name)",
     )
     .gte("starts_at", range.from)
     .lt("starts_at", range.to)
@@ -49,6 +50,7 @@ export async function fetchSessions(range: { from: string; to: string }): Promis
       roomId: s.room_id,
       roomName: room?.name ?? null,
       funderColor: group?.funders?.color ?? "#64748b",
+      trainerColor: (s.trainers as unknown as { color: string | null } | null)?.color ?? null,
       startsAt: s.starts_at,
       endsAt: s.ends_at,
       status: s.status,

@@ -29,6 +29,7 @@ export type TrainerFormValues = {
   priority: string;
   skills: string;
   languages: string;
+  color: string; // couleur des séances sur le planning
   isActive: boolean;
 };
 
@@ -44,6 +45,7 @@ const EMPTY: TrainerFormValues = {
   priority: "10",
   skills: "FLE",
   languages: "fr",
+  color: "#0ea5e9",
   isActive: true,
 };
 
@@ -70,6 +72,7 @@ export function TrainerFormDialog({ initial }: { initial?: TrainerFormValues }) 
         hourlyCost: Number(values.hourlyCost),
         weeklyHoursMax: Number(values.weeklyHoursMax),
         priority: Number(values.priority),
+        color: values.color || null,
         skills: values.skills.split(",").map((s) => s.trim()).filter(Boolean),
         languages: values.languages.split(",").map((s) => s.trim()).filter(Boolean),
         isActive: values.isActive,
@@ -159,6 +162,18 @@ export function TrainerFormDialog({ initial }: { initial?: TrainerFormValues }) 
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Heures max / semaine">
               <Input type="number" step="0.5" value={values.weeklyHoursMax} onChange={(e) => set("weeklyHoursMax", e.target.value)} />
+            </Field>
+            <Field label="Couleur sur le planning">
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={values.color || "#0ea5e9"}
+                  onChange={(e) => set("color", e.target.value)}
+                  className="h-9 w-14 cursor-pointer rounded border bg-transparent p-0.5"
+                  aria-label="Couleur des séances de ce formateur"
+                />
+                <span className="text-xs text-muted-foreground">Ses séances prennent cette couleur.</span>
+              </div>
             </Field>
             <Field label="Priorité (1 = premier choix)">
               <Input type="number" min="1" value={values.priority} onChange={(e) => set("priority", e.target.value)} />

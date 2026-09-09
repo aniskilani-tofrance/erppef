@@ -21,6 +21,7 @@ const trainerSchema = z.object({
   priority: z.number().int().min(1),
   skills: z.array(z.string()),
   languages: z.array(z.string()),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),
   isActive: z.boolean(),
 });
 
@@ -48,6 +49,7 @@ export async function upsertTrainer(raw: z.infer<typeof trainerSchema>): Promise
     hourly_cost: d.hourlyCost,
     weekly_hours_max: d.weeklyHoursMax,
     priority: d.priority,
+    ...(d.color !== undefined ? { color: d.color } : {}),
     skills: d.skills,
     languages: d.languages,
     is_active: d.isActive,

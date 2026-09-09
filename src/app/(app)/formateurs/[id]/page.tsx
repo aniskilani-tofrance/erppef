@@ -62,6 +62,7 @@ export default async function FormateurPage({ params }: { params: Promise<{ id: 
               hourlyCost: String(trainer.hourly_cost),
               weeklyHoursMax: String(trainer.weekly_hours_max),
               priority: String(trainer.priority),
+              color: trainer.color ?? "#0ea5e9",
               skills: (trainer.skills ?? []).join(", "),
               languages: (trainer.languages ?? []).join(", "),
               isActive: trainer.is_active,

@@ -8,13 +8,13 @@ export default async function PlanningPage() {
 
   const trainersQuery =
     role === "admin" || role === "coordinator"
-      ? supabase.from("trainers").select("id, first_name, last_name").eq("is_active", true).order("priority")
-      : supabase.from("v_trainers_public").select("id, first_name, last_name").eq("is_active", true);
+      ? supabase.from("trainers").select("id, first_name, last_name, color").eq("is_active", true).order("priority")
+      : supabase.from("v_trainers_public").select("id, first_name, last_name, color").eq("is_active", true);
 
   const [{ data: trainers }, { data: rooms }, { data: funders }, { data: org }, { data: closures }, { data: absences }, { data: groups }] =
     await Promise.all([
       trainersQuery,
-      supabase.from("rooms").select("id, name").eq("is_active", true).order("name"),
+      supabase.from("rooms").select("id, name, color").eq("is_active", true).order("name"),
       supabase.from("funders").select("id, name, color").eq("is_active", true).order("name"),
       supabase.from("organizations").select("school_holiday_zone").eq("id", orgId).single(),
       supabase.from("calendar_closures").select("id, kind, zone, label, starts_on, ends_on"),
@@ -46,8 +46,9 @@ export default async function PlanningPage() {
         trainers={(trainers ?? []).map((t) => ({
           id: t.id,
           name: `${t.first_name} ${t.last_name ?? ""}`.trim(),
+          color: t.color ?? null,
         }))}
-        rooms={rooms ?? []}
+        rooms={(rooms ?? []).map((r) => ({ id: r.id, name: r.name, color: r.color ?? null }))}
         funders={funders ?? []}
         closures={applicableClosures.map((c) => ({
           id: c.id,

@@ -26,7 +26,17 @@ import { SessionCreateDialog, type GroupOption } from "./session-create-dialog";
 
 type Filters = { trainerId: string; roomId: string; funderId: string };
 type Option = { id: string; name: string };
+type ColoredOption = { id: string; name: string; color: string | null };
 type FunderOption = { id: string; name: string; color: string };
+type ColorBy = "formateur" | "financeur" | "salle";
+
+// Palette de secours (formateur ou salle sans couleur) : stable par position dans la liste.
+const FALLBACK_COLORS = ["#0ea5e9", "#14b8a6", "#a855f7", "#f59e0b", "#ef4444", "#22c55e", "#6366f1", "#ec4899", "#84cc16", "#f97316"];
+const COLOR_BY_OPTIONS: { value: ColorBy; label: string }[] = [
+  { value: "formateur", label: "Couleurs : formateurs" },
+  { value: "financeur", label: "Couleurs : financeurs" },
+  { value: "salle", label: "Couleurs : salles" },
+];
 type ClosureBand = { id: string; label: string; startsOn: string; endsOn: string };
 type AbsenceBand = {
   id: string;
@@ -60,8 +70,8 @@ export function PlanningCalendar({
   groups = [],
 }: {
   canEdit: boolean;
-  trainers: Option[];
-  rooms: Option[];
+  trainers: ColoredOption[];
+  rooms: ColoredOption[];
   funders: FunderOption[];
   closures?: ClosureBand[];
   absences?: AbsenceBand[];
@@ -70,6 +80,27 @@ export function PlanningCalendar({
   const queryClient = useQueryClient();
   const [range, setRange] = useState<{ from: string; to: string } | null>(null);
   const [filters, setFilters] = useState<Filters>({ trainerId: "all", roomId: "all", funderId: "all" });
+  // Une couleur par FORMATEUR par défaut : c'est ce qu'on lit d'un coup d'œil (qui est où).
+  const [colorBy, setColorBy] = useState<ColorBy>("formateur");
+  const trainerColor = useMemo(
+    () => new Map(trainers.map((t, i) => [t.id, t.color ?? FALLBACK_COLORS[i % FALLBACK_COLORS.length]])),
+    [trainers],
+  );
+  const roomColor = useMemo(
+    () => new Map(rooms.map((r, i) => [r.id, r.color ?? FALLBACK_COLORS[(i + 3) % FALLBACK_COLORS.length]])),
+    [rooms],
+  );
+  const colorOf = (s: CalendarSession): string => {
+    if (colorBy === "financeur") return s.funderColor;
+    if (colorBy === "salle") return (s.roomId && roomColor.get(s.roomId)) || "#64748b";
+    return (s.trainerId && (trainerColor.get(s.trainerId) ?? s.trainerColor)) || "#64748b";
+  };
+  const legend: { id: string; name: string; color: string }[] =
+    colorBy === "financeur"
+      ? funders.map((f) => ({ id: f.id, name: f.name, color: f.color }))
+      : colorBy === "salle"
+        ? rooms.map((r) => ({ id: r.id, name: r.name, color: roomColor.get(r.id)! }))
+        : trainers.map((t) => ({ id: t.id, name: t.name, color: trainerColor.get(t.id)! }));
   const [selected, setSelected] = useState<CalendarSession | null>(null);
   const [newSlot, setNewSlot] = useState<{ startsAt: string; endsAt: string } | null>(null);
   // Sur mobile, la grille horaire est illisible : vue agenda (liste) par défaut.
@@ -117,11 +148,11 @@ export function PlanningCalendar({
       title: s.groupName,
       start: s.startsAt,
       end: s.endsAt,
-      backgroundColor: s.funderColor,
+      backgroundColor: colorOf(s),
       borderColor: "rgba(0,0,0,.18)",
       textColor: "#ffffff",
       editable: canEdit && s.status === "planifiee",
-      extendedProps: { room: s.roomName, trainer: s.trainerName },
+      extendedProps: { room: s.roomName, trainer: s.trainerName, colorBy },
     })),
     // Vacances, fériés et fermetures en fond grisé (ends_on inclusif → end exclusif).
     ...closures.map((c) => ({
@@ -187,11 +218,21 @@ export function PlanningCalendar({
           options={funders}
           onChange={(v) => setFilters((f) => ({ ...f, funderId: v }))}
         />
-        <div className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
-          {funders.map((f) => (
-            <span key={f.id} className="inline-flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: f.color }} />
-              {f.name}
+        <Select value={colorBy} onValueChange={(v) => setColorBy(v as ColorBy)}>
+          <SelectTrigger className="h-9 w-[190px] text-sm" title="Ce que les couleurs représentent">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {COLOR_BY_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <div className="ml-auto flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+          {legend.map((l) => (
+            <span key={l.id} className="inline-flex items-center gap-1.5">
+              <span className="h-3 w-3 rounded-full ring-1 ring-black/10" style={{ backgroundColor: l.color }} />
+              {l.name}
             </span>
           ))}
         </div>
@@ -237,8 +278,9 @@ export function PlanningCalendar({
                 </span>
               );
             }
-            const { room, trainer } = arg.event.extendedProps as { room?: string; trainer?: string };
-            const details = [room, trainer].filter(Boolean).join(" · ");
+            const { room, trainer, colorBy: mode } = arg.event.extendedProps as { room?: string; trainer?: string; colorBy?: ColorBy };
+            // En mode formateur la couleur dit déjà qui : on met la salle en avant, et inversement.
+            const details = (mode === "salle" ? [trainer, room] : [room, trainer]).filter(Boolean).join(" · ");
             if (arg.view.type.startsWith("list")) {
               return (
                 <span>
