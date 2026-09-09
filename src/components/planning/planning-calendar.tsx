@@ -46,6 +46,10 @@ const ABSENCE_STYLES: Record<string, { label: string; color: string }> = {
   autre: { label: "absent·e", color: "#64748b" },
 };
 
+// Référence STABLE : un tableau littéral dans le JSX est recréé à chaque rendu, FullCalendar y voit
+// un changement d'options et se remet à jour sans fin (erreur React #185). Dimanche masqué.
+const HIDDEN_DAYS: number[] = [0];
+
 export function PlanningCalendar({
   canEdit,
   trainers,
@@ -219,7 +223,7 @@ export function PlanningCalendar({
           stickyHeaderDates
           eventTimeFormat={{ hour: "2-digit", minute: "2-digit", hour12: false }}
           weekends
-          hiddenDays={[0]}
+          hiddenDays={HIDDEN_DAYS}
           height="auto"
           nowIndicator
           events={events}
