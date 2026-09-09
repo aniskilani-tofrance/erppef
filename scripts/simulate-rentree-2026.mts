@@ -144,6 +144,13 @@ SCENARIOS.opt2 = { caps: {}, groups: OPT2 };
 SCENARIOS.pefA1mardi = { caps: {}, groups: [
   { label: "PEF A1", code: "PEF_A1", pattern: [P(1, "09:00", "12:00"), P(2, "09:00", "12:00"), P(2, "13:30", "16:30")], trainer: "Marie", room: "Salle 12", startsOn: START, skipHolidays: false },
 ] };
+// 09/09 soir : pas de séance sur les jours d'université → les absences du formateur sont traitées comme
+// des fermetures (ABSENCES_AS_CLOSURES=1) ; les 3 groupes des deux Marie sont régénérés, PEF A1 à 13h-16h.
+SCENARIOS.rattrapage = { caps: {}, groups: [
+  { label: "PEF A2", code: "PEF_A2", pattern: [P(1, "09:00", "12:00"), P(2, "09:00", "12:00"), P(3, "09:00", "12:00")], trainer: "Marie Joelle", room: "Salle 13", startsOn: START, skipHolidays: false },
+  { label: "PEF A1", code: "PEF_A1", pattern: [P(1, "09:00", "12:00"), P(2, "09:00", "12:00"), P(2, "13:00", "16:00")], trainer: "Marie", room: "Salle 12", startsOn: START, skipHolidays: false },
+  { label: "Cours municipaux A1", code: "CMSTOA1", pattern: [P(1, "13:00", "16:00"), P(2, "13:00", "16:00")], trainer: "Marie Joelle", room: "Cordon", startsOn: START, skipHolidays: true },
+] };
 // Variante : cours municipaux AUSSI pendant les vacances scolaires (fin plus tôt)
 SCENARIOS.cmVacances = { caps: { Sabrina: 21 }, groups: SCENARIOS.base.groups.map((g) => ({ ...g, skipHolidays: false })) };
 
@@ -186,6 +193,17 @@ if (scenario === "opt2") {
 if (scenario === "pefA1mardi") {
   data.rooms.find((r) => r.name === "Salle 12")!.availabilities.push({ weekday: 2, start: "13:30", end: "16:30" });
 }
+if (scenario === "rattrapage") {
+  data.rooms.find((r) => r.name === "Salle 12")!.availabilities.push({ weekday: 2, start: "13:00", end: "16:00" });
+  data.rooms.find((r) => r.name === "Salle 13")!.availabilities.push({ weekday: 3, start: "09:00", end: "12:00" });
+  data.trainers.find((t) => t.firstName.trim() === "Marie Joelle")!.availabilities.push({ weekday: 3, start: "09:00", end: "12:00" });
+  const marie = data.trainers.find((t) => t.firstName.trim() === "Marie")!;
+  for (const a of marie.availabilities) if (a.start === "13:30") a.start = "13:00"; // fiche corrigée par Anis : dispo dès 13h
+}
+const ABS = process.env.ABSENCES_AS_CLOSURES === "1";
+// Les absences du formateur voulu deviennent des fermetures : le moteur saute ces jours et prolonge la fin.
+const withAbsences = (d: EngineData, t: TrainerData): EngineData =>
+  ABS ? { ...d, closures: [...d.closures, ...t.absences.map((a) => ({ startsOn: a.startsOn, endsOn: a.endsOn, label: "Université", kind: "fermeture_org" as const }))] } : d;
 if (scenario === "mercredi") {
   const cordon = data.rooms.find((r) => r.name === "Cordon")!;
   cordon.availabilities.push({ weekday: 3, start: "09:00", end: "12:00" }, { weekday: 3, start: "13:00", end: "16:00" });
@@ -212,7 +230,7 @@ for (const g of sc.groups) {
   const wanted = data.trainers.find((t) => t.id === input.preferredTrainerId)!;
   const savedAbs = wanted.absences;
   wanted.absences = [];
-  const forced = proposeGroupPlan(input, data);
+  const forced = proposeGroupPlan(input, withAbsences(data, { ...wanted, absences: savedAbs }));
   wanted.absences = savedAbs;
   const chosen = forced.trainerAlternatives.find((t) => t.trainerId === wanted.id)!;
   const absentSessions = forced.sessions.filter((s) => savedAbs.some((a) => s.localDate >= a.startsOn && s.localDate <= a.endsOn));
@@ -247,7 +265,7 @@ if (process.env.OUT) {
       programId: p.id, totalHours: Number(p.h), level: p.vise, requiredSkills: p.skills ?? [], defaultWeeklyHours: Number(p.h_sem),
       startsOn: g.startsOn, weeklyPattern: g.pattern, preferredTrainerId: wanted.id, preferredRoomId: roomId(g.room),
       expectedHeadcount: g.room === "Berthoud" ? 8 : 12, skipSchoolHolidays: g.skipHolidays,
-    }, { ...data, trainers: data.trainers.map((t) => ({ ...t, busy: [] })), rooms: data.rooms.map((r) => ({ ...r, busy: [] })) });
+    }, withAbsences({ ...data, trainers: data.trainers.map((t) => ({ ...t, busy: [] })), rooms: data.rooms.map((r) => ({ ...r, busy: [] })) }, { ...wanted, absences: savedAbs }));
     wanted.absences = savedAbs;
     out.push({
       org_id: raw.org.id, program_id: p.id, funder_id: p.financeur_id, name: names[g.code] ?? g.label,
