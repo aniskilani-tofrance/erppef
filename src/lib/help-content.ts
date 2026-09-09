@@ -425,6 +425,11 @@ export const FAQ: FaqItem[] = [
     roles: ALL,
   },
   {
+    q: "L'image reste noire quand je prends une photo d'un apprenant.",
+    a: "Le navigateur n'a pas donné accès à la caméra. Cliquez l'icône caméra dans la barre d'adresse et autorisez pef-erp.vercel.app, puis réessayez. Sur tablette ou téléphone, l'accès se règle dans les réglages du navigateur. Vous pouvez toujours « Importer » une photo prise avec l'appareil photo de l'appareil.",
+    roles: TEAM,
+  },
+  {
     q: "Le bouton WhatsApp ne fait rien, ou ouvre une page blanche.",
     a: "Sur ordinateur, le lien ouvre WhatsApp Web (ou l'application WhatsApp si elle est installée) : il faut être connecté à WhatsApp sur cet appareil. Sur téléphone, l'application WhatsApp s'ouvre directement. Si le bouton est grisé, le numéro de la fiche est absent ou inexploitable (mettez-le au format 06 12 34 56 78 ou +33 6 12 34 56 78).",
     roles: TEAM,

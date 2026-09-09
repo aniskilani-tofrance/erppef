@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Camera, ImagePlus, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -28,10 +28,12 @@ export function PhotoUpload({
 }) {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const [busy, setBusy] = useState(false);
-  const [cameraOpen, setCameraOpen] = useState(false);
+  // Le flux vit dans l'état (pas dans une ref) : la balise <video> du dialog est montée APRÈS
+  // l'ouverture, et c'est le callback ref ci-dessous qui branche le flux dès qu'elle existe.
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const cameraOpen = stream !== null;
 
   async function handleFile(file: File | Blob) {
     setBusy(true);
@@ -53,41 +55,61 @@ export function PhotoUpload({
   }
 
   async function openCamera() {
-    if (!navigator.mediaDevices?.getUserMedia) {
+    if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
       cameraInputRef.current?.click(); // repli : caméra du système (mobile) ou sélecteur
       return;
     }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: { ideal: 1024 }, height: { ideal: 1024 } },
-        audio: false,
-      });
-      streamRef.current = stream;
-      setCameraOpen(true);
-    } catch {
-      // Permission refusée ou pas de caméra → repli système
-      cameraInputRef.current?.click();
+    // Caméra frontale en priorité ; si les contraintes ne passent pas (webcam de bureau,
+    // ancien navigateur), on retente sans contrainte avant de renoncer.
+    const attempts: MediaStreamConstraints[] = [
+      { video: { facingMode: "user", width: { ideal: 1024 }, height: { ideal: 1024 } }, audio: false },
+      { video: true, audio: false },
+    ];
+    let lastError: unknown = null;
+    for (const constraints of attempts) {
+      try {
+        const s = await navigator.mediaDevices.getUserMedia(constraints);
+        setStream(s);
+        return;
+      } catch (e) {
+        lastError = e;
+        if (e instanceof DOMException && (e.name === "NotAllowedError" || e.name === "SecurityError")) break;
+      }
     }
+    const name = lastError instanceof DOMException ? lastError.name : "";
+    toast.error(
+      name === "NotAllowedError"
+        ? "Caméra refusée par le navigateur : autorisez-la (icône caméra dans la barre d'adresse), ou choisissez une photo."
+        : "Caméra indisponible sur cet appareil : choisissez une photo à la place.",
+    );
+    cameraInputRef.current?.click();
   }
 
   function closeCamera() {
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    streamRef.current = null;
-    setCameraOpen(false);
+    setStream(null); // l'effet ci-dessous coupe les pistes
   }
 
-  // Brancher le flux sur la balise vidéo quand le dialog est monté
-  useEffect(() => {
-    if (cameraOpen && videoRef.current && streamRef.current) {
-      videoRef.current.srcObject = streamRef.current;
-    }
-    return () => {
-      if (!cameraOpen) {
-        streamRef.current?.getTracks().forEach((t) => t.stop());
-        streamRef.current = null;
+  // Branche le flux sur la balise <video> dès qu'elle est montée dans le dialog, et
+  // force la lecture (autoplay ne suffit pas toujours quand la source arrive après le montage).
+  const attachVideo = useCallback(
+    (el: HTMLVideoElement | null) => {
+      videoRef.current = el;
+      if (el && stream) {
+        el.srcObject = stream;
+        el.play().catch(() => {
+          /* la lecture repart sur loadedmetadata */
+        });
       }
-    };
-  }, [cameraOpen]);
+    },
+    [stream],
+  );
+
+  // Coupe les pistes quand le flux change (fermeture) ou quand le composant disparaît :
+  // la LED de la caméra ne reste jamais allumée.
+  useEffect(() => {
+    if (!stream) return;
+    return () => stream.getTracks().forEach((t) => t.stop());
+  }, [stream]);
 
   function capture() {
     const video = videoRef.current;
@@ -139,13 +161,21 @@ export function PhotoUpload({
           <div className="space-y-3">
             {/* Miroir : plus naturel pour un portrait face caméra */}
             <video
-              ref={videoRef}
+              ref={attachVideo}
               autoPlay
               playsInline
               muted
+              onLoadedMetadata={(e) => e.currentTarget.play().catch(() => undefined)}
               className="aspect-square w-full rounded-lg bg-black object-cover"
               style={{ transform: "scaleX(-1)" }}
             />
+            <p className="text-center text-xs text-muted-foreground">
+              Image noire ? Autorisez la caméra dans le navigateur, ou{" "}
+              <button type="button" className="underline" onClick={() => { closeCamera(); cameraInputRef.current?.click(); }}>
+                choisissez une photo
+              </button>
+              .
+            </p>
             <div className="flex justify-center gap-2">
               <Button type="button" variant="outline" onClick={closeCamera}>
                 Annuler
