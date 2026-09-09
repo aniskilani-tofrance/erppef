@@ -167,6 +167,10 @@ SCENARIOS.cm240 = { caps: {}, groups: [
   { label: "Cours municipaux A2", code: "CMSTOA2", pattern: [P(2, "13:00", "17:00"), P(4, "13:00", "17:00")], trainer: "Sabrina", room: "Landy", startsOn: START, skipHolidays: true },
   { label: "Cours municipaux B1", code: "CMSTOB1", pattern: [P(2, "18:30", "21:00"), P(6, "09:00", "13:30")], trainer: "Sabrina", room: "Berthoud", startsOn: START, skipHolidays: true },
 ] };
+// 09/09 soir : PEF A2 à la salle Bachelet lundi et mardi 14h-17h (+ mercredi 9h-12h, salle 13 en base)
+SCENARIOS.bachelet = { caps: {}, groups: [
+  { label: "PEF A2", code: "PEF_A2", pattern: [P(1, "14:00", "17:00"), P(2, "14:00", "17:00"), P(3, "09:00", "12:00")], trainer: "Marie Joelle", room: "Bachelet", startsOn: START, skipHolidays: false },
+] };
 // Variante : cours municipaux AUSSI pendant les vacances scolaires (fin plus tôt)
 SCENARIOS.cmVacances = { caps: { Sabrina: 21 }, groups: SCENARIOS.base.groups.map((g) => ({ ...g, skipHolidays: false })) };
 
@@ -235,6 +239,14 @@ if (scenario === "cm240") {
   data.trainers.find((t) => t.firstName.trim() === "Marie Joelle")!.availabilities.push({ weekday: 3, start: "09:00", end: "12:00" });
   const marie = data.trainers.find((t) => t.firstName.trim() === "Marie")!;
   for (const a of marie.availabilities) if (a.start === "13:30") a.start = "13:00";
+}
+if (scenario === "bachelet") {
+  data.rooms.push({ id: "bachelet-nouvelle", name: "Bachelet", capacity: 12, isActive: true, busy: [], unavailabilities: [],
+    availabilities: [{ weekday: 1, start: "14:00", end: "17:00" }, { weekday: 2, start: "14:00", end: "17:00" }, { weekday: 3, start: "09:00", end: "12:00" }] });
+  raw.rooms.push({ id: "bachelet-nouvelle", nom: "Bachelet" });
+  const mj = data.trainers.find((t) => t.firstName.trim() === "Marie Joelle")!;
+  mj.availabilities = mj.availabilities.map((a) => (a.weekday === 2 && a.start === "13:00" ? { ...a, end: "17:00" } : a));
+  mj.availabilities.push({ weekday: 3, start: "09:00", end: "12:00" });
 }
 if (scenario === "mercredi") {
   const cordon = data.rooms.find((r) => r.name === "Cordon")!;
