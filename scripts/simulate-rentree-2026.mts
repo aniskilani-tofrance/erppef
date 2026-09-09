@@ -158,6 +158,15 @@ SCENARIOS.cm120 = { caps: {}, groups: [
   { label: "Cours municipaux B1", code: "CMSTOB1", pattern: [P(2, "18:00", "20:00"), P(6, "09:00", "12:00")], trainer: "Sabrina", room: "Berthoud", startsOn: START, skipHolidays: true },
 ] };
 if (process.env.CM_HOURS) for (const p of raw.programs) if (String(p.code).startsWith("CMSTO")) p.h = Number(process.env.CM_HOURS);
+// 09/09 (correction Anis) : cours municipaux = 240 h ; Cordon 9h-13h, Landy 13h-17h, Berthoud mar 18h30-21h + sam 9h-13h30.
+// PEF A2 passe l'après-midi en salle 13 (Marie-Joëlle est à Cordon le matin). Dispos de Sabrina ajustées.
+SCENARIOS.cm240 = { caps: {}, groups: [
+  { label: "PEF A2", code: "PEF_A2", pattern: [P(1, "13:00", "16:00"), P(2, "13:00", "16:00"), P(3, "09:00", "12:00")], trainer: "Marie Joelle", room: "Salle 13", startsOn: START, skipHolidays: false },
+  { label: "PEF A1", code: "PEF_A1", pattern: [P(1, "09:00", "12:00"), P(2, "09:00", "12:00"), P(2, "13:00", "16:00")], trainer: "Marie", room: "Salle 12", startsOn: START, skipHolidays: false },
+  { label: "Cours municipaux A1", code: "CMSTOA1", pattern: [P(1, "09:00", "13:00"), P(2, "09:00", "13:00")], trainer: "Marie Joelle", room: "Cordon", startsOn: START, skipHolidays: true },
+  { label: "Cours municipaux A2", code: "CMSTOA2", pattern: [P(2, "13:00", "17:00"), P(4, "13:00", "17:00")], trainer: "Sabrina", room: "Landy", startsOn: START, skipHolidays: true },
+  { label: "Cours municipaux B1", code: "CMSTOB1", pattern: [P(2, "18:30", "21:00"), P(6, "09:00", "13:30")], trainer: "Sabrina", room: "Berthoud", startsOn: START, skipHolidays: true },
+] };
 // Variante : cours municipaux AUSSI pendant les vacances scolaires (fin plus tôt)
 SCENARIOS.cmVacances = { caps: { Sabrina: 21 }, groups: SCENARIOS.base.groups.map((g) => ({ ...g, skipHolidays: false })) };
 
@@ -213,6 +222,19 @@ const withAbsences = (d: EngineData, t: TrainerData): EngineData =>
   ABS ? { ...d, closures: [...d.closures, ...t.absences.map((a) => ({ startsOn: a.startsOn, endsOn: a.endsOn, label: "Université", kind: "fermeture_org" as const }))] } : d;
 if (scenario === "cm120") {
   data.trainers.find((t) => t.firstName.trim() === "Sabrina")!.availabilities.push({ weekday: 2, start: "18:00", end: "20:00" });
+}
+if (scenario === "cm240") {
+  const room = (n: string) => data.rooms.find((r) => r.name === n)!;
+  room("Cordon").availabilities = [1, 2, 4].map((d) => ({ weekday: d, start: "09:00", end: "13:00" }));
+  room("Landy").availabilities = [1, 2, 4].map((d) => ({ weekday: d, start: "13:00", end: "17:00" }));
+  room("Berthoud").availabilities = [...[1, 2, 3, 4, 5].map((d) => ({ weekday: d, start: "18:30", end: "21:00" })), { weekday: 6, start: "09:00", end: "13:30" }];
+  room("Salle 12").availabilities.push({ weekday: 2, start: "13:00", end: "16:00" });
+  room("Salle 13").availabilities.push({ weekday: 3, start: "09:00", end: "12:00" });
+  const sab = data.trainers.find((t) => t.firstName.trim() === "Sabrina")!;
+  sab.availabilities = [1, 2, 3, 4, 5, 6].map((d) => ({ weekday: d, start: "09:00", end: d === 2 ? "21:00" : "18:00" }));
+  data.trainers.find((t) => t.firstName.trim() === "Marie Joelle")!.availabilities.push({ weekday: 3, start: "09:00", end: "12:00" });
+  const marie = data.trainers.find((t) => t.firstName.trim() === "Marie")!;
+  for (const a of marie.availabilities) if (a.start === "13:30") a.start = "13:00";
 }
 if (scenario === "mercredi") {
   const cordon = data.rooms.find((r) => r.name === "Cordon")!;
