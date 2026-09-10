@@ -46,7 +46,7 @@ export default async function ParametresPage() {
       membershipId: m.id,
       name: (m.profiles as unknown as { full_name: string } | null)?.full_name ?? "—",
       email: authById.get(m.user_id)?.email ?? null,
-      role: m.role as "admin" | "coordinator" | "trainer" | "viewer",
+      role: m.role as "admin" | "coordinator" | "trainer" | "viewer" | "setter",
       isSelf: m.user_id === userId,
       trainerLinked: Boolean(m.trainer_id),
       lastSignInAt: authById.get(m.user_id)?.lastSignInAt ?? null,

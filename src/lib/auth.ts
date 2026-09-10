@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-export type AppRole = "admin" | "coordinator" | "trainer" | "viewer";
+// setter = commercial prestataire (leads restaurateurs) : accès minimal, jamais les apprenants.
+export type AppRole = "admin" | "coordinator" | "trainer" | "viewer" | "setter";
 
 export type SessionContext = {
   userId: string;

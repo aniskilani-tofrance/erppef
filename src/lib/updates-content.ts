@@ -22,8 +22,23 @@ export type AppUpdate = {
 
 const TEAM: AppRole[] = ["admin", "coordinator"];
 const ALL: AppRole[] = ["admin", "coordinator", "trainer"];
+const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des leads restaurateurs
 
 export const APP_UPDATES: AppUpdate[] = [
+  {
+    id: "2026-09-11-leads-restaurateurs",
+    date: "2026-09-11",
+    title: "Leads restaurateurs : le mini-CRM du setter",
+    summary: "Nouveau menu « Leads resto » : les restaurateurs qui laissent leurs coordonnées (campagne parlerresto) sont rappelés sous 24 h, qualifiés en 7 questions et transformés en rendez-vous — avec les SMS et emails du kit pré-remplis.",
+    items: [
+      { text: "Menu « Leads resto » : « À traiter aujourd'hui » (nouveaux à rappeler sous 24 h, relances dues, SMS de rappel de RDV, RDV du jour), l'entonnoir par statut, la liste filtrable (statut, score, segment, suivi, recherche).", roles: LEADS },
+      { text: "Sur chaque fiche : Appeler, SMS, WhatsApp et Email pré-remplis avec les modèles du kit (appel manqué, dernière tentative, rappel de RDV la veille, confirmation, documentation, relance J3, rupture J10, no-show), chacun tracé dans le journal.", roles: LEADS },
+      { text: "Après chaque tentative, la cadence J0 → J1 → J3 → J6 → J10 propose la prochaine action et sa date ; l'horloge du service dit quand ne pas appeler (jamais 11h30-14h30, jamais après 17h30).", roles: LEADS },
+      { text: "En haut de la liste, les chiffres du point hebdo : reçus, rappelés sous 24 h, qualifiés, RDV pris, show rate, gagnés, pipeline. Export CSV aux colonnes du Sheet de suivi ; import par collage.", roles: ["admin", "coordinator"] },
+      { text: "Nouveau rôle « Commercial (setter) » (Paramètres → Utilisateurs) : accès aux leads, à la Formation et à l'Aide seulement — jamais aux apprenants ni aux formateurs. Bouton « Réglages » sur la page Leads : date du prochain groupe, Calendly, créneaux types.", roles: ["admin", "coordinator"] },
+    ],
+    training: [{ moduleId: "m1-leads", lessonId: "journee", label: "Ma journée de setter" }],
+  },
   {
     id: "2026-09-09-conges-formateurs",
     date: "2026-09-09",

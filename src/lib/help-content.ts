@@ -22,7 +22,7 @@ export const HELP_SECTIONS: HelpSection[] = [
   {
     id: "demarrer",
     title: "Démarrer",
-    roles: ALL,
+    roles: [...ALL, "setter"],
     articles: [
       {
         title: "Se connecter",
@@ -353,6 +353,75 @@ export const HELP_SECTIONS: HelpSection[] = [
           "Page Qualité → « Registre des réclamations » : consignez chaque réclamation et surtout l'action corrective (ind. 31-32).",
           "La page Qualité regroupe vos indicateurs (assiduité, heures, satisfaction) et un tableau « où sont les preuves » par indicateur Qualiopi : c'est l'écran à montrer à l'auditeur.",
           "Les alertes assiduité apparaissent sur le Dashboard et la page Qualité : apprenant sous 70 % de présence ou 3 absences de suite. Contactez-le et notez l'action dans sa fiche.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "leads",
+    title: "Leads restaurateurs (mini-CRM)",
+    roles: ["admin", "coordinator", "setter"],
+    articles: [
+      {
+        title: "Rappeler un nouveau lead sous 24 h",
+        steps: [
+          "Menu « Leads resto » (ou votre Dashboard si vous êtes commercial) : la carte « À rappeler sous 24 h » liste les leads jamais contactés, le plus ancien en premier ; en rouge au-delà de 24 h.",
+          "Regardez d'abord l'horloge du service en haut : vert = c'est l'heure d'appeler (9h30-11h30, 14h30-17h30) ; orange ou gris = emails, SMS et préparation des fiches, pas d'appel.",
+          "Ouvrez la fiche, bouton « Appeler » : le téléphone compose le numéro et la fenêtre « Noter » s'ouvre pour enregistrer le résultat dès que vous raccrochez.",
+          "Messagerie ? Notez « Messagerie », puis SMS → « SMS n°1 — après appel manqué » : le texte est déjà écrit, vous n'avez qu'à envoyer.",
+        ],
+      },
+      {
+        title: "Qualifier en 7 questions et noter le résultat",
+        steps: [
+          "Bouton « Modifier la fiche » : la partie « Qualification » suit l'ordre de l'appel — taille, postes (cuisine ou salle), pour quand, contrat et heures par semaine, ce qui coince, décideur, HACCP.",
+          "Un contrat « Extras » ou « CDD < 6 mois » affiche un avertissement : pas de POEI possible, déroulez la cascade (FLE cuisine/salle, AKTO, HACCP) et notez l'offre qui accroche.",
+          "Le score est proposé automatiquement (chaud / tiède / froid) d'après ces réponses ; vous pouvez le forcer.",
+          "Dans « Noter », choisissez le résultat : le statut suivant est pré-rempli et ne recule jamais ; la prochaine action et sa date sont proposées d'après la cadence, modifiables.",
+        ],
+      },
+      {
+        title: "Envoyer un SMS, un WhatsApp ou un email du kit",
+        steps: [
+          "Sur la fiche : SMS, WhatsApp et Email ouvrent une liste de modèles (appel manqué, dernière tentative, rappel de RDV, créneau promis, no-show ; confirmation, documentation, relance J3, rupture J10, réponse écrite, no-show).",
+          "Le message s'ouvre dans votre application (Messages, WhatsApp, votre messagerie) déjà rempli : prénom du contact, postes, date et heure du RDV, prochain groupe, lien Calendly, votre prénom. Relisez, envoyez.",
+          "Chaque envoi est tracé dans le journal de la fiche et compte comme une tentative.",
+          "Les mots viennent de la campagne parlerresto : « formé directement dans votre restaurant », « 3 jours chez vous / 2 jours chez nous », « 0 € de reste à charge sur la formation ». Ne les remplacez pas par « gratuit ».",
+        ],
+      },
+      {
+        title: "Poser le RDV avec la direction et le faire tenir",
+        steps: [
+          "Proposez toujours deux créneaux hors service (les créneaux types sont rappelés sur la fiche), jamais « quand êtes-vous disponible ? ». Dans le restaurant, entre les deux services, le rendez-vous tient mieux.",
+          "Bouton « Poser le RDV » : date, heure, comment (téléphone, sur place, visio). Le statut passe à « RDV pris » et la prochaine action devient « SMS de rappel la veille ».",
+          "Tout de suite après : Email → « Email n°1 — confirmation de RDV ».",
+          "La veille : la carte « SMS de rappel à envoyer pour demain » vous le rappelle ; SMS → « SMS n°3 — rappel de RDV ». Le lendemain, notez « RDV tenu », « No-show » ou « Reporté » sur la fiche.",
+        ],
+      },
+      {
+        title: "Relancer sans harceler : la cadence J0 → J10",
+        steps: [
+          "J0 appel + SMS n°1 si messagerie · J1 appel à un autre créneau (matin ↔ coupure) · J3 email n°3 · J6 appel + SMS n°2 « dernière tentative » · J10 email n°4 « je ferme votre dossier ? ».",
+          "Après chaque tentative notée, la fiche affiche l'étape suivante et sa date ; la carte « Relances dues » de la page Leads regroupe tout ce qui est à faire aujourd'hui ou en retard.",
+          "Au-delà de 5 tentatives sans réponse : statut « Perdu », raison « Injoignable ». Jamais plus de deux messages vocaux sur un même lead.",
+        ],
+      },
+      {
+        title: "Importer, exporter, régler (direction)",
+        steps: [
+          "« Importer » : collez les lignes du Google Sheet de suivi (avec la ligne d'en-têtes) ou une liste simple « Entreprise ; Contact ; Téléphone ; Email ; Ville CP ; Postes ; Nb ; Notes » — un aperçu s'affiche avant l'import.",
+          "« Exporter CSV » : les 24 colonnes du Sheet de suivi dans le même ordre, puis les colonnes propres à l'ERP (référence, offre, heures, décideur, HACCP, RDV). Ouvrable dans Excel ou Google Sheets.",
+          "« Réglages » (direction) : la date du prochain groupe restauration (l'argument d'urgence des scripts), le lien Calendly, les deux créneaux types, le nom de la personne qui tient le RDV. Ils alimentent tous les modèles.",
+          "Paramètres → Utilisateurs → « Inviter » avec le rôle « Commercial (setter) » : la personne ne voit que les leads, la Formation et l'Aide.",
+        ],
+      },
+      {
+        title: "Ce qu'on ne dit jamais à un restaurateur",
+        steps: [
+          "Jamais « 100 % gratuit » ni « ça ne vous coûte rien » : dire « financé par France Travail, 0 € de reste à charge sur la formation ».",
+          "Jamais « aucun engagement » : « vous ne vous engagez qu'à l'embauche en fin de parcours, si le candidat a le niveau ».",
+          "Jamais de promesse sur un montant AKTO, sur l'attestation HACCP réglementaire, sur les titres de séjour ou le travail non déclaré.",
+          "Jamais de tarif ni de devis : c'est le rendez-vous de la direction. « Très bonne question — c'est exactement ce qu'on vous détaille en RDV, mardi 10h ou jeudi 15h ? »",
         ],
       },
     ],

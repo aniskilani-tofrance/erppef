@@ -5,6 +5,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { OccupancyChart } from "@/components/dashboard/occupancy-chart";
 import { TrainerDashboard } from "@/components/dashboard/trainer-dashboard";
 import { ViewerDashboard } from "@/components/dashboard/viewer-dashboard";
+import { SetterDashboard } from "@/components/leads/setter-dashboard";
 import { weekStartOf } from "@/lib/dates";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +32,14 @@ export default async function DashboardPage() {
       <>
         <div className="mx-auto mb-4 max-w-3xl">{ticker}</div>
         <TrainerDashboard userId={userId} />
+      </>
+    );
+  }
+  if (role === "setter") {
+    return (
+      <>
+        <div className="mx-auto mb-4 max-w-3xl">{ticker}</div>
+        <SetterDashboard userId={userId} />
       </>
     );
   }

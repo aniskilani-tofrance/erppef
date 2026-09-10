@@ -28,7 +28,7 @@ export type Member = {
   membershipId: string;
   name: string;
   email: string | null;
-  role: "admin" | "coordinator" | "trainer" | "viewer";
+  role: "admin" | "coordinator" | "trainer" | "viewer" | "setter";
   isSelf: boolean;
   trainerLinked: boolean;
   lastSignInAt: string | null; // null = jamais connecté
@@ -39,6 +39,7 @@ const ROLES = [
   { value: "coordinator", label: "Coordinateur" },
   { value: "trainer", label: "Formateur" },
   { value: "viewer", label: "Lecture seule" },
+  { value: "setter", label: "Commercial (setter) — leads restaurateurs uniquement" },
 ] as const;
 
 function lastSeen(iso: string): string {

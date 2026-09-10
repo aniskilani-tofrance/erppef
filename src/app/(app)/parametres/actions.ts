@@ -16,7 +16,7 @@ export type GcalSyncResult = { ok: true; stats: GcalSyncStats } | { ok: false; e
 const inviteSchema = z.object({
   email: z.string().email(),
   fullName: z.string().min(1),
-  role: z.enum(["admin", "coordinator", "trainer", "viewer"]),
+  role: z.enum(["admin", "coordinator", "trainer", "viewer", "setter"]),
 });
 
 // Invitation d'un utilisateur par l'admin, avec le rôle choisi.
@@ -127,7 +127,7 @@ export async function renameMember(raw: z.infer<typeof renameSchema>): Promise<A
 
 const roleSchema = z.object({
   membershipId: z.string().uuid(),
-  role: z.enum(["admin", "coordinator", "trainer", "viewer"]),
+  role: z.enum(["admin", "coordinator", "trainer", "viewer", "setter"]),
 });
 
 // Changement de rôle par l'admin. Garde-fous : pas son propre rôle, jamais zéro admin.

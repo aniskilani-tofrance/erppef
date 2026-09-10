@@ -17,6 +17,7 @@ export default async function ComptePage() {
     coordinator: "Coordinateur pédagogique",
     trainer: "Formateur",
     viewer: "Lecture seule",
+    setter: "Commercial (setter)",
   }[role];
 
   return (

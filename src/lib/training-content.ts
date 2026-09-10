@@ -20,7 +20,7 @@ export type Lesson = {
 
 export type TrainingModule = {
   id: string;
-  track: "formateur" | "coordinateur";
+  track: "formateur" | "coordinateur" | "commercial";
   order: number;
   title: string;
   duration: string; // estimation affichée
@@ -699,9 +699,125 @@ export const TRAINING_MODULES: TrainingModule[] = [
       },
     ],
   },
+  // ───────────────────────── PARCOURS COMMERCIAL ─────────────────────────
+  {
+    id: "m1-leads",
+    track: "commercial",
+    order: 1,
+    title: "Le mini-CRM des leads restaurateurs",
+    duration: "20 min",
+    objectives: [
+      "Rappeler chaque nouveau lead sous 24 h, aux bonnes heures",
+      "Qualifier en 7 questions et noter le résultat en 2 minutes",
+      "Envoyer les SMS et emails du kit sans rien réécrire",
+      "Poser un RDV qui se tient, et relancer J0 → J10 sans harceler",
+    ],
+    lessons: [
+      {
+        id: "journee",
+        title: "Ma journée de setter",
+        intro: "Votre Dashboard, c'est votre journée : l'horloge du service, les leads à rappeler, les relances dues, les rappels de RDV. Le reste de l'ERP ne vous concerne pas.",
+        steps: [
+          "Ouvrez pef-erp.vercel.app sur votre téléphone (ajoutez-le à l'écran d'accueil) et connectez-vous : vous arrivez sur votre journée.",
+          "L'horloge du service en haut : vert = appelez (9h30-11h30, 14h30-17h30) ; orange = service du midi, pas d'appel ; gris = trop tôt ou trop tard. Restauration collective : 9h-11h et 14h-16h.",
+          "« À rappeler sous 24 h » : les leads jamais contactés, le plus ancien en premier. La pub promet un rappel sous 24 h — en rouge, c'est déjà trop tard.",
+          "« Relances dues » : ce que la cadence prévoit aujourd'hui ou en retard. « SMS de rappel à envoyer pour demain » : les RDV de demain sans SMS n°3.",
+          "17h30 : message court à la direction — nombre d'appels, de joignables, de RDV pris, blocages. Le lundi, le point hebdo lit les chiffres en haut de la page Leads.",
+        ],
+        tip: "Un lead reçu à 12h se rappelle à 14h30, pas à 12h05. Entre les deux services : emails, SMS, préparation des fiches (20 secondes sur Google Maps par restaurant).",
+        practice: { instruction: "Ouvrez votre Dashboard et repérez l'horloge du service et la carte « À rappeler sous 24 h ».", href: "/dashboard", hrefLabel: "Ouvrir mon Dashboard" },
+      },
+      {
+        id: "qualifier",
+        title: "Appeler et qualifier en 7 questions",
+        intro: "Le restaurateur parle 70 % du temps. Vous posez les 7 questions, vous notez, vous closez. La fiche suit l'ordre de l'appel.",
+        steps: [
+          "Sur la fiche, « Appeler » compose le numéro et ouvre « Noter » : dès que vous raccrochez, le résultat s'enregistre (joint, messagerie, barrage, rappel convenu, refus…).",
+          "« Modifier la fiche » → Qualification : 1 taille (couverts, équipe) · 2 postes, cuisine ou salle, combien · 3 pour quand · 4 contrat et heures par semaine · 5 ce qui coince · 6 décideur ? · HACCP à jour ?",
+          "Contrat « Extras » ou « CDD < 6 mois » : pas de POEI — la fiche vous le dit. Déroulez la cascade (FLE cuisine/salle → AKTO → HACCP) et notez l'« Offre qui accroche ».",
+          "Temps partiel sous 24 h/semaine : notez les heures, ne promettez rien — la direction valide en RDV.",
+          "Le score (chaud / tiède / froid) est proposé d'après vos réponses : chaud = poste ferme + échéance < 3 mois + contrat éligible + décideur au téléphone.",
+        ],
+        tip: "Question qui ouvre tout : « Vous êtes bien le décideur pour les embauches — franchisé, gérant ? » Si non, demandez le portable du décideur : c'est lui le lead.",
+        practice: { instruction: "Créez un lead d'essai (« Test — à supprimer »), remplissez les 7 questions avec un contrat « Extras » et observez l'avertissement, puis supprimez-le (ou demandez à la direction).", href: "/leads", hrefLabel: "Ouvrir les leads" },
+      },
+      {
+        id: "messages",
+        title: "SMS, WhatsApp, email : les modèles du kit",
+        intro: "Vous n'écrivez jamais un message de zéro : chaque modèle du kit est pré-rempli avec le prénom, les postes, le RDV, le prochain groupe et le Calendly.",
+        steps: [
+          "Sur la fiche : SMS → « SMS n°1 — après appel manqué » s'ouvre dans Messages, déjà écrit. Relisez, envoyez. Le journal note « SMS envoyé » et compte une tentative.",
+          "WhatsApp : mêmes textes, pour les restaurateurs qui y répondent mieux. Email : confirmation de RDV (n°1), documentation (n°2), relance J3 (n°3), rupture J10 (n°4), réponse écrite (n°5), no-show (n°6).",
+          "Les mots viennent de la pub parlerresto : « formé directement dans votre restaurant », « 3 jours chez vous / 2 jours chez nous », « 0 € de reste à charge sur la formation ».",
+          "Interdits, même par écrit : « 100 % gratuit », « aucun engagement », un tarif, un montant AKTO, une promesse sur l'attestation HACCP ou les titres de séjour.",
+        ],
+        tip: "Question technique par écrit ? Ne répondez pas sur le fond : proposez l'appel de 5 minutes hors service.",
+        practice: { instruction: "Sur un lead, ouvrez le menu SMS et lisez les 5 modèles, puis le menu Email et ses 6 modèles. Repérez « n°3 — rappel de RDV » : c'est celui de la veille.", href: "/leads", hrefLabel: "Ouvrir les leads" },
+      },
+      {
+        id: "rdv",
+        title: "Poser le RDV et le faire tenir",
+        intro: "Deux créneaux précis, hors service — jamais « quand êtes-vous disponible ? ». Puis confirmation immédiate et SMS la veille : un restaurateur oublie vite.",
+        steps: [
+          "« Donc si je résume : 2 commis pour novembre, en CDI. Notre prochain groupe restauration démarre [date] — il faut définir le poste maintenant. Anis vous propose mardi 10h ou jeudi 15h ? »",
+          "Bouton « Poser le RDV » : date, heure, comment (dans le restaurant entre les deux services = meilleur show rate). Le statut passe à « RDV pris ».",
+          "Tout de suite : Email → n°1 confirmation. La veille : la carte du Dashboard vous le rappelle → SMS n°3. Le jour J : « RDV tenu », « No-show » ou « Reporté » sur la fiche.",
+          "No-show : Email n°6 + SMS no-show le jour même, sans culpabiliser (« un coup de feu, ça arrive »), et deux nouveaux créneaux.",
+        ],
+        tip: "Prévenez la direction avec 5 infos : segment, postes, volume, échéance, contrat. Tout est sur la fiche.",
+        practice: { instruction: "Sur votre lead d'essai, posez un RDV demain 15h « dans le restaurant » et vérifiez que la prochaine action devient « SMS de rappel la veille ».", href: "/leads", hrefLabel: "Ouvrir les leads" },
+      },
+      {
+        id: "relances",
+        title: "Relancer : la cadence J0 → J10",
+        intro: "Cinq tentatives sur dix jours, multicanal, puis on classe. La fiche calcule l'étape suivante à chaque tentative notée.",
+        steps: [
+          "J0 appel (+ SMS n°1 si messagerie) · J1 appel à un autre créneau (matin ↔ coupure) · J3 email n°3 · J6 appel + SMS n°2 « dernière tentative » · J10 email n°4 « je ferme votre dossier ? ».",
+          "Après chaque « Noter », la prochaine action et sa date sont proposées ; vous pouvez les changer (un rappel convenu à 15h remplace la cadence).",
+          "Jamais plus de deux messages vocaux. Meilleurs jours : mardi, mercredi, jeudi. Le lundi, beaucoup de restaurants sont fermés ; le vendredi après-midi et le samedi, c'est le rush.",
+          "Cinquième tentative sans réponse : statut « Perdu », raison « Injoignable après 5 tentatives ». On passe au suivant.",
+        ],
+        tip: "L'email de rupture J10 est souvent celui qui fait répondre. Ne le sautez pas.",
+        practice: { instruction: "Sur un lead « À rappeler », notez un appel « Messagerie » et regardez la prochaine action proposée : elle doit être « J1 — rappeler à un autre créneau ».", href: "/leads?statut=a_rappeler", hrefLabel: "Leads à rappeler" },
+      },
+    ],
+    quiz: [
+      {
+        question: "Un lead arrive à 12h10. Quand l'appelez-vous ?",
+        choices: ["Tout de suite, la pub promet 24 h", "À 14h30, à la coupure", "Demain matin à 9h30"],
+        answerIndex: 1,
+        explanation: "Sous 24 h, oui — mais jamais pendant le service du midi (11h30-14h30). La coupure à 14h30 est le meilleur créneau.",
+      },
+      {
+        question: "Le restaurateur ne prend que des extras. Que faites-vous ?",
+        choices: ["Vous promettez que la POEI marche quand même", "Vous notez « Extras », vous déroulez la cascade FLE → AKTO → HACCP et vous posez le RDV", "Vous classez le lead « Perdu »"],
+        answerIndex: 1,
+        explanation: "Extras = pas de contrat éligible à la POEI, mais un lead n'est jamais jeté : les offres de repli se vendent au même RDV.",
+      },
+      {
+        question: "Que dit-on à la place de « c'est 100 % gratuit » ?",
+        choices: ["« Ça ne vous coûte rien »", "« Financé par France Travail, 0 € de reste à charge sur la formation »", "« C'est pris en charge à 100 % par votre OPCO »"],
+        answerIndex: 1,
+        explanation: "Ce sont les mots de la campagne. Le cofinancement OPCO sur une POEI n'existe pas.",
+      },
+      {
+        question: "Un restaurateur propose un CDI de 20 h par semaine. Que répondez-vous ?",
+        choices: ["« Aucun problème, ça passe »", "« Ça ne passe pas, désolé »", "« Ça se regarde : Anis vérifie le volume d'heures avec vous en RDV » — et vous notez les heures"],
+        answerIndex: 2,
+        explanation: "Le temps partiel se valide poste par poste avec France Travail : on note, on ne promet rien.",
+      },
+      {
+        question: "RDV posé pour jeudi 15h. Que fait la fiche mercredi ?",
+        choices: ["Rien, le RDV est posé", "Elle rappelle d'envoyer le SMS n°3 la veille", "Elle envoie le SMS toute seule"],
+        answerIndex: 1,
+        explanation: "Le SMS de rappel la veille est obligatoire — la fiche et le Dashboard le rappellent, mais c'est vous qui l'envoyez (un tap).",
+      },
+    ],
+  },
 ];
 
 export const TRACKS = [
   { id: "formateur", label: "Parcours Formateur", description: "Prise en main, émargement, bons réflexes — 30 minutes.", roles: ["trainer", "admin", "coordinator"] },
   { id: "coordinateur", label: "Parcours Coordinateur", description: "Paramétrage, groupes, planning, qualité, bilans — 1 h 35 au total, à votre rythme.", roles: ["admin", "coordinator", "viewer"] },
+  { id: "commercial", label: "Parcours Commercial (leads restaurateurs)", description: "Le mini-CRM : rappeler sous 24 h, qualifier, poser le RDV, relancer — 20 minutes.", roles: ["setter", "admin", "coordinator"] },
 ] as const;

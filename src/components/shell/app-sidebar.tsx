@@ -18,6 +18,7 @@ import {
   Settings,
   Users,
   UsersRound,
+  UtensilsCrossed,
   Wallet,
   Menu,
 } from "lucide-react";
@@ -29,7 +30,7 @@ import { GlobalSearch } from "@/components/shell/global-search";
 import type { AppRole } from "@/lib/auth";
 
 const NAV = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "coordinator", "trainer", "viewer"] },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "coordinator", "trainer", "viewer", "setter"] },
   { href: "/planning", label: "Planning", icon: CalendarDays, roles: ["admin", "coordinator", "trainer", "viewer"] },
   { href: "/groupes", label: "Groupes", icon: UsersRound, roles: ["admin", "coordinator", "trainer", "viewer"] },
   { href: "/apprenants", label: "Apprenants", icon: BookUser, roles: ["admin", "coordinator"] },
@@ -38,7 +39,8 @@ const NAV = [
   { href: "/salles", label: "Salles", icon: DoorOpen, roles: ["admin", "coordinator"] },
   { href: "/qualite", label: "Qualité", icon: BadgeCheck, roles: ["admin", "coordinator"] },
   { href: "/rapports", label: "Rapports", icon: FileBarChart, roles: ["admin", "coordinator"] },
-  { href: "/formation", label: "Formation", icon: BookOpen, roles: ["admin", "coordinator", "trainer", "viewer"] },
+  { href: "/leads", label: "Leads resto", icon: UtensilsCrossed, roles: ["admin", "coordinator", "setter"] },
+  { href: "/formation", label: "Formation", icon: BookOpen, roles: ["admin", "coordinator", "trainer", "viewer", "setter"] },
   { href: "/examens", label: "Examens", icon: GraduationCap, roles: ["admin", "coordinator"], soon: true },
   { href: "/finance", label: "Finance", icon: Wallet, roles: ["admin", "coordinator"], soon: true },
   { href: "/parametres", label: "Paramètres", icon: Settings, roles: ["admin"] },
@@ -148,5 +150,6 @@ function roleLabel(role: AppRole): string {
     coordinator: "Coordinateur pédagogique",
     trainer: "Formateur",
     viewer: "Lecture seule",
+    setter: "Commercial (setter)",
   }[role];
 }

@@ -9,7 +9,7 @@ import { APP_UPDATES, formatUpdateDate, updatesForRole } from "@/lib/updates-con
 // Serveur uniquement, client service_role.
 
 const BASE_URL = "https://pef-erp.vercel.app";
-const ROLE_RANK: Record<AppRole, number> = { admin: 3, coordinator: 2, trainer: 1, viewer: 0 };
+const ROLE_RANK: Record<AppRole, number> = { admin: 3, coordinator: 2, trainer: 1, viewer: 0, setter: 0 };
 
 type Recipient = { email: string; firstName: string; role: AppRole };
 
