@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -360,15 +361,23 @@ const settingsSchema = z.object({
   slot1: z.string().trim().min(1),
   slot2: z.string().trim().min(1),
   directorName: z.string().trim().min(1),
+  notifyEmail: z.string().trim().email().or(z.literal("")).default(""),
+  defaultOwnerUserId: uuid.or(z.literal("")).default(""),
+  // Jeton du webhook : "keep" = inchangé, "regenerate" = nouveau, "disable" = fermé
+  inboundTokenAction: z.enum(["keep", "regenerate", "disable"]).default("keep"),
 });
 
-export async function saveLeadSettings(raw: z.infer<typeof settingsSchema>): Promise<ActionResult> {
+export async function saveLeadSettings(raw: z.input<typeof settingsSchema>): Promise<ActionResult> {
   const parsed = settingsSchema.safeParse(raw);
-  if (!parsed.success) return { ok: false, error: "Réglages invalides (le lien Calendly doit être une URL complète)." };
+  if (!parsed.success) return { ok: false, error: "Réglages invalides (lien Calendly complet, email de notification valide)." };
   const { orgId } = await requireRole(["admin", "coordinator"]);
   const supabase = await createClient();
   const { data: org } = await supabase.from("organizations").select("settings").eq("id", orgId).single();
-  const settings = { ...((org?.settings as Record<string, unknown>) ?? {}), leads: { ...DEFAULT_LEAD_SETTINGS, ...parsed.data } };
+  const current = ((org?.settings as Record<string, unknown> | null)?.leads ?? {}) as Record<string, unknown>;
+  const { inboundTokenAction, ...fields } = parsed.data;
+  const inboundToken =
+    inboundTokenAction === "disable" ? "" : inboundTokenAction === "regenerate" || !current.inboundToken ? newToken() : String(current.inboundToken);
+  const settings = { ...((org?.settings as Record<string, unknown>) ?? {}), leads: { ...DEFAULT_LEAD_SETTINGS, ...current, ...fields, inboundToken } };
   const { error } = await supabase.from("organizations").update({ settings }).eq("id", orgId);
   if (error) return { ok: false, error: translatePgError(error) };
   revalidateLeads();
@@ -377,6 +386,9 @@ export async function saveLeadSettings(raw: z.infer<typeof settingsSchema>): Pro
 
 function today(): string {
   return new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Paris" });
+}
+function newToken(): string {
+  return randomBytes(24).toString("base64url");
 }
 function addDaysIso(date: string, days: number): string {
   const d = new Date(`${date}T12:00:00Z`);

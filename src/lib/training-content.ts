@@ -721,6 +721,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
           "Ouvrez pef-erp.vercel.app sur votre téléphone (ajoutez-le à l'écran d'accueil) et connectez-vous : vous arrivez sur votre journée.",
           "L'horloge du service en haut : vert = appelez (9h30-11h30, 14h30-17h30) ; orange = service du midi, pas d'appel ; gris = trop tôt ou trop tard. Restauration collective : 9h-11h et 14h-16h.",
           "« À rappeler sous 24 h » : les leads jamais contactés, le plus ancien en premier. La pub promet un rappel sous 24 h — en rouge, c'est déjà trop tard.",
+          "Les leads arrivent tout seuls : quand un restaurateur remplit le formulaire (landing, Meta) ou prend un créneau Calendly, sa fiche se crée et vous recevez un email avec le lien. Rien à recopier — juste rappeler.",
           "« Relances dues » : ce que la cadence prévoit aujourd'hui ou en retard. « SMS de rappel à envoyer pour demain » : les RDV de demain sans SMS n°3.",
           "17h30 : message court à la direction — nombre d'appels, de joignables, de RDV pris, blocages. Le lundi, le point hebdo lit les chiffres en haut de la page Leads.",
         ],

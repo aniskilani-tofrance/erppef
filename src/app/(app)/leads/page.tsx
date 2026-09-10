@@ -81,7 +81,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- téléchargement (route handler), pas une page */}
             <a href="/leads/export"><Download className="mr-2 h-4 w-4" />Exporter CSV</a>
           </Button>
-          {canSettings && <LeadSettingsDialog settings={settings} />}
+          {canSettings && <LeadSettingsDialog settings={settings} owners={owners} />}
         </div>
       </div>
 

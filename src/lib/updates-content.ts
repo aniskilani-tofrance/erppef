@@ -36,6 +36,8 @@ export const APP_UPDATES: AppUpdate[] = [
       { text: "Après chaque tentative, la cadence J0 → J1 → J3 → J6 → J10 propose la prochaine action et sa date ; l'horloge du service dit quand ne pas appeler (jamais 11h30-14h30, jamais après 17h30).", roles: LEADS },
       { text: "En haut de la liste, les chiffres du point hebdo : reçus, rappelés sous 24 h, qualifiés, RDV pris, show rate, gagnés, pipeline. Export CSV aux colonnes du Sheet de suivi ; import par collage.", roles: ["admin", "coordinator"] },
       { text: "Nouveau rôle « Commercial (setter) » (Paramètres → Utilisateurs) : accès aux leads, à la Formation et à l'Aide seulement — jamais aux apprenants ni aux formateurs. Bouton « Réglages » sur la page Leads : date du prochain groupe, Calendly, créneaux types.", roles: ["admin", "coordinator"] },
+      { text: "Les leads arrivent tout seuls : Réglages → adresse du webhook à coller dans Brevo (automation « Appeler un webhook »), dans le formulaire de la landing, dans Make pour Meta Lead Ads et dans Calendly (le RDV se pose sur la fiche). Chaque nouveau lead est attribué au setter et annoncé par email « à rappeler sous 24 h » ; les doublons sous 30 jours sont notés, pas recréés.", roles: ["admin", "coordinator"] },
+      { text: "Quand un restaurateur remplit le formulaire, sa fiche apparaît toute seule dans « À rappeler sous 24 h » et vous recevez un email avec le lien : plus rien à recopier.", roles: ["setter"] },
     ],
     training: [{ moduleId: "m1-leads", lessonId: "journee", label: "Ma journée de setter" }],
   },

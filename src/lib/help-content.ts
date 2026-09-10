@@ -416,6 +416,18 @@ export const HELP_SECTIONS: HelpSection[] = [
         ],
       },
       {
+        title: "Brancher la landing, Brevo, Meta et Calendly : les leads arrivent tout seuls",
+        steps: [
+          "Leads → Réglages → partie « Leads qui arrivent tout seuls » : choisissez à qui attribuer les nouveaux leads (le setter) et l'email prévenu à chaque arrivée, puis Enregistrer : l'adresse du webhook apparaît (…/api/leads/inbound?token=…). Copiez-la.",
+          "Brevo : Automations → nouveau scénario → point d'entrée « Formulaire soumis » (ou « Contact ajouté à la liste ») → action « Appeler un webhook » (POST) avec cette adresse : le contact et ses attributs (PRENOM, NOM, SMS, ENTREPRISE…) créent la fiche.",
+          "Formulaire de la landing (Manus) : en plus de Brevo, envoyez le formulaire en POST vers la même adresse (JSON ou formulaire classique) avec entreprise, prénom, nom, téléphone, email, ville, postes, utm_source, utm_campaign.",
+          "Meta Lead Ads : dans Make, module « Facebook Lead Ads → Watch leads » puis « HTTP → Make a request » (POST, JSON, corps = le lead) vers l'adresse : le nom du visuel (ad_name) devient la campagne de la fiche.",
+          "Calendly (forfait Standard ou plus) : Intégrations → Webhooks → événements « Invitee Created » et « Invitee Canceled » vers la même adresse : le RDV se pose sur la fiche du restaurateur (retrouvé par email ou téléphone) ou en crée une, statut « RDV pris ».",
+          "Test : ouvrez l'adresse du webhook dans le navigateur : « Point d'entrée actif » confirme le jeton. Un même téléphone ou email reçu deux fois en 30 jours ne crée pas de doublon : l'événement est noté sur la fiche existante.",
+          "Le jeton est un secret : s'il fuit, Réglages → « Régénérer le jeton » (l'ancienne adresse cesse de fonctionner) ; « Fermer le webhook » coupe tout.",
+        ],
+      },
+      {
         title: "Ce qu'on ne dit jamais à un restaurateur",
         steps: [
           "Jamais « 100 % gratuit » ni « ça ne vous coûte rien » : dire « financé par France Travail, 0 € de reste à charge sur la formation ».",

@@ -15,6 +15,9 @@ export type LeadSettings = {
   slot1: string; // « mardi 10h »
   slot2: string; // « jeudi 15h »
   directorName: string; // « Anis Kilani »
+  inboundToken: string; // jeton du webhook /api/leads/inbound (vide = webhook fermé)
+  notifyEmail: string; // email prévenu à chaque nouveau lead (le setter)
+  defaultOwnerUserId: string; // à qui attribuer les leads entrants
 };
 
 export const DEFAULT_LEAD_SETTINGS: LeadSettings = {
@@ -23,6 +26,9 @@ export const DEFAULT_LEAD_SETTINGS: LeadSettings = {
   slot1: "mardi 10h",
   slot2: "jeudi 15h",
   directorName: "Anis Kilani",
+  inboundToken: "",
+  notifyEmail: "",
+  defaultOwnerUserId: "",
 };
 
 // Réglages effectifs = défauts + retouches de l'organisme (organizations.settings.leads)
