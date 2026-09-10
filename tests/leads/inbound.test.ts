@@ -64,7 +64,7 @@ describe("webhook leads entrants : normalisation", () => {
         name: "Karim Benali",
         email: "karim@chezkarim.fr",
         text_reminder_number: "+33612345678",
-        scheduled_event: { start_time: "2026-09-18T13:00:00.000000Z", location: { type: "outbound_call", location: "+33612345678" } },
+        scheduled_event: { name: "Appel découverte 15 min", start_time: "2026-09-18T13:00:00.000000Z", location: { type: "outbound_call", location: "+33612345678" }, event_memberships: [{ user_email: "mohammad.shahzad9@gmail.com" }] },
         questions_and_answers: [{ question: "Nom du restaurant", answer: "Chez Karim" }],
       },
     });
@@ -75,6 +75,8 @@ describe("webhook leads entrants : normalisation", () => {
     expect(r.locationKind).toBe("telephone");
     expect(r.phone).toBe("+33612345678");
     expect(r.answers).toContain("Chez Karim");
+    expect(r.hostEmail).toBe("mohammad.shahzad9@gmail.com");
+    expect(r.eventName).toBe("Appel découverte 15 min");
   });
 
   it("Calendly invitee.canceled", () => {

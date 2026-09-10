@@ -30,6 +30,8 @@ export type InboundCalendly = {
   locationKind: "telephone" | "sur_site" | "visio" | null;
   answers: string | null;
   cancelReason: string | null;
+  hostEmail: string | null; // qui tient le créneau (Calendly du setter ≠ Calendly de la direction)
+  eventName: string | null; // nom du type d'événement Calendly (« Appel découverte », « RDV 30 min »…)
 };
 
 export type Inbound = InboundLead | InboundCalendly;
@@ -113,6 +115,8 @@ export function normalizeInbound(payload: unknown): Inbound | null {
     const locationKind: InboundCalendly["locationKind"] =
       /phone|call/.test(locType) ? "telephone" : /physical|custom|in_person/.test(locType) ? "sur_site" : /google|zoom|teams|meet|conference/.test(locType) ? "visio" : null;
     const cancellation = (inv.cancellation ?? null) as { reason?: string } | null;
+    const memberships = Array.isArray(scheduled.event_memberships) ? (scheduled.event_memberships as { user_email?: string }[]) : [];
+    const hostEmail = memberships.find((m) => typeof m.user_email === "string")?.user_email ?? null;
     return {
       kind: "calendly",
       action: eventName === "invitee.canceled" ? "canceled" : "created",
@@ -123,6 +127,8 @@ export function normalizeInbound(payload: unknown): Inbound | null {
       locationKind,
       answers: qa.length ? qa.map((q) => `${q.question ?? ""} : ${q.answer ?? ""}`).join(" · ") : null,
       cancelReason: cancellation?.reason ?? null,
+      hostEmail,
+      eventName: typeof scheduled.name === "string" ? scheduled.name : null,
     };
   }
 

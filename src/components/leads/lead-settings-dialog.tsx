@@ -118,7 +118,7 @@ export function LeadSettingsDialog({ settings, owners }: { settings: LeadSetting
                 <p className="text-sm text-muted-foreground">Pas encore ouvert : enregistrez une première fois pour créer le jeton.</p>
               )}
               <p className="text-xs text-muted-foreground">
-                POST en JSON ou formulaire. Champs reconnus : entreprise/restaurant, prénom, nom, téléphone, email, ville, postes, nb_postes, message, utm_source, utm_campaign. Doublon (même téléphone ou email sous 30 jours) = pas de nouvelle fiche. Calendly (invitee.created) est reconnu et pose le RDV.
+                POST en JSON ou formulaire. Champs reconnus : entreprise/restaurant, prénom, nom, téléphone, email, ville, postes, nb_postes, message, utm_source, utm_campaign. Doublon (même téléphone ou email sous 30 jours) = pas de nouvelle fiche. Calendly : un créneau dont l&apos;hôte est l&apos;email ci-dessus = appel de qualification (« À rappeler ») ; un créneau de la direction = « RDV pris ».
               </p>
               {webhookUrl && (
                 <Select value={tokenAction} onValueChange={(v) => setTokenAction(v as typeof tokenAction)}>

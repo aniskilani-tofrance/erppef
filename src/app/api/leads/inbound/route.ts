@@ -167,7 +167,75 @@ ${lead.message ? `<li><b>Message :</b> ${escapeHtml(lead.message)}</li>` : ""}
 
 const FINAL = ["gagne", "perdu", "hors_cible"];
 
+// Deux Calendly possibles : celui du setter (appel de qualification → « À rappeler », créneau
+// convenu) et celui de la direction (RDV de 30 min → « RDV pris »). On les distingue par l'email
+// de l'hôte du créneau (= l'email de notification du setter) ou par le nom du créneau.
+function isSetterCall(c: InboundCalendly, notifyEmail: string): boolean {
+  if (c.hostEmail && notifyEmail && c.hostEmail.toLowerCase() === notifyEmail.toLowerCase()) return true;
+  return /appel|d[ée]couverte|qualification|rappel|setter/i.test(c.eventName ?? "");
+}
+
+function fmtWhen(iso: string | null): string {
+  return iso ? new Date(iso).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Paris" }) : "";
+}
+
+async function handleSetterCall(admin: Admin, org: Org, c: InboundCalendly, ownerId: string | null, notifyEmail: string) {
+  const existing = await findExisting(admin, org.id, c.email, c.phone, null);
+  const when = fmtWhen(c.startsAt);
+  if (c.action === "canceled") {
+    if (!existing) return { ok: true, ignored: true, reason: "Annulation Calendly sans fiche correspondante" };
+    await admin.from("employer_leads").update({ next_action: "Créneau d'appel Calendly annulé : rappeler", next_action_on: today() }).eq("id", existing.id);
+    await admin.from("employer_lead_events").insert({ org_id: org.id, lead_id: existing.id, kind: "note", outcome: "autre", note: `Créneau d'appel Calendly annulé${c.cancelReason ? ` — ${c.cancelReason}` : ""}` });
+    return { ok: true, leadId: existing.id, ref: leadRef(existing.lead_no), canceled: true };
+  }
+  const patch = {
+    next_action: `Appel de qualification réservé via Calendly${when ? ` — ${when}` : ""}`,
+    next_action_on: c.startsAt ? new Date(c.startsAt).toLocaleDateString("sv-SE", { timeZone: "Europe/Paris" }) : today(),
+  };
+  let leadId: string;
+  let leadNo: number | null;
+  if (existing) {
+    await admin.from("employer_leads").update({ ...patch, ...(existing.status === "nouveau" ? { status: "a_rappeler" } : {}) }).eq("id", existing.id);
+    leadId = existing.id;
+    leadNo = existing.lead_no;
+  } else {
+    const { data, error } = await admin
+      .from("employer_leads")
+      .insert({
+        org_id: org.id,
+        company: c.name ? `Restaurant de ${c.name}` : (c.email ?? "Lead Calendly"),
+        contact_name: c.name,
+        email: c.email,
+        phone: c.phone,
+        source: "site",
+        campaign: "calendly",
+        notes: c.answers,
+        owner_user_id: ownerId,
+        status: "a_rappeler",
+        ...patch,
+      })
+      .select("id, lead_no")
+      .single();
+    if (error || !data) throw new Error(error?.message ?? "Création impossible");
+    leadId = data.id;
+    leadNo = data.lead_no;
+  }
+  await admin.from("employer_lead_events").insert({
+    org_id: org.id, lead_id: leadId, kind: "note", outcome: "rappel_convenu",
+    note: `Créneau d'appel réservé via Calendly${when ? ` — ${when}` : ""}${c.eventName ? ` (${c.eventName})` : ""}${c.answers ? ` · ${c.answers}` : ""}`,
+  });
+  if (notifyEmail) {
+    await sendMail({
+      to: notifyEmail,
+      subject: `Appel réservé sur votre Calendly : ${c.name ?? c.email ?? "restaurateur"}${when ? ` — ${when}` : ""}`,
+      html: `<p>Un restaurateur a réservé un créneau d'appel sur votre Calendly.</p><p><a href="${BASE_URL}/leads/${leadId}">Ouvrir la fiche ${leadRef(leadNo)}</a> — préparez les 7 questions, rappelez à l'heure dite (à la minute).</p>`,
+    }).catch(() => false);
+  }
+  return { ok: true, leadId, ref: leadRef(leadNo), setterCall: true, at: c.startsAt };
+}
+
 async function handleCalendly(admin: Admin, org: Org, c: InboundCalendly, ownerId: string | null, notifyEmail: string) {
+  if (isSetterCall(c, notifyEmail)) return handleSetterCall(admin, org, c, ownerId, notifyEmail);
   const existing = await findExisting(admin, org.id, c.email, c.phone, null);
   if (c.action === "canceled") {
     if (!existing) return { ok: true, ignored: true, reason: "Annulation Calendly sans fiche correspondante" };
