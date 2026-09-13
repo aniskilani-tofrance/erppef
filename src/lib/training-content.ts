@@ -40,6 +40,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
     objectives: [
       "Me connecter et retrouver mes cours du jour",
       "Savoir où changer mon mot de passe",
+      "Afficher mes cours dans mon agenda personnel (Google, iPhone, Outlook…)",
       "Comprendre ce que l'ERP fait pour moi",
     ],
     lessons: [
@@ -71,6 +72,26 @@ export const TRAINING_MODULES: TrainingModule[] = [
         ],
         tip: "Le badge « émargée » est votre liste de contrôle : en fin de semaine, toutes vos séances passées doivent l'avoir.",
       },
+      {
+        id: "agenda",
+        title: "Mes cours dans mon agenda personnel",
+        intro:
+          "Vous n'avez rien à recopier : l'ERP tient pour vous un agenda Google « Cours PEF — votre nom », partagé avec l'email de votre fiche, et le met à jour chaque nuit (séances déplacées ou annulées comprises).",
+        steps: [
+          "Sur ordinateur : calendar.google.com avec l'adresse de votre fiche → colonne de gauche, « Autres agendas » → cochez « Cours PEF — votre nom ».",
+          "Application Google Agenda (Android ou iPhone) : ☰ → « Paramètres » → touchez « Cours PEF — votre nom » sous votre compte → « Synchroniser ». Ajoutez une notification par défaut pour être prévenu(e) avant chaque cours.",
+          "Calendrier Apple sur iPhone : ouvrez calendar.google.com/calendar/syncselect dans Safari, cochez l'agenda, enregistrez. Outlook ou autre : copiez l'« Adresse secrète au format iCal » (Paramètres Google Agenda → l'agenda → « Intégrer l'agenda ») et ajoutez-la comme calendrier « depuis Internet ».",
+          "Chaque événement indique le groupe et la salle, avec l'adresse et « Comment trouver la salle » quand la coordination les a renseignées.",
+          "L'agenda est en lecture seule : un changement de planning se demande à la coordination, votre agenda suit la nuit suivante. Vous ne le trouvez pas ? Votre fiche doit porter une adresse Google (Gmail ou @parleremploi.fr) : demandez la correction, il sera repartagé.",
+        ],
+        tip: "Le détail pas à pas, appareil par appareil, est dans Aide → « Voir mes cours dans mon agenda (Google, iPhone, Outlook…) ».",
+        practice: {
+          instruction:
+            "Ouvrez Google Agenda avec l'adresse de votre fiche et affichez « Cours PEF — votre nom ». Sur téléphone, activez « Synchroniser » dans les paramètres de l'application.",
+          href: "/aide",
+          hrefLabel: "Le pas à pas par appareil (Aide)",
+        },
+      },
     ],
     quiz: [
       {
@@ -90,6 +111,12 @@ export const TRAINING_MODULES: TrainingModule[] = [
         choices: ["Impossible, il faut demander à l'admin", "En se réinscrivant", "Menu « Mon compte » en bas à gauche"],
         answerIndex: 2,
         explanation: "« Mon compte » permet de changer son mot de passe à tout moment (l'actuel est demandé par sécurité).",
+      },
+      {
+        question: "La coordination a déplacé une de vos séances. Que faites-vous pour votre agenda Google ?",
+        choices: ["Rien : il se met à jour dans la nuit", "Je la déplace moi-même dans Google Agenda", "Je supprime l'agenda et je le recrée"],
+        answerIndex: 0,
+        explanation: "L'agenda « Cours PEF — votre nom » est tenu par l'ERP : chaque nuit, il pousse les séances déplacées ou annulées. Vous n'avez rien à faire (et il est en lecture seule).",
       },
     ],
   },

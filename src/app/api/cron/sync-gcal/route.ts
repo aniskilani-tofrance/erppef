@@ -1,6 +1,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { gcalConfigured, syncTrainerCalendars } from "@/lib/gcal";
 
+export const maxDuration = 300; // première passe ou rentrée : plusieurs centaines d'écritures Google, avec réessais
+
 // Cron Vercel (cf. vercel.json) : synchronise chaque nuit les agendas Google
 // des formateurs. Authentifié par le header Authorization: Bearer <CRON_SECRET>
 // que Vercel ajoute automatiquement aux invocations de cron.

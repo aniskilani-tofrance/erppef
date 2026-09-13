@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>ERP ParlerEmploi — Vos cours dans votre agenda</title>
+<style>
+  :root {
+    --vert: #0F4C3A;
+    --emeraude: #2BAE7E;
+    --pale: #EAF4EF;
+    --encre: #1a2b26;
+    --gris: #6b7a75;
+    --ligne: #dfe8e4;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  @page { size: A4 portrait; margin: 0; }
+  html, body { font-family: "Avenir Next", "Helvetica Neue", Arial, sans-serif; color: var(--encre); background: white; }
+  .page {
+    width: 210mm; height: 297mm;
+    page-break-after: always;
+    position: relative; overflow: hidden;
+    padding: 16mm 18mm 18mm;
+    display: flex; flex-direction: column; gap: 6mm;
+  }
+  .page:last-child { page-break-after: avoid; }
+  .page::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 5mm;
+    background: linear-gradient(90deg, var(--vert), var(--emeraude));
+  }
+  .footer {
+    position: absolute; bottom: 8mm; left: 18mm; right: 18mm;
+    display: flex; justify-content: space-between; align-items: baseline; gap: 6mm;
+    font-size: 8.5pt; color: var(--gris);
+    border-top: 1px solid var(--ligne); padding-top: 3mm;
+  }
+  .footer span { white-space: nowrap; }
+  .footer span:nth-child(2) { flex: 1; text-align: center; white-space: normal; }
+  .kicker { font-size: 9.5pt; letter-spacing: 2.5px; text-transform: uppercase; color: var(--emeraude); font-weight: 700; }
+  h1 { font-size: 26pt; color: var(--vert); line-height: 1.12; margin-top: 2mm; }
+  .lead { font-size: 11.5pt; color: var(--gris); line-height: 1.5; margin-top: 3mm; max-width: 165mm; }
+
+  .auto {
+    background: var(--pale); border-radius: 4mm; padding: 5mm 6mm;
+    border-left: 2.5mm solid var(--emeraude);
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 5mm;
+  }
+  .auto div { font-size: 9.5pt; line-height: 1.45; }
+  .auto strong { display: block; color: var(--vert); font-size: 10pt; margin-bottom: 1mm; }
+
+  h2 {
+    font-size: 14pt; color: var(--vert); display: flex; align-items: baseline; gap: 3mm;
+    border-bottom: 1px solid var(--ligne); padding-bottom: 2mm;
+  }
+  h2 .tag { font-size: 8.5pt; font-weight: 700; color: var(--emeraude); letter-spacing: 1.5px; text-transform: uppercase; }
+  ol.steps { list-style: none; counter-reset: etape; display: grid; gap: 2.5mm; margin-top: 3mm; }
+  ol.steps li {
+    counter-increment: etape; position: relative; padding-left: 10mm;
+    font-size: 10pt; line-height: 1.45;
+  }
+  ol.steps li::before {
+    content: counter(etape); position: absolute; left: 0; top: 0.2mm;
+    width: 7mm; height: 7mm; border-radius: 50%;
+    background: var(--vert); color: white; font-weight: 700; font-size: 9pt;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .chemin { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 9pt; background: var(--pale); padding: 0.4mm 1.6mm; border-radius: 1.2mm; white-space: nowrap; }
+  .section { break-inside: avoid; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8mm; }
+  .note { font-size: 9pt; color: var(--gris); line-height: 1.45; margin-top: 2.5mm; padding-left: 10mm; }
+  .note strong { color: var(--vert); }
+  .depannage { background: var(--pale); border-radius: 4mm; padding: 5mm 6mm; }
+  .depannage h2 { border: none; padding: 0; margin-bottom: 2mm; }
+  .depannage ul { list-style: none; display: grid; gap: 2mm; }
+  .depannage li { font-size: 9.8pt; line-height: 1.45; padding-left: 6mm; position: relative; }
+  .depannage li::before { content: "✓"; position: absolute; left: 0; color: var(--emeraude); font-weight: 700; }
+  .contenu { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; }
+  .contenu .card { border: 1px solid var(--ligne); border-radius: 4mm; padding: 4.5mm 5.5mm; font-size: 9.6pt; line-height: 1.45; }
+  .contenu .card strong { display: block; color: var(--vert); margin-bottom: 1mm; }
+</style>
+</head>
+<body>
+
+<!-- ───────────── PAGE 1 ───────────── -->
+<section class="page">
+  <div>
+    <div class="kicker">ERP ParlerEmploi Formation · Mode d'emploi formateur</div>
+    <h1>Vos cours dans votre agenda</h1>
+    <p class="lead">L'ERP tient pour vous un agenda Google « Cours PEF — votre nom », mis à jour chaque nuit. Voici comment l'afficher sur votre ordinateur, votre téléphone, ou dans Outlook.</p>
+  </div>
+
+  <div class="auto">
+    <div><strong>Rien à installer</strong>L'agenda est créé par l'ERP et partagé avec l'adresse email de votre fiche formateur. Google vous a envoyé un email « … a partagé un agenda avec vous ».</div>
+    <div><strong>Toujours à jour</strong>Chaque nuit, vos séances à venir sont poussées : groupe, salle, adresse et « Comment trouver la salle ». Les séances déplacées ou annulées suivent.</div>
+    <div><strong>En lecture seule</strong>Vous ne pouvez pas modifier une séance depuis l'agenda : un changement de planning se demande à la coordination, votre agenda suit la nuit suivante.</div>
+  </div>
+
+  <div class="section">
+    <h2>Sur ordinateur <span class="tag">Google Agenda</span></h2>
+    <ol class="steps">
+      <li>Ouvrez <span class="chemin">calendar.google.com</span> et connectez-vous avec l'adresse email de votre fiche formateur (celle où vous recevez les emails de l'ERP).</li>
+      <li>Dans la colonne de gauche, sous <strong>« Autres agendas »</strong>, repérez <strong>« Cours PEF — votre nom »</strong>. Cochez la case pour l'afficher ; décochez-la pour le masquer sans le perdre.</li>
+      <li>Cliquez sur une séance : vous voyez le groupe, la salle et son adresse. Pour être prévenu(e) avant chaque cours : survolez l'agenda → ⋮ → « Paramètres » → « Notifications sur les événements ».</li>
+    </ol>
+  </div>
+
+  <div class="section">
+    <h2>Sur téléphone <span class="tag">Application Google Agenda · Android et iPhone</span></h2>
+    <ol class="steps">
+      <li>Installez ou ouvrez l'application <strong>Google Agenda</strong>, connectée au même compte que ci-dessus.</li>
+      <li>Menu <strong>☰</strong> (en haut à gauche) → tout en bas, <strong>« Paramètres »</strong> → sous votre compte, touchez <strong>« Cours PEF — votre nom »</strong> → activez <strong>« Synchroniser »</strong>.</li>
+      <li>Revenez au calendrier : vos cours s'affichent avec vos autres agendas. Dans le même écran, réglez une notification par défaut (par exemple 1 heure avant) pour chaque séance.</li>
+    </ol>
+    <p class="note"><strong>L'agenda n'apparaît pas dans la liste ?</strong> Sur ordinateur, cochez-le d'abord dans « Autres agendas » (étape 2 ci-dessus), puis revenez dans l'application : il est maintenant proposé.</p>
+  </div>
+
+  <div class="contenu">
+    <div class="card"><strong>Ce que contient chaque séance</strong>Le nom du groupe et la salle dans le titre (par exemple « PEF A2 · Cordon »), l'adresse de la salle dans le lieu (un clic ouvre l'itinéraire) et, dans la description, « Comment trouver la salle » quand la coordination l'a renseigné.</div>
+    <div class="card"><strong>Quand ça se met à jour</strong>Chaque nuit. Une séance déplacée bouge, une séance annulée disparaît, une nouvelle séance apparaît. Si la coordination clique « Synchroniser maintenant », c'est immédiat.</div>
+  </div>
+
+  <div class="footer">
+    <span>ParlerEmploi Formation · pef-erp.vercel.app</span>
+    <span>Mode d'emploi complet dans l'ERP : Aide → « Voir mes cours dans mon agenda »</span>
+    <span>1 / 2</span>
+  </div>
+</section>
+
+<!-- ───────────── PAGE 2 ───────────── -->
+<section class="page">
+  <div class="section">
+    <h2>iPhone <span class="tag">Application Calendrier d'Apple</span></h2>
+    <ol class="steps">
+      <li>Réglages → <strong>Apps → Calendrier → Comptes</strong> : votre compte Google doit être présent, avec <strong>« Calendriers »</strong> activé (sinon « Ajouter un compte » → Google).</li>
+      <li>Les agendas partagés ne sont pas repris d'office. Dans Safari, connecté(e) à votre compte Google, ouvrez <span class="chemin">calendar.google.com/calendar/syncselect</span>, cochez <strong>« Cours PEF — votre nom »</strong> et enregistrez.</li>
+      <li>Ouvrez Calendrier → <strong>« Calendriers »</strong> (en bas) → cochez « Cours PEF — votre nom » sous Gmail. Il se met à jour tout seul (quelques minutes de délai).</li>
+    </ol>
+  </div>
+
+  <div class="two">
+    <div class="section">
+      <h2>Samsung <span class="tag">Calendrier Samsung</span></h2>
+      <ol class="steps">
+        <li>Activez d'abord « Synchroniser » dans l'application Google Agenda (page 1).</li>
+        <li>Ouvrez Calendrier Samsung → <strong>☰ → « Gérer les calendriers »</strong> → cochez « Cours PEF — votre nom » sous votre compte Google.</li>
+      </ol>
+    </div>
+    <div class="section">
+      <h2>Outlook et autres <span class="tag">Thunderbird, Proton…</span></h2>
+      <ol class="steps">
+        <li>Sur ordinateur, <span class="chemin">calendar.google.com</span> → ⚙️ <strong>Paramètres</strong> → à gauche, « Cours PEF — votre nom » → <strong>« Intégrer l'agenda »</strong>.</li>
+        <li>Copiez <strong>« Adresse secrète au format iCal »</strong>.</li>
+        <li>Dans l'autre application : « Ajouter un calendrier » → <strong>« Depuis Internet »</strong> (ou « par URL ») → collez l'adresse. Mise à jour automatique, avec quelques heures de délai.</li>
+      </ol>
+      <p class="note"><strong>Ne partagez jamais cette adresse</strong> : elle donne accès à votre agenda.</p>
+    </div>
+  </div>
+
+  <div class="depannage">
+    <h2>Ça ne marche pas ? Vérifiez dans l'ordre</h2>
+    <ul>
+      <li><strong>La bonne adresse.</strong> L'agenda est partagé avec l'email de votre fiche formateur. Connectez-vous à Google avec cette adresse, pas avec un autre compte.</li>
+      <li><strong>Une adresse Google.</strong> Il faut une adresse Gmail ou une adresse professionnelle hébergée chez Google (comme @parleremploi.fr). Sinon, demandez à la coordination de mettre une adresse Google sur votre fiche : l'agenda est repartagé automatiquement.</li>
+      <li><strong>L'invitation.</strong> Cherchez l'email de Google « … a partagé un agenda avec vous » ; son bouton « Ajouter cet agenda » suffit.</li>
+      <li><strong>Sur téléphone, « Synchroniser » activé</strong> pour cet agenda dans les paramètres de l'application Google Agenda (page 1).</li>
+      <li><strong>Toujours rien ?</strong> Demandez à la coordination de cliquer Paramètres → « Synchroniser maintenant » dans l'ERP, puis réessayez.</li>
+    </ul>
+  </div>
+
+  <div class="footer">
+    <span>ParlerEmploi Formation · pef-erp.vercel.app</span>
+    <span>Questions : votre coordination</span>
+    <span>2 / 2</span>
+  </div>
+</section>
+
+</body>
+</html>

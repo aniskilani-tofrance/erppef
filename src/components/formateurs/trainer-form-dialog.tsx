@@ -134,6 +134,10 @@ export function TrainerFormDialog({ initial }: { initial?: TrainerFormValues }) 
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Email">
               <Input type="email" value={values.email} onChange={(e) => set("email", e.target.value)} />
+              <p className="text-xs text-muted-foreground">
+                De préférence une adresse Google (Gmail ou @parleremploi.fr) : l&apos;agenda « Cours PEF » lui
+                est partagé et l&apos;invitation à se connecter y est envoyée.
+              </p>
             </Field>
             <Field label="Téléphone">
               <Input value={values.phone} onChange={(e) => set("phone", e.target.value)} />

@@ -84,6 +84,18 @@ export const HELP_SECTIONS: HelpSection[] = [
         ],
       },
       {
+        title: "Voir mes cours dans mon agenda (Google, iPhone, Outlook…)",
+        steps: [
+          "Rien à installer : l'ERP crée un agenda Google « Cours PEF — votre nom » et le partage avec l'adresse email de votre fiche formateur. Chaque nuit il y pousse vos séances à venir (groupe, salle, adresse et « Comment trouver la salle » quand elles sont renseignées) et met à jour celles qui ont été déplacées ou annulées. Vous pouvez le lire, pas le modifier : le planning se change avec la coordination.",
+          "Sur ordinateur : ouvrez calendar.google.com avec cette adresse. L'agenda est dans la colonne de gauche, sous « Autres agendas » (Google vous a aussi envoyé un email « … a partagé un agenda avec vous »). Cochez-le pour l'afficher, décochez-le pour le masquer.",
+          "Application Google Agenda (Android ou iPhone) : menu ☰ → tout en bas « Paramètres » → sous votre compte, touchez « Cours PEF — votre nom » → activez « Synchroniser ». Vos cours s'affichent avec vos autres agendas ; réglez une notification par défaut pour être prévenu(e) avant chaque séance.",
+          "Calendrier de l'iPhone (l'application Apple) : les agendas partagés ne sont pas repris par défaut. Dans Safari, connecté(e) à votre compte Google, ouvrez calendar.google.com/calendar/syncselect, cochez « Cours PEF — votre nom » et enregistrez. Vérifiez aussi que votre compte Google est ajouté dans Réglages → Apps → Calendrier → Comptes, avec « Calendriers » activé.",
+          "Calendrier Samsung : il reprend les agendas de votre compte Google. Ouvrez-le → ☰ → « Gérer les calendriers » → cochez « Cours PEF — votre nom » (si besoin, activez d'abord « Synchroniser » dans l'application Google Agenda).",
+          "Outlook, Thunderbird ou une autre application : dans calendar.google.com → ⚙️ Paramètres → à gauche, « Cours PEF — votre nom » → « Intégrer l'agenda » → copiez « Adresse secrète au format iCal ». Dans l'autre application, choisissez « Ajouter un calendrier depuis Internet » (ou « par URL ») et collez l'adresse : l'agenda se met à jour tout seul, avec quelques heures de délai selon l'application. Ne partagez jamais cette adresse : elle donne accès à votre agenda.",
+          "Vous ne trouvez pas l'agenda ? Il faut que l'email de votre fiche formateur soit une adresse Google (Gmail, ou une adresse professionnelle sur Google comme @parleremploi.fr) et que vous soyez connecté(e) avec elle. Sinon, demandez à la coordination de corriger l'email de votre fiche : l'agenda est repartagé à la synchronisation suivante (chaque nuit, ou tout de suite avec « Synchroniser maintenant »).",
+        ],
+      },
+      {
         title: "Faire signer la feuille d'émargement",
         steps: [
           "Depuis votre Dashboard ou le Planning, ouvrez la séance → « Feuille d'émargement » → « Ouvrir l'émargement ».",
@@ -158,6 +170,16 @@ export const HELP_SECTIONS: HelpSection[] = [
           "Retirer l'accès est réversible : la personne ne peut plus se connecter mais sa fiche et son historique restent ; vous pouvez la réinviter plus tard.",
           "« Inviter un utilisateur » pour un non-formateur (coordinateur, lecture seule).",
           "Un changement de rôle s'applique à la prochaine connexion de la personne.",
+        ],
+      },
+      {
+        title: "Les agendas Google des formateurs",
+        steps: [
+          "Paramètres → carte « Agendas Google des formateurs » : l'ERP tient un agenda « Cours PEF — Prénom Nom » par formateur, partagé en lecture avec l'email de sa fiche et en écriture avec la direction. La synchronisation tourne chaque nuit vers 6 h ; « Synchroniser maintenant » lance une passe tout de suite et affiche le bilan (agendas, séances poussées, inchangées, retirées, agendas renommés, partages ajoutés, erreurs).",
+          "Un formateur ne voit rien : (1) vérifiez que l'email de sa fiche est une adresse Google (Gmail ou @parleremploi.fr) ; (2) s'il vient d'être créé, renommé ou si son email a changé, cliquez « Synchroniser maintenant » : l'agenda est renommé et repartagé, Google lui envoie l'invitation ; (3) envoyez-lui Aide → « Voir mes cours dans mon agenda » pour l'afficher sur son téléphone ou dans Outlook.",
+          "Chaque événement porte le groupe, la salle, son adresse et « Comment trouver la salle » : renseignez ces deux champs sur les fiches des salles pour que les formateurs les aient sous la main.",
+          "L'ERP ne touche qu'à ses propres événements : ce que vous ajoutez à la main dans ces agendas est conservé. Une séance annulée ou déplacée disparaît ou bouge à la passe suivante ; seules les séances qui ont changé sont réécrites.",
+          "Des erreurs « Rate Limit Exceeded » peuvent apparaître lors d'une première grosse passe (rentrée, nouveau formateur) : l'ERP réessaie de lui-même, et ce qui reste est rattrapé la nuit suivante.",
         ],
       },
     ],
@@ -456,6 +478,16 @@ export const FAQ: FaqItem[] = [
   {
     q: "Je ne vois pas mes séances sur mon Dashboard (formateur).",
     a: "Votre compte n'est probablement pas relié à votre fiche formateur. Demandez au coordinateur de vous réinviter depuis votre fiche (bouton « Renvoyer l'invitation ») : le lien se fait automatiquement.",
+    roles: ALL,
+  },
+  {
+    q: "Mes cours n'apparaissent pas dans mon agenda Google.",
+    a: "L'agenda « Cours PEF — votre nom » est partagé avec l'email de votre fiche formateur : connectez-vous à Google avec cette adresse, puis cochez-le sous « Autres agendas » (ordinateur) ou activez « Synchroniser » dans les paramètres de l'application Google Agenda (téléphone). Si l'adresse de votre fiche n'est pas une adresse Google, demandez à la coordination de la corriger : l'agenda est repartagé à la synchronisation suivante. Mode d'emploi complet : Aide → « Voir mes cours dans mon agenda ».",
+    roles: ALL,
+  },
+  {
+    q: "Puis-je déplacer une séance depuis mon agenda Google ?",
+    a: "Non : l'agenda est en lecture seule et l'ERP le réécrit chaque nuit. Un changement de planning se demande à la coordination, qui le fait dans l'ERP ; votre agenda suit la nuit suivante.",
     roles: ALL,
   },
   {
