@@ -5,6 +5,8 @@ import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { translatePgError } from "@/lib/pg-errors";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { DOCUMENT_KINDS, learnerDocumentsPrefix, type LearnerDocumentKind } from "@/lib/dossier/documents";
 import { ADMISSION_STATUS_CODES } from "@/lib/admission/status";
 import { CONTACT_SOURCES, LEVELS } from "@/lib/referentiels";
 
@@ -392,10 +394,150 @@ async function deleteOneLearner(
   const { error } = await supabase.from("learners").delete().eq("id", id).eq("org_id", orgId);
   if (error) return { ok: false, name, error: translatePgError(error) };
 
+  // Pièces du dossier administratif (bucket privé « dossiers ») : les lignes partent en
+  // cascade, les fichiers se nettoient ici (RGPD : rien ne doit survivre à la fiche).
+  await removeLearnerDossierFiles(orgId, id);
+
   // Photo du bucket public « photos » : nettoyage best-effort (chemin après /photos/).
   const photoPath = learner.photo_url?.split("/storage/v1/object/public/photos/")[1];
   if (photoPath) await supabase.storage.from("photos").remove([decodeURIComponent(photoPath)]).catch(() => undefined);
   return { ok: true, name };
+}
+
+async function removeLearnerDossierFiles(orgId: string, learnerId: string): Promise<void> {
+  try {
+    const storage = createAdminClient().storage.from("dossiers");
+    const prefix = learnerDocumentsPrefix(orgId, learnerId);
+    const { data } = await storage.list(prefix, { limit: 200 });
+    if (data?.length) await storage.remove(data.map((o) => `${prefix}/${o.name}`));
+  } catch {
+    // Nettoyage best-effort : la fiche est déjà supprimée.
+  }
+}
+
+// ───────────────── Dossier administratif (pièces scannées / déposées) ─────────────────
+
+export type LearnerDocumentRow = {
+  id: string;
+  kind: LearnerDocumentKind;
+  label: string;
+  filePath: string;
+  mimeType: string | null;
+  sizeBytes: number | null;
+  createdAt: string;
+  signedUrl: string | null; // lien de consultation temporaire (1 h)
+};
+
+export type LearnerDocumentsResult =
+  | { ok: true; orgId: string; documents: LearnerDocumentRow[] }
+  | { ok: false; error: string };
+
+// Pièces d'un apprenant avec liens signés : appelé à l'ouverture de la fiche (jamais
+// en masse sur la liste, pour ne pas signer des centaines d'URL).
+export async function listLearnerDocuments(learnerId: string): Promise<LearnerDocumentsResult> {
+  if (!z.string().uuid().safeParse(learnerId).success) return { ok: false, error: "Apprenant invalide" };
+  const { orgId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("learner_documents")
+    .select("id, kind, label, file_path, mime_type, size_bytes, created_at")
+    .eq("learner_id", learnerId)
+    .eq("org_id", orgId)
+    .order("created_at");
+  if (error) return { ok: false, error: translatePgError(error) };
+
+  const documents = await Promise.all(
+    (data ?? []).map(async (d) => {
+      const { data: signed } = await supabase.storage.from("dossiers").createSignedUrl(d.file_path, 3600);
+      return {
+        id: d.id,
+        kind: d.kind as LearnerDocumentKind,
+        label: d.label,
+        filePath: d.file_path,
+        mimeType: d.mime_type,
+        sizeBytes: d.size_bytes,
+        createdAt: d.created_at,
+        signedUrl: signed?.signedUrl ?? null,
+      };
+    }),
+  );
+  return { ok: true, orgId, documents };
+}
+
+const addDocumentSchema = z.object({
+  learnerId: z.string().uuid(),
+  kind: z.enum(DOCUMENT_KINDS as [LearnerDocumentKind, ...LearnerDocumentKind[]]),
+  label: z.string().min(1).max(120),
+  filePath: z.string().min(1).max(300),
+  mimeType: z.string().max(100).optional(),
+  sizeBytes: z.number().int().nonnegative().optional(),
+});
+
+// Référence une pièce déjà uploadée par le navigateur dans le bucket privé « dossiers ».
+// Recto, verso et justificatif sont des emplacements uniques : une nouvelle pièce remplace
+// l'ancienne (ligne et fichier). « Autre » s'empile.
+export async function addLearnerDocument(raw: z.infer<typeof addDocumentSchema>): Promise<ActionResult> {
+  const parsed = addDocumentSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Données invalides" };
+  const d = parsed.data;
+
+  const { orgId, userId } = await requireRole(["admin", "coordinator"]);
+  if (!d.filePath.startsWith(`${learnerDocumentsPrefix(orgId, d.learnerId)}/`)) {
+    return { ok: false, error: "Chemin de fichier invalide" };
+  }
+  const supabase = await createClient();
+  const storage = createAdminClient().storage.from("dossiers");
+
+  if (d.kind !== "autre") {
+    const { data: previous } = await supabase
+      .from("learner_documents")
+      .select("id, file_path")
+      .eq("learner_id", d.learnerId)
+      .eq("org_id", orgId)
+      .eq("kind", d.kind);
+    for (const p of previous ?? []) {
+      await supabase.from("learner_documents").delete().eq("id", p.id);
+      await storage.remove([p.file_path]).catch(() => undefined);
+    }
+  }
+
+  const { error } = await supabase.from("learner_documents").insert({
+    org_id: orgId,
+    learner_id: d.learnerId,
+    kind: d.kind,
+    label: d.label,
+    file_path: d.filePath,
+    mime_type: d.mimeType ?? null,
+    size_bytes: d.sizeBytes ?? null,
+    uploaded_by: userId,
+  });
+  if (error) {
+    await storage.remove([d.filePath]).catch(() => undefined);
+    return { ok: false, error: translatePgError(error) };
+  }
+  revalidatePath("/apprenants");
+  return { ok: true };
+}
+
+export async function deleteLearnerDocument(id: string): Promise<ActionResult> {
+  if (!z.string().uuid().safeParse(id).success) return { ok: false, error: "Document invalide" };
+  const { orgId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+
+  const { data: doc } = await supabase
+    .from("learner_documents")
+    .select("file_path")
+    .eq("id", id)
+    .eq("org_id", orgId)
+    .single();
+  if (!doc) return { ok: false, error: "Document introuvable" };
+
+  const { error } = await supabase.from("learner_documents").delete().eq("id", id);
+  if (error) return { ok: false, error: translatePgError(error) };
+  await createAdminClient().storage.from("dossiers").remove([doc.file_path]).catch(() => undefined);
+  revalidatePath("/apprenants");
+  return { ok: true };
 }
 
 export async function deleteLearner(id: string): Promise<ActionResult> {

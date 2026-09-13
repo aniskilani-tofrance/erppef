@@ -26,6 +26,18 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-09-14-dossier-administratif",
+    date: "2026-09-14",
+    title: "Dossier administratif : pièces scannées depuis le téléphone",
+    summary: "La fiche apprenant accueille la pièce d'identité (recto, verso), le justificatif de domicile et les autres documents : photo ou scan depuis l'iPhone, ou fichier depuis l'ordinateur, dans un espace privé réservé à la coordination.",
+    items: [
+      { text: "Fiche apprenant → bloc « Dossier administratif » : trois emplacements (identité recto, identité verso, justificatif de domicile) + « Autres documents » à intitulé libre. Compteur « 2 / 3 pièces ».", roles: TEAM },
+      { text: "Sur téléphone, « Photo / scan » ouvre l'appareil photo ; sur iPhone, « Fichier » → ⋯ → « Scanner des documents » dépose un PDF net et redressé. Sur ordinateur, « Fichier » accepte photo ou PDF (15 Mo max, photos réduites avant envoi).", roles: TEAM },
+      { text: "Protection : visible par l'admin et la coordination seulement (jamais formateurs ni setter), stockage privé, lien de consultation valable 1 h, suppression automatique avec la fiche. Ne conservez que ce que le financeur exige.", roles: TEAM },
+    ],
+    training: [{ moduleId: "c3-equipe", lessonId: "apprenants", label: "Apprenants : fiche, photo, import" }],
+  },
+  {
     id: "2026-09-14-agenda-formateurs",
     date: "2026-09-14",
     title: "Vos cours dans votre agenda (Google, iPhone, Outlook…)",
@@ -35,6 +47,7 @@ export const APP_UPDATES: AppUpdate[] = [
       { text: "Chaque événement indique le groupe et la salle, avec son adresse et « Comment trouver la salle » quand elles sont renseignées. Les séances déplacées ou annulées sont mises à jour la nuit suivante ; l'agenda est en lecture seule.", roles: ["trainer"] },
       { text: "La synchronisation ne réécrit plus que les séances qui ont changé et réessaie quand Google limite le débit : plus de séances manquantes. Un formateur renommé ou dont l'email a été ajouté ou corrigé voit son agenda renommé et repartagé automatiquement (ou tout de suite avec « Synchroniser maintenant », dont le bilan est détaillé).", roles: TEAM },
       { text: "Sur la fiche formateur, le champ Email rappelle qu'une adresse Google est préférable : c'est elle qui reçoit l'agenda. Aide → « Les agendas Google des formateurs » pour dépanner un formateur qui ne voit rien.", roles: TEAM },
+      { text: "Direction : nouvel agenda « Cours PEF — Tous les formateurs » (toutes les séances, formatrice dans le titre) et tous les comptes admin reçoivent chaque agenda en écriture. Paramètres → « Voir tous les agendas » : la liste, les partages et « Ouvrir dans Google Agenda ».", roles: ["admin"] },
     ],
     training: [{ moduleId: "f1-prise-en-main", lessonId: "agenda", label: "Mes cours dans mon agenda personnel" }],
   },

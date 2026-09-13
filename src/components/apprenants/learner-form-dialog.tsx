@@ -15,6 +15,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Pencil } from "lucide-react";
 import { PhotoUpload, initials } from "@/components/ui/photo-upload";
+import { LearnerDocuments } from "@/components/apprenants/learner-documents";
 import { ADMISSION_STATUSES } from "@/lib/admission/status";
 import {
   ACTIVITIES as REF_ACTIVITIES,
@@ -308,6 +309,16 @@ export function LearnerFormDialog({
             <Label>Identifiant France Travail</Label>
             <Input value={values.franceTravailId} onChange={(e) => set("franceTravailId", e.target.value)} />
           </div>
+
+          {/* Dossier administratif : pièces scannées (recto/verso, justificatif). Fiche déjà créée seulement. */}
+          {isEdit && values.id ? (
+            <LearnerDocuments learnerId={values.id} />
+          ) : (
+            <p className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+              Dossier administratif (pièce d&apos;identité, justificatif de domicile) : enregistrez d&apos;abord la fiche,
+              puis rouvrez-la pour scanner ou déposer les pièces.
+            </p>
+          )}
 
           {/* Analyse du besoin à l'entrée : preuve individuelle Qualiopi ind. 4. */}
           <div className="rounded-md border p-3">

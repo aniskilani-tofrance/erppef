@@ -175,7 +175,8 @@ export const HELP_SECTIONS: HelpSection[] = [
       {
         title: "Les agendas Google des formateurs",
         steps: [
-          "Paramètres → carte « Agendas Google des formateurs » : l'ERP tient un agenda « Cours PEF — Prénom Nom » par formateur, partagé en lecture avec l'email de sa fiche et en écriture avec la direction. La synchronisation tourne chaque nuit vers 6 h ; « Synchroniser maintenant » lance une passe tout de suite et affiche le bilan (agendas, séances poussées, inchangées, retirées, agendas renommés, partages ajoutés, erreurs).",
+          "Paramètres → carte « Agendas Google des formateurs » : l'ERP tient un agenda « Cours PEF — Prénom Nom » par formateur, partagé en lecture avec l'email de sa fiche, et un agenda « Cours PEF — Tous les formateurs » avec toutes les séances de l'organisme (formatrice dans le titre, « formateur à affecter » sinon). La synchronisation tourne chaque nuit vers 6 h ; « Synchroniser maintenant » lance une passe tout de suite et affiche le bilan (agendas, séances poussées, inchangées, retirées, agendas renommés, partages ajoutés, erreurs).",
+          "Accès de la direction : tous les comptes ERP de rôle admin reçoivent automatiquement chaque agenda en écriture (un nouvel admin est ajouté à la passe suivante). « Voir tous les agendas » liste chaque agenda avec ses partages et un bouton « Ouvrir dans Google Agenda » qui l'ajoute à votre Google Agenda s'il n'y est pas encore (connectez-vous avec votre adresse admin). Astuce : affichez seulement « Tous les formateurs » pour une vue d'ensemble, ou les agendas individuels pour comparer.",
           "Un formateur ne voit rien : (1) vérifiez que l'email de sa fiche est une adresse Google (Gmail ou @parleremploi.fr) ; (2) s'il vient d'être créé, renommé ou si son email a changé, cliquez « Synchroniser maintenant » : l'agenda est renommé et repartagé, Google lui envoie l'invitation ; (3) envoyez-lui Aide → « Voir mes cours dans mon agenda » pour l'afficher sur son téléphone ou dans Outlook.",
           "Chaque événement porte le groupe, la salle, son adresse et « Comment trouver la salle » : renseignez ces deux champs sur les fiches des salles pour que les formateurs les aient sous la main.",
           "L'ERP ne touche qu'à ses propres événements : ce que vous ajoutez à la main dans ces agendas est conservé. Une séance annulée ou déplacée disparaît ou bouge à la passe suivante ; seules les séances qui ont changé sont réécrites.",
@@ -286,6 +287,17 @@ export const HELP_SECTIONS: HelpSection[] = [
           "Un message par étape, jamais le même texte : Nouveau → « Premier contact » ; Injoignable → « Relance » ; Contacté → le lien du test s'il reste à faire, sinon « Prochaine étape » ; Convoqué → la convocation avec date et lieu ; Évalué → « Place proposée » ; Inscrit → confirmation avec le groupe et le premier cours ; Sans suite → « Porte ouverte ». Le bouton dit toujours quelle étape il envoie.",
           "Retoucher les textes : onglet Admission → « Messages ». Un texte par étape, variables entre accolades ({prenom}, {date}, {lieu}, {groupe}…), aperçu rempli avec un exemple, « Revenir au texte d'origine » à tout moment. Enregistré pour toute l'équipe, aussi pour les emails de convocation et de rappel.",
           "Comment la personne NOUS a contactés : fiche apprenant → bloc « Parcours d'admission » → « Nous a contactés par » (bouche-à-oreille, passage à l'accueil, téléphone, WhatsApp, email, site, réseaux sociaux, France Travail, partenaire, affiche) + une précision libre (nom du partenaire, page…). C'est aussi la colonne « Canal de contact » du tableur Drive/Excel. La carte « D'où viennent les demandes » (onglet Admission) et le bilan financeur (Rapports) en donnent la répartition.",
+        ],
+      },
+      {
+        title: "Constituer le dossier administratif (pièce d'identité, justificatif)",
+        steps: [
+          "Fiche apprenant (crayon dans la liste) → bloc « Dossier administratif » : trois emplacements, Pièce d'identité recto, Pièce d'identité verso (rien pour un passeport), Justificatif de domicile ; plus « Autres documents » (titre de séjour, attestation France Travail, RIB, diplôme…) avec un intitulé libre. Le compteur « 2 / 3 pièces » dit où en est le dossier.",
+          "Depuis un iPhone ou un Android : « Photo / scan » ouvre directement l'appareil photo, cadrez la pièce à plat sous une bonne lumière. Pour un scan net et redressé sur iPhone : « Fichier » → « Choisir un fichier » → bouton ⋯ en haut → « Scanner des documents » → validez : le PDF est déposé.",
+          "Depuis un ordinateur : « Fichier » accepte une photo (JPG, PNG, HEIC) ou un PDF, 15 Mo maximum. Une photo est réduite avant envoi (2000 px), un PDF est conservé tel quel.",
+          "Recto, verso et justificatif sont uniques : « Refaire » remplace la pièce précédente. « Voir » ouvre la pièce dans un nouvel onglet (lien valable 1 h, à ne pas transmettre) ; la corbeille la supprime.",
+          "Protection des données : ces pièces ne sont visibles que par l'admin et la coordination (jamais par les formateurs ni le setter, même via l'API), elles sont stockées dans un espace privé et supprimées avec la fiche de l'apprenant. Ne gardez que ce que le financeur exige, et pas plus longtemps que le parcours et ses obligations de justification.",
+          "Une fiche qui vient d'être créée n'a pas encore d'emplacement : enregistrez-la, puis rouvrez-la pour ajouter les pièces.",
         ],
       },
       {
@@ -484,6 +496,11 @@ export const FAQ: FaqItem[] = [
     q: "Mes cours n'apparaissent pas dans mon agenda Google.",
     a: "L'agenda « Cours PEF — votre nom » est partagé avec l'email de votre fiche formateur : connectez-vous à Google avec cette adresse, puis cochez-le sous « Autres agendas » (ordinateur) ou activez « Synchroniser » dans les paramètres de l'application Google Agenda (téléphone). Si l'adresse de votre fiche n'est pas une adresse Google, demandez à la coordination de la corriger : l'agenda est repartagé à la synchronisation suivante. Mode d'emploi complet : Aide → « Voir mes cours dans mon agenda ».",
     roles: ALL,
+  },
+  {
+    q: "Comment scanner la pièce d'identité d'un apprenant avec mon iPhone ?",
+    a: "Ouvrez sa fiche depuis la liste Apprenants, bloc « Dossier administratif ». Soit « Photo / scan » (appareil photo, pièce à plat), soit, pour un PDF net et redressé : « Fichier » → « Choisir un fichier » → ⋯ → « Scanner des documents ». La pièce est stockée dans un espace privé réservé à la coordination et supprimée avec la fiche.",
+    roles: TEAM,
   },
   {
     q: "Puis-je déplacer une séance depuis mon agenda Google ?",

@@ -6,7 +6,7 @@ import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { translatePgError } from "@/lib/pg-errors";
-import { gcalConfigured, syncTrainerCalendars, type GcalSyncStats } from "@/lib/gcal";
+import { gcalConfigured, listOrgCalendars, syncTrainerCalendars, type GcalSyncStats, type OrgCalendar } from "@/lib/gcal";
 import { inviteUser } from "@/lib/invitations";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -182,6 +182,23 @@ export async function sendUpdateAnnouncements(): Promise<{ ok: true; message: st
     ok: true,
     message: `${r.updates} mise${r.updates > 1 ? "s" : ""} à jour annoncée${r.updates > 1 ? "s" : ""} à ${r.sent} personne${r.sent > 1 ? "s" : ""}${r.skipped.length ? ` (échec : ${r.skipped.join(", ")})` : ""}.`,
   };
+}
+
+export type GcalListResult = { ok: true; calendars: OrgCalendar[] } | { ok: false; error: string };
+
+// Inventaire des agendas Google de l'organisme (consolidé + un par formateur), avec
+// leurs partages et le lien pour les ouvrir dans Google Agenda.
+export async function listGoogleCalendars(): Promise<GcalListResult> {
+  const { orgId } = await requireRole(["admin"]);
+  if (!gcalConfigured()) {
+    return { ok: false, error: "Compte de service Google non configuré (variables GDRIVE_* manquantes)." };
+  }
+  try {
+    return { ok: true, calendars: await listOrgCalendars(orgId) };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "erreur inconnue";
+    return { ok: false, error: `Lecture des agendas impossible : ${message}` };
+  }
 }
 
 export async function syncGoogleCalendars(): Promise<GcalSyncResult> {

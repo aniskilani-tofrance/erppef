@@ -1,9 +1,13 @@
 import { google, type calendar_v3 } from "googleapis";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-// Synchronisation des séances vers Google Calendar : un agenda par formateur
-// (« Cours PEF — Prénom Nom »), créé et possédé par le compte de service, partagé
-// en lecture avec l'email du formateur et en écriture avec GCAL_ADMIN_EMAIL.
+// Synchronisation des séances vers Google Calendar :
+//  - un agenda par formateur (« Cours PEF — Prénom Nom »), partagé en lecture avec l'email
+//    de sa fiche et en écriture avec la direction (tous les comptes ERP de rôle admin,
+//    plus GCAL_ADMIN_EMAIL) ;
+//  - un agenda consolidé (« Cours PEF — Tous les formateurs ») avec toutes les séances de
+//    l'organisme, formatrice dans le titre, partagé en écriture avec la direction.
+// Les agendas sont créés et possédés par le compte de service.
 // Prérequis : API Google Calendar activée sur le projet GCP du compte de service.
 //
 // Idempotence : l'id d'événement = uuid de la séance sans tirets (alphabet hex ⊂
@@ -11,14 +15,15 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // extendedProperties.private { erp: "pef", sessionId } — la sync met à jour ou
 // supprime ses propres événements, jamais ceux créés à la main.
 //
-// Économie d'appels (14/09/2026) : la passe nocturne ne réécrit plus que ce qui a
-// changé (comparaison titre / lieu / description / horaires), réessaie avec
-// attente exponentielle sur « Rate Limit Exceeded », et à chaque passe vérifie
-// que l'agenda porte le nom actuel du formateur et reste partagé avec son email
-// actuel (un email ajouté ou corrigé après la création est ainsi pris en compte).
+// Économie d'appels (14/09/2026) : la passe nocturne ne réécrit que ce qui a changé
+// (comparaison titre / lieu / description / horaires), réessaie avec attente
+// exponentielle sur « Rate Limit Exceeded », et à chaque passe vérifie que l'agenda
+// porte le nom actuel et reste partagé avec les bonnes adresses.
 
 const TZ = "Europe/Paris";
 const TRAINER_TAG = "erp-trainer:";
+const ORG_TAG = "erp-org:";
+const ORG_CALENDAR_NAME = "Cours PEF — Tous les formateurs";
 const WRITE_PAUSE_MS = 120; // souffle entre deux écritures (limite Google par minute)
 
 export function gcalConfigured(): boolean {
@@ -46,6 +51,7 @@ export type SessionForCalendar = {
   room_name: string | null;
   room_address: string | null;
   room_access_notes: string | null;
+  trainer_name?: string | null;
 };
 
 export function calendarName(trainer: TrainerRef): string {
@@ -53,7 +59,7 @@ export function calendarName(trainer: TrainerRef): string {
 }
 
 /** Corps d'événement Google attendu pour une séance (titre, lieu, description, horaires). */
-export function eventBody(s: SessionForCalendar): calendar_v3.Schema$Event {
+export function eventBody(s: SessionForCalendar, options: { withTrainer?: boolean } = {}): calendar_v3.Schema$Event {
   const location = [s.room_name, s.room_address].filter(Boolean).join(", ");
   const description = [
     "Séance planifiée par l'ERP ParlerEmploi Formation.",
@@ -61,8 +67,11 @@ export function eventBody(s: SessionForCalendar): calendar_v3.Schema$Event {
   ]
     .filter(Boolean)
     .join("\n");
+  const parts = [s.group_name ?? "Cours"];
+  if (s.room_name) parts.push(s.room_name);
+  if (options.withTrainer) parts.push(s.trainer_name?.trim() || "formateur à affecter");
   return {
-    summary: `${s.group_name ?? "Cours"}${s.room_name ? ` · ${s.room_name}` : ""}`,
+    summary: parts.join(" · "),
     location: location || undefined,
     description,
     status: "confirmed",
@@ -95,18 +104,28 @@ export function eventNeedsUpdate(
 
 export type Share = { email: string; role: "reader" | "writer" };
 
-/** Partages attendus (formateur en lecture, direction en écriture) absents de l'ACL. */
-export function missingShares(
-  acl: calendar_v3.Schema$AclRule[],
-  trainerEmail: string | null | undefined,
-  adminEmail: string | null | undefined,
-): Share[] {
-  const wanted: Share[] = [];
-  const t = trainerEmail?.trim().toLowerCase();
-  const a = adminEmail?.trim().toLowerCase();
-  if (t && t.includes("@")) wanted.push({ email: t, role: "reader" });
-  if (a && a.includes("@") && a !== t) wanted.push({ email: a, role: "writer" });
+function cleanEmail(e: string | null | undefined): string | null {
+  const v = e?.trim().toLowerCase();
+  return v && v.includes("@") ? v : null;
+}
 
+/** Partages attendus : formateur en lecture, direction (admins ERP + GCAL_ADMIN_EMAIL) en écriture. */
+export function wantedShares(trainerEmail: string | null | undefined, adminEmails: (string | null | undefined)[]): Share[] {
+  const shares: Share[] = [];
+  const seen = new Set<string>();
+  for (const raw of adminEmails) {
+    const email = cleanEmail(raw);
+    if (!email || seen.has(email)) continue;
+    seen.add(email);
+    shares.push({ email, role: "writer" });
+  }
+  const t = cleanEmail(trainerEmail);
+  if (t && !seen.has(t)) shares.push({ email: t, role: "reader" });
+  return shares;
+}
+
+/** Parmi les partages voulus, ceux que l'ACL de l'agenda n'accorde pas encore (au moins ce rôle). */
+export function missingShares(acl: calendar_v3.Schema$AclRule[], wanted: Share[]): Share[] {
   const rank = { reader: 1, writer: 2, owner: 3 } as Record<string, number>;
   const have = new Map<string, number>();
   for (const rule of acl) {
@@ -115,6 +134,11 @@ export function missingShares(
     have.set(email, Math.max(have.get(email) ?? 0, rank[rule.role ?? ""] ?? 0));
   }
   return wanted.filter((w) => (have.get(w.email) ?? 0) < rank[w.role]);
+}
+
+/** Lien « ajouter / ouvrir cet agenda » dans Google Agenda. */
+export function calendarUrl(calendarId: string): string {
+  return `https://calendar.google.com/calendar/u/0/r?cid=${encodeURIComponent(calendarId)}`;
 }
 
 type ErrorLike = { code?: string | number; status?: number; message?: string };
@@ -156,32 +180,99 @@ function statusOf(e: unknown): number {
   return typeof err.status === "number" ? err.status : Number(err.code);
 }
 
+// ───────────────────────── Accès aux données ─────────────────────────
+
+/** Emails de la direction : comptes ERP de rôle admin de l'organisme + GCAL_ADMIN_EMAIL. */
+export async function loadAdminEmails(orgId: string): Promise<string[]> {
+  const supabase = createAdminClient();
+  const emails = new Set<string>();
+  const env = cleanEmail(process.env.GCAL_ADMIN_EMAIL);
+  if (env) emails.add(env);
+  const { data: members } = await supabase.from("memberships").select("user_id").eq("org_id", orgId).eq("role", "admin");
+  for (const m of members ?? []) {
+    const { data } = await supabase.auth.admin.getUserById(m.user_id);
+    const email = cleanEmail(data.user?.email);
+    if (email) emails.add(email);
+  }
+  return [...emails];
+}
+
+type Row = {
+  id: string;
+  trainer_id: string | null;
+  starts_at: string;
+  ends_at: string;
+  groups: { name: string } | null;
+  rooms: { name: string; address: string | null; access_notes: string | null } | null;
+  trainers: { id: string; first_name: string; last_name: string | null; email: string | null } | null;
+};
+
+async function loadUpcomingSessions(orgId: string, nowIso: string): Promise<Row[]> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("sessions")
+    .select(
+      "id, trainer_id, starts_at, ends_at, groups(name), rooms:room_id(name, address, access_notes), trainers:trainer_id(id, first_name, last_name, email)",
+    )
+    .eq("org_id", orgId)
+    .neq("status", "annulee")
+    .gte("starts_at", nowIso)
+    .order("starts_at");
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as Row[];
+}
+
+function trainerName(t: { first_name: string; last_name: string | null }): string {
+  return `${t.first_name} ${t.last_name ?? ""}`.replace(/\s+/g, " ").trim();
+}
+
+function toSession(s: Row): SessionForCalendar {
+  return {
+    id: s.id,
+    starts_at: s.starts_at,
+    ends_at: s.ends_at,
+    group_name: s.groups?.name ?? null,
+    room_name: s.rooms?.name ?? null,
+    room_address: s.rooms?.address ?? null,
+    room_access_notes: s.rooms?.access_notes ?? null,
+    trainer_name: s.trainers ? trainerName(s.trainers) : null,
+  };
+}
+
 // ───────────────────────── Synchronisation ─────────────────────────
 
-async function ensureTrainerCalendar(
+export type GcalSyncStats = {
+  calendars: number;
+  upserted: number;
+  unchanged: number;
+  deleted: number;
+  renamed: number;
+  shared: number;
+  errors: string[];
+};
+
+async function ensureCalendar(
   cal: calendar_v3.Calendar,
-  trainer: TrainerRef,
   existingList: calendar_v3.Schema$CalendarListEntry[],
+  spec: { tag: string; summary: string; shares: Share[]; label: string },
   stats: GcalSyncStats,
 ): Promise<string> {
-  const tag = `${TRAINER_TAG}${trainer.id}`;
-  const summary = calendarName(trainer);
-  const found = existingList.find((c) => c.description?.includes(tag));
+  const found = existingList.find((c) => c.description?.includes(spec.tag));
 
   let calendarId: string;
   if (found?.id) {
     calendarId = found.id;
     // Formateur renommé après la création de l'agenda : on suit.
-    if (found.summary !== summary) {
-      await withRetry(() => cal.calendars.patch({ calendarId, requestBody: { summary } }));
+    if (found.summary !== spec.summary) {
+      await withRetry(() => cal.calendars.patch({ calendarId, requestBody: { summary: spec.summary } }));
       stats.renamed += 1;
     }
   } else {
     const { data: created } = await withRetry(() =>
       cal.calendars.insert({
         requestBody: {
-          summary,
-          description: `Agenda généré par l'ERP ParlerEmploi Formation. Ne pas modifier à la main. ${tag}`,
+          summary: spec.summary,
+          description: `Agenda généré par l'ERP ParlerEmploi Formation. Ne pas modifier à la main. ${spec.tag}`,
           timeZone: TZ,
         },
       }),
@@ -189,9 +280,9 @@ async function ensureTrainerCalendar(
     calendarId = created.id!;
   }
 
-  // Partages : vérifiés à chaque passe (email ajouté ou corrigé après coup).
+  // Partages : vérifiés à chaque passe (email ajouté ou corrigé, nouvel admin).
   const { data: aclData } = await withRetry(() => cal.acl.list({ calendarId }));
-  for (const share of missingShares(aclData.items ?? [], trainer.email, process.env.GCAL_ADMIN_EMAIL)) {
+  for (const share of missingShares(aclData.items ?? [], spec.shares)) {
     try {
       await withRetry(() =>
         cal.acl.insert({
@@ -203,7 +294,7 @@ async function ensureTrainerCalendar(
       stats.shared += 1;
     } catch (e) {
       // Partage impossible (adresse sans compte Google…) : l'agenda existe quand même.
-      stats.errors.push(`${trainer.name} — partage avec ${share.email} impossible : ${e instanceof Error ? e.message : "erreur"}`);
+      stats.errors.push(`${spec.label} — partage avec ${share.email} impossible : ${e instanceof Error ? e.message : "erreur"}`);
     }
   }
   return calendarId;
@@ -229,119 +320,174 @@ async function listErpEvents(cal: calendar_v3.Calendar, calendarId: string, time
   return items;
 }
 
-export type GcalSyncStats = {
-  calendars: number;
-  upserted: number;
-  unchanged: number;
-  deleted: number;
-  renamed: number;
-  shared: number;
-  errors: string[];
-};
+/** Aligne les événements ERP d'un agenda sur la liste des séances voulues (diff, puis orphelins). */
+async function syncEvents(
+  cal: calendar_v3.Calendar,
+  calendarId: string,
+  desired: { sessionId: string; body: calendar_v3.Schema$Event }[],
+  nowIso: string,
+  label: string,
+  stats: GcalSyncStats,
+) {
+  const existing = await listErpEvents(cal, calendarId, nowIso);
+  const existingBySession = new Map(
+    existing
+      .filter((e) => e.extendedProperties?.private?.sessionId)
+      .map((e) => [e.extendedProperties!.private!.sessionId as string, e]),
+  );
+
+  for (const { sessionId, body } of desired) {
+    const eventId = sessionId.replace(/-/g, "");
+    const current = existingBySession.get(sessionId);
+    existingBySession.delete(sessionId);
+
+    if (current && !eventNeedsUpdate(current, body)) {
+      stats.unchanged += 1;
+      continue;
+    }
+
+    try {
+      if (current) {
+        await withRetry(() => cal.events.update({ calendarId, eventId, requestBody: body }));
+      } else {
+        try {
+          await withRetry(() => cal.events.insert({ calendarId, requestBody: { ...body, id: eventId } }));
+        } catch (e) {
+          // 409 = l'id existe déjà (événement supprimé à la main puis séance revenue) : update le restaure.
+          if (statusOf(e) !== 409) throw e;
+          await withRetry(() => cal.events.update({ calendarId, eventId, requestBody: body }));
+        }
+      }
+      stats.upserted += 1;
+    } catch (e) {
+      stats.errors.push(`${label} — séance ${body.start?.dateTime} : ${e instanceof Error ? e.message : "erreur"}`);
+    }
+    await sleep(WRITE_PAUSE_MS);
+  }
+
+  // Événements ERP futurs sans séance correspondante (déplacée, annulée, supprimée)
+  for (const orphan of existingBySession.values()) {
+    try {
+      await withRetry(() => cal.events.delete({ calendarId, eventId: orphan.id! }));
+      stats.deleted += 1;
+    } catch (e) {
+      if (statusOf(e) === 410 || statusOf(e) === 404) continue; // déjà supprimé
+      stats.errors.push(`${label} — suppression impossible : ${orphan.summary ?? orphan.id}`);
+    }
+    await sleep(WRITE_PAUSE_MS);
+  }
+}
 
 export async function syncTrainerCalendars(orgId: string): Promise<GcalSyncStats> {
-  const supabase = createAdminClient();
   const cal = calendarClient();
   const stats: GcalSyncStats = { calendars: 0, upserted: 0, unchanged: 0, deleted: 0, renamed: 0, shared: 0, errors: [] };
 
   const nowIso = new Date().toISOString();
-  const { data: sessions, error } = await supabase
-    .from("sessions")
-    .select(
-      "id, trainer_id, starts_at, ends_at, groups(name), rooms:room_id(name, address, access_notes), trainers:trainer_id(id, first_name, last_name, email)",
-    )
-    .eq("org_id", orgId)
-    .neq("status", "annulee")
-    .not("trainer_id", "is", null)
-    .gte("starts_at", nowIso)
-    .order("starts_at");
-  if (error) throw new Error(error.message);
+  const [rows, adminEmails] = await Promise.all([loadUpcomingSessions(orgId, nowIso), loadAdminEmails(orgId)]);
 
   // Regroupe par formateur
-  type Row = NonNullable<typeof sessions>[number];
   const byTrainer = new Map<string, { trainer: TrainerRef; sessions: SessionForCalendar[] }>();
-  for (const s of (sessions ?? []) as Row[]) {
-    const t = s.trainers as unknown as { id: string; first_name: string; last_name: string | null; email: string | null } | null;
+  for (const s of rows) {
+    const t = s.trainers;
     if (!t) continue;
-    const group = s.groups as unknown as { name: string } | null;
-    const room = s.rooms as unknown as { name: string; address: string | null; access_notes: string | null } | null;
     const entry = byTrainer.get(t.id) ?? {
-      trainer: { id: t.id, name: `${t.first_name} ${t.last_name ?? ""}`.replace(/\s+/g, " ").trim(), email: t.email },
+      trainer: { id: t.id, name: trainerName(t), email: t.email },
       sessions: [],
     };
-    entry.sessions.push({
-      id: s.id,
-      starts_at: s.starts_at,
-      ends_at: s.ends_at,
-      group_name: group?.name ?? null,
-      room_name: room?.name ?? null,
-      room_address: room?.address ?? null,
-      room_access_notes: room?.access_notes ?? null,
-    });
+    entry.sessions.push(toSession(s));
     byTrainer.set(t.id, entry);
   }
 
   const { data: calList } = await withRetry(() => cal.calendarList.list({ maxResults: 250 }));
   const existingCalendars = calList.items ?? [];
 
-  for (const { trainer, sessions: trainerSessions } of byTrainer.values()) {
+  for (const { trainer, sessions } of byTrainer.values()) {
     try {
-      const calendarId = await ensureTrainerCalendar(cal, trainer, existingCalendars, stats);
-      stats.calendars += 1;
-
-      // Événements ERP futurs déjà présents sur l'agenda
-      const existing = await listErpEvents(cal, calendarId, nowIso);
-      const existingBySession = new Map(
-        existing
-          .filter((e) => e.extendedProperties?.private?.sessionId)
-          .map((e) => [e.extendedProperties!.private!.sessionId as string, e]),
+      const calendarId = await ensureCalendar(
+        cal,
+        existingCalendars,
+        { tag: `${TRAINER_TAG}${trainer.id}`, summary: calendarName(trainer), shares: wantedShares(trainer.email, adminEmails), label: trainer.name },
+        stats,
       );
-
-      for (const s of trainerSessions) {
-        const body = eventBody(s);
-        const eventId = s.id.replace(/-/g, "");
-        const current = existingBySession.get(s.id);
-        existingBySession.delete(s.id);
-
-        if (current && !eventNeedsUpdate(current, body)) {
-          stats.unchanged += 1;
-          continue;
-        }
-
-        try {
-          if (current) {
-            await withRetry(() => cal.events.update({ calendarId, eventId, requestBody: body }));
-          } else {
-            try {
-              await withRetry(() => cal.events.insert({ calendarId, requestBody: { ...body, id: eventId } }));
-            } catch (e) {
-              // 409 = l'id existe déjà (événement supprimé à la main puis séance revenue) : update le restaure.
-              if (statusOf(e) !== 409) throw e;
-              await withRetry(() => cal.events.update({ calendarId, eventId, requestBody: body }));
-            }
-          }
-          stats.upserted += 1;
-        } catch (e) {
-          stats.errors.push(`${trainer.name} — séance ${s.starts_at} : ${e instanceof Error ? e.message : "erreur"}`);
-        }
-        await sleep(WRITE_PAUSE_MS);
-      }
-
-      // Événements ERP futurs sans séance correspondante (déplacée, annulée, supprimée)
-      for (const orphan of existingBySession.values()) {
-        try {
-          await withRetry(() => cal.events.delete({ calendarId, eventId: orphan.id! }));
-          stats.deleted += 1;
-        } catch (e) {
-          if (statusOf(e) === 410 || statusOf(e) === 404) continue; // déjà supprimé
-          stats.errors.push(`${trainer.name} — suppression impossible : ${orphan.summary ?? orphan.id}`);
-        }
-        await sleep(WRITE_PAUSE_MS);
-      }
+      stats.calendars += 1;
+      await syncEvents(
+        cal,
+        calendarId,
+        sessions.map((s) => ({ sessionId: s.id, body: eventBody(s) })),
+        nowIso,
+        trainer.name,
+        stats,
+      );
     } catch (e) {
       stats.errors.push(`${trainer.name} : ${e instanceof Error ? e.message : "erreur inconnue"}`);
     }
   }
 
+  // Agenda consolidé de la direction : toutes les séances (formatrice dans le titre,
+  // y compris celles encore sans formateur). Créé seulement s'il y a quelqu'un à qui le partager.
+  if (adminEmails.length > 0) {
+    try {
+      const calendarId = await ensureCalendar(
+        cal,
+        existingCalendars,
+        { tag: `${ORG_TAG}${orgId}`, summary: ORG_CALENDAR_NAME, shares: wantedShares(null, adminEmails), label: ORG_CALENDAR_NAME },
+        stats,
+      );
+      stats.calendars += 1;
+      await syncEvents(
+        cal,
+        calendarId,
+        rows.map((s) => ({ sessionId: s.id, body: eventBody(toSession(s), { withTrainer: true }) })),
+        nowIso,
+        ORG_CALENDAR_NAME,
+        stats,
+      );
+    } catch (e) {
+      stats.errors.push(`${ORG_CALENDAR_NAME} : ${e instanceof Error ? e.message : "erreur inconnue"}`);
+    }
+  }
+
   return stats;
+}
+
+// ───────────────────────── Inventaire (page Paramètres) ─────────────────────────
+
+export type OrgCalendar = {
+  kind: "all" | "trainer";
+  title: string;
+  calendarId: string;
+  url: string;
+  shares: { email: string; role: string }[];
+};
+
+/** Les agendas Google de l'organisme (consolidé + un par formateur) avec leurs partages. */
+export async function listOrgCalendars(orgId: string): Promise<OrgCalendar[]> {
+  const cal = calendarClient();
+  const supabase = createAdminClient();
+  const { data: trainers } = await supabase.from("trainers").select("id, first_name, last_name").eq("org_id", orgId);
+  const trainerById = new Map((trainers ?? []).map((t) => [t.id, trainerName(t)]));
+
+  const { data: calList } = await withRetry(() => cal.calendarList.list({ maxResults: 250 }));
+  const result: OrgCalendar[] = [];
+  for (const c of calList.items ?? []) {
+    const description = c.description ?? "";
+    let kind: OrgCalendar["kind"] | null = null;
+    if (description.includes(`${ORG_TAG}${orgId}`)) kind = "all";
+    else {
+      const match = description.match(/erp-trainer:([0-9a-f-]{36})/);
+      if (match && trainerById.has(match[1])) kind = "trainer";
+    }
+    if (!kind || !c.id) continue;
+    const { data: acl } = await withRetry(() => cal.acl.list({ calendarId: c.id! }));
+    result.push({
+      kind,
+      title: c.summary ?? c.id,
+      calendarId: c.id,
+      url: calendarUrl(c.id),
+      shares: (acl.items ?? [])
+        .filter((r) => r.scope?.type === "user" && r.scope.value && !r.scope.value.endsWith(".gserviceaccount.com"))
+        .map((r) => ({ email: r.scope!.value!, role: r.role ?? "" })),
+    });
+  }
+  return result.sort((a, b) => (a.kind === b.kind ? a.title.localeCompare(b.title, "fr") : a.kind === "all" ? -1 : 1));
 }

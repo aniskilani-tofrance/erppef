@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   calendarName,
+  calendarUrl,
   eventBody,
   eventNeedsUpdate,
   isRetryable,
   missingShares,
+  wantedShares,
   withRetry,
   type SessionForCalendar,
 } from "@/lib/gcal";
@@ -69,20 +71,38 @@ describe("agenda Google des formateurs — partages", () => {
     { role: "writer", scope: { type: "user", value: "anis@parleremploi.fr" } },
   ];
 
+  it("veut la direction en écriture (dédoublonnée) et le formateur en lecture", () => {
+    expect(wantedShares("Marie@parleremploi.fr", ["anis@parleremploi.fr", "ANIS@parleremploi.fr", null, "pas-un-email"])).toEqual([
+      { email: "anis@parleremploi.fr", role: "writer" },
+      { email: "marie@parleremploi.fr", role: "reader" },
+    ]);
+    // Un admin qui est aussi formateur garde l'écriture
+    expect(wantedShares("anis@parleremploi.fr", ["anis@parleremploi.fr"])).toEqual([{ email: "anis@parleremploi.fr", role: "writer" }]);
+    expect(wantedShares(null, [])).toEqual([]);
+  });
+
   it("ajoute l'email actuel du formateur quand l'agenda a été partagé avec une ancienne adresse", () => {
-    expect(missingShares(acl, "Marie@parleremploi.fr", "anis@parleremploi.fr")).toEqual([
+    expect(missingShares(acl, wantedShares("Marie@parleremploi.fr", ["anis@parleremploi.fr"]))).toEqual([
       { email: "marie@parleremploi.fr", role: "reader" },
     ]);
   });
 
-  it("ne repartage pas ce qui l'est déjà (casse indifférente, rôle supérieur accepté)", () => {
-    expect(missingShares(acl, "Ancienne@HOTMAIL.fr", "ANIS@parleremploi.fr")).toEqual([]);
-    expect(missingShares(acl, "anis@parleremploi.fr", "anis@parleremploi.fr")).toEqual([]);
+  it("ajoute un nouvel admin ERP en écriture, sans toucher aux partages existants", () => {
+    expect(missingShares(acl, wantedShares("ancienne@hotmail.fr", ["anis@parleremploi.fr", "direction@parleremploi.fr"]))).toEqual([
+      { email: "direction@parleremploi.fr", role: "writer" },
+    ]);
   });
 
-  it("ignore un formateur sans email valide et une direction non configurée", () => {
-    expect(missingShares([], null, undefined)).toEqual([]);
-    expect(missingShares([], "pas-un-email", "")).toEqual([]);
+  it("ne repartage pas ce qui l'est déjà (casse indifférente, rôle supérieur accepté)", () => {
+    expect(missingShares(acl, wantedShares("Ancienne@HOTMAIL.fr", ["ANIS@parleremploi.fr"]))).toEqual([]);
+    // reader demandé alors que writer accordé : rien à faire
+    expect(missingShares(acl, [{ email: "anis@parleremploi.fr", role: "reader" }])).toEqual([]);
+  });
+
+  it("titre de l'agenda consolidé : groupe · salle · formatrice, ou « à affecter »", () => {
+    expect(eventBody({ ...session, trainer_name: "Marie TREGARO" }, { withTrainer: true }).summary).toBe("PEF A2 — automne · Cordon · Marie TREGARO");
+    expect(eventBody({ ...session, trainer_name: null }, { withTrainer: true }).summary).toBe("PEF A2 — automne · Cordon · formateur à affecter");
+    expect(calendarUrl("abc@group.calendar.google.com")).toBe("https://calendar.google.com/calendar/u/0/r?cid=abc%40group.calendar.google.com");
   });
 });
 
