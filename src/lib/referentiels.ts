@@ -77,6 +77,7 @@ export const CONTACT_SOURCES = [
   { code: "email", label: "Email", aliases: ["mail", "courriel", "e-mail"] },
   { code: "site_web", label: "Site internet", aliases: ["site", "internet", "web", "formulaire", "formulaire du site"] },
   { code: "reseaux_sociaux", label: "Réseaux sociaux", aliases: ["facebook", "instagram", "tiktok", "linkedin", "réseaux", "reseaux"] },
+  { code: "maison_de_quartier", label: "Maison de quartier", aliases: ["mdq", "maison du quartier", "maisons de quartier", "centre social", "maison de quartier saint-ouen"] },
   { code: "france_travail", label: "France Travail", aliases: ["pôle emploi", "pole emploi", "ft", "conseiller france travail"] },
   { code: "partenaire", label: "Orienté par un partenaire", aliases: ["partenaire", "association", "mairie", "ccas", "mission locale", "cip", "assistante sociale"] },
   { code: "affiche_flyer", label: "Affiche / flyer", aliases: ["affiche", "flyer", "tract", "prospectus"] },
@@ -84,6 +85,7 @@ export const CONTACT_SOURCES = [
 ] as const;
 
 export const PRESCRIBERS = [
+  "Maison de quartier (MDQ)",
   "France Travail",
   "Mission locale",
   "CCAS",

@@ -129,18 +129,32 @@ const LEVELS = ["Non évalué", ...REF_LEVELS];
 const ORAL_LEVEL_OPTIONS = [{ value: "nd", label: "Non déterminé" }, ...REF_LEVELS.map((l) => ({ value: l, label: l }))];
 const ADMISSION_OPTIONS = ADMISSION_STATUSES.map((s) => ({ value: s.code, label: `${s.label} — ${s.hint}` }));
 const SOURCE_OPTIONS = [{ value: "nc", label: "Non renseigné" }, ...REF_SOURCES.map((s) => ({ value: s.code, label: s.label }))];
+// Aide à la saisie de la précision selon le canal (la maison de quartier est la plus utile :
+// c'est elle qui détaille la provenance des cours municipaux).
+const DETAIL_PLACEHOLDER: Record<string, string> = {
+  maison_de_quartier: "Landy, Pasteur, Rosiers…",
+  partenaire: "Nom du partenaire (mission locale, CCAS, association…)",
+  france_travail: "Agence ou conseiller",
+  bouche_a_oreille: "Qui ? (ancien apprenant, ami, famille)",
+  reseaux_sociaux: "Facebook, Instagram, TikTok…",
+  site_web: "Page ou formulaire",
+  affiche_flyer: "Où ?",
+};
 
 export function LearnerFormDialog({
   initial,
   groups = [],
   defaultGroupId,
   triggerLabel = "Nouvel apprenant",
+  sourceDetails = [],
 }: {
   initial?: LearnerFormValues;
   // Groupes proposés pour l'inscription directe à la création (flux « créer et inscrire »).
   groups?: { id: string; name: string }[];
   defaultGroupId?: string;
   triggerLabel?: string;
+  // Précisions de provenance déjà saisies (quelle maison de quartier, quel partenaire…) : suggestions.
+  sourceDetails?: string[];
 }) {
   const [open, setOpen] = useState(false);
   const [values, setValues] = useState<LearnerFormValues>(initial ?? EMPTY);
@@ -366,12 +380,20 @@ export function LearnerFormDialog({
               <div className="grid gap-4 sm:grid-cols-2">
                 <SelectField label="Nous a contactés par" value={values.contactSource} options={SOURCE_OPTIONS} onChange={(v) => set("contactSource", v)} />
                 <div className="space-y-2">
-                  <Label>Précision (optionnel)</Label>
+                  <Label>{values.contactSource === "maison_de_quartier" ? "Laquelle ?" : "Précision (optionnel)"}</Label>
                   <Input
                     value={values.contactSourceDetail}
                     onChange={(e) => set("contactSourceDetail", e.target.value)}
-                    placeholder="Nom du partenaire, page Facebook, ancien apprenant…"
+                    placeholder={DETAIL_PLACEHOLDER[values.contactSource] ?? "Nom du partenaire, page Facebook, ancien apprenant…"}
+                    list={sourceDetails.length ? "learner-source-details" : undefined}
                   />
+                  {sourceDetails.length > 0 && (
+                    <datalist id="learner-source-details">
+                      {sourceDetails.map((d) => (
+                        <option key={d} value={d} />
+                      ))}
+                    </datalist>
+                  )}
                 </div>
               </div>
               <SelectField label="Statut d'admission" value={values.admissionStatus} options={ADMISSION_OPTIONS} onChange={(v) => set("admissionStatus", v)} />
@@ -454,7 +476,7 @@ export function LearnerFormDialog({
                 </div>
                 <div className="space-y-2">
                   <Label>Prescripteur</Label>
-                  <Input value={values.prescriber} onChange={(e) => set("prescriber", e.target.value)} placeholder="France Travail, mission locale…" />
+                  <Input value={values.prescriber} onChange={(e) => set("prescriber", e.target.value)} placeholder="MDQ Landy, France Travail, mission locale, asso…" />
                 </div>
               </div>
             </div>

@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -7,7 +8,8 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { AdmissionBadge } from "@/components/admission/admission-badge";
-import { SourceChip, SourceDot } from "@/components/admission/source-dot";
+import { FamilyDot, SourceDot } from "@/components/admission/source-dot";
+import { FAMILIES, FAMILY_ORDER, resolveProvenance } from "@/lib/admission/sources";
 import { ContactDialog, type ContactEntry } from "@/components/admission/contact-dialog";
 import { MeetingFormDialog } from "@/components/admission/meeting-form-dialog";
 import { LearnersTabs } from "@/components/apprenants/learners-tabs";
@@ -19,7 +21,6 @@ import { messageForSituation, stageInfo, type Templates } from "@/lib/admission/
 import { MessageTemplatesDialog } from "@/components/admission/message-templates-dialog";
 import { formatPhone } from "@/lib/admission/phone";
 import { ADMISSION_STATUSES, admissionBadgeClass } from "@/lib/admission/status";
-import { CONTACT_SOURCES } from "@/lib/referentiels";
 import { learnerRef } from "@/lib/refs";
 
 // Parcours d'admission : qui contacter aujourd'hui (WhatsApp en un clic), les réunions
@@ -47,6 +48,7 @@ type LearnerRow = {
   created_at: string;
   contact_source?: string | null;
   contact_source_detail?: string | null;
+  prescriber?: string | null;
 };
 
 function fmtDay(iso: string | null): string {
@@ -87,7 +89,7 @@ function LearnerRows({
           <TableRow key={l.id}>
             <TableCell className="font-medium">
               <span className="inline-flex items-center gap-1.5">
-                <SourceDot code={l.contact_source} detail={l.contact_source_detail} />
+                <SourceDot learner={l} />
                 {l.first_name} {l.last_name}
               </span>
               <span className="block font-mono text-[11px] font-normal text-muted-foreground">
@@ -139,7 +141,7 @@ export default async function AdmissionPage() {
   const [{ data: learners }, { data: contacts }, { data: meetingRows }, { data: rooms }, { data: profile }, { data: pendingTests }, templates, h] = await Promise.all([
     supabase
       .from("learners")
-      .select("id, first_name, last_name, learner_no, phone, email, admission_status, level_assessed, created_at, contact_source, contact_source_detail")
+      .select("id, first_name, last_name, learner_no, phone, email, admission_status, level_assessed, created_at, contact_source, contact_source_detail, prescriber")
       .order("created_at", { ascending: true }),
     supabase
       .from("learner_contacts")
@@ -200,16 +202,32 @@ export default async function AdmissionPage() {
   // Évalués (test oral fait) mais pas encore inscrits dans un groupe
   const toEnroll = (learners ?? []).filter((l) => l.admission_status === "evalue");
 
-  // D'où viennent les demandes : canal de premier contact (total + 30 derniers jours)
+  // D'où viennent les demandes : par famille de provenance (maison de quartier, contact
+  // direct, prescripteur), puis le détail (quelle maison de quartier, quel canal) — total
+  // et 30 derniers jours.
   const since30 = new Date(new Date().getTime() - 30 * 86_400_000).toISOString();
-  const sourceRows = [...CONTACT_SOURCES.map((s) => ({ code: s.code as string, label: s.label })), { code: "nc", label: "Non renseigné" }]
-    .map((s) => {
-      const mine = (learners ?? []).filter((l) => (l.contact_source ?? "nc") === s.code);
-      return { ...s, total: mine.length, recent: mine.filter((l) => l.created_at >= since30).length };
-    })
-    .filter((s) => s.total > 0)
-    .sort((a, b) => b.total - a.total);
-  const sourceTotal = sourceRows.reduce((acc, s) => acc + s.total, 0);
+  const provenances = (learners ?? []).map((l) => ({ createdAt: l.created_at, p: resolveProvenance(l) }));
+  const sourceGroups = FAMILY_ORDER.map((family) => {
+    const mine = provenances.filter((x) => x.p.family === family);
+    const children = new Map<string, { label: string; total: number; recent: number }>();
+    for (const x of mine) {
+      const label = family === "quartier"
+        ? (x.p.detail ? `Maison de quartier — ${x.p.detail}` : "Maison de quartier (laquelle ? à préciser)")
+        : x.p.text;
+      const row = children.get(label) ?? { label, total: 0, recent: 0 };
+      row.total += 1;
+      if (x.createdAt >= since30) row.recent += 1;
+      children.set(label, row);
+    }
+    return {
+      family,
+      label: FAMILIES[family].label,
+      total: mine.length,
+      recent: mine.filter((x) => x.createdAt >= since30).length,
+      children: [...children.values()].sort((a, b) => b.total - a.total),
+    };
+  }).filter((g) => g.total > 0);
+  const sourceTotal = sourceGroups.reduce((acc, g) => acc + g.total, 0);
 
   const now = new Date().getTime();
   const meetings = ((meetingRows ?? []) as unknown as MeetingRow[]).map((m) => {
@@ -322,34 +340,49 @@ export default async function AdmissionPage() {
         <CardHeader className="pb-2">
           <CardTitle className="text-base">D&apos;où viennent les demandes</CardTitle>
           <p className="text-xs text-muted-foreground">
-            Canal par lequel la personne nous a contactés (champ « Nous a contactés par » de la fiche, colonne « Canal de contact » du tableur).
+            Par famille (pastille de la liste), puis le détail : quelle maison de quartier, quel canal. Déduit de « Nous a contactés par » et, à défaut, du champ « Prescripteur » (MDQ, France Travail, asso…).
           </p>
         </CardHeader>
         <CardContent>
-          {sourceRows.length === 0 ? (
-            <p className="py-2 text-sm text-muted-foreground">Aucun canal renseigné pour l&apos;instant.</p>
+          {sourceGroups.length === 0 ? (
+            <p className="py-2 text-sm text-muted-foreground">Aucun apprenant pour l&apos;instant.</p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Canal</TableHead>
+                  <TableHead>Provenance</TableHead>
                   <TableHead className="text-right">Total</TableHead>
                   <TableHead className="hidden text-right sm:table-cell">Part</TableHead>
                   <TableHead className="text-right">30 derniers jours</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sourceRows.map((s) => (
-                  <TableRow key={s.code}>
-                    <TableCell className={s.code === "nc" ? "text-muted-foreground" : "font-medium"}>
-                      <SourceChip code={s.code === "nc" ? null : s.code} />
-                    </TableCell>
-                    <TableCell className="text-right">{s.total}</TableCell>
-                    <TableCell className="hidden text-right text-muted-foreground sm:table-cell">
-                      {sourceTotal ? Math.round((s.total / sourceTotal) * 100) : 0} %
-                    </TableCell>
-                    <TableCell className="text-right">{s.recent || "—"}</TableCell>
-                  </TableRow>
+                {sourceGroups.map((g) => (
+                  <Fragment key={g.family}>
+                    <TableRow className="bg-muted/40">
+                      <TableCell className={g.family === "nc" ? "text-muted-foreground" : "font-semibold"}>
+                        <span className="inline-flex items-center gap-2">
+                          <FamilyDot family={g.family} />
+                          {g.label}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">{g.total}</TableCell>
+                      <TableCell className="hidden text-right text-muted-foreground sm:table-cell">
+                        {sourceTotal ? Math.round((g.total / sourceTotal) * 100) : 0} %
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">{g.recent || "—"}</TableCell>
+                    </TableRow>
+                    {g.children.map((c) => (
+                      <TableRow key={`${g.family}:${c.label}`}>
+                        <TableCell className="pl-9 text-sm text-muted-foreground">{c.label}</TableCell>
+                        <TableCell className="text-right text-sm">{c.total}</TableCell>
+                        <TableCell className="hidden text-right text-sm text-muted-foreground sm:table-cell">
+                          {sourceTotal ? Math.round((c.total / sourceTotal) * 100) : 0} %
+                        </TableCell>
+                        <TableCell className="text-right text-sm">{c.recent || "—"}</TableCell>
+                      </TableRow>
+                    ))}
+                  </Fragment>
                 ))}
               </TableBody>
             </Table>

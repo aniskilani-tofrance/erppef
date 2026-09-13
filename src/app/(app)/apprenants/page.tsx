@@ -17,7 +17,7 @@ import { AdmissionBadge } from "@/components/admission/admission-badge";
 import { AdmissionFilter } from "@/components/admission/admission-filter";
 import { SourceDot } from "@/components/admission/source-dot";
 import { SourceFilter } from "@/components/admission/source-filter";
-import { sourceStyle } from "@/lib/admission/sources";
+import { matchesSourceFilter, resolveProvenance } from "@/lib/admission/sources";
 import { BulkInviteButton } from "@/components/admission/bulk-invite-button";
 import { ContactDialog, type ContactEntry } from "@/components/admission/contact-dialog";
 import { WhatsAppButton } from "@/components/admission/whatsapp-button";
@@ -117,12 +117,16 @@ export default async function ApprenantsPage({
     admissionCounts[code] = (admissionCounts[code] ?? 0) + 1;
   }
   const toContactCount = (admissionCounts.nouveau ?? 0) + (admissionCounts.injoignable ?? 0);
-  // Provenance (« Nous a contactés par ») : effectifs pour le filtre, « nc » = non renseigné
-  const sourceCounts: Record<string, number> = {};
-  for (const l of learners ?? []) {
-    const code = l.contact_source ?? "nc";
-    sourceCounts[code] = (sourceCounts[code] ?? 0) + 1;
+  // Provenance (famille + canal, déduite du canal « Nous a contactés par » ou du prescripteur)
+  const provenanceByLearner = new Map((learners ?? []).map((l) => [l.id, resolveProvenance(l)]));
+  const familyCounts: Record<string, number> = {};
+  const channelCounts: Record<string, number> = {};
+  for (const p of provenanceByLearner.values()) {
+    familyCounts[p.family] = (familyCounts[p.family] ?? 0) + 1;
+    if (p.channel) channelCounts[p.channel] = (channelCounts[p.channel] ?? 0) + 1;
   }
+  // Précisions déjà saisies (quelle maison de quartier, quel partenaire…) : suggestions du dialog
+  const sourceDetails = [...new Set((learners ?? []).map((l) => l.contact_source_detail?.trim()).filter((d): d is string => Boolean(d)))].sort((a, b) => a.localeCompare(b, "fr"));
   const senderFirstName = profile?.full_name?.trim().split(/\s+/)[0] ?? null;
 
   // Dernier test par apprenant (le plus récent prime)
@@ -152,7 +156,7 @@ export default async function ApprenantsPage({
   const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
   const visible = (learners ?? []).filter((l) => {
     if (statut && (l.admission_status ?? "nouveau") !== statut) return false;
-    if (source && (l.contact_source ?? "nc") !== source) return false;
+    if (!matchesSourceFilter(provenanceByLearner.get(l.id) ?? resolveProvenance(l), source)) return false;
     if (!q) return true;
     const hay = norm(`${l.first_name} ${l.last_name} ${l.phone ?? ""} ${learnerRef(l.learner_no)} a${l.learner_no ?? ""}`);
     return q.trim().split(/\s+/).every((word) => hay.includes(norm(word)));
@@ -173,12 +177,12 @@ export default async function ApprenantsPage({
         <h1 className="text-2xl font-semibold tracking-tight">Apprenants</h1>
         <div className="flex flex-wrap gap-2">
           <AdmissionFilter value={statut ?? ""} counts={admissionCounts} />
-          <SourceFilter value={source ?? ""} counts={sourceCounts} />
+          <SourceFilter value={source ?? ""} familyCounts={familyCounts} channelCounts={channelCounts} />
           <BulkInviteButton meetings={meetingOptions} />
           <BulkDeleteLearnersButton />
           <DriveSyncButton />
           <LearnerImportDialog groups={groupOptions} />
-          <LearnerFormDialog groups={groupOptions} />
+          <LearnerFormDialog groups={groupOptions} sourceDetails={sourceDetails} />
         </div>
       </div>
 
@@ -230,12 +234,12 @@ export default async function ApprenantsPage({
                       </Avatar>
                       <span>
                         <span className="inline-flex items-center gap-1.5">
-                          <SourceDot code={l.contact_source} detail={l.contact_source_detail} />
+                          <SourceDot learner={l} />
                           {l.first_name} {l.last_name}
                         </span>
                         <span className="block font-mono text-[11px] font-normal text-muted-foreground">
                           {learnerRef(l.learner_no)}
-                          <span className="font-sans"> · {sourceStyle(l.contact_source).label}</span>
+                          <span className="font-sans"> · {(provenanceByLearner.get(l.id) ?? resolveProvenance(l)).text}</span>
                         </span>
                       </span>
                     </span>
@@ -318,6 +322,7 @@ export default async function ApprenantsPage({
                   <TableCell>
                     <span className="inline-flex items-center gap-1">
                     <LearnerFormDialog
+                      sourceDetails={sourceDetails}
                       initial={{
                         id: l.id,
                         photoUrl: l.photo_url ?? null,
