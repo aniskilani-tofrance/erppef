@@ -7,6 +7,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { AdmissionBadge } from "@/components/admission/admission-badge";
+import { SourceChip, SourceDot } from "@/components/admission/source-dot";
 import { ContactDialog, type ContactEntry } from "@/components/admission/contact-dialog";
 import { MeetingFormDialog } from "@/components/admission/meeting-form-dialog";
 import { LearnersTabs } from "@/components/apprenants/learners-tabs";
@@ -44,6 +45,8 @@ type LearnerRow = {
   admission_status: string | null;
   level_assessed: string | null;
   created_at: string;
+  contact_source?: string | null;
+  contact_source_detail?: string | null;
 };
 
 function fmtDay(iso: string | null): string {
@@ -83,7 +86,10 @@ function LearnerRows({
         {rows.slice(0, 80).map((l) => (
           <TableRow key={l.id}>
             <TableCell className="font-medium">
-              {l.first_name} {l.last_name}
+              <span className="inline-flex items-center gap-1.5">
+                <SourceDot code={l.contact_source} detail={l.contact_source_detail} />
+                {l.first_name} {l.last_name}
+              </span>
               <span className="block font-mono text-[11px] font-normal text-muted-foreground">
                 {learnerRef(l.learner_no)}{l.level_assessed ? ` · ${l.level_assessed}` : ""}
               </span>
@@ -133,7 +139,7 @@ export default async function AdmissionPage() {
   const [{ data: learners }, { data: contacts }, { data: meetingRows }, { data: rooms }, { data: profile }, { data: pendingTests }, templates, h] = await Promise.all([
     supabase
       .from("learners")
-      .select("id, first_name, last_name, learner_no, phone, email, admission_status, level_assessed, created_at, contact_source")
+      .select("id, first_name, last_name, learner_no, phone, email, admission_status, level_assessed, created_at, contact_source, contact_source_detail")
       .order("created_at", { ascending: true }),
     supabase
       .from("learner_contacts")
@@ -335,7 +341,9 @@ export default async function AdmissionPage() {
               <TableBody>
                 {sourceRows.map((s) => (
                   <TableRow key={s.code}>
-                    <TableCell className={s.code === "nc" ? "text-muted-foreground" : "font-medium"}>{s.label}</TableCell>
+                    <TableCell className={s.code === "nc" ? "text-muted-foreground" : "font-medium"}>
+                      <SourceChip code={s.code === "nc" ? null : s.code} />
+                    </TableCell>
                     <TableCell className="text-right">{s.total}</TableCell>
                     <TableCell className="hidden text-right text-muted-foreground sm:table-cell">
                       {sourceTotal ? Math.round((s.total / sourceTotal) * 100) : 0} %

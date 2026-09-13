@@ -26,6 +26,17 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-09-14-pastille-provenance",
+    date: "2026-09-14",
+    title: "La provenance des apprenants en un coup d'œil",
+    summary: "Une pastille de couleur devant chaque nom indique par quel canal la personne nous a contactés (même couleur = même canal), avec un filtre par provenance dans la liste.",
+    items: [
+      { text: "Liste Apprenants et onglet Admission : pastille de couleur devant le nom (orange = bouche-à-oreille, bleu marine = France Travail, vert = WhatsApp, rose = réseaux sociaux, violet = site, sarcelle = partenaire…), libellé sous le nom, précision au survol. Pastille creuse = canal non renseigné, à compléter sur la fiche.", roles: TEAM },
+      { text: "Nouveau filtre « Toutes les provenances » à côté du filtre par statut : il sert de légende (couleur + effectif) et isole un canal, par exemple pour rappeler tous les contacts venus d'un partenaire. La carte « D'où viennent les demandes » reprend les mêmes couleurs.", roles: TEAM },
+    ],
+    training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "L'admission : WhatsApp, réunion d'information, test oral" }],
+  },
+  {
     id: "2026-09-14-dossier-administratif",
     date: "2026-09-14",
     title: "Dossier administratif : pièces scannées depuis le téléphone",
