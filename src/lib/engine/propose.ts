@@ -140,12 +140,16 @@ export function proposeGroupPlan(input: ProposalInput, data: EngineData): Propos
   };
 }
 
-// Tri lexicographique : éligibles d'abord, puis salarié avant vacataire,
-// coût horaire croissant, priorité manuelle croissante, score souple décroissant.
-function compareTrainers(a: RankedTrainer, b: RankedTrainer): number {
+// Tri lexicographique : éligibles d'abord, puis salarié avant vacataire, stagiaires en
+// dernier (jamais recommandés d'office : ils co-animent, ou tiennent un atelier choisi à la
+// main), coût horaire croissant, priorité manuelle croissante, score souple décroissant.
+export function compareTrainers(a: RankedTrainer, b: RankedTrainer): number {
   const eligA = a.hardViolations.length === 0 ? 0 : 1;
   const eligB = b.hardViolations.length === 0 ? 0 : 1;
   if (eligA !== eligB) return eligA - eligB;
+  const internA = a.contractType === "stagiaire" ? 1 : 0;
+  const internB = b.contractType === "stagiaire" ? 1 : 0;
+  if (internA !== internB) return internA - internB;
   if (a.contractType !== b.contractType) return a.contractType === "salarie" ? -1 : 1;
   if (a.hourlyCost !== b.hourlyCost) return a.hourlyCost - b.hourlyCost;
   if (a.priority !== b.priority) return a.priority - b.priority;

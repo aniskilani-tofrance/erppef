@@ -53,7 +53,11 @@ export const CONTRACT_LABELS: Record<string, string> = {
   salarie: "Salarié",
   vacataire: "Vacataire",
   prestataire: "Prestataire",
+  stagiaire: "Stagiaire",
 };
+
+export type ContractType = "salarie" | "vacataire" | "prestataire" | "stagiaire";
+export const CONTRACT_TYPES: ContractType[] = ["salarie", "vacataire", "prestataire", "stagiaire"];
 
 // Objectifs d'entrée (analyse du besoin, Qualiopi ind. 4)
 export const GOALS = [

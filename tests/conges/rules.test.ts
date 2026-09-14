@@ -18,3 +18,11 @@ describe("règles du module congés", () => {
     expect(sessionsInRange(["2026-10-05", "2026-10-06", "2026-10-12"], "2026-10-05", "2026-10-09")).toBe(2);
   });
 });
+
+describe("règles du module congés — stagiaires", () => {
+  it("un stagiaire déclare ses absences sans validation, comme un vacataire", () => {
+    expect(needsApproval("stagiaire")).toBe(false);
+    expect(initialStatus("stagiaire")).toBe("approuvee");
+    expect(requestWording("stagiaire").button).toBe("Déclarer une absence");
+  });
+});

@@ -49,7 +49,7 @@ export async function loadAttendanceSheetData(
   const { data: session } = await supabase
     .from("sessions")
     .select(
-      "id, group_id, starts_at, ends_at, attendance_closed_at, trainer_signature, groups(name, programs(name)), trainers:trainer_id(first_name, last_name), rooms:room_id(name)",
+      "id, group_id, starts_at, ends_at, attendance_closed_at, trainer_signature, groups(name, programs(name)), trainers:trainer_id(first_name, last_name), co_trainers:co_trainer_id(first_name, last_name, contract_type), rooms:room_id(name)",
     )
     .eq("id", sessionId)
     .eq("org_id", orgId)
@@ -89,7 +89,13 @@ export async function loadAttendanceSheetData(
   return {
     groupName: group?.name ?? "Groupe",
     programName: group?.programs?.name ?? null,
-    trainerName: trainer ? `${trainer.first_name} ${trainer.last_name ?? ""}`.trim() : null,
+    trainerName: (() => {
+      const co = session.co_trainers as unknown as { first_name: string; last_name: string | null; contract_type: string } | null;
+      const main = trainer ? `${trainer.first_name} ${trainer.last_name ?? ""}`.trim() : null;
+      if (!co) return main;
+      const coName = `${co.first_name} ${co.last_name ?? ""}`.trim() + (co.contract_type === "stagiaire" ? " (stagiaire)" : "");
+      return main ? `${main}, avec ${coName}` : coName;
+    })(),
     roomName: room?.name ?? null,
     startsAt: session.starts_at,
     endsAt: session.ends_at,

@@ -44,6 +44,12 @@ export default async function FormateurPage({ params }: { params: Promise<{ id: 
           {trainer.first_name} {trainer.last_name}
         </h1>
         <Badge variant="outline">{CONTRACT_LABELS[trainer.contract_type] ?? trainer.contract_type}</Badge>
+        {trainer.contract_type === "stagiaire" && (trainer.internship_school || trainer.internship_ends_on) && (
+          <span className="text-sm text-muted-foreground">
+            {trainer.internship_school ?? ""}{trainer.internship_school && trainer.internship_ends_on ? " · " : ""}
+            {trainer.internship_ends_on ? `stage jusqu'au ${new Date(`${trainer.internship_ends_on}T12:00:00Z`).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}` : ""}
+          </span>
+        )}
         {!trainer.is_active && <Badge variant="destructive">Inactif</Badge>}
         {membership && <Badge variant="secondary">Compte ERP actif</Badge>}
         <div className="ml-auto flex items-center gap-2">
@@ -66,6 +72,8 @@ export default async function FormateurPage({ params }: { params: Promise<{ id: 
               skills: (trainer.skills ?? []).join(", "),
               languages: (trainer.languages ?? []).join(", "),
               isActive: trainer.is_active,
+              internshipSchool: trainer.internship_school ?? "",
+              internshipEndsOn: trainer.internship_ends_on ?? "",
             }}
           />
           <DeleteTrainerButton

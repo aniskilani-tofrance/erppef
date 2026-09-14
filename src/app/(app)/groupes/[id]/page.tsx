@@ -19,6 +19,7 @@ import { ReplanButton } from "@/components/groupes/replan-button";
 import { SurveyManager } from "@/components/groupes/survey-manager";
 import { PlanningShare, type PlanningRecipient } from "@/components/groupes/planning-share";
 import { AttendanceDispatchCard, type DispatchHistoryRow } from "@/components/groupes/attendance-dispatch-card";
+import { CoTrainerSelect } from "@/components/groupes/co-trainer-select";
 import { KIND_LABELS } from "@/lib/evaluations/grid";
 import { STATE_LABELS, computeMilestones, milestoneState, type MilestoneSession, type MilestoneState } from "@/lib/evaluations/milestones";
 
@@ -54,7 +55,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
         .single(),
       supabase
         .from("sessions")
-        .select("id, starts_at, ends_at, status, trainers:trainer_id(first_name), rooms:room_id(name)")
+        .select("id, starts_at, ends_at, status, trainers:trainer_id(first_name), co_trainers:co_trainer_id(first_name), rooms:room_id(name)")
         .eq("group_id", id)
         .order("starts_at"),
       supabase.from("v_group_hours").select("*").eq("group_id", id).single(),
@@ -118,6 +119,17 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
         .order("sent_at", { ascending: false })
         .limit(10)
     : { data: [] };
+  // Co-animation : stagiaire ou second formateur par défaut sur les séances à venir.
+  const [{ data: coTrainerOptions }, { data: coTrainerRow }] = await Promise.all([
+    canWrite
+      ? supabase.from("trainers").select("id, first_name, last_name, contract_type").eq("is_active", true).order("last_name")
+      : Promise.resolve({ data: [] as { id: string; first_name: string; last_name: string | null; contract_type: string }[] }),
+    group.co_trainer_id
+      ? supabase.from("v_trainers_public").select("first_name, last_name, contract_type").eq("id", group.co_trainer_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+  const coTrainer = coTrainerRow as { first_name: string; last_name: string | null; contract_type: string } | null;
+
   // Jalons d'évaluation (mi-parcours / finale) : date, état, avancement des grilles.
   const { data: evaluationRows } = await supabase.from("evaluations").select("kind, co, po, ce, pe").eq("group_id", id);
   const milestones = computeMilestones((sessions ?? []) as MilestoneSession[], { midterm_on: group.midterm_on, final_on: group.final_on });
@@ -262,6 +274,20 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
             <p className="mt-1 font-medium">
               {trainer ? `${trainer.first_name} ${trainer.last_name ?? ""}`.trim() : "Non affecté"}
             </p>
+            {canWrite ? (
+              <>
+                <p className="mt-2 text-xs uppercase tracking-wide text-muted-foreground">Co-animation</p>
+                <CoTrainerSelect
+                  groupId={id}
+                  value={(group.co_trainer_id as string | null) ?? null}
+                  trainers={(coTrainerOptions ?? [])
+                    .filter((t) => t.id !== group.trainer_id)
+                    .map((t) => ({ id: t.id, name: `${t.first_name} ${t.last_name ?? ""}`.trim(), contractType: t.contract_type }))}
+                />
+              </>
+            ) : coTrainer ? (
+              <p className="text-sm text-muted-foreground">avec {`${coTrainer.first_name} ${coTrainer.last_name ?? ""}`.trim()}{coTrainer.contract_type === "stagiaire" ? " (stagiaire)" : ""}</p>
+            ) : null}
           </CardContent>
         </Card>
         <Card>
@@ -440,7 +466,12 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
                     <TableCell>
                       {utcToLocalTime(s.starts_at)} – {utcToLocalTime(s.ends_at)}
                     </TableCell>
-                    <TableCell>{(s.trainers as unknown as { first_name: string } | null)?.first_name ?? "—"}</TableCell>
+                    <TableCell>
+                      {(s.trainers as unknown as { first_name: string } | null)?.first_name ?? "—"}
+                      {(s.co_trainers as unknown as { first_name: string } | null)?.first_name && (
+                        <span className="text-muted-foreground"> + {(s.co_trainers as unknown as { first_name: string }).first_name}</span>
+                      )}
+                    </TableCell>
                     <TableCell>{(s.rooms as unknown as { name: string } | null)?.name ?? "—"}</TableCell>
                     <TableCell>
                       <Badge variant={s.status === "annulee" ? "destructive" : s.status === "realisee" ? "secondary" : "outline"}>

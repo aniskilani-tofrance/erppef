@@ -200,11 +200,13 @@ export async function loadAdminEmails(orgId: string): Promise<string[]> {
 type Row = {
   id: string;
   trainer_id: string | null;
+  co_trainer_id: string | null;
   starts_at: string;
   ends_at: string;
   groups: { name: string } | null;
   rooms: { name: string; address: string | null; access_notes: string | null } | null;
   trainers: { id: string; first_name: string; last_name: string | null; email: string | null } | null;
+  co_trainers: { id: string; first_name: string; last_name: string | null; email: string | null } | null;
 };
 
 async function loadUpcomingSessions(orgId: string, nowIso: string): Promise<Row[]> {
@@ -212,7 +214,7 @@ async function loadUpcomingSessions(orgId: string, nowIso: string): Promise<Row[
   const { data, error } = await supabase
     .from("sessions")
     .select(
-      "id, trainer_id, starts_at, ends_at, groups(name), rooms:room_id(name, address, access_notes), trainers:trainer_id(id, first_name, last_name, email)",
+      "id, trainer_id, co_trainer_id, starts_at, ends_at, groups(name), rooms:room_id(name, address, access_notes), trainers:trainer_id(id, first_name, last_name, email), co_trainers:co_trainer_id(id, first_name, last_name, email)",
     )
     .eq("org_id", orgId)
     .neq("status", "annulee")
@@ -235,7 +237,7 @@ function toSession(s: Row): SessionForCalendar {
     room_name: s.rooms?.name ?? null,
     room_address: s.rooms?.address ?? null,
     room_access_notes: s.rooms?.access_notes ?? null,
-    trainer_name: s.trainers ? trainerName(s.trainers) : null,
+    trainer_name: [s.trainers ? trainerName(s.trainers) : null, s.co_trainers ? trainerName(s.co_trainers) : null].filter(Boolean).join(" + ") || null,
   };
 }
 
@@ -385,17 +387,18 @@ export async function syncTrainerCalendars(orgId: string): Promise<GcalSyncStats
   const nowIso = new Date().toISOString();
   const [rows, adminEmails] = await Promise.all([loadUpcomingSessions(orgId, nowIso), loadAdminEmails(orgId)]);
 
-  // Regroupe par formateur
+  // Regroupe par formateur : une séance co-animée va dans l'agenda des deux personnes.
   const byTrainer = new Map<string, { trainer: TrainerRef; sessions: SessionForCalendar[] }>();
   for (const s of rows) {
-    const t = s.trainers;
-    if (!t) continue;
-    const entry = byTrainer.get(t.id) ?? {
-      trainer: { id: t.id, name: trainerName(t), email: t.email },
-      sessions: [],
-    };
-    entry.sessions.push(toSession(s));
-    byTrainer.set(t.id, entry);
+    for (const t of [s.trainers, s.co_trainers]) {
+      if (!t) continue;
+      const entry = byTrainer.get(t.id) ?? {
+        trainer: { id: t.id, name: trainerName(t), email: t.email },
+        sessions: [],
+      };
+      entry.sessions.push(toSession(s));
+      byTrainer.set(t.id, entry);
+    }
   }
 
   const { data: calList } = await withRetry(() => cal.calendarList.list({ maxResults: 250 }));

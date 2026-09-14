@@ -130,7 +130,7 @@ export function wrapText(str: string, maxW: number, size: number, f: PDFFont): s
 export async function loadGroupPlanning(supabase: SupabaseClient, groupId: string): Promise<GroupPlanning | null> {
   const { data: g } = await supabase
     .from("groups")
-    .select("id, group_no, name, starts_on, ends_on, total_hours, weekly_pattern, skip_school_holidays, notes, org_id, programs(name), funders(name), trainers:trainer_id(first_name, last_name), rooms:room_id(name, address, access_notes)")
+    .select("id, group_no, name, starts_on, ends_on, total_hours, weekly_pattern, skip_school_holidays, notes, org_id, programs(name), funders(name), trainers:trainer_id(first_name, last_name), co_trainers:co_trainer_id(first_name, last_name, contract_type), rooms:room_id(name, address, access_notes)")
     .eq("id", groupId)
     .single();
   if (!g) return null;
@@ -151,6 +151,8 @@ export async function loadGroupPlanning(supabase: SupabaseClient, groupId: strin
     .lte("starts_on", endsOn ?? g.starts_on)
     .order("starts_on");
   const t = g.trainers as unknown as { first_name: string; last_name: string } | null;
+  const co = g.co_trainers as unknown as { first_name: string; last_name: string | null; contract_type: string } | null;
+  const coLabel = co ? `${co.first_name} ${co.last_name ?? ""}`.trim() + (co.contract_type === "stagiaire" ? " (stagiaire)" : "") : null;
   const r = g.rooms as unknown as { name: string; address: string | null; access_notes: string | null } | null;
   return {
     groupId: g.id,
@@ -158,7 +160,7 @@ export async function loadGroupPlanning(supabase: SupabaseClient, groupId: strin
     name: g.name,
     programName: (g.programs as unknown as { name: string } | null)?.name ?? null,
     funderName: (g.funders as unknown as { name: string } | null)?.name ?? null,
-    trainerName: t ? `${t.first_name} ${t.last_name}`.trim() : null,
+    trainerName: t ? `${t.first_name} ${t.last_name}`.trim() + (coLabel ? `, avec ${coLabel}` : "") : coLabel,
     roomName: r?.name ?? null,
     roomAddress: r?.address ?? null,
     roomAccess: r?.access_notes ?? null,

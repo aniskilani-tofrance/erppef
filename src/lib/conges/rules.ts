@@ -1,8 +1,8 @@
 // Règles du module congés (pur, testable).
 //   salarié      → demande à valider par l'admin ou la coordination (« en_attente »)
-//   vacataire / prestataire → absence enregistrée directement (« approuvee »)
+//   vacataire / prestataire / stagiaire → absence enregistrée directement (« approuvee »)
 
-export type ContractType = "salarie" | "vacataire" | "prestataire";
+export type ContractType = "salarie" | "vacataire" | "prestataire" | "stagiaire";
 export type AbsenceStatus = "en_attente" | "approuvee" | "refusee";
 export type AbsenceKind = "conge" | "maladie" | "formation" | "autre";
 

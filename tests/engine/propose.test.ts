@@ -251,3 +251,16 @@ describe("proposeGroupPlan", () => {
     expect(dates).not.toContain("2026-01-12");
   });
 });
+
+describe("moteur — stagiaires jamais recommandés d'office", () => {
+  it("classe un stagiaire éligible après les salariés et vacataires, mais avant les inéligibles", async () => {
+    const { compareTrainers } = await import("@/lib/engine/propose");
+    const base = { name: "", hourlyCost: 30, priority: 10, score: 0, projectedCost: 0, hardViolations: [] as string[], softNotes: [] as string[] };
+    const stagiaire = { ...base, trainerId: "s", contractType: "stagiaire" as const, hourlyCost: 0 };
+    const vacataire = { ...base, trainerId: "v", contractType: "vacataire" as const, hourlyCost: 40 };
+    const salarie = { ...base, trainerId: "e", contractType: "salarie" as const, hourlyCost: 45 };
+    const bloque = { ...base, trainerId: "b", contractType: "salarie" as const, hardViolations: ["indisponible"] };
+    const sorted = [stagiaire, bloque, vacataire, salarie].sort(compareTrainers).map((t) => t.trainerId);
+    expect(sorted).toEqual(["e", "v", "s", "b"]);
+  });
+});

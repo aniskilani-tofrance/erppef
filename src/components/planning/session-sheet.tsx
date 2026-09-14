@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { deleteSession, updateSession, type CalendarSession } from "@/app/(app)/planning/actions";
@@ -34,15 +34,21 @@ export function SessionSheet({
   onChanged: () => void;
 }) {
   const [trainerId, setTrainerId] = useState<string>(NONE);
+  const [coTrainerId, setCoTrainerId] = useState<string>(NONE);
   const [roomId, setRoomId] = useState<string>(NONE);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [pending, startTransition] = useTransition();
 
-  useEffect(() => {
+  // Nouvelle séance ouverte : on réaligne les champs pendant le rendu (pattern React
+  // « adjusting state when a prop changes »), sans effet.
+  const [prevSession, setPrevSession] = useState<CalendarSession | null>(session);
+  if (session !== prevSession) {
+    setPrevSession(session);
     setTrainerId(session?.trainerId ?? NONE);
+    setCoTrainerId(session?.coTrainerId ?? NONE);
     setRoomId(session?.roomId ?? NONE);
     setConfirmDelete(false);
-  }, [session]);
+  }
 
   if (!session) return <Sheet open={false} />;
 
@@ -51,6 +57,7 @@ export function SessionSheet({
       const result = await updateSession({
         sessionId: session!.id,
         trainerId: trainerId === NONE ? null : trainerId,
+        coTrainerId: coTrainerId === NONE ? null : coTrainerId,
         roomId: roomId === NONE ? null : roomId,
         status,
       });
@@ -87,6 +94,23 @@ export function SessionSheet({
               <SelectContent>
                 <SelectItem value={NONE}>Aucun</SelectItem>
                 {trainers.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Co-animation (stagiaire ou second formateur)</Label>
+            <Select value={coTrainerId} onValueChange={setCoTrainerId} disabled={!canEdit}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NONE}>Personne</SelectItem>
+                {trainers.filter((t) => t.id !== trainerId).map((t) => (
                   <SelectItem key={t.id} value={t.id}>
                     {t.name}
                   </SelectItem>

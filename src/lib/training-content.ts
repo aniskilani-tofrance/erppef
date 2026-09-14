@@ -392,6 +392,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
           "Formateurs → « Nouveau formateur » : photo, contrat (salarié/vacataire), coût horaire chargé, plafond d'heures hebdo, priorité (1 = premier choix).",
           "Sur sa fiche : ses disponibilités récurrentes (jours + heures). C'est LA donnée que le moteur respecte à la lettre.",
           "Email renseigné = invitation automatique : il reçoit un lien, choisit son mot de passe, et voit son planning.",
+          "Stagiaire : même fiche, contrat « Stagiaire » (établissement, fin de stage). Il co-anime un groupe (fiche groupe → carte Formateur → Co-animation, appliqué aux séances à venir) ou tient son propre atelier (groupe dont il est le formateur, choisi à la main : le moteur ne le propose jamais d'office).",
           "Déposez ses CV et diplômes (« Qualifications ») : preuve Qualiopi ind. 21-22 toujours prête.",
           "Menu « Congés » : les demandes des salariés à valider en un clic, les absences déclarées par les vacataires, l'historique. Seules les absences validées bloquent le moteur.",
         ],

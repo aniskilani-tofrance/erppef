@@ -26,6 +26,18 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-09-15-stagiaires-co-animation",
+    date: "2026-09-15",
+    title: "Stagiaires : co-animation d'un cours ou atelier propre",
+    summary: "Un stagiaire est une fiche formateur avec le contrat « Stagiaire ». Il peut co-animer les séances d'une formatrice (posé sur le groupe ou séance par séance) ou tenir son propre atelier.",
+    items: [
+      { text: "Formateurs → Nouveau formateur → contrat « Stagiaire » (établissement, fin de stage). Fiche groupe → carte Formateur → « Co-animation » : appliqué aux séances à venir ; Planning → séance → « Co-animation » pour une séance précise.", roles: TEAM },
+      { text: "Le co-animateur apparaît sur les plannings PDF, la feuille d'émargement (« avec … (stagiaire) »), le planning (filtre par formateur) et son agenda Google. Le moteur ne propose jamais un stagiaire d'office pour un groupe : vous le choisissez à la main pour un atelier.", roles: TEAM },
+      { text: "Si vous co-animez avec un stagiaire, ses séances apparaissent sur son Dashboard avec le badge « co-animation » ; la feuille d'émargement reste contre-signée par vous.", roles: ["trainer"] },
+    ],
+    training: [{ moduleId: "c3-equipe", lessonId: "formateurs", label: "Un formateur prêt à planifier" }],
+  },
+  {
     id: "2026-09-14-evaluations-parcours",
     date: "2026-09-14",
     title: "Évaluations de mi-parcours et de fin de parcours",

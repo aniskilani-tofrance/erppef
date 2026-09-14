@@ -39,8 +39,9 @@ export async function TrainerDashboard({ userId }: { userId: string }) {
   const [{ data: weekSessions }, { data: toClose }, { data: myAbsences }] = await Promise.all([
     supabase
       .from("sessions")
-      .select("id, starts_at, ends_at, status, attendance_closed_at, groups(name), rooms:room_id(name)")
-      .eq("trainer_id", trainerId)
+      .select("id, starts_at, ends_at, status, attendance_closed_at, trainer_id, co_trainer_id, groups(name), rooms:room_id(name)")
+      // Mes séances : celles que j'anime et celles que je co-anime (stagiaire, binôme)
+      .or(`trainer_id.eq.${trainerId},co_trainer_id.eq.${trainerId}`)
       .neq("status", "annulee")
       .gte("starts_at", `${weekStart}T00:00:00Z`)
       .lt("starts_at", `${weekEnd}T00:00:00Z`)
@@ -90,6 +91,7 @@ export async function TrainerDashboard({ userId }: { userId: string }) {
                   {(s.rooms as unknown as { name: string } | null)?.name && (
                     <Badge variant="outline">{(s.rooms as unknown as { name: string }).name}</Badge>
                   )}
+                  {s.co_trainer_id === trainerId && <Badge variant="secondary">co-animation</Badge>}
                   <Link
                     href={`/seances/${s.id}/emargement`}
                     className="ml-auto inline-flex items-center gap-1 text-sm font-medium hover:underline"

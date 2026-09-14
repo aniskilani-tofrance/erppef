@@ -12,6 +12,8 @@ export type CalendarSession = {
   groupName: string;
   trainerId: string | null;
   trainerName: string | null;
+  coTrainerId: string | null; // co-animation (stagiaire ou second formateur)
+  coTrainerName: string | null;
   roomId: string | null;
   roomName: string | null;
   funderColor: string;
@@ -29,7 +31,7 @@ export async function fetchSessions(range: { from: string; to: string }): Promis
   const { data, error } = await supabase
     .from("sessions")
     .select(
-      "id, group_id, trainer_id, room_id, starts_at, ends_at, status, groups(name, funders(color)), trainers:trainer_id(first_name, last_name, color), rooms:room_id(name)",
+      "id, group_id, trainer_id, co_trainer_id, room_id, starts_at, ends_at, status, groups(name, funders(color)), trainers:trainer_id(first_name, last_name, color), co_trainers:co_trainer_id(first_name, last_name), rooms:room_id(name)",
     )
     .gte("starts_at", range.from)
     .lt("starts_at", range.to)
@@ -40,6 +42,7 @@ export async function fetchSessions(range: { from: string; to: string }): Promis
   return (data ?? []).map((s) => {
     const group = s.groups as unknown as { name: string; funders: { color: string } | null } | null;
     const trainer = s.trainers as unknown as { first_name: string; last_name: string } | null;
+    const coTrainer = s.co_trainers as unknown as { first_name: string; last_name: string | null } | null;
     const room = s.rooms as unknown as { name: string } | null;
     return {
       id: s.id,
@@ -47,6 +50,8 @@ export async function fetchSessions(range: { from: string; to: string }): Promis
       groupName: group?.name ?? "Groupe",
       trainerId: s.trainer_id,
       trainerName: trainer ? `${trainer.first_name} ${trainer.last_name ?? ""}`.trim() : null,
+      coTrainerId: s.co_trainer_id ?? null,
+      coTrainerName: coTrainer ? `${coTrainer.first_name} ${coTrainer.last_name ?? ""}`.trim() : null,
       roomId: s.room_id,
       roomName: room?.name ?? null,
       funderColor: group?.funders?.color ?? "#64748b",
@@ -117,6 +122,7 @@ export async function createSession(raw: z.infer<typeof createSchema>): Promise<
 const updateSchema = z.object({
   sessionId: z.string().uuid(),
   trainerId: z.string().uuid().nullable(),
+  coTrainerId: z.string().uuid().nullable().optional(),
   roomId: z.string().uuid().nullable(),
   status: z.enum(["planifiee", "realisee", "annulee"]),
 });
@@ -129,10 +135,14 @@ export async function updateSession(raw: z.infer<typeof updateSchema>): Promise<
   await requireRole(["admin", "coordinator"]);
   const supabase = await createClient();
 
+  if (parsed.data.coTrainerId && parsed.data.coTrainerId === parsed.data.trainerId) {
+    return { ok: false, error: "Le co-animateur doit être différent du formateur." };
+  }
   const { error } = await supabase
     .from("sessions")
     .update({
       trainer_id: parsed.data.trainerId,
+      ...(parsed.data.coTrainerId !== undefined ? { co_trainer_id: parsed.data.coTrainerId } : {}),
       room_id: parsed.data.roomId,
       status: parsed.data.status,
     })

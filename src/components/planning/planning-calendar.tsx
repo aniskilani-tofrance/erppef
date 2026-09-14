@@ -141,7 +141,7 @@ export function PlanningCalendar({
   const filtered = useMemo(
     () =>
       sessions.filter((s) => {
-        if (filters.trainerId !== "all" && s.trainerId !== filters.trainerId) return false;
+        if (filters.trainerId !== "all" && s.trainerId !== filters.trainerId && s.coTrainerId !== filters.trainerId) return false;
         if (filters.roomId !== "all" && s.roomId !== filters.roomId) return false;
         if (filters.funderId !== "all") {
           const funder = funders.find((f) => f.id === filters.funderId);
@@ -164,7 +164,7 @@ export function PlanningCalendar({
         borderColor: "rgba(0,0,0,.18)",
         textColor: readableText(bg),
         editable: canEdit && s.status === "planifiee",
-        extendedProps: { room: s.roomName, trainer: s.trainerName, colorBy },
+        extendedProps: { room: s.roomName, trainer: s.coTrainerName ? `${s.trainerName ?? "—"} + ${s.coTrainerName}` : s.trainerName, colorBy },
       };
     }),
     // Vacances, fériés et fermetures en fond grisé (ends_on inclusif → end exclusif).

@@ -242,6 +242,7 @@ export async function replanMissingHours(groupId: string): Promise<SimpleResult>
       org_id: orgId,
       group_id: groupId,
       trainer_id: group.trainer_id,
+      co_trainer_id: group.co_trainer_id ?? null,
       room_id: group.room_id,
       starts_at: s.startsAt,
       ends_at: s.endsAt,
@@ -429,6 +430,11 @@ export async function duplicateGroup(raw: z.infer<typeof duplicateSchema>): Prom
 
   revalidatePath("/groupes");
   revalidatePath("/planning");
+  // Le groupe « suite » hérite du co-animateur (stagiaire) sur toutes ses séances.
+  if (group.co_trainer_id) {
+    await supabase.from("groups").update({ co_trainer_id: group.co_trainer_id }).eq("id", newGroupId as string);
+    await supabase.from("sessions").update({ co_trainer_id: group.co_trainer_id }).eq("group_id", newGroupId as string);
+  }
   return { ok: true, groupId: newGroupId as string };
 }
 
@@ -476,4 +482,38 @@ export async function sendAttendanceDispatchNow(groupId: string, mode: "manuel" 
   revalidatePath(`/groupes/${groupId}`);
   if (result.status === "erreur") return { ok: false, error: result.message };
   return { ok: true, status: result.status, message: result.message };
+}
+
+// ───────────── Co-animation (stagiaire ou second formateur) ─────────────
+
+const coTrainerSchema = z.object({ groupId: z.string().uuid(), coTrainerId: z.string().uuid().nullable() });
+
+// Co-animateur par défaut du groupe : appliqué aux séances à venir (les séances passées
+// gardent qui était réellement présent). Chaque séance reste modifiable dans le planning.
+export async function setGroupCoTrainer(raw: z.infer<typeof coTrainerSchema>): Promise<{ ok: true; sessions: number } | { ok: false; error: string }> {
+  const parsed = coTrainerSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Données invalides" };
+  const { groupId, coTrainerId } = parsed.data;
+  const { orgId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+
+  const { data: group } = await supabase.from("groups").select("id, trainer_id").eq("id", groupId).eq("org_id", orgId).single();
+  if (!group) return { ok: false, error: "Groupe introuvable" };
+  if (coTrainerId && coTrainerId === group.trainer_id) return { ok: false, error: "Le co-animateur doit être différent du formateur du groupe." };
+
+  const { error } = await supabase.from("groups").update({ co_trainer_id: coTrainerId }).eq("id", groupId);
+  if (error) return { ok: false, error: translatePgError(error) };
+
+  const { data: updated, error: sessionsError } = await supabase
+    .from("sessions")
+    .update({ co_trainer_id: coTrainerId })
+    .eq("group_id", groupId)
+    .eq("status", "planifiee")
+    .gte("starts_at", new Date().toISOString())
+    .select("id");
+  if (sessionsError) return { ok: false, error: translatePgError(sessionsError) };
+
+  revalidatePath(`/groupes/${groupId}`);
+  revalidatePath("/planning");
+  return { ok: true, sessions: (updated ?? []).length };
 }

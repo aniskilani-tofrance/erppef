@@ -23,7 +23,7 @@ export type TrainerFormValues = {
   lastName: string;
   email: string;
   phone: string;
-  contractType: "salarie" | "vacataire" | "prestataire";
+  contractType: "salarie" | "vacataire" | "prestataire" | "stagiaire";
   hourlyCost: string;
   weeklyHoursMax: string;
   priority: string;
@@ -31,6 +31,8 @@ export type TrainerFormValues = {
   languages: string;
   color: string; // couleur des séances sur le planning
   isActive: boolean;
+  internshipSchool: string; // stagiaire : établissement
+  internshipEndsOn: string; // stagiaire : fin de stage (YYYY-MM-DD)
 };
 
 const EMPTY: TrainerFormValues = {
@@ -47,6 +49,8 @@ const EMPTY: TrainerFormValues = {
   languages: "fr",
   color: "#0ea5e9",
   isActive: true,
+  internshipSchool: "",
+  internshipEndsOn: "",
 };
 
 export function TrainerFormDialog({ initial }: { initial?: TrainerFormValues }) {
@@ -147,7 +151,7 @@ export function TrainerFormDialog({ initial }: { initial?: TrainerFormValues }) 
             <Field label="Contrat">
               <Select
                 value={values.contractType}
-                onValueChange={(v) => set("contractType", v as "salarie" | "vacataire" | "prestataire")}
+                onValueChange={(v) => set("contractType", v as "salarie" | "vacataire" | "prestataire" | "stagiaire")}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -156,13 +160,30 @@ export function TrainerFormDialog({ initial }: { initial?: TrainerFormValues }) 
                   <SelectItem value="salarie">Salarié</SelectItem>
                   <SelectItem value="vacataire">Vacataire</SelectItem>
                   <SelectItem value="prestataire">Prestataire (freelance)</SelectItem>
+                  <SelectItem value="stagiaire">Stagiaire (co-animation ou atelier)</SelectItem>
                 </SelectContent>
               </Select>
+              {values.contractType === "stagiaire" && (
+                <p className="text-xs text-muted-foreground">
+                  Un stagiaire co-anime les séances d&apos;une formatrice (fiche groupe → « Co-animation ») ou tient son propre atelier
+                  (groupe dont il est le formateur). Le moteur ne le propose jamais d&apos;office : vous le choisissez à la main.
+                </p>
+              )}
             </Field>
             <Field label="Coût horaire chargé (€)">
               <Input type="number" step="0.5" value={values.hourlyCost} onChange={(e) => set("hourlyCost", e.target.value)} />
             </Field>
           </div>
+          {values.contractType === "stagiaire" && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Établissement (école, université)">
+                <Input value={values.internshipSchool} onChange={(e) => set("internshipSchool", e.target.value)} placeholder="INALCO, Sorbonne Nouvelle…" />
+              </Field>
+              <Field label="Fin de stage">
+                <Input type="date" value={values.internshipEndsOn} onChange={(e) => set("internshipEndsOn", e.target.value)} />
+              </Field>
+            </div>
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Heures max / semaine">
               <Input type="number" step="0.5" value={values.weeklyHoursMax} onChange={(e) => set("weeklyHoursMax", e.target.value)} />
