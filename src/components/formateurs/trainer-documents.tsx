@@ -20,12 +20,16 @@ export type TrainerDocument = {
 export function TrainerDocuments({
   trainerId,
   documents,
+  contractType,
 }: {
   trainerId: string;
   documents: TrainerDocument[];
+  contractType?: string; // « stagiaire » : la convention de stage est le document attendu
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [label, setLabel] = useState("");
+  const isIntern = contractType === "stagiaire";
+  const hasConvention = documents.some((d) => /convention/i.test(d.label));
+  const [label, setLabel] = useState(isIntern && !hasConvention ? "Convention de stage" : "");
   const [busy, setBusy] = useState(false);
   const [pending, startTransition] = useTransition();
 
@@ -69,6 +73,12 @@ export function TrainerDocuments({
 
   return (
     <div className="space-y-4">
+      {isIntern && !hasConvention && (
+        <p className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          Convention de stage manquante : déposez ici la convention signée par l&apos;établissement, le stagiaire et l&apos;association
+          (intitulé « Convention de stage »). Elle doit être signée avant la première séance.
+        </p>
+      )}
       {documents.length > 0 ? (
         <ul className="space-y-2">
           {documents.map((d) => (
@@ -92,15 +102,16 @@ export function TrainerDocuments({
         </ul>
       ) : (
         <p className="text-sm text-muted-foreground">
-          Aucun document. Ajoutez CV, diplômes et attestations de formation continue :
-          c&apos;est la preuve des indicateurs 21-22 en audit.
+          {isIntern
+            ? "Aucun document. Ajoutez la convention de stage signée, puis le CV et, à la fin du stage, l'attestation de stage."
+            : "Aucun document. Ajoutez CV, diplômes et attestations de formation continue : c'est la preuve des indicateurs 21-22 en audit."}
         </p>
       )}
 
       <div className="flex flex-wrap items-end gap-2">
         <div className="space-y-2">
           <Label>Intitulé</Label>
-          <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="CV, Master FLE, attestation…" className="w-56" />
+          <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder={isIntern ? "Convention de stage, CV, attestation de stage…" : "CV, Master FLE, attestation…"} className="w-56" />
         </div>
         <Button variant="outline" disabled={busy} onClick={() => inputRef.current?.click()}>
           <Upload className="mr-2 h-4 w-4" />

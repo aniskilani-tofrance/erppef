@@ -116,10 +116,12 @@ export default async function FormateurPage({ params }: { params: Promise<{ id: 
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Qualifications et documents (Qualiopi ind. 21-22)</CardTitle>
+          <CardTitle className="text-base">
+            {trainer.contract_type === "stagiaire" ? "Convention de stage et documents" : "Qualifications et documents (Qualiopi ind. 21-22)"}
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <TrainerDocuments trainerId={trainer.id} documents={documents} />
+          <TrainerDocuments trainerId={trainer.id} documents={documents} contractType={trainer.contract_type} />
         </CardContent>
       </Card>
 
