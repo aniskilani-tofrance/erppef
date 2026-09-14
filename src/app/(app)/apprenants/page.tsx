@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CalendarDays } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -289,7 +290,7 @@ export default async function ApprenantsPage({
                     <PlacementTestCell learnerId={l.id} test={testByLearner.get(l.id) ?? null} senderFirstName={senderFirstName} learnerFirstName={l.first_name} phone={l.phone} template={templates.test_positionnement} />
                   </TableCell>
                   <TableCell>
-                    <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-wrap items-center gap-1">
                       {mine.length === 0 && <span className="text-sm text-muted-foreground">—</span>}
                       {mine.map((e) => (
                         <Badge key={e.id} variant="outline" asChild>
@@ -298,6 +299,16 @@ export default async function ApprenantsPage({
                           </Link>
                         </Badge>
                       ))}
+                      {mine.length > 0 && (
+                        <a
+                          href={`/apprenants/${l.id}/planning`}
+                          className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                          title="Télécharger son planning de cours (PDF)"
+                          aria-label="Télécharger son planning de cours (PDF)"
+                        >
+                          <CalendarDays className="h-3.5 w-3.5" />
+                        </a>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>

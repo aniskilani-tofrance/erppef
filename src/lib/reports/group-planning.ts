@@ -68,18 +68,21 @@ export function describePattern(pattern: { weekday: number; start: string; end: 
 export function fmtDay(day: string, opts: Intl.DateTimeFormatOptions = { weekday: "long", day: "numeric", month: "long", year: "numeric" }): string {
   return new Date(`${day.slice(0, 10)}T12:00:00Z`).toLocaleDateString("fr-FR", { ...opts, timeZone: TZ });
 }
-function localDate(iso: string): string {
+export function localDate(iso: string): string {
   return new Intl.DateTimeFormat("fr-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(iso));
 }
-function localTime(iso: string): string {
+export function localTime(iso: string): string {
   return new Date(iso).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: TZ }).replace(":", "h");
 }
-function hoursOf(s: PlanningSession): number {
+export function hoursOf(s: PlanningSession): number {
   return Math.round(((new Date(s.endsAt).getTime() - new Date(s.startsAt).getTime()) / 3600_000) * 100) / 100;
 }
-function slug(s: string): string {
+export function slug(s: string): string {
   return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
+
+// Charte et constantes partag\u00e9es avec les plannings group\u00e9s (planning-bundle.ts).
+export const PLANNING_THEME = { PEF_GREEN, PEF_EMERALD, PEF_PALE, GRAY, A4, MARGIN, TZ, ORG_LEGAL };
 
 export async function loadGroupPlanning(supabase: SupabaseClient, groupId: string): Promise<GroupPlanning | null> {
   const { data: g } = await supabase
@@ -186,28 +189,38 @@ export function buildPlanningCsv(p: GroupPlanning): string {
 }
 
 // ── Calendrier .ics (téléphone de l'apprenant, agenda du financeur) ──────────
-export function buildPlanningIcs(p: GroupPlanning): string {
-  const stamp = (iso: string) => new Date(iso).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
-  const esc = (s: string) => s.replace(/\\/g, "\\\\").replace(/;/g, "\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
+const icsStamp = (iso: string) => new Date(iso).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+const icsEsc = (s: string) => s.replace(/\\/g, "\\\\").replace(/;/g, "\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
+
+/** Les VEVENT d'un groupe (séances non annulées), réutilisés par les calendriers groupés. */
+export function icsEvents(p: GroupPlanning): string[] {
   const location = [p.roomName, p.roomAddress].filter(Boolean).join(", ");
-  const events = p.sessions
+  return p.sessions
     .filter((s) => s.status !== "annulee")
     .map((s) => [
       "BEGIN:VEVENT",
       `UID:${s.id}@pef-erp`,
-      `DTSTAMP:${stamp(new Date().toISOString())}`,
-      `DTSTART:${stamp(s.startsAt)}`,
-      `DTEND:${stamp(s.endsAt)}`,
-      `SUMMARY:${esc(`Cours de français — ${p.name}`)}`,
-      ...(location ? [`LOCATION:${esc(location)}`] : []),
-      `DESCRIPTION:${esc(`${ORG_LEGAL.name}${s.trainerName ?? p.trainerName ? ` · ${s.trainerName ?? p.trainerName}` : ""}${p.roomAccess ? `\n${p.roomAccess}` : ""}`)}`,
+      `DTSTAMP:${icsStamp(new Date().toISOString())}`,
+      `DTSTART:${icsStamp(s.startsAt)}`,
+      `DTEND:${icsStamp(s.endsAt)}`,
+      `SUMMARY:${icsEsc(`Cours de français — ${p.name}`)}`,
+      ...(location ? [`LOCATION:${icsEsc(location)}`] : []),
+      `DESCRIPTION:${icsEsc(`${ORG_LEGAL.name}${s.trainerName ?? p.trainerName ? ` · ${s.trainerName ?? p.trainerName}` : ""}${p.roomAccess ? `\n${p.roomAccess}` : ""}`)}`,
       "END:VEVENT",
     ].join("\r\n"));
+}
+
+/** Enveloppe VCALENDAR autour d'une liste de VEVENT. */
+export function wrapIcs(calendarName: string, events: string[]): string {
   return [
     "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//ParlerEmploi Formation//ERP PEF//FR", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
-    `X-WR-CALNAME:${esc(`Cours de français — ${p.name}`)}`, `X-WR-TIMEZONE:${TZ}`,
+    `X-WR-CALNAME:${icsEsc(calendarName)}`, `X-WR-TIMEZONE:${TZ}`,
     ...events, "END:VCALENDAR", "",
   ].join("\r\n");
+}
+
+export function buildPlanningIcs(p: GroupPlanning): string {
+  return wrapIcs(`Cours de français — ${p.name}`, icsEvents(p));
 }
 
 // ── PDF ──────────────────────────────────────────────────────────────────────

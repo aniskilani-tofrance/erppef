@@ -32,6 +32,16 @@ type ColorBy = "formateur" | "financeur" | "salle";
 
 // Palette de secours (formateur ou salle sans couleur) : stable par position dans la liste.
 const FALLBACK_COLORS = ["#0ea5e9", "#14b8a6", "#a855f7", "#f59e0b", "#ef4444", "#22c55e", "#6366f1", "#ec4899", "#84cc16", "#f97316"];
+// Texte sombre sur une couleur claire (jaune, lime…), blanc sur une couleur foncée : lisible partout.
+export function readableText(hex: string): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return "#ffffff";
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16) / 255);
+  const lin = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  const luminance = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  return luminance > 0.45 ? "#0f172a" : "#ffffff";
+}
+
 const COLOR_BY_OPTIONS: { value: ColorBy; label: string }[] = [
   { value: "formateur", label: "Couleurs : formateurs" },
   { value: "financeur", label: "Couleurs : financeurs" },
@@ -143,17 +153,20 @@ export function PlanningCalendar({
   );
 
   const events = [
-    ...filtered.map((s) => ({
-      id: s.id,
-      title: s.groupName,
-      start: s.startsAt,
-      end: s.endsAt,
-      backgroundColor: colorOf(s),
-      borderColor: "rgba(0,0,0,.18)",
-      textColor: "#ffffff",
-      editable: canEdit && s.status === "planifiee",
-      extendedProps: { room: s.roomName, trainer: s.trainerName, colorBy },
-    })),
+    ...filtered.map((s) => {
+      const bg = colorOf(s);
+      return {
+        id: s.id,
+        title: s.groupName,
+        start: s.startsAt,
+        end: s.endsAt,
+        backgroundColor: bg,
+        borderColor: "rgba(0,0,0,.18)",
+        textColor: readableText(bg),
+        editable: canEdit && s.status === "planifiee",
+        extendedProps: { room: s.roomName, trainer: s.trainerName, colorBy },
+      };
+    }),
     // Vacances, fériés et fermetures en fond grisé (ends_on inclusif → end exclusif).
     ...closures.map((c) => ({
       id: `closure-${c.id}`,
@@ -199,7 +212,8 @@ export function PlanningCalendar({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap gap-2">
+      {/* Téléphone : filtres sur deux colonnes (au lieu de quatre lignes) ; bureau : en ligne. */}
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
         <FilterSelect
           placeholder="Tous les formateurs"
           value={filters.trainerId}
@@ -219,7 +233,7 @@ export function PlanningCalendar({
           onChange={(v) => setFilters((f) => ({ ...f, funderId: v }))}
         />
         <Select value={colorBy} onValueChange={(v) => setColorBy(v as ColorBy)}>
-          <SelectTrigger className="h-9 w-[190px] text-sm" title="Ce que les couleurs représentent">
+          <SelectTrigger className="h-9 w-full text-sm sm:w-[190px]" title="Ce que les couleurs représentent">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -228,7 +242,7 @@ export function PlanningCalendar({
             ))}
           </SelectContent>
         </Select>
-        <div className="ml-auto flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+        <div className="col-span-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground sm:ml-auto">
           {legend.map((l) => (
             <span key={l.id} className="inline-flex items-center gap-1.5">
               <span className="h-3 w-3 rounded-full ring-1 ring-black/10" style={{ backgroundColor: l.color }} />
@@ -238,7 +252,9 @@ export function PlanningCalendar({
         </div>
       </div>
 
-      <div className="rounded-lg border bg-background p-3 [&_.fc]:text-sm [&_.fc-timegrid-event]:rounded-md [&_.fc-timegrid-event]:shadow-sm [&_.fc-daygrid-event]:rounded [&_.fc-col-header-cell-cushion]:py-1.5 [&_.fc-col-header-cell-cushion]:font-semibold [&_.fc-timegrid-slot]:h-8 [&_.fc-day-today]:bg-amber-50/60">
+      {/* Lisibilité : textes du calendrier remontés (titres, boutons, heures, liste mobile), barre
+          d'outils qui se replie sur téléphone, créneaux un peu plus hauts pour 3 lignes par séance. */}
+      <div className="rounded-lg border bg-background p-2 sm:p-3 [&_.fc]:text-sm [&_.fc-toolbar]:flex-wrap [&_.fc-toolbar]:gap-y-2 [&_.fc-toolbar-title]:text-base! sm:[&_.fc-toolbar-title]:text-lg! [&_.fc-button]:px-2! [&_.fc-button]:text-xs! sm:[&_.fc-button]:text-sm! [&_.fc-timegrid-event]:rounded-md [&_.fc-timegrid-event]:shadow-sm [&_.fc-daygrid-event]:rounded [&_.fc-col-header-cell-cushion]:py-1.5 [&_.fc-col-header-cell-cushion]:font-semibold [&_.fc-timegrid-slot]:h-9 [&_.fc-timegrid-slot-label-cushion]:text-xs [&_.fc-timegrid-axis-cushion]:text-xs [&_.fc-day-today]:bg-amber-50/60 [&_.fc-list-day-cushion]:bg-muted! [&_.fc-list-day-text]:text-sm [&_.fc-list-day-side-text]:text-sm [&_.fc-list-event-time]:text-sm [&_.fc-list-event-time]:whitespace-nowrap [&_.fc-list-event-title]:text-sm [&_.fc-list-event-title]:leading-snug [&_.fc-list-event-graphic]:hidden">
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, multiMonthPlugin, listPlugin]}
           initialView={isMobile ? "listWeek" : "timeGridWeek"}
@@ -275,7 +291,7 @@ export function PlanningCalendar({
             if (arg.event.display === "background") return undefined;
             if (arg.event.extendedProps.absence) {
               return (
-                <span className="block truncate px-1 text-[10px] font-medium leading-4">
+                <span className="block truncate px-1.5 text-[11px] font-medium leading-5">
                   {arg.event.title}
                 </span>
               );
@@ -284,20 +300,41 @@ export function PlanningCalendar({
             // En mode formateur la couleur dit déjà qui : on met la salle en avant, et inversement.
             const details = (mode === "salle" ? [trainer, room] : [room, trainer]).filter(Boolean).join(" · ");
             if (arg.view.type.startsWith("list")) {
+              // Liste (téléphone) : pastille de la couleur du formateur (la pastille native de
+              // FullCalendar reprend la bordure, grise), titre sur une ligne, salle et formatrice dessous.
               return (
-                <span>
-                  <b>{arg.event.title}</b>
-                  {details && <span className="ml-2 opacity-75">{details}</span>}
+                <span className="flex items-start gap-2">
+                  <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ring-1 ring-black/10" style={{ backgroundColor: arg.event.backgroundColor }} />
+                  <span className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
+                    <b className="text-sm">{arg.event.title}</b>
+                    {details && <span className="text-xs text-muted-foreground sm:text-sm">{details}</span>}
+                  </span>
                 </span>
               );
             }
+            if (arg.view.type === "dayGridMonth") {
+              return (
+                <div className="truncate px-1 text-[11px] font-medium leading-5">
+                  {arg.timeText && <span className="mr-1 opacity-90">{arg.timeText}</span>}
+                  {arg.event.title}
+                </div>
+              );
+            }
+            // Grille : le titre peut passer sur 2-3 lignes (les cases ont de la hauteur, les colonnes
+            // sont étroites quand plusieurs séances se chevauchent) ; l'heure reste en bas.
             return (
-              <div className="flex h-full flex-col overflow-hidden px-1 py-0.5 leading-tight">
-                <div className="truncate text-[11px] font-semibold">{arg.event.title}</div>
-                {details && <div className="truncate text-[10px] opacity-85">{details}</div>}
-                {arg.timeText && <div className="mt-auto truncate text-[9px] opacity-70">{arg.timeText}</div>}
+              <div className="flex h-full flex-col overflow-hidden px-1.5 py-1 leading-tight">
+                <div className="line-clamp-3 text-xs font-semibold">{arg.event.title}</div>
+                {details && <div className="line-clamp-2 text-[11px]">{details}</div>}
+                {arg.timeText && <div className="mt-auto truncate text-[10.5px] opacity-90">{arg.timeText}</div>}
               </div>
             );
+          }}
+          // Infobulle complète au survol (titre, salle, formatrice, horaire) : utile quand la case est étroite.
+          eventDidMount={(arg) => {
+            if (arg.event.display === "background") return;
+            const { room, trainer } = arg.event.extendedProps as { room?: string; trainer?: string };
+            arg.el.title = [arg.event.title, [room, trainer].filter(Boolean).join(" · "), arg.timeText].filter(Boolean).join("\n");
           }}
           editable={canEdit}
           selectable={canEdit}
@@ -357,7 +394,7 @@ function FilterSelect({
 }) {
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="w-44">
+      <SelectTrigger className="w-full sm:w-44">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

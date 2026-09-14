@@ -582,6 +582,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
           "Certificat de réalisation : fiche du groupe → « Certificat » à côté de l'apprenant (dates et heures réellement suivies).",
           "Export d'assiduité CSV par groupe : le récapitulatif chiffré à joindre aux factures France Travail/OPCO.",
           "Planning à diffuser (fiche du groupe → « Diffuser le planning ») : PDF apprenants, PDF financeur, CSV, calendrier .ics, WhatsApp par inscrit et email groupé avec le PDF. Renseignez l'adresse des salles et « Comment trouver la salle » pour qu'ils apparaissent dessus et dans les messages aux apprenants.",
+          "Plusieurs groupes d'un coup : page Planning → « Télécharger les plannings » (tous les groupes en cours, par financeur, par groupe), Rapports → financeur → « Plannings des groupes (PDF) » (sommaire + planning de chaque groupe, pour la Ville par exemple), et liste Apprenants → icône calendrier à côté des groupes d'une personne pour son planning à elle.",
         ],
         tip: "Tout est calculé depuis les émargements réels : si les feuilles sont clôturées au fil de l'eau, vos documents sont toujours justes.",
       },

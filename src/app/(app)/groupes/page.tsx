@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Plus } from "lucide-react";
+import { CalendarDays, Plus } from "lucide-react";
 import { groupRef } from "@/lib/refs";
 
 const STATUS_LABELS: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
@@ -36,14 +36,22 @@ export default async function GroupesPage() {
     <div className="mx-auto max-w-6xl space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Groupes</h1>
-        {canWrite && (
-          <Button asChild>
-            <Link href="/groupes/nouveau">
-              <Plus className="mr-2 h-4 w-4" />
-              Nouveau groupe
-            </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button asChild variant="outline" title="Sommaire + planning de chaque groupe en cours ou à venir (version apprenants), à imprimer pour l'accueil">
+            <a href="/planning/telecharger">
+              <CalendarDays className="mr-2 h-4 w-4" />
+              Tous les plannings (PDF)
+            </a>
           </Button>
-        )}
+          {canWrite && (
+            <Button asChild>
+              <Link href="/groupes/nouveau">
+                <Plus className="mr-2 h-4 w-4" />
+                Nouveau groupe
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="rounded-lg border bg-background">

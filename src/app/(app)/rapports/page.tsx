@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ReportFilters } from "@/components/rapports/report-filters";
 import { DepositReportButton } from "@/components/rapports/deposit-report-button";
-import { Download, FileText } from "lucide-react";
+import { CalendarDays, Download, FileText } from "lucide-react";
 
 // Bilan d'activité par financeur : LA restitution attendue par la Ville, France
 // Travail, le FSE… — heures, bénéficiaires, assiduité (émargements clôturés), typologie.
@@ -81,6 +81,19 @@ export default async function RapportsPage({
               </a>
             </Button>
             <DepositReportButton funderId={funderId!} from={from} to={to} />
+            <span className="mx-1 hidden h-5 border-l sm:inline-block" aria-hidden />
+            <Button asChild variant="outline" size="sm" title="Page de garde récapitulative + planning prévisionnel de chaque groupe en cours ou à venir de ce financeur">
+              <a href={`/rapports/financeur/${funderId}/planning`}>
+                <CalendarDays className="mr-2 h-4 w-4" />
+                Plannings des groupes (PDF)
+              </a>
+            </Button>
+            <Button asChild variant="ghost" size="sm" title="Toutes les séances des groupes de ce financeur, une ligne par séance">
+              <a href={`/rapports/financeur/${funderId}/planning?format=csv`}>CSV</a>
+            </Button>
+            <Button asChild variant="ghost" size="sm" title="Calendrier .ics à ouvrir dans Google Agenda / Outlook">
+              <a href={`/rapports/financeur/${funderId}/planning?format=ics`}>.ics</a>
+            </Button>
           </div>
 
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

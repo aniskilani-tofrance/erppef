@@ -97,6 +97,13 @@ export default async function ParametresPage() {
                 <FunderFormDialog
                   initial={{ id: f.id, name: f.name, code: f.code, color: f.color, isActive: f.is_active }}
                 />
+                <a
+                  href={`/rapports/financeur/${f.id}/planning`}
+                  className="text-xs text-muted-foreground underline-offset-2 hover:underline"
+                  title="Plannings de tous ses groupes en cours ou à venir (PDF : sommaire + planning de chaque groupe)"
+                >
+                  Plannings (PDF)
+                </a>
               </li>
             ))}
           </ul>

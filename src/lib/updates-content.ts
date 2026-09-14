@@ -26,6 +26,18 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-09-14-plannings-groupes",
+    date: "2026-09-14",
+    title: "Plannings à télécharger : par financeur, par apprenant, tous les groupes",
+    summary: "En plus du planning de chaque groupe, un seul PDF réunit les plannings de tous les groupes d'un financeur, ceux d'un apprenant, ou tous les groupes en cours pour l'accueil.",
+    items: [
+      { text: "Rapports → financeur → « Plannings des groupes (PDF) » : page de garde récapitulative (groupe, jours et horaires, période, salle, formatrice, heures) puis le planning prévisionnel de chaque groupe en cours ou à venir. Aussi en CSV (une ligne par séance) et .ics.", roles: TEAM },
+      { text: "Liste Apprenants → colonne Groupes → icône calendrier : le PDF « Vos plannings de cours » de la personne (dès qu'elle est inscrite dans un groupe).", roles: TEAM },
+      { text: "Page Groupes → « Tous les plannings (PDF) » : sommaire + planning de chaque groupe en cours, à imprimer pour l'accueil ou la rentrée.", roles: ALL },
+    ],
+    training: [{ moduleId: "c5-vie-quotidienne", lessonId: "documents", label: "Les documents financeurs" }],
+  },
+  {
     id: "2026-09-14-pastille-provenance",
     date: "2026-09-14",
     title: "La provenance des apprenants en un coup d'œil",

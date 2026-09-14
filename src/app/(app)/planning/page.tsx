@@ -1,6 +1,7 @@
 import { requireSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PlanningCalendar } from "@/components/planning/planning-calendar";
+import { PlanningDownloads } from "@/components/planning/planning-downloads";
 
 export default async function PlanningPage() {
   const { role, orgId } = await requireSession();
@@ -21,7 +22,7 @@ export default async function PlanningPage() {
       supabase.from("trainer_absences").select("id, trainer_id, starts_on, ends_on, kind").eq("status", "approuvee"),
       supabase
         .from("groups")
-        .select("id, name, trainer_id, room_id")
+        .select("id, name, trainer_id, room_id, funder_id")
         .in("status", ["en_attente", "ouvert", "complet"])
         .order("starts_on", { ascending: false }),
     ]);
@@ -40,7 +41,17 @@ export default async function PlanningPage() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-4">
-      <h1 className="text-2xl font-semibold tracking-tight">Planning</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-2xl font-semibold tracking-tight">Planning</h1>
+        <PlanningDownloads
+          groups={(groups ?? []).map((g) => ({ id: g.id, name: g.name }))}
+          // Seulement les financeurs qui ont au moins un groupe en cours (les autres n'auraient rien à télécharger)
+          funders={(funders ?? [])
+            .filter((f) => (groups ?? []).some((g) => g.funder_id === f.id))
+            .map((f) => ({ id: f.id, name: f.name }))}
+          canManage={role === "admin" || role === "coordinator"}
+        />
+      </div>
       <PlanningCalendar
         canEdit={role === "admin" || role === "coordinator"}
         trainers={(trainers ?? []).map((t) => ({
