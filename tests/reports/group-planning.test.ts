@@ -59,3 +59,22 @@ describe("planning de groupe à diffuser", () => {
     expect(planningFileName(planning, "apprenants", "ics")).toBe("planning_PEF-A1-2026-27_apprenants.ics");
   });
 });
+
+describe("planning de groupe — lieu et accès sans débordement", () => {
+  it("replie une adresse longue et coupe un mot plus large que la ligne", async () => {
+    const { PDFDocument, StandardFonts } = await import("pdf-lib");
+    const { pdfSafe, wrapText } = await import("@/lib/reports/group-planning");
+    const doc = await PDFDocument.create();
+    const font = await doc.embedFont(StandardFonts.Helvetica);
+    const long = "Cordon — Espace Jean-Baptiste Clément, 12 rue du Docteur Bauer, 93400 Saint-Ouen-sur-Seine (entrée par le parking, bâtiment B, 1er étage)";
+    const lines = wrapText(long, 200, 9, font);
+    expect(lines.length).toBeGreaterThan(2);
+    for (const ln of lines) expect(font.widthOfTextAtSize(ln, 9)).toBeLessThanOrEqual(200);
+    expect(lines.join(" ")).toBe(long);
+    const glued = wrapText("https://maps.app.goo.gl/ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", 120, 9, font);
+    expect(glued.length).toBeGreaterThan(1);
+    for (const ln of glued) expect(font.widthOfTextAtSize(ln, 9)).toBeLessThanOrEqual(120);
+    expect(wrapText("Métro 13 → Mairie de Saint-Ouen\n\nSonner « PEF » 🙂", 400, 9, font)).toEqual(["Métro 13 -> Mairie de Saint-Ouen", "Sonner « PEF »"]);
+    expect(pdfSafe("Bâtiment B ➜ 1er étage")).toBe("Bâtiment B -> 1er étage");
+  });
+});

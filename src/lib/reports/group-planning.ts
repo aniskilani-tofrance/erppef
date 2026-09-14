@@ -84,6 +84,49 @@ export function slug(s: string): string {
 // Charte et constantes partag\u00e9es avec les plannings group\u00e9s (planning-bundle.ts).
 export const PLANNING_THEME = { PEF_GREEN, PEF_EMERALD, PEF_PALE, GRAY, A4, MARGIN, TZ, ORG_LEGAL };
 
+// Les polices standard du PDF (WinAnsi) ne connaissent ni les fl\u00e8ches ni les emojis : on les
+// remplace ou on les retire plut\u00f4t que de faire \u00e9chouer tout le document.
+export function pdfSafe(str: string): string {
+  return str
+    .replace(/[\u2192\u21d2\u279c\u2794]/g, "->")
+    .replace(/[\u2190\u21d0]/g, "<-")
+    .replace(/[\u2194]/g, "<->")
+    .replace(/[\u2028\u2029]/g, "\n")
+    .replace(/[^\x09\x0A\x0D\x20-\x7E\u00a0-\u00ff\u0152\u0153\u0160\u0161\u0178\u017d\u017e\u0192\u2013\u2014\u2018\u2019\u201a\u201c\u201d\u201e\u2020\u2021\u2022\u2026\u2030\u2039\u203a\u20ac\u2122]/g, "");
+}
+
+/** Replie un texte (paragraphes conserv\u00e9s, mots trop longs coup\u00e9s) dans une largeur donn\u00e9e. */
+export function wrapText(str: string, maxW: number, size: number, f: PDFFont): string[] {
+  const out: string[] = [];
+  const width = (s: string) => f.widthOfTextAtSize(s, size);
+  for (const para of pdfSafe(str).split(/\r?\n/)) {
+    const words = para.split(/\s+/).filter(Boolean);
+    if (!words.length) continue;
+    let line = "";
+    for (let word of words) {
+      // Mot plus large que la ligne (adresse coll\u00e9e, URL\u2026) : coup\u00e9 en morceaux
+      while (width(word) > maxW) {
+        let cut = word.length;
+        while (cut > 1 && width(word.slice(0, cut)) > maxW) cut -= 1;
+        if (line) {
+          out.push(line);
+          line = "";
+        }
+        out.push(word.slice(0, cut));
+        word = word.slice(cut);
+      }
+      if (!word) continue;
+      const cand = line ? `${line} ${word}` : word;
+      if (line && width(cand) > maxW) {
+        out.push(line);
+        line = word;
+      } else line = cand;
+    }
+    if (line) out.push(line);
+  }
+  return out;
+}
+
 export async function loadGroupPlanning(supabase: SupabaseClient, groupId: string): Promise<GroupPlanning | null> {
   const { data: g } = await supabase
     .from("groups")
@@ -301,30 +344,7 @@ export async function buildPlanningPdf(p: GroupPlanning, audience: PlanningAudie
   const plannedHours = Math.round(active.reduce((n, s) => n + hoursOf(s), 0) * 10) / 10;
   field("Période", `du ${fmtDay(p.startsOn)} au ${p.endsOn ? fmtDay(p.endsOn) : "—"}`);
   field("Rythme", describePattern(p.weeklyPattern) || "—");
-  field(learners ? "Lieu" : "Salle", [p.roomName, p.roomAddress].filter(Boolean).join(" — ") || "—");
-  if (p.roomAccess) {
-    text("Pour trouver la salle", MARGIN, base);
-    const maxW = A4.width - 2 * MARGIN - 140;
-    let first = true;
-    for (const para of p.roomAccess.split(/\r?\n/)) {
-      let line = "";
-      for (const word of para.split(/\s+/).filter(Boolean)) {
-        const cand = line ? `${line} ${word}` : word;
-        if (font.widthOfTextAtSize(cand, base) > maxW && line) {
-          if (!first) y -= base + 3;
-          text(line, MARGIN + 140, base, font, rgb(0.15, 0.15, 0.15));
-          first = false;
-          line = word;
-        } else line = cand;
-      }
-      if (line) {
-        if (!first) y -= base + 3;
-        text(line, MARGIN + 140, base, font, rgb(0.15, 0.15, 0.15));
-        first = false;
-      }
-    }
-    y -= base + 5;
-  }
+  field(learners ? "Lieu" : "Salle", p.roomName ?? "—");
   field("Formatrice", p.trainerName ?? "—");
   if (!learners) field("Financeur", p.funderName ?? "—");
   field("Volume", `${plannedHours} h planifiées sur ${p.totalHours} h · ${active.length} séances`);
@@ -341,7 +361,49 @@ export async function buildPlanningPdf(p: GroupPlanning, audience: PlanningAudie
       y -= base + 6;
     }
   }
-  y -= 8;
+  y -= 4;
+
+  // ── Lieu et accès : encadré sur toute la largeur (adresse et « Comment trouver la salle »
+  //    peuvent être longs : texte replié, jamais de débordement, saut de page si besoin) ──
+  if (p.roomName || p.roomAddress || p.roomAccess) {
+    const boxX = MARGIN;
+    const boxW = A4.width - 2 * MARGIN;
+    const innerX = MARGIN + 10;
+    const innerW = boxW - 20;
+    const lineH = base + 3.5;
+    const placeLines = wrapText([p.roomName, p.roomAddress].filter(Boolean).join(" — ") || "—", innerW, base, bold);
+    const accessLines = p.roomAccess ? wrapText(p.roomAccess, innerW, base - 0.5, font) : [];
+    const boxH = 12 + lineH + placeLines.length * lineH + (accessLines.length ? 6 + lineH + accessLines.length * lineH : 0) + 6;
+    if (y - boxH < MARGIN + 30) {
+      page = doc.addPage([A4.width, A4.height]);
+      pages.push(page);
+      y = A4.height - MARGIN;
+      text(`${p.name} — planning (suite)`, MARGIN, 9, bold, PEF_GREEN);
+      y -= 16;
+    }
+    const top = y + base + 3;
+    page.drawRectangle({ x: boxX, y: top - boxH, width: boxW, height: boxH, color: PEF_PALE });
+    page.drawRectangle({ x: boxX, y: top - boxH, width: 3, height: boxH, color: PEF_EMERALD });
+    y = top - 12 - base + 3;
+    text(learners ? "LIEU DU COURS ET ACCÈS" : "LIEU ET ACCÈS", innerX, base - 1, bold, PEF_GREEN);
+    y -= lineH;
+    for (const ln of placeLines) {
+      text(ln, innerX, base, bold);
+      y -= lineH;
+    }
+    if (accessLines.length) {
+      y -= 6;
+      text("Comment trouver la salle", innerX, base - 1, bold, GRAY);
+      y -= lineH;
+      for (const ln of accessLines) {
+        text(ln, innerX, base - 0.5, font, rgb(0.15, 0.15, 0.15));
+        y -= lineH;
+      }
+    }
+    y = top - boxH - 14;
+  } else {
+    y -= 4;
+  }
 
   // ── Tableau des séances, par mois ──
   tableHeader();
