@@ -26,6 +26,22 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-09-14-evaluations-parcours",
+    date: "2026-09-14",
+    title: "Évaluations de mi-parcours et de fin de parcours",
+    summary: "Nouveau menu « Évaluations » : deux jalons automatiques par groupe, une grille par compétence (référentiel CECRL, trois crans) remplie par la formatrice, un test ciblé en appui, et une attestation d'acquis remise en fin de parcours.",
+    items: [
+      { text: "Menu « Évaluations » : vos groupes avec les dates des deux jalons. Vous recevez un email une semaine avant, puis la veille. Sur la page du groupe : une ligne par apprenant, quatre compétences (comprendre, parler, lire, écrire) en trois crans NA / EC / A, le niveau atteint, un commentaire ; enregistré à chaque clic.", roles: ["trainer"] },
+      { text: "En appui, « Lancer les tests » crée un lien de 20 questions au niveau du groupe pour chaque apprenant (WhatsApp) ; « Reprendre » pré-remplit la ligne d'après le score, que vous ajustez. En fin de parcours, l'icône attestation donne le PDF d'acquis à remettre à l'apprenant.", roles: ["trainer"] },
+      { text: "Jalons posés automatiquement (moitié des heures, dernière séance), modifiables sur la page Évaluations du groupe ; carte « Évaluations de parcours » sur la fiche groupe ; jalons incomplets dans « À faire aujourd'hui ».", roles: TEAM },
+      { text: "Bilan financeur : nouvelle section « Acquis en fin de parcours » (compétences acquises, niveaux atteints, apprenants ayant progressé depuis l'entrée) dès qu'une grille finale existe. C'est la preuve Qualiopi de l'évaluation des acquis (ind. 11).", roles: TEAM },
+    ],
+    training: [
+      { moduleId: "f3-reflexes", lessonId: "evaluations", label: "Évaluer mes apprenants" },
+      { moduleId: "c5-vie-quotidienne", lessonId: "documents", label: "Les documents financeurs" },
+    ],
+  },
+  {
     id: "2026-09-14-emargements-financeur",
     date: "2026-09-14",
     title: "Les feuilles d'émargement partent toutes seules au financeur le vendredi",

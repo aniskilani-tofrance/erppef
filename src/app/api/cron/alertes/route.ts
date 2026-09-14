@@ -6,6 +6,7 @@ import { localToUtc, nextDay, utcToLocalTime } from "@/lib/dates";
 import { buildMeetingReminderMessage, formatMeetingWhen, textToHtml } from "@/lib/admission/messages";
 import { loadTemplates } from "@/lib/admission/load-templates";
 import { announceUpdatesEverywhere, type AnnounceResult } from "@/lib/updates-announce";
+import { sendEvaluationReminders } from "@/lib/evaluations/reminders";
 import {
   ABSENCE_ALERT_THRESHOLD,
   computeLearnerStats,
@@ -90,6 +91,8 @@ export async function GET(request: Request) {
   let reminders: { sent: number; skippedNoEmail: number } = { sent: 0, skippedNoEmail: 0 };
   let meetingReminders: { sent: number; skippedNoEmail: number } = { sent: 0, skippedNoEmail: 0 };
   let trainerRelances = 0;
+  // Rappels aux formateurs avant les jalons d'évaluation (J-7, J-1)
+  let evaluationReminders = 0;
   // Mises à jour de l'outil pas encore annoncées → email « Quoi de neuf » à l'équipe
   let updatesAnnounced: Record<string, AnnounceResult> = {};
   if (mailerConfigured()) {
@@ -112,6 +115,11 @@ export async function GET(request: Request) {
       trainerRelances = await sendTrainerRelances(unclosed ?? []);
     } catch (e) {
       console.error("[relances]", e instanceof Error ? e.message : e);
+    }
+    try {
+      evaluationReminders = await sendEvaluationReminders(supabase);
+    } catch (e) {
+      console.error("[évaluations]", e instanceof Error ? e.message : e);
     }
   }
 
@@ -173,7 +181,7 @@ export async function GET(request: Request) {
   });
 
   if (atRisk.length === 0 && sheets.length === 0 && !watchReminder && admissionLines.length === 0 && !leaveLine) {
-    return Response.json({ sent: false, reason: "rien à signaler", backup, reminders, meetingReminders, trainerRelances, updatesAnnounced });
+    return Response.json({ sent: false, reason: "rien à signaler", backup, reminders, meetingReminders, trainerRelances, evaluationReminders, updatesAnnounced });
   }
 
   const lines = [
@@ -206,7 +214,7 @@ export async function GET(request: Request) {
   if (!res.ok) {
     return Response.json({ sent: false, error: await res.text() }, { status: 500 });
   }
-  return Response.json({ sent: true, atRisk: atRisk.length, unclosedSheets: sheets.length, admission: admissionLines.length, reminders, meetingReminders, trainerRelances, updatesAnnounced });
+  return Response.json({ sent: true, atRisk: atRisk.length, unclosedSheets: sheets.length, admission: admissionLines.length, reminders, meetingReminders, trainerRelances, evaluationReminders, updatesAnnounced });
 }
 
 // ── Parcours d'admission : alertes du matin ──────────────────────────────────

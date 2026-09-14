@@ -9,6 +9,7 @@ import {
 // séparée du calcul (computeFunderReport, fonction PURE testable sans base).
 
 import { CONTACT_SOURCES } from "@/lib/referentiels";
+import { hasProgressed, summarizeSkills, type Mark, type SkillSummary } from "@/lib/evaluations/grid";
 
 export const SOURCE_LABELS: Record<string, string> = Object.fromEntries(CONTACT_SOURCES.map((s) => [s.code, s.label]));
 
@@ -46,6 +47,27 @@ export type ReportLearner = {
   rqth: boolean | null;
   educationLevel: string | null;
   contactSource?: string | null; // canal par lequel la personne nous a contactés
+  levelAssessed?: string | null; // niveau à l'entrée (positionnement)
+};
+
+// Évaluation de parcours (grille formatrice : 4 compétences CECRL en 3 crans + niveau atteint).
+export type ReportEvaluation = {
+  learnerId: string;
+  groupId: string;
+  kind: "mi_parcours" | "finale";
+  co: Mark | null;
+  po: Mark | null;
+  ce: Mark | null;
+  pe: Mark | null;
+  levelReached: string | null;
+};
+
+export type AcquisSummary = {
+  evaluated: number; // apprenants avec une grille finale
+  skills: SkillSummary[];
+  levels: Distribution; // niveau atteint en fin de parcours
+  compared: number; // apprenants avec niveau d'entrée ET niveau atteint renseignés
+  progressed: number; // dont niveau atteint > niveau d'entrée
 };
 
 export type ReportEnrollment = {
@@ -79,6 +101,7 @@ export type FunderReportData = {
   enrollments: ReportEnrollment[];
   learners: ReportLearner[];
   attendanceRecords: AttendanceRecord[]; // séances CLÔTURÉES de la période uniquement
+  evaluations?: ReportEvaluation[]; // grilles de mi-parcours / finale des groupes du financeur
 };
 
 export type Distribution = { label: string; count: number }[];
@@ -124,6 +147,7 @@ export type FunderReport = {
     hoursAttended: number;
     rate: number | null;
   }[];
+  acquis: AcquisSummary | null; // null tant qu'aucune évaluation finale n'est saisie
 };
 
 // Âge au DERNIER jour de la période (convention des bilans annuels).
@@ -267,6 +291,31 @@ export function computeFunderReport(data: FunderReportData): FunderReport {
     },
     groupDetails,
     learnerDetails,
+    acquis: computeAcquis(data.evaluations ?? [], learners),
+  };
+}
+
+// Acquis en fin de parcours (Qualiopi ind. 11) : une grille finale par apprenant (la plus
+// récente si plusieurs groupes), compétences en trois crans, niveau atteint, progression
+// par rapport au niveau d'entrée.
+export function computeAcquis(evaluations: ReportEvaluation[], learners: ReportLearner[]): AcquisSummary | null {
+  const ids = new Set(learners.map((l) => l.id));
+  const finals = new Map<string, ReportEvaluation>();
+  for (const e of evaluations) {
+    if (e.kind !== "finale" || !ids.has(e.learnerId)) continue;
+    if (!(e.co || e.po || e.ce || e.pe || e.levelReached)) continue;
+    finals.set(e.learnerId, e);
+  }
+  if (finals.size === 0) return null;
+  const entryLevel = new Map(learners.map((l) => [l.id, l.levelAssessed ?? null]));
+  const list = [...finals.values()];
+  const withBoth = list.filter((e) => e.levelReached && entryLevel.get(e.learnerId));
+  return {
+    evaluated: list.length,
+    skills: summarizeSkills(list),
+    levels: distribute(list, (e) => e.levelReached?.trim() || null),
+    compared: withBoth.length,
+    progressed: withBoth.filter((e) => hasProgressed(entryLevel.get(e.learnerId), e.levelReached)).length,
   };
 }
 
@@ -335,12 +384,19 @@ export async function loadFunderReportData(
   ]);
 
   const learnerIds = [...new Set((enrollments ?? []).map((e) => e.learner_id))];
-  const { data: learners } = learnerIds.length
-    ? await supabase
-        .from("learners")
-        .select("id, first_name, last_name, learner_no, gender, birth_date, city, district, qpv, activity_status, rqth, education_level, contact_source")
-        .in("id", learnerIds)
-    : { data: [] };
+  const [{ data: learners }, { data: evaluations }] = await Promise.all([
+    learnerIds.length
+      ? supabase
+          .from("learners")
+          .select("id, first_name, last_name, learner_no, gender, birth_date, city, district, qpv, activity_status, rqth, education_level, contact_source, level_assessed")
+          .in("id", learnerIds)
+      : Promise.resolve({ data: [] as never[] }),
+    supabase
+      .from("evaluations")
+      .select("learner_id, group_id, kind, co, po, ce, pe, level_reached, evaluated_at")
+      .in("group_id", groupIds)
+      .order("evaluated_at", { ascending: true }),
+  ]);
 
   return {
     funderName: funder.name,
@@ -379,6 +435,17 @@ export async function loadFunderReportData(
       rqth: l.rqth,
       educationLevel: l.education_level,
       contactSource: l.contact_source ?? null,
+      levelAssessed: l.level_assessed ?? null,
+    })),
+    evaluations: (evaluations ?? []).map((e) => ({
+      learnerId: e.learner_id,
+      groupId: e.group_id,
+      kind: e.kind as ReportEvaluation["kind"],
+      co: e.co,
+      po: e.po,
+      ce: e.ce,
+      pe: e.pe,
+      levelReached: e.level_reached,
     })),
     attendanceRecords: (attendances ?? []).map((a) => {
       const s = a.sessions as unknown as { starts_at: string; ends_at: string };

@@ -219,6 +219,22 @@ export const TRAINING_MODULES: TrainingModule[] = [
         ],
       },
       {
+        id: "evaluations",
+        title: "Évaluer mes apprenants (mi-parcours, fin de parcours)",
+        intro: "Deux jalons par groupe, posés automatiquement : à la moitié des heures et à la dernière séance. Vous êtes prévenu(e) par email une semaine avant, puis la veille.",
+        steps: [
+          "Menu « Évaluations » (ou le lien de l'email) → votre groupe : une ligne par apprenant, quatre compétences CECRL en trois crans NA / EC / A, le niveau atteint, un commentaire. Enregistré à chaque clic.",
+          "Le test en appui : « Lancer les tests » puis le bouton WhatsApp de chaque ligne envoie un lien de 20 questions au niveau du groupe. Une fois passé, « Reprendre » pré-remplit la ligne : ajustez d'après la classe, votre regard prime.",
+          "Fin de parcours : l'icône attestation sur la ligne donne le PDF d'acquis à remettre à l'apprenant (heures, niveau d'entrée, niveau atteint, compétences).",
+        ],
+        tip: "Pas de note sur 20 : trois crans par compétence, c'est ce que comprennent l'apprenant, le financeur et l'auditeur Qualiopi.",
+        practice: {
+          instruction: "Ouvrez le menu Évaluations et repérez les dates de vos deux jalons.",
+          href: "/evaluations",
+          hrefLabel: "Ouvrir les évaluations",
+        },
+      },
+      {
         id: "aide",
         title: "Trouver de l'aide",
         steps: [
@@ -584,6 +600,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
           "Planning à diffuser (fiche du groupe → « Diffuser le planning ») : PDF apprenants, PDF financeur, CSV, calendrier .ics, WhatsApp par inscrit et email groupé avec le PDF. Renseignez l'adresse des salles et « Comment trouver la salle » pour qu'ils apparaissent dessus et dans les messages aux apprenants.",
           "Plusieurs groupes d'un coup : page Planning → « Télécharger les plannings » (tous les groupes en cours, par financeur, par groupe), Rapports → financeur → « Plannings des groupes (PDF) » (sommaire + planning de chaque groupe, pour la Ville par exemple), et liste Apprenants → icône calendrier à côté des groupes d'une personne pour son planning à elle.",
           "Feuilles d'émargement au financeur (fiche groupe, carte dédiée) : activez l'envoi hebdomadaire et les destinataires ; chaque vendredi après-midi les feuilles clôturées de la semaine partent en PDF. Clôturez les feuilles dans la semaine : une feuille non clôturée est signalée et repart la semaine suivante. « M'envoyer un test » montre le rendu.",
+          "Évaluations de parcours (menu Évaluations, ou fiche groupe) : deux jalons automatiques (mi-parcours, finale), grille par compétence CECRL en trois crans remplie par la formatrice, test ciblé en appui, attestation d'acquis en fin de parcours, et section « Acquis » dans le bilan financeur. Les formatrices sont prévenues par email une semaine avant et la veille ; les jalons incomplets remontent dans « À faire aujourd'hui ».",
         ],
         tip: "Tout est calculé depuis les émargements réels : si les feuilles sont clôturées au fil de l'eau, vos documents sont toujours justes.",
       },

@@ -113,6 +113,30 @@ export async function buildFunderReportPdf(report: FunderReport): Promise<Uint8A
   distributionBlock("Quartiers (découpage municipal)", report.distributions.districts.filter((d) => d.label !== "Non renseigné").slice(0, 12));
   distributionBlock("Canal de premier contact (comment ils nous ont trouvés)", report.distributions.sources);
 
+  // ── Acquis en fin de parcours (évaluation des acquis, Qualiopi ind. 11) ──
+  if (report.acquis) {
+    const a = report.acquis;
+    newPageIfNeeded(120);
+    sectionTitle("Acquis en fin de parcours");
+    newPageIfNeeded(14);
+    text(`Apprenants évalués en fin de parcours : ${a.evaluated} sur ${report.totals.uniqueLearners} (grille de la formatrice, quatre compétences du référentiel CECRL en trois crans).`, MARGIN + 8, 9);
+    y -= 16;
+    for (const s of a.skills) {
+      if (!s.total) continue;
+      newPageIfNeeded(14);
+      text(s.label, MARGIN + 8, 9.5);
+      text(`${s.acquis} acquis · ${s.enCours} en cours · ${s.nonAcquis} non acquis`, MARGIN + 200, 9.5, bold, PEF_GREEN);
+      y -= 14;
+    }
+    y -= 4;
+    distributionBlock("Niveau atteint en fin de parcours", a.levels);
+    if (a.compared > 0) {
+      newPageIfNeeded(14);
+      text(`Progression d'au moins un niveau depuis l'entrée : ${a.progressed} apprenant${a.progressed > 1 ? "s" : ""} sur ${a.compared} dont le niveau d'entrée est connu.`, MARGIN + 8, 9, bold, PEF_GREEN);
+      y -= 18;
+    }
+  }
+
   // ── Détail par groupe ──
   newPageIfNeeded(60);
   sectionTitle("Détail par groupe");

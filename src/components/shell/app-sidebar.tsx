@@ -41,7 +41,7 @@ const NAV = [
   { href: "/rapports", label: "Rapports", icon: FileBarChart, roles: ["admin", "coordinator"] },
   { href: "/leads", label: "Leads resto", icon: UtensilsCrossed, roles: ["admin", "coordinator", "setter"] },
   { href: "/formation", label: "Formation", icon: BookOpen, roles: ["admin", "coordinator", "trainer", "viewer", "setter"] },
-  { href: "/examens", label: "Examens", icon: GraduationCap, roles: ["admin", "coordinator"], soon: true },
+  { href: "/evaluations", label: "Évaluations", icon: GraduationCap, roles: ["admin", "coordinator", "trainer"] },
   { href: "/finance", label: "Finance", icon: Wallet, roles: ["admin", "coordinator"], soon: true },
   { href: "/parametres", label: "Paramètres", icon: Settings, roles: ["admin"] },
 ] as const;

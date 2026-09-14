@@ -163,6 +163,79 @@ export function literacyGateDecision(
 export type GradeOptions = { firstName?: string };
 
 // answersByQuestionId : réponse brute du client, indexée par id de question.
+/** Corrige UNE question CECRL (QCM, appariement, texte libre évalué par IA…). Jamais d'exception. */
+export async function gradeOne(q: Question, userAnswer: string): Promise<boolean> {
+  try {
+    if (FREE_RESPONSE_TYPES.includes(q.type)) {
+      return userAnswer.trim() ? await evaluateFreeAnswer(q, userAnswer) : false;
+    }
+    if (q.type === "match_pairs") {
+      const matched = userAnswer ? JSON.parse(userAnswer) : {};
+      return q.pairs.every((p: any) => matched[p.left] === p.right);
+    }
+    if (q.type === "categorize") {
+      const assigned = userAnswer ? JSON.parse(userAnswer) : {};
+      return q.items.every((item: any) => assigned[item.text] === item.category);
+    }
+    if (q.type === "order_sentences") {
+      const ordered = userAnswer ? JSON.parse(userAnswer) : [];
+      return ordered.length === q.sentences.length && ordered.every((item: any, i: number) => item.origIdx === q.correctOrder[i]);
+    }
+    if (q.type === "sentence_builder") {
+      const built = userAnswer.split("|").join(" ").trim().toLowerCase().replace(/\.$/, "");
+      return built === q.correctSentence.toLowerCase().replace(/\.$/, "");
+    }
+    if (q.type === "fill_keyboard") {
+      const ans = userAnswer.trim().toLowerCase();
+      return q.acceptedAnswers.some((a: string) => a.toLowerCase() === ans);
+    }
+    if (q.type === "word_choice_text") {
+      const choices = userAnswer ? JSON.parse(userAnswer) : [];
+      return q.correctBlanks.every((ans: string, i: number) => choices[i] === ans);
+    }
+    if (q.type === "complete_form") {
+      const fields = userAnswer ? JSON.parse(userAnswer) : {};
+      return Object.keys(fields).length >= Math.ceil(q.formFields.length * 0.6);
+    }
+    if (q.type === "true_false_justify") {
+      const { tf, justif } = userAnswer ? JSON.parse(userAnswer) : { tf: null, justif: "" };
+      return tf === q.correct && Boolean(justif) && justif.trim().length > 3;
+    }
+    // QCM standard (listen_choose, fill_in_blank, scenario_tree, safety_instruction,
+    // complete_dialogue, odd_one_out, read_comprehension, email_response).
+    // Le client renvoie toujours le TEXTE de l'option choisie ; certaines données
+    // stockent la bonne réponse comme index → normalisation ici.
+    const correctText = q.options && typeof q.correct === "number" ? q.options[q.correct] : q.correct;
+    return userAnswer === correctText;
+  } catch {
+    return false;
+  }
+}
+
+/** Questions CECRL (sans les réponses) filtrées par identifiant, pour les tests ciblés. */
+export function publicQuestionsById(ids: number[]): Question[] {
+  const wanted = new Set(ids);
+  return publicQuestions().filter((q) => wanted.has(q.id));
+}
+
+/** Corrige un sous-ensemble de questions CECRL : score en % sur ce sous-ensemble. */
+export async function gradeSubset(
+  answersByQuestionId: Record<number, string>,
+  ids: number[],
+): Promise<{ score: number; answers: GradedAnswer[] }> {
+  const wanted = new Set(ids);
+  const details: GradedAnswer[] = [];
+  let correct = 0;
+  const subset = QUESTIONS.filter((q) => wanted.has(q.id));
+  for (const q of subset) {
+    const userAnswer = answersByQuestionId[q.id] ?? "";
+    const ok = await gradeOne(q, userAnswer);
+    if (ok) correct += 1;
+    details.push({ questionId: q.id, answer: userAnswer, correct: ok });
+  }
+  return { score: subset.length ? Math.round((correct / subset.length) * 100) : 0, answers: details };
+}
+
 export async function gradeTest(
   answersByQuestionId: Record<number, string>,
   options: GradeOptions = {},
@@ -206,50 +279,7 @@ export async function gradeTest(
 
   for (const q of QUESTIONS) {
     const userAnswer = answersByQuestionId[q.id] ?? "";
-    let isCorrect = false;
-
-    try {
-      if (FREE_RESPONSE_TYPES.includes(q.type)) {
-        isCorrect = userAnswer.trim() ? await evaluateFreeAnswer(q, userAnswer) : false;
-      } else if (q.type === "match_pairs") {
-        const matched = userAnswer ? JSON.parse(userAnswer) : {};
-        isCorrect = q.pairs.every((p: any) => matched[p.left] === p.right);
-      } else if (q.type === "categorize") {
-        const assigned = userAnswer ? JSON.parse(userAnswer) : {};
-        isCorrect = q.items.every((item: any) => assigned[item.text] === item.category);
-      } else if (q.type === "order_sentences") {
-        const ordered = userAnswer ? JSON.parse(userAnswer) : [];
-        isCorrect =
-          ordered.length === q.sentences.length &&
-          ordered.every((item: any, i: number) => item.origIdx === q.correctOrder[i]);
-      } else if (q.type === "sentence_builder") {
-        const built = userAnswer.split("|").join(" ").trim().toLowerCase().replace(/\.$/, "");
-        isCorrect = built === q.correctSentence.toLowerCase().replace(/\.$/, "");
-      } else if (q.type === "fill_keyboard") {
-        const ans = userAnswer.trim().toLowerCase();
-        isCorrect = q.acceptedAnswers.some((a: string) => a.toLowerCase() === ans);
-      } else if (q.type === "word_choice_text") {
-        const choices = userAnswer ? JSON.parse(userAnswer) : [];
-        isCorrect = q.correctBlanks.every((ans: string, i: number) => choices[i] === ans);
-      } else if (q.type === "complete_form") {
-        const fields = userAnswer ? JSON.parse(userAnswer) : {};
-        isCorrect = Object.keys(fields).length >= Math.ceil(q.formFields.length * 0.6);
-      } else if (q.type === "true_false_justify") {
-        const { tf, justif } = userAnswer ? JSON.parse(userAnswer) : { tf: null, justif: "" };
-        isCorrect = tf === q.correct && Boolean(justif) && justif.trim().length > 3;
-      } else {
-        // QCM standard (listen_choose, fill_in_blank, scenario_tree, safety_instruction,
-        // complete_dialogue, odd_one_out, read_comprehension, email_response).
-        // Le client renvoie toujours le TEXTE de l'option choisie ; certaines données
-        // stockent la bonne réponse comme index → normalisation ici.
-        const correctText =
-          q.options && typeof q.correct === "number" ? q.options[q.correct] : q.correct;
-        isCorrect = userAnswer === correctText;
-      }
-    } catch {
-      isCorrect = false;
-    }
-
+    const isCorrect = await gradeOne(q, userAnswer);
     if (isCorrect) correctCount++;
     details.push({ questionId: q.id, answer: userAnswer, correct: isCorrect });
   }

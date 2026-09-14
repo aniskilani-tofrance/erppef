@@ -19,6 +19,17 @@ import { ReplanButton } from "@/components/groupes/replan-button";
 import { SurveyManager } from "@/components/groupes/survey-manager";
 import { PlanningShare, type PlanningRecipient } from "@/components/groupes/planning-share";
 import { AttendanceDispatchCard, type DispatchHistoryRow } from "@/components/groupes/attendance-dispatch-card";
+import { KIND_LABELS } from "@/lib/evaluations/grid";
+import { STATE_LABELS, computeMilestones, milestoneState, type MilestoneSession, type MilestoneState } from "@/lib/evaluations/milestones";
+
+const MILESTONE_CLASS: Record<MilestoneState, string> = {
+  sans_date: "border-gray-300 bg-gray-100 text-gray-600",
+  a_venir: "border-sky-300 bg-sky-50 text-sky-800",
+  bientot: "border-amber-300 bg-amber-50 text-amber-800",
+  a_faire: "border-red-300 bg-red-50 text-red-700",
+  en_cours: "border-violet-300 bg-violet-50 text-violet-800",
+  faite: "border-emerald-300 bg-emerald-50 text-emerald-800",
+};
 import { loadTemplates } from "@/lib/admission/load-templates";
 import { baseVars, buildStageMessage } from "@/lib/admission/templates";
 import { describeHolidays, describePattern, fmtDay as fmtPlanningDay, loadGroupPlanning } from "@/lib/reports/group-planning";
@@ -107,6 +118,23 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
         .order("sent_at", { ascending: false })
         .limit(10)
     : { data: [] };
+  // Jalons d'évaluation (mi-parcours / finale) : date, état, avancement des grilles.
+  const { data: evaluationRows } = await supabase.from("evaluations").select("kind, co, po, ce, pe").eq("group_id", id);
+  const milestones = computeMilestones((sessions ?? []) as MilestoneSession[], { midterm_on: group.midterm_on, final_on: group.final_on });
+  const today = new Date().toLocaleDateString("fr-CA", { timeZone: "Europe/Paris" });
+  const enrolledCount = (enrollments ?? []).filter((e) => e.status === "inscrit").length;
+  const evaluationMilestones = (["mi_parcours", "finale"] as const).map((kind) => {
+    const on = kind === "mi_parcours" ? milestones.midterm.on : milestones.final.on;
+    const done = (evaluationRows ?? []).filter((e) => e.kind === kind && (e.co || e.po || e.ce || e.pe)).length;
+    const state = milestoneState(on, today, done, enrolledCount);
+    return {
+      kind,
+      label: KIND_LABELS[kind],
+      date: on ? new Date(`${on}T12:00:00Z`).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Europe/Paris" }) : "—",
+      state: `${STATE_LABELS[state]}${enrolledCount ? ` · ${done}/${enrolledCount}` : ""}`,
+      className: MILESTONE_CLASS[state],
+    };
+  });
   const dispatchHistory: DispatchHistoryRow[] = (dispatchRows ?? []).map((d) => ({
     id: d.id,
     sentAt: d.sent_at,
@@ -279,6 +307,25 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
         </CardHeader>
         <CardContent>
           <PlanningShare groupId={id} recipients={planningRecipients} canWrite={canWrite} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Évaluations de parcours</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Mi-parcours à la moitié des heures, finale à la dernière séance : grille par compétence (CECRL, trois crans), test ciblé en appui, attestation d&apos;acquis en fin de parcours.
+          </p>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-center gap-2 text-sm">
+          {evaluationMilestones.map((m) => (
+            <span key={m.kind} className="inline-flex items-center gap-2 rounded-md border px-3 py-1.5">
+              <span className="font-medium">{m.label}</span>
+              <span className="text-muted-foreground">{m.date}</span>
+              <Badge variant="outline" className={m.className}>{m.state}</Badge>
+            </span>
+          ))}
+          <Link href={`/groupes/${id}/evaluations`} className="ml-auto text-sm font-medium hover:underline">Ouvrir les évaluations →</Link>
         </CardContent>
       </Card>
 

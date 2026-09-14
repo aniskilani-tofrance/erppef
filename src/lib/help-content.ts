@@ -116,6 +116,15 @@ export const HELP_SECTIONS: HelpSection[] = [
         ],
       },
       {
+        title: "Évaluer mes apprenants à mi-parcours et en fin de parcours",
+        steps: [
+          "Vous recevez un email une semaine avant chaque jalon, puis la veille : « Ouvrir la grille d'évaluation ». Le menu « Évaluations » liste aussi vos groupes avec les dates.",
+          "Pour chaque apprenant, quatre compétences (comprendre à l'oral, parler, lire, écrire) en trois crans : NA non acquis, EC en cours d'acquisition, A acquis. Puis le niveau atteint et, si vous voulez, un mot d'appréciation. C'est enregistré à chaque clic, deux minutes par personne.",
+          "En appui, le petit test : « Lancer les tests » crée un lien par apprenant (20 questions au niveau du groupe, 15 à 20 minutes sur téléphone), à envoyer par WhatsApp. Quand il est passé, « Reprendre » pré-remplit la ligne : ajustez d'après ce que vous observez en classe, votre grille est la référence.",
+          "En fin de parcours, quand les quatre compétences sont renseignées, l'icône attestation donne le PDF à remettre à l'apprenant avec son certificat de réalisation.",
+        ],
+      },
+      {
         title: "Signaler une absence ou un imprévu",
         steps: [
           "Prévenez votre coordinateur : il enregistre votre absence sur votre fiche, et le planning en tient compte.",
@@ -342,6 +351,17 @@ export const HELP_SECTIONS: HelpSection[] = [
           "Une feuille non clôturée le vendredi n'est pas envoyée : elle est signalée dans l'email et repart la semaine suivante une fois clôturée. Si rien n'est clôturé, le financeur ne reçoit rien et la coordination est prévenue par email. Le cours du samedi matin part avec l'email du vendredi suivant.",
           "« Envoyer maintenant » envoie tout de suite ce qui est clôturé depuis le dernier envoi (rattrapage, demande du financeur). « M'envoyer un test » envoie le même email à vous seul, sans toucher au dernier envoi : faites-le avant la rentrée pour voir le rendu.",
           "L'historique sous la carte garde chaque envoi : date, statut (envoyé, reporté, rien à envoyer, erreur), nombre de feuilles, destinataires. En cas d'erreur SMTP, réessayez avec « Envoyer maintenant ».",
+        ],
+      },
+      {
+        title: "Évaluer les acquis : mi-parcours, fin de parcours, attestation (ind. 11)",
+        steps: [
+          "Deux jalons par groupe, posés automatiquement : mi-parcours à la moitié des heures planifiées, finale à la dernière séance (fiche groupe → carte « Évaluations de parcours », ou menu « Évaluations » pour tous les groupes). Les dates se changent sur la page du groupe ; vide = automatique.",
+          "La formatrice est prévenue par email une semaine avant le jalon, puis la veille, tant que les grilles ne sont pas complètes. Le jalon apparaît aussi dans « À faire aujourd'hui » de la coordination la semaine venue et tant qu'il est incomplet.",
+          "La grille (page Évaluations du groupe) : pour chaque inscrit, quatre compétences du référentiel CECRL (comprendre à l'oral, parler, lire, écrire) en trois crans NA / EC / A (non acquis, en cours d'acquisition, acquis), un niveau atteint (A1.1 à B2) et un commentaire. Enregistrement automatique à chaque clic ; cliquer à nouveau efface.",
+          "Le test ciblé, en appui : « Lancer les tests » crée pour chaque inscrit un lien de 20 questions au niveau visé du groupe et au niveau suivant (sans bloc littératie), à envoyer par WhatsApp ou à copier. Une fois passé, « Reprendre » pré-remplit la ligne d'après le score (à ajuster : la grille de la formatrice reste la référence). Le test ne modifie jamais le niveau d'entrée de la fiche.",
+          "Attestation d'acquis : dès que les quatre compétences de la grille finale sont renseignées, une icône sur la ligne donne le PDF (heures suivies, niveau à l'entrée et niveau atteint, compétences à mi-parcours et en fin de parcours, appréciation). Document de l'organisme, il ne vaut pas certification officielle (DCL, TCF, DELF) : il complète le certificat de réalisation.",
+          "Bilan financeur (Rapports) : une section « Acquis en fin de parcours » apparaît dès qu'une grille finale existe : compétences acquises, niveaux atteints, nombre d'apprenants ayant progressé d'au moins un niveau depuis l'entrée.",
         ],
       },
       {

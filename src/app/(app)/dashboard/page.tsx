@@ -7,6 +7,7 @@ import { TrainerDashboard } from "@/components/dashboard/trainer-dashboard";
 import { ViewerDashboard } from "@/components/dashboard/viewer-dashboard";
 import { SetterDashboard } from "@/components/leads/setter-dashboard";
 import { weekStartOf } from "@/lib/dates";
+import { computeMilestones, milestoneState, type MilestoneSession } from "@/lib/evaluations/milestones";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { CalendarDays, ClipboardCheck, DoorOpen, Users, UsersRound } from "lucide-react";
@@ -119,8 +120,33 @@ export default async function DashboardPage() {
     supabase.from("trainer_absences").select("id", { count: "exact", head: true }).eq("status", "en_attente"),
   ]);
 
+  // À faire : jalons d'évaluation (mi-parcours / finale) de la semaine ou dépassés, grilles incomplètes
+  const [{ data: evalGroups }, { data: evalSessions }, { data: evalEnrollments }, { data: evalRows }] = await Promise.all([
+    supabase.from("groups").select("id, name, midterm_on, final_on").in("status", ["en_attente", "ouvert", "complet"]),
+    supabase.from("sessions").select("group_id, starts_at, ends_at, status").neq("status", "annulee").gte("starts_at", new Date(new Date().getTime() - 400 * 86_400_000).toISOString()),
+    supabase.from("enrollments").select("group_id").eq("status", "inscrit"),
+    supabase.from("evaluations").select("group_id, kind, co, po, ce, pe"),
+  ]);
+  const evaluationTodos: { label: string; href: string }[] = [];
+  for (const g of evalGroups ?? []) {
+    const expected = (evalEnrollments ?? []).filter((e) => e.group_id === g.id).length;
+    if (!expected) continue;
+    const m = computeMilestones((evalSessions ?? []).filter((s) => s.group_id === g.id) as MilestoneSession[], { midterm_on: g.midterm_on, final_on: g.final_on });
+    for (const kind of ["mi_parcours", "finale"] as const) {
+      const on = kind === "mi_parcours" ? m.midterm.on : m.final.on;
+      const done = (evalRows ?? []).filter((e) => e.group_id === g.id && e.kind === kind && (e.co || e.po || e.ce || e.pe)).length;
+      const state = milestoneState(on, today, done, expected);
+      if (state === "bientot" || state === "a_faire" || (state === "en_cours" && on && on <= today)) {
+        evaluationTodos.push({
+          label: `Évaluation ${kind === "finale" ? "finale" : "de mi-parcours"} — ${g.name} : ${done}/${expected} grille${expected > 1 ? "s" : ""} (${state === "a_faire" || (on && on <= today) ? "date dépassée" : `le ${fmtShortDate(`${on}T12:00:00Z`)}`})`,
+          href: `/groupes/${g.id}/evaluations#${kind}`,
+        });
+      }
+    }
+  }
+
   // Liste « À faire aujourd'hui » : ce qui demande une action, avec le lien pour la faire.
-  const todos: { label: string; href: string }[] = [];
+  const todos: { label: string; href: string }[] = [...evaluationTodos];
   for (const s of unclosedSheets.data ?? []) {
     const g = s.groups as unknown as { name: string } | null;
     todos.push({
