@@ -335,6 +335,16 @@ export const HELP_SECTIONS: HelpSection[] = [
     roles: TEAM,
     articles: [
       {
+        title: "Envoyer chaque semaine les feuilles d'émargement au financeur",
+        steps: [
+          "Fiche du groupe → carte « Feuilles d'émargement au financeur » : activez l'envoi hebdomadaire, indiquez les destinataires (une adresse par ligne) et les personnes en copie, puis « Enregistrer ». Chez PEF, les trois cours municipaux sont déjà réglés : Cordon → mba@…, Landy → miscache@…, et gfenzi@ + nchahbani@ reçoivent les trois sites.",
+          "Chaque vendredi après-midi (16 h l'été, 15 h l'hiver), l'ERP envoie automatiquement un email par groupe avec les feuilles CLÔTURÉES de la semaine en pièces jointes (un PDF signé par séance), la liste des séances avec le nombre de présents, et une copie à la coordination.",
+          "Une feuille non clôturée le vendredi n'est pas envoyée : elle est signalée dans l'email et repart la semaine suivante une fois clôturée. Si rien n'est clôturé, le financeur ne reçoit rien et la coordination est prévenue par email. Le cours du samedi matin part avec l'email du vendredi suivant.",
+          "« Envoyer maintenant » envoie tout de suite ce qui est clôturé depuis le dernier envoi (rattrapage, demande du financeur). « M'envoyer un test » envoie le même email à vous seul, sans toucher au dernier envoi : faites-le avant la rentrée pour voir le rendu.",
+          "L'historique sous la carte garde chaque envoi : date, statut (envoyé, reporté, rien à envoyer, erreur), nombre de feuilles, destinataires. En cas d'erreur SMTP, réessayez avec « Envoyer maintenant ».",
+        ],
+      },
+      {
         title: "Produire les documents pour un financeur",
         steps: [
           "Feuille d'émargement PDF : sur la séance clôturée → « Télécharger le PDF » ou « Déposer sur le Drive » (classée par formation dans le Drive partagé).",

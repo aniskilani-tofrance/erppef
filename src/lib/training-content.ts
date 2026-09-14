@@ -583,6 +583,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
           "Export d'assiduité CSV par groupe : le récapitulatif chiffré à joindre aux factures France Travail/OPCO.",
           "Planning à diffuser (fiche du groupe → « Diffuser le planning ») : PDF apprenants, PDF financeur, CSV, calendrier .ics, WhatsApp par inscrit et email groupé avec le PDF. Renseignez l'adresse des salles et « Comment trouver la salle » pour qu'ils apparaissent dessus et dans les messages aux apprenants.",
           "Plusieurs groupes d'un coup : page Planning → « Télécharger les plannings » (tous les groupes en cours, par financeur, par groupe), Rapports → financeur → « Plannings des groupes (PDF) » (sommaire + planning de chaque groupe, pour la Ville par exemple), et liste Apprenants → icône calendrier à côté des groupes d'une personne pour son planning à elle.",
+          "Feuilles d'émargement au financeur (fiche groupe, carte dédiée) : activez l'envoi hebdomadaire et les destinataires ; chaque vendredi après-midi les feuilles clôturées de la semaine partent en PDF. Clôturez les feuilles dans la semaine : une feuille non clôturée est signalée et repart la semaine suivante. « M'envoyer un test » montre le rendu.",
         ],
         tip: "Tout est calculé depuis les émargements réels : si les feuilles sont clôturées au fil de l'eau, vos documents sont toujours justes.",
       },

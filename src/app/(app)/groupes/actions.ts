@@ -15,6 +15,7 @@ import { loadTemplates } from "@/lib/admission/load-templates";
 import { baseVars, buildStageMessage } from "@/lib/admission/templates";
 import { textToHtml } from "@/lib/admission/messages";
 import { buildPlanningPdf, describeHolidays, describePattern, fmtDay, loadGroupPlanning, planningFileName } from "@/lib/reports/group-planning";
+import { dispatchGroupAttendance, parseEmails } from "@/lib/emargement/dispatch";
 
 // Envoie le planning (message + PDF apprenants en pièce jointe) à chaque inscrit qui a un email.
 export async function emailGroupPlanning(groupId: string): Promise<{ ok: true; message: string } | { ok: false; error: string }> {
@@ -429,4 +430,50 @@ export async function duplicateGroup(raw: z.infer<typeof duplicateSchema>): Prom
   revalidatePath("/groupes");
   revalidatePath("/planning");
   return { ok: true, groupId: newGroupId as string };
+}
+
+// ───────────── Feuilles d'émargement au financeur (envoi hebdomadaire) ─────────────
+
+const dispatchSettingsSchema = z.object({
+  groupId: z.string().uuid(),
+  enabled: z.boolean(),
+  to: z.string().max(2000),
+  cc: z.string().max(2000),
+});
+
+export async function updateAttendanceDispatch(raw: z.infer<typeof dispatchSettingsSchema>): Promise<{ ok: true } | { ok: false; error: string }> {
+  const parsed = dispatchSettingsSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Données invalides" };
+  const { orgId } = await requireRole(["admin", "coordinator"]);
+  const to = parseEmails(parsed.data.to);
+  const cc = parseEmails(parsed.data.cc).filter((e) => !to.includes(e));
+  if (parsed.data.enabled && to.length === 0) return { ok: false, error: "Indiquez au moins un destinataire pour activer l'envoi." };
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("groups")
+    .update({ attendance_mail_enabled: parsed.data.enabled, attendance_mail_to: to, attendance_mail_cc: cc })
+    .eq("id", parsed.data.groupId)
+    .eq("org_id", orgId);
+  if (error) return { ok: false, error: translatePgError(error) };
+  revalidatePath(`/groupes/${parsed.data.groupId}`);
+  return { ok: true };
+}
+
+export type DispatchNowResult = { ok: true; status: string; message: string } | { ok: false; error: string };
+
+// « Envoyer maintenant » (aux vrais destinataires) ou « M'envoyer un test » (à soi seul).
+export async function sendAttendanceDispatchNow(groupId: string, mode: "manuel" | "test"): Promise<DispatchNowResult> {
+  if (!z.string().uuid().safeParse(groupId).success) return { ok: false, error: "Groupe invalide" };
+  const { orgId, userId } = await requireRole(["admin", "coordinator"]);
+  let overrideTo: string[] | undefined;
+  if (mode === "test") {
+    const supabase = await createClient();
+    const { data } = await supabase.auth.getUser();
+    if (!data.user?.email) return { ok: false, error: "Votre compte n'a pas d'adresse email." };
+    overrideTo = [data.user.email];
+  }
+  const result = await dispatchGroupAttendance(groupId, { mode, orgId, overrideTo, triggeredBy: userId });
+  revalidatePath(`/groupes/${groupId}`);
+  if (result.status === "erreur") return { ok: false, error: result.message };
+  return { ok: true, status: result.status, message: result.message };
 }

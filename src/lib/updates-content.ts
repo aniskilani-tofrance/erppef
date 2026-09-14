@@ -26,6 +26,18 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-09-14-emargements-financeur",
+    date: "2026-09-14",
+    title: "Les feuilles d'émargement partent toutes seules au financeur le vendredi",
+    summary: "Sur chaque groupe, un envoi hebdomadaire des feuilles d'émargement clôturées (PDF signés) aux destinataires du financeur, avec envoi manuel, test et historique. Les trois cours municipaux sont déjà réglés pour la Ville de Saint-Ouen.",
+    items: [
+      { text: "Fiche groupe → carte « Feuilles d'émargement au financeur » : interrupteur, destinataires, copies, « Envoyer maintenant », « M'envoyer un test », historique des envois.", roles: TEAM },
+      { text: "Chaque vendredi après-midi : un email par groupe avec les feuilles clôturées de la semaine (un PDF par séance, présents comptés), copie à la coordination. Une feuille non clôturée est signalée et part la semaine suivante ; si rien n'est clôturé, la coordination est prévenue à la place du financeur.", roles: TEAM },
+      { text: "Pour les formatrices : clôturez vos feuilles d'émargement dans la semaine (au plus tard le vendredi midi) — c'est ce qui part au financeur le vendredi après-midi.", roles: ["trainer"] },
+    ],
+    training: [{ moduleId: "c5-vie-quotidienne", lessonId: "documents", label: "Les documents financeurs" }],
+  },
+  {
     id: "2026-09-14-plannings-groupes",
     date: "2026-09-14",
     title: "Plannings à télécharger : par financeur, par apprenant, tous les groupes",

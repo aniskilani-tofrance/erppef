@@ -13,7 +13,9 @@ export function mailerConfigured(): boolean {
 }
 
 export async function sendMail(options: {
-  to: string;
+  to: string | string[];
+  cc?: string[];
+  bcc?: string[];
   subject: string;
   html: string;
   attachments?: { filename: string; content: Buffer | Uint8Array; contentType?: string }[];
@@ -31,6 +33,8 @@ export async function sendMail(options: {
     await transport.sendMail({
       from: `ParlerEmploi Formation <${process.env.SMTP_FROM ?? process.env.SMTP_USER}>`,
       to: options.to,
+      cc: options.cc?.length ? options.cc : undefined,
+      bcc: options.bcc?.length ? options.bcc : undefined,
       subject: options.subject,
       html: options.html,
       attachments: options.attachments?.map((a) => ({ filename: a.filename, content: Buffer.from(a.content), contentType: a.contentType })),

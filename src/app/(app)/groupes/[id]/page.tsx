@@ -18,6 +18,7 @@ import { DuplicateGroupDialog } from "@/components/groupes/duplicate-group-dialo
 import { ReplanButton } from "@/components/groupes/replan-button";
 import { SurveyManager } from "@/components/groupes/survey-manager";
 import { PlanningShare, type PlanningRecipient } from "@/components/groupes/planning-share";
+import { AttendanceDispatchCard, type DispatchHistoryRow } from "@/components/groupes/attendance-dispatch-card";
 import { loadTemplates } from "@/lib/admission/load-templates";
 import { baseVars, buildStageMessage } from "@/lib/admission/templates";
 import { describeHolidays, describePattern, fmtDay as fmtPlanningDay, loadGroupPlanning } from "@/lib/reports/group-planning";
@@ -96,6 +97,29 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
     .sort((a, b) => a.name.localeCompare(b.name, "fr"));
 
   const canWrite = role === "admin" || role === "coordinator";
+
+  // Envoi hebdomadaire des feuilles d'émargement au financeur : réglages (colonnes du groupe) + historique.
+  const { data: dispatchRows } = canWrite
+    ? await supabase
+        .from("attendance_dispatches")
+        .select("id, sent_at, mode, status, recipients, cc, session_ids, missing_session_ids, period_from, period_to, error")
+        .eq("group_id", id)
+        .order("sent_at", { ascending: false })
+        .limit(10)
+    : { data: [] };
+  const dispatchHistory: DispatchHistoryRow[] = (dispatchRows ?? []).map((d) => ({
+    id: d.id,
+    sentAt: d.sent_at,
+    mode: d.mode,
+    status: d.status,
+    recipients: d.recipients ?? [],
+    cc: d.cc ?? [],
+    sheets: (d.session_ids ?? []).length,
+    missing: (d.missing_session_ids ?? []).length,
+    periodFrom: d.period_from,
+    periodTo: d.period_to,
+    error: d.error,
+  }));
   const enrolled = (enrollments ?? []).map((e) => {
     const l = e.learners as unknown as { first_name: string; last_name: string; level_assessed: string | null } | null;
     return {
@@ -257,6 +281,29 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
           <PlanningShare groupId={id} recipients={planningRecipients} canWrite={canWrite} />
         </CardContent>
       </Card>
+
+      {canWrite && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Feuilles d&apos;émargement au financeur</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Chaque vendredi après-midi, les feuilles clôturées de la semaine partent par email (une feuille PDF par séance) aux
+              destinataires ci-dessous. Une feuille non clôturée est signalée et part la semaine suivante.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <AttendanceDispatchCard
+              groupId={id}
+              enabled={Boolean(group.attendance_mail_enabled)}
+              to={(group.attendance_mail_to as string[] | null) ?? []}
+              cc={(group.attendance_mail_cc as string[] | null) ?? []}
+              lastSentAt={(group.attendance_mail_last_sent_at as string | null) ?? null}
+              history={dispatchHistory}
+              canWrite={canWrite}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
