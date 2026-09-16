@@ -22,7 +22,7 @@ export type LeadSettings = {
 
 export const DEFAULT_LEAD_SETTINGS: LeadSettings = {
   nextGroupLabel: "[date à fixer]",
-  calendlyUrl: "https://calendly.com/anis-kilani-parleremploi",
+  calendlyUrl: "https://calendly.com/contact-parleremploi/30min",
   slot1: "mardi 10h",
   slot2: "jeudi 15h",
   directorName: "Anis Kilani",
@@ -44,37 +44,70 @@ export function resolveLeadSettings(settings: unknown): LeadSettings {
 
 export const SMS_TEMPLATES = [
   {
+    code: "demande_recue",
+    delivery: "automatic",
+    label: "SMS — demande de recrutement prise en compte",
+    when: "Immédiatement après le formulaire, pendant la plage d'envoi autorisée.",
+    text: `Bonjour {prenom}, votre besoin de recrutement pour {restaurant} est bien pris en compte. Pour avancer sans vous déranger pendant le service, choisissez votre créneau ici : {calendly}. ParlerEmploi`,
+  },
+  {
+    code: "qualification_reservee",
+    delivery: "automatic",
+    label: "SMS — appel de qualification réservé",
+    when: "Dès qu'un créneau Calendly de qualification est confirmé.",
+    text: `Bonjour {prenom}, votre appel de qualification ParlerEmploi est réservé {jour} à {heure}. Nous vous appellerons au numéro indiqué. À très vite pour avancer sur les recrutements de {restaurant}.`,
+  },
+  {
+    code: "confirmation_rdv",
+    delivery: "automatic",
+    label: "SMS — rendez-vous avec un expert confirmé",
+    when: "Dès que le rendez-vous avec un expert ParlerEmploi est posé.",
+    text: `Bonjour {prenom}, votre rendez-vous ParlerEmploi est confirmé {jour} à {heure} {mode}, au sujet des recrutements de {restaurant}. En cas d'empêchement, répondez à ce SMS.`,
+  },
+  {
     code: "appel_manque",
+    delivery: "automatic",
     label: "SMS n°1 — après appel manqué (J0)",
     when: "Systématique après un message vocal.",
     text: `Bonjour {prenom}, ParlerEmploi vous a appelé au sujet de votre demande pour {restaurant}. Pour éviter de vous déranger pendant le service, indiquez-nous votre meilleur créneau ou réservez ici : {calendly}.`,
   },
   {
     code: "derniere_tentative",
+    delivery: "automatic",
     label: "SMS n°2 — dernière tentative (J6)",
     when: "Après le 4e essai sans réponse.",
     text: `Bonjour {prenom}, sans retour de votre part nous allons clôturer le suivi de votre demande pour {restaurant}. Si votre besoin en {metier} est toujours d'actualité, choisissez un créneau ici : {calendly}. ParlerEmploi`,
   },
   {
     code: "rappel_rdv",
+    delivery: "automatic",
     label: "SMS n°3 — rappel de RDV (la veille)",
     when: "Obligatoire la veille de chaque rendez-vous.",
     text: `Bonjour {prenom}, rappel de votre rendez-vous demain {jour} à {heure} {mode} avec un expert ParlerEmploi, au sujet de vos recrutements en {metier}. À demain !`,
   },
   {
     code: "creneau_promis",
+    delivery: "manual",
     label: "SMS n°4 — rappel de créneau promis",
     when: "Le jour même, avant de rappeler à l'heure convenue.",
     text: `Bonjour {prenom}, comme convenu, un conseiller ParlerEmploi vous appelle aujourd'hui à {heure}, en dehors du service.`,
   },
   {
     code: "no_show",
+    delivery: "automatic",
     label: "SMS — après un RDV manqué",
     when: "Le jour du no-show, avec l'email n°6.",
     text: `Bonjour {prenom}, nous avons manqué notre rendez-vous. Préférez-vous le recaler {creneau1} ou {creneau2} ? ParlerEmploi`,
   },
 ] as const;
 export type SmsTemplateCode = (typeof SMS_TEMPLATES)[number]["code"];
+export const SMS_TEMPLATE_CODES = SMS_TEMPLATES.map((template) => template.code) as [SmsTemplateCode, ...SmsTemplateCode[]];
+export const MANUAL_SMS_TEMPLATE_CODES = ["creneau_promis"] as const;
+export type ManualSmsTemplateCode = (typeof MANUAL_SMS_TEMPLATE_CODES)[number];
+export const MANUAL_SMS_TEMPLATES = SMS_TEMPLATES.filter(
+  (template): template is Extract<(typeof SMS_TEMPLATES)[number], { code: ManualSmsTemplateCode }> =>
+    (MANUAL_SMS_TEMPLATE_CODES as readonly string[]).includes(template.code),
+);
 
 export const EMAIL_TEMPLATES = [
   {

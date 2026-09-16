@@ -11,7 +11,7 @@ import {
   CONTRACT_TYPE_CODES, EVENT_KIND_CODES, EVENT_OUTCOME_CODES, HACCP_STATUS_CODES, HIRING_HORIZON_CODES,
   LEAD_OFFER_CODES, LEAD_SCORE_CODES, LEAD_SEGMENT_CODES, LEAD_SOURCE_CODES, LEAD_STATUS_CODES, RDV_MODE_CODES,
 } from "@/lib/leads/status";
-import { DEFAULT_LEAD_SETTINGS, type SmsTemplateCode } from "@/lib/leads/templates";
+import { DEFAULT_LEAD_SETTINGS, MANUAL_SMS_TEMPLATE_CODES, type ManualSmsTemplateCode } from "@/lib/leads/templates";
 import { BREVO_LEAD_EVENTS, brevoEventForStatus, dispatchBrevoLeadEvent, type LeadForBrevo } from "@/lib/leads/brevo";
 import { dispatchTwilioLeadSms } from "@/lib/leads/twilio";
 import { loadLeadSettings } from "@/lib/leads/queries";
@@ -44,6 +44,27 @@ async function dispatchStatusEmail(
   if (!eventName || !lead) return;
   const settings = await loadLeadSettings(supabase, orgId);
   await dispatchBrevoLeadEvent(supabase, { orgId, lead, settings, eventName });
+}
+
+async function dispatchCallOutcomeSms(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  orgId: string,
+  userId: string,
+  lead: LeadForBrevo,
+  outcome: string | null,
+) {
+  if (outcome !== "messagerie") return;
+  const { count } = await supabase
+    .from("employer_lead_events")
+    .select("id", { count: "exact", head: true })
+    .eq("org_id", orgId)
+    .eq("lead_id", lead.id)
+    .eq("kind", "appel")
+    .eq("outcome", "messagerie");
+  const code = count === 1 ? "appel_manque" : count && count >= 4 ? "derniere_tentative" : null;
+  if (!code) return;
+  const settings = await loadLeadSettings(supabase, orgId);
+  await dispatchTwilioLeadSms(supabase, { orgId, lead, settings, code, byUserId: userId, automatic: true });
 }
 
 // ── Fiche ────────────────────────────────────────────────────────────────────
@@ -193,20 +214,24 @@ export async function logLeadEvent(raw: z.infer<typeof eventSchema>): Promise<Ac
       .single();
     if (e2) return { ok: false, error: translatePgError(e2) };
     if (d.status) await dispatchStatusEmail(supabase, orgId, updated as LeadForBrevo | null, d.status);
+    if (updated) await dispatchCallOutcomeSms(supabase, orgId, userId, updated as LeadForBrevo, d.outcome);
+  } else if (d.kind === "appel") {
+    const current = await supabase.from("employer_leads").select("*").eq("id", d.leadId).eq("org_id", orgId).maybeSingle();
+    if (current.data) await dispatchCallOutcomeSms(supabase, orgId, userId, current.data as LeadForBrevo, d.outcome);
   }
   revalidateLeads(d.leadId);
   return { ok: true };
 }
 
-const smsTemplateCode = z.enum(["appel_manque", "derniere_tentative", "rappel_rdv", "creneau_promis", "no_show"]);
+const manualSmsTemplateCode = z.enum(MANUAL_SMS_TEMPLATE_CODES);
 
 /**
  * Sends an approved template through Twilio from the CRM, rather than opening
  * the setter's personal SMS application. The provider response is journaled
  * against the lead, preventing the same model being sent twice by mistake.
  */
-export async function sendLeadSms(raw: { leadId: string; code: SmsTemplateCode }): Promise<ActionResult> {
-  const parsed = z.object({ leadId: uuid, code: smsTemplateCode }).safeParse(raw);
+export async function sendLeadSms(raw: { leadId: string; code: ManualSmsTemplateCode }): Promise<ActionResult> {
+  const parsed = z.object({ leadId: uuid, code: manualSmsTemplateCode }).safeParse(raw);
   if (!parsed.success) return { ok: false, error: "Données SMS invalides" };
   const { orgId, userId } = await requireRole([...LEAD_ROLES]);
   const supabase = await createClient();
@@ -272,6 +297,14 @@ export async function setLeadStatus(raw: { leadId: string; status: string; lostR
       lead: updated as LeadForBrevo,
       settings,
       eventName: BREVO_LEAD_EVENTS.dernierMessage,
+    });
+    await dispatchTwilioLeadSms(supabase, {
+      orgId,
+      lead: updated as LeadForBrevo,
+      settings,
+      code: "derniere_tentative",
+      byUserId: userId,
+      automatic: true,
     });
   }
   revalidateLeads(d.leadId);
@@ -369,6 +402,15 @@ export async function setLeadRdv(raw: z.infer<typeof rdvSchema>): Promise<Action
     note: `RDV posé le ${d.date.split("-").reverse().join("/")} à ${d.time} (${d.mode})`,
   });
   await dispatchStatusEmail(supabase, orgId, updated as LeadForBrevo | null, "rdv_pris");
+  const settings = await loadLeadSettings(supabase, orgId);
+  await dispatchTwilioLeadSms(supabase, {
+    orgId,
+    lead: updated as LeadForBrevo,
+    settings,
+    code: "confirmation_rdv",
+    byUserId: userId,
+    automatic: true,
+  });
   revalidateLeads(d.leadId);
   return { ok: true };
 }
@@ -404,6 +446,14 @@ export async function setRdvOutcome(raw: { leadId: string; outcome: "tenu" | "no
       lead: updated as LeadForBrevo,
       settings,
       eventName: BREVO_LEAD_EVENTS.noShow,
+    });
+    await dispatchTwilioLeadSms(supabase, {
+      orgId,
+      lead: updated as LeadForBrevo,
+      settings,
+      code: "no_show",
+      byUserId: userId,
+      automatic: true,
     });
   }
   revalidateLeads(d.leadId);

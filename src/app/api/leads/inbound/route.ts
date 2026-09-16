@@ -6,6 +6,7 @@ import { toWhatsAppNumber } from "@/lib/admission/phone";
 import { resolveLeadSettings, type LeadSettings } from "@/lib/leads/templates";
 import { leadRef, sourceLabel } from "@/lib/leads/status";
 import { BREVO_LEAD_EVENTS, dispatchBrevoLeadEvent, type LeadForBrevo } from "@/lib/leads/brevo";
+import { dispatchTwilioLeadSms } from "@/lib/leads/twilio";
 
 // Point d'entrée des leads : POST /api/leads/inbound?token=<jeton de l'organisation>
 // Accepte JSON ou formulaire (Brevo, Make/Meta, landing Manus, Calendly). Le jeton
@@ -155,6 +156,13 @@ async function handleLead(admin: Admin, org: Org, lead: InboundLead, ownerId: st
     settings,
     eventName: BREVO_LEAD_EVENTS.nouveau,
   });
+  await dispatchTwilioLeadSms(admin, {
+    orgId: org.id,
+    lead: data as LeadForBrevo,
+    settings,
+    code: "demande_recue",
+    automatic: true,
+  });
 
   if (notifyEmail) {
     const url = `${BASE_URL}/leads/${data.id}`;
@@ -192,7 +200,7 @@ function fmtWhen(iso: string | null): string {
   return iso ? new Date(iso).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Paris" }) : "";
 }
 
-async function handleSetterCall(admin: Admin, org: Org, c: InboundCalendly, ownerId: string | null, notifyEmail: string) {
+async function handleSetterCall(admin: Admin, org: Org, c: InboundCalendly, ownerId: string | null, notifyEmail: string, settings: LeadSettings) {
   const existing = await findExisting(admin, org.id, c.email, c.phone, null);
   const when = fmtWhen(c.startsAt);
   if (c.action === "canceled") {
@@ -237,6 +245,16 @@ async function handleSetterCall(admin: Admin, org: Org, c: InboundCalendly, owne
     org_id: org.id, lead_id: leadId, kind: "note", outcome: "rappel_convenu",
     note: `Créneau d'appel réservé via Calendly${when ? ` — ${when}` : ""}${c.eventName ? ` (${c.eventName})` : ""}${c.answers ? ` · ${c.answers}` : ""}`,
   });
+  const leadForSms = await loadLeadForBrevo(admin, leadId);
+  if (leadForSms) {
+    await dispatchTwilioLeadSms(admin, {
+      orgId: org.id,
+      lead: leadForSms,
+      settings,
+      code: "qualification_reservee",
+      automatic: true,
+    });
+  }
   if (notifyEmail) {
     await sendMail({
       to: notifyEmail,
@@ -248,7 +266,7 @@ async function handleSetterCall(admin: Admin, org: Org, c: InboundCalendly, owne
 }
 
 async function handleCalendly(admin: Admin, org: Org, c: InboundCalendly, ownerId: string | null, notifyEmail: string, settings: LeadSettings) {
-  if (isSetterCall(c, notifyEmail)) return handleSetterCall(admin, org, c, ownerId, notifyEmail);
+  if (isSetterCall(c, notifyEmail)) return handleSetterCall(admin, org, c, ownerId, notifyEmail, settings);
   const existing = await findExisting(admin, org.id, c.email, c.phone, null);
   if (c.action === "canceled") {
     if (!existing) return { ok: true, ignored: true, reason: "Annulation Calendly sans fiche correspondante" };
@@ -304,6 +322,13 @@ async function handleCalendly(admin: Admin, org: Org, c: InboundCalendly, ownerI
       lead: leadForBrevo,
       settings,
       eventName: BREVO_LEAD_EVENTS.rdvPris,
+    });
+    await dispatchTwilioLeadSms(admin, {
+      orgId: org.id,
+      lead: leadForBrevo,
+      settings,
+      code: "confirmation_rdv",
+      automatic: true,
     });
   }
   if (notifyEmail) {
