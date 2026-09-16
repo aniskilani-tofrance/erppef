@@ -64,17 +64,7 @@ export async function dispatchTwilioLeadSms(
     .limit(1);
   if (prior?.[0]) return { sent: false, reason: "already_sent" };
 
-  let senderName = "Shahzad";
-  if (params.lead.owner_user_id) {
-    const { data: owner } = await supabase
-      .from("profiles")
-      .select("full_name")
-      .eq("id", params.lead.owner_user_id)
-      .maybeSingle();
-    const fullName = (owner?.full_name as string | null | undefined)?.trim();
-    if (fullName) senderName = fullName.split(/\s+/)[0] || senderName;
-  }
-  const body = renderSms(params.code, leadVars(params.lead, params.settings, senderName));
+  const body = renderSms(params.code, leadVars(params.lead, params.settings, "Un conseiller ParlerEmploi"));
   const accountSid = process.env.TWILIO_ACCOUNT_SID!.trim();
   const authToken = process.env.TWILIO_AUTH_TOKEN!.trim();
   const serviceSid = process.env.TWILIO_MESSAGING_SERVICE_SID!.trim();

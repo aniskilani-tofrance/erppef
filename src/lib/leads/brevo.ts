@@ -96,41 +96,38 @@ function leadReference(leadNo: number | null): string | null {
   return leadNo == null ? null : `L-${String(leadNo).padStart(4, "0")}`;
 }
 
-function messageFor(eventName: BrevoLeadEvent, lead: LeadForBrevo, settings: LeadSettings, setterName: string) {
+function messageFor(eventName: BrevoLeadEvent, lead: LeadForBrevo, settings: LeadSettings) {
   const firstName = firstNameOf(lead.contact_name) || "Bonjour";
-  const vars = leadVars(lead, settings, setterName);
+  const vars = leadVars(lead, settings, "Votre conseiller ParlerEmploi");
 
   if (eventName === BREVO_LEAD_EVENTS.nouveau) {
     return {
-      subject: `${firstName}, votre demande de recrutement est bien reçue`,
+      subject: `${firstName}, votre besoin de recrutement pour ${lead.company} est pris en compte`,
       body: `Bonjour ${firstName},
 
-Merci pour votre demande concernant ${lead.company}. ${setterName}, de ParlerEmploi Formation, va l’étudier et vous appeler sous 24 heures ouvrées, en évitant les heures de service.
+Votre demande concernant ${lead.company} est bien prise en compte par notre équipe conseil.
 
-L’objectif du premier échange est simple : comprendre vos besoins en ${vars.metier} et vérifier si la POEI peut vous aider à recruter avec un candidat formé avant l’embauche.
+L'objectif du premier échange est de comprendre vos besoins en ${vars.metier}, vos contraintes d'exploitation et de vérifier si la POEI peut préparer une solution de recrutement adaptée à votre établissement.
 
-Si vous préférez choisir directement un créneau de 15 minutes hors service, vous pouvez le faire ici : ${settings.calendlyUrl}
+Vous pouvez choisir dès maintenant un créneau de 15 minutes, en dehors du service si nécessaire : ${settings.calendlyUrl}
 
-À bientôt,
-${setterName}
-ParlerEmploi Formation`,
+L'équipe conseil ParlerEmploi
+Recrutement & formation restauration`,
     };
   }
 
   if (eventName === BREVO_LEAD_EVENTS.aRappeler) {
     return {
-      subject: `${firstName}, quel créneau pour parler de votre recrutement ?`,
+      subject: `${firstName}, quel créneau pour avancer sur les recrutements de ${lead.company} ?`,
       body: `Bonjour ${firstName},
 
-Je viens de tenter de vous joindre au sujet de votre recherche de personnel pour ${lead.company}. J’imagine que je tombe en plein service.
+Nous avons tenté de vous joindre au sujet de votre recherche de personnel pour ${lead.company}. Nous préférons éviter de vous appeler pendant le service.
 
-Pour éviter de vous déranger, choisissez un créneau de 15 minutes en dehors du service : ${settings.calendlyUrl}
+Choisissez le créneau de 15 minutes le plus pratique pour échanger sur vos besoins en ${vars.metier} : ${settings.calendlyUrl}
 
 Ou répondez simplement à ce mail avec le meilleur moment pour vous rappeler.
 
-Bien cordialement,
-${setterName}
-ParlerEmploi Formation`,
+L'équipe conseil ParlerEmploi`,
     };
   }
 
@@ -138,16 +135,14 @@ ParlerEmploi Formation`,
 
   if (eventName === BREVO_LEAD_EVENTS.rappelRdv) {
     return {
-      subject: `Rappel : notre rendez-vous demain — ${lead.company}`,
+      subject: `Rappel : votre rendez-vous pour ${lead.company} — demain`,
       body: `Bonjour ${firstName},
 
-Petit rappel pour notre rendez-vous demain ${vars.jour} à ${vars.heure}${vars.mode ? ` ${vars.mode}` : ""} avec ${settings.directorName}, au sujet de vos recrutements en ${vars.metier}.
+Votre rendez-vous de cadrage est prévu demain ${vars.jour} à ${vars.heure}${vars.mode ? ` ${vars.mode}` : ""}, au sujet de vos recrutements en ${vars.metier} pour ${lead.company}. Un expert ParlerEmploi préparera cet échange à partir des éléments déjà transmis.
 
-En cas d’empêchement, répondez directement à ce message : nous trouverons un autre créneau hors service.
+En cas d'empêchement, répondez directement à ce message : nous trouverons un autre créneau adapté à votre service.
 
-À demain,
-${setterName}
-ParlerEmploi Formation`,
+L'équipe conseil ParlerEmploi`,
     };
   }
 
@@ -189,17 +184,7 @@ export async function dispatchBrevoLeadEvent(
     .limit(1);
   if (prior?.[0]) return { sent: false, reason: "already_sent" };
 
-  let setterName = "Shahzad";
-  if (params.lead.owner_user_id) {
-    const { data: owner } = await supabase
-      .from("profiles")
-      .select("full_name")
-      .eq("id", params.lead.owner_user_id)
-      .maybeSingle();
-    const fullName = (owner?.full_name as string | null | undefined)?.trim();
-    if (fullName) setterName = fullName.split(/\s+/)[0] || setterName;
-  }
-  const message = messageFor(params.eventName, params.lead, params.settings, setterName);
+  const message = messageFor(params.eventName, params.lead, params.settings);
   const senderEmail = process.env.BREVO_SENDER_EMAIL?.trim() || "contact@parleremploi.fr";
   const senderName = process.env.BREVO_SENDER_NAME?.trim() || "ParlerEmploi Formation";
 
@@ -209,7 +194,7 @@ export async function dispatchBrevoLeadEvent(
       headers: { accept: "application/json", "content-type": "application/json", "api-key": apiKey },
       body: JSON.stringify({
         sender: { name: senderName, email: senderEmail },
-        replyTo: { name: `${setterName} — ParlerEmploi`, email: senderEmail },
+        replyTo: { name: "Équipe conseil ParlerEmploi", email: senderEmail },
         to: [{ email, name: params.lead.contact_name || params.lead.company }],
         subject: message.subject,
         htmlContent: brandedHtml(message.body),

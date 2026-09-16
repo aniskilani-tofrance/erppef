@@ -47,31 +47,31 @@ export const SMS_TEMPLATES = [
     code: "appel_manque",
     label: "SMS n°1 — après appel manqué (J0)",
     when: "Systématique après un message vocal.",
-    text: `Bonjour {prenom}, {setter} de ParlerEmploi. Je vous ai appelé suite à votre demande sur parlerresto : un employé formé directement dans votre restaurant, financé par France Travail (0 € de reste à charge sur la formation). Je retente demain en dehors du service — ou dites-moi votre meilleur créneau. Bonne journée !`,
+    text: `Bonjour {prenom}, ParlerEmploi vous a appelé au sujet de votre demande pour {restaurant}. Pour éviter de vous déranger pendant le service, indiquez-nous votre meilleur créneau ou réservez ici : {calendly}.`,
   },
   {
     code: "derniere_tentative",
     label: "SMS n°2 — dernière tentative (J6)",
     when: "Après le 4e essai sans réponse.",
-    text: `Bonjour {prenom}, sans retour de votre part je classe votre demande de recrutement en restauration. Si vous cherchez toujours du monde en {metier}, 30 min avec notre directeur, hors service : {calendly} — {setter}, ParlerEmploi`,
+    text: `Bonjour {prenom}, sans retour de votre part nous allons clôturer le suivi de votre demande pour {restaurant}. Si votre besoin en {metier} est toujours d'actualité, choisissez un créneau ici : {calendly}. ParlerEmploi`,
   },
   {
     code: "rappel_rdv",
     label: "SMS n°3 — rappel de RDV (la veille)",
     when: "Obligatoire la veille de chaque rendez-vous.",
-    text: `Bonjour {prenom}, rappel de votre RDV demain {jour} à {heure} {mode} avec {direction} (ParlerEmploi) au sujet de vos recrutements en {metier}. À demain !`,
+    text: `Bonjour {prenom}, rappel de votre rendez-vous demain {jour} à {heure} {mode} avec un expert ParlerEmploi, au sujet de vos recrutements en {metier}. À demain !`,
   },
   {
     code: "creneau_promis",
     label: "SMS n°4 — rappel de créneau promis",
     when: "Le jour même, avant de rappeler à l'heure convenue.",
-    text: `Bonjour {prenom}, comme convenu je vous rappelle à {heure} aujourd'hui, en dehors du service. {setter}, ParlerEmploi`,
+    text: `Bonjour {prenom}, comme convenu, un conseiller ParlerEmploi vous appelle aujourd'hui à {heure}, en dehors du service.`,
   },
   {
     code: "no_show",
     label: "SMS — après un RDV manqué",
     when: "Le jour du no-show, avec l'email n°6.",
-    text: `Bonjour {prenom}, on s'est manqués pour le RDV avec {direction}. On recale {creneau1} ou {creneau2} ? {setter}, ParlerEmploi`,
+    text: `Bonjour {prenom}, nous avons manqué notre rendez-vous. Préférez-vous le recaler {creneau1} ou {creneau2} ? ParlerEmploi`,
   },
 ] as const;
 export type SmsTemplateCode = (typeof SMS_TEMPLATES)[number]["code"];
@@ -81,20 +81,19 @@ export const EMAIL_TEMPLATES = [
     code: "confirmation_rdv",
     label: "Email n°1 — confirmation de RDV",
     when: "Immédiatement après l'appel où le RDV est posé.",
-    subject: `Confirmation RDV {jour} {heure} — vos recrutements en {metier}`,
+    subject: `Votre rendez-vous est confirmé — {restaurant} · {jour} à {heure}`,
     text: `Bonjour {prenom},
 
-Merci pour notre échange. Je vous confirme votre rendez-vous avec {direction}, directeur de ParlerEmploi Centre de Formation :
+Votre rendez-vous concernant les recrutements de {restaurant} est confirmé :
 
 ▶ {jour} à {heure} — {mode}
 
-Au programme (30 min) : votre besoin ({metier}), le parcours 3 jours chez vous / 2 jours chez nous pendant 3 mois, le financement France Travail (dispositif POEI, 0 € de reste à charge sur la formation) et le calendrier du prochain groupe restauration.
+Un expert ParlerEmploi préparera cet échange à partir des éléments déjà partagés : votre besoin en {metier}, le rythme de l'établissement, les profils recherchés et la faisabilité du parcours.
 
-D'ici là, si un empêchement (un coup de feu, ça arrive) : répondez à ce mail ou déplacez le créneau ici : {calendly}
+D'ici là, si votre organisation change, répondez directement à ce message ou déplacez le créneau ici : {calendly}
 
-Bien cordialement,
-{setter}
-ParlerEmploi Centre de Formation — organisme certifié Qualiopi`,
+L'équipe conseil ParlerEmploi
+Recrutement & formation restauration`,
   },
   {
     code: "documentation",
@@ -115,11 +114,10 @@ Comme convenu au téléphone, voici l'essentiel en 4 points :
 
 Notre prochain groupe restauration démarre {date_groupe} : pour en profiter, le poste doit être défini dans les prochaines semaines.
 
-▶ 30 minutes avec notre directeur, hors service, pour chiffrer votre cas : {calendly} — ou répondez-moi avec vos disponibilités.
+▶ Un échange hors service avec un expert ParlerEmploi pour étudier votre cas : {calendly} — ou répondez à ce message avec vos disponibilités.
 
-Bien cordialement,
-{setter}
-ParlerEmploi Centre de Formation — organisme certifié Qualiopi`,
+L'équipe conseil ParlerEmploi
+Organisme certifié Qualiopi`,
   },
   {
     code: "relance_j3",
@@ -130,14 +128,12 @@ ParlerEmploi Centre de Formation — organisme certifié Qualiopi`,
 
 Vous avez laissé vos coordonnées sur parlerresto au sujet d'un employé formé directement dans votre restaurant, et je n'ai pas réussi à vous joindre — j'imagine que je tombe en plein service.
 
-En bref : vous recrutez en cuisine ou en salle, France Travail finance la formation du candidat avant l'embauche (3 jours chez vous / 2 jours chez nous pendant 3 mois, 0 € de reste à charge sur la formation), et vous ne vous engagez qu'à la fin, si le candidat a le niveau.
+En bref : vous recrutez en cuisine ou en salle, France Travail peut financer la formation du candidat avant l'embauche, sous réserve de l'éligibilité du projet. Le parcours est construit autour de votre établissement, avec 3 jours sur site et 2 jours au centre.
 
-Le plus simple : choisissez un créneau de 30 min hors service ici → {calendly}
+Le plus simple : choisissez un créneau de 15 min hors service ici → {calendly}
 Ou indiquez-moi à quelle heure vous appeler entre deux services.
 
-Bien cordialement,
-{setter}
-ParlerEmploi Centre de Formation`,
+L'équipe conseil ParlerEmploi`,
   },
   {
     code: "rupture_j10",
@@ -152,9 +148,7 @@ Sans retour de votre part après plusieurs tentatives, je m'apprête à classer 
 – Si c'est juste un problème de timing (la saison, un coup de feu) : dites-moi quand revenir vers vous.
 – Si vous cherchez toujours en cuisine ou en salle : le prochain groupe restauration démarre {date_groupe}, il reste des places → {calendly}
 
-Bien cordialement,
-{setter}
-ParlerEmploi Centre de Formation`,
+L'équipe conseil ParlerEmploi`,
   },
   {
     code: "reponse_ecrite",
@@ -167,9 +161,7 @@ Merci pour votre message. Pour vous répondre précisément (postes, calendrier,
 
 En attendant, l'essentiel : France Travail finance la formation de vos futures recrues AVANT l'embauche (3 jours chez vous / 2 jours chez nous pendant 3 mois, 0 € de reste à charge sur la formation), nous fournissons les candidats et la formation, vous n'embauchez qu'à la fin si le niveau est atteint.
 
-Bien cordialement,
-{setter}
-ParlerEmploi Centre de Formation`,
+L'équipe conseil ParlerEmploi`,
   },
   {
     code: "no_show",
@@ -178,15 +170,13 @@ ParlerEmploi Centre de Formation`,
     subject: `On s'est manqués — on recale ?`,
     text: `Bonjour {prenom},
 
-{direction} vous a attendu {jour} à {heure} — un coup de feu, un fournisseur, ça arrive à tout le monde en restauration.
+Nous avons manqué notre rendez-vous du {jour} à {heure} — un coup de feu, un fournisseur, cela arrive à tout le monde en restauration.
 
-Je vous propose de recaler 30 minutes, hors service : {creneau1} ou {creneau2} ? Ou directement ici : {calendly}
+Nous vous proposons de le recaler hors service : {creneau1} ou {creneau2} ? Ou directement ici : {calendly}
 
 Si entre-temps le besoin a changé, dites-le-moi en une ligne.
 
-Bien cordialement,
-{setter}
-ParlerEmploi Centre de Formation`,
+L'équipe conseil ParlerEmploi`,
   },
 ] as const;
 export type EmailTemplateCode = (typeof EMAIL_TEMPLATES)[number]["code"];
