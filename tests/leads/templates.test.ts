@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_LEAD_SETTINGS,
+  directorCalendlyLink,
   MANUAL_SMS_TEMPLATES,
   leadVars,
   mailtoLink,
@@ -45,6 +46,17 @@ describe("modèles SMS / email restauration", () => {
     expect(mail.subject).toBe("Chez Karim — recruter en commis de cuisine avec un candidat formé chez vous (comme convenu)");
     expect(mail.body).toContain("démarre le 2 novembre");
     expect(mail.body).toContain(DEFAULT_LEAD_SETTINGS.calendlyUrl);
+  });
+
+  it("préremplit le Calendly de direction sans détourner le lien de qualification", () => {
+    const url = directorCalendlyLink(
+      { contact_name: "Karim Benali", email: "karim@chezkarim.fr" },
+      DEFAULT_LEAD_SETTINGS,
+    );
+    expect(url).toContain("anis-kilani-parleremploi/nouvelle-reunion");
+    expect(url).toContain("name=Karim+Benali");
+    expect(url).toContain("email=karim%40chezkarim.fr");
+    expect(DEFAULT_LEAD_SETTINGS.calendlyUrl).toContain("contact-parleremploi/30min");
   });
 
   it("sans prénom : « Bonjour, »", () => {

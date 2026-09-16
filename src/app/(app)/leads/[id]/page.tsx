@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ShieldAlert } from "lucide-react";
+import { ArrowLeft, ExternalLink, ShieldAlert } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -12,6 +12,7 @@ import {
   potentialAmount, rdvModeLabel, sourceLabel,
 } from "@/lib/leads/status";
 import { formatPhone } from "@/lib/admission/phone";
+import { directorCalendlyLink } from "@/lib/leads/templates";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScoreBadge, SegmentBadge } from "@/components/leads/lead-badges";
 import { LeadFormDialog } from "@/components/leads/lead-form-dialog";
@@ -69,6 +70,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
     today,
   };
   const rdvUpcoming = lead.rdv_at && lead.rdv_outcome === "a_venir";
+  const directorBookingUrl = directorCalendlyLink(lead, settings);
 
   return (
     <div className="mx-auto max-w-5xl space-y-5">
@@ -144,6 +146,17 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
                 <p className="text-sm text-muted-foreground">Pas encore de RDV. Deux créneaux hors service : {settings.slot1} ou {settings.slot2}.</p>
               )}
               <div className="flex flex-wrap items-center gap-2">
+                {!isFinalStatus(lead.status) && (
+                  <a
+                    href={directorBookingUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground"
+                    title="Ouvre le Calendly de direction avec le nom et l’email du lead préremplis"
+                  >
+                    <ExternalLink className="mr-2 h-4 w-4" />Réserver via le Calendly direction
+                  </a>
+                )}
                 {!isFinalStatus(lead.status) && <LeadRdvDialog leadId={lead.id} slot1={settings.slot1} slot2={settings.slot2} hasRdv={Boolean(lead.rdv_at)} />}
                 {rdvUpcoming && <RdvOutcomeButtons leadId={lead.id} />}
               </div>

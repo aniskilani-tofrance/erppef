@@ -11,7 +11,8 @@ import { toWhatsAppNumber } from "@/lib/admission/phone";
 
 export type LeadSettings = {
   nextGroupLabel: string; // « le 2 novembre » — la date du prochain groupe restauration
-  calendlyUrl: string;
+  calendlyUrl: string; // qualification prospect
+  directorCalendlyUrl: string; // rendez-vous direction après qualification
   slot1: string; // « mardi 10h »
   slot2: string; // « jeudi 15h »
   directorName: string; // « Anis Kilani »
@@ -23,6 +24,7 @@ export type LeadSettings = {
 export const DEFAULT_LEAD_SETTINGS: LeadSettings = {
   nextGroupLabel: "[date à fixer]",
   calendlyUrl: "https://calendly.com/contact-parleremploi/30min",
+  directorCalendlyUrl: "https://calendly.com/anis-kilani-parleremploi/nouvelle-reunion",
   slot1: "mardi 10h",
   slot2: "jeudi 15h",
   directorName: "Anis Kilani",
@@ -269,6 +271,27 @@ export function leadVars(lead: LeadForVars, settings: LeadSettings, setterFirstN
     creneau1: settings.slot1,
     creneau2: settings.slot2,
   };
+}
+
+/**
+ * Opens the direction's booking page from a CRM lead while keeping the
+ * prospect's visible form limited to Calendly. Name and email are the two
+ * documented universal prefill fields; the telephone remains in the CRM.
+ */
+export function directorCalendlyLink(
+  lead: Pick<LeadForVars, "contact_name"> & { email?: string | null },
+  settings: LeadSettings,
+): string {
+  try {
+    const url = new URL(settings.directorCalendlyUrl);
+    const name = lead.contact_name?.trim();
+    const email = lead.email?.trim();
+    if (name) url.searchParams.set("name", name);
+    if (email?.includes("@")) url.searchParams.set("email", email);
+    return url.toString();
+  } catch {
+    return settings.directorCalendlyUrl;
+  }
 }
 
 export function renderSms(code: SmsTemplateCode, vars: LeadVars): string {

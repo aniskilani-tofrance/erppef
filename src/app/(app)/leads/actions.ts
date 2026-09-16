@@ -530,6 +530,7 @@ export async function importLeads(raw: { rows: z.infer<typeof importRowSchema>[]
 const settingsSchema = z.object({
   nextGroupLabel: z.string().trim().min(1),
   calendlyUrl: z.string().trim().url(),
+  directorCalendlyUrl: z.string().trim().url(),
   slot1: z.string().trim().min(1),
   slot2: z.string().trim().min(1),
   directorName: z.string().trim().min(1),
@@ -541,7 +542,7 @@ const settingsSchema = z.object({
 
 export async function saveLeadSettings(raw: z.input<typeof settingsSchema>): Promise<ActionResult> {
   const parsed = settingsSchema.safeParse(raw);
-  if (!parsed.success) return { ok: false, error: "Réglages invalides (lien Calendly complet, email de notification valide)." };
+  if (!parsed.success) return { ok: false, error: "Réglages invalides (liens Calendly complets, email de notification valide)." };
   const { orgId } = await requireRole(["admin", "coordinator"]);
   const supabase = await createClient();
   const { data: org } = await supabase.from("organizations").select("settings").eq("id", orgId).single();
