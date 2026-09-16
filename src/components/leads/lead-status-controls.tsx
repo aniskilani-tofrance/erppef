@@ -3,8 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Trash2 } from "lucide-react";
-import { assignLead, deleteLead, setLeadStatus, setNextAction } from "@/app/(app)/leads/actions";
+import { CircleUserRound, Trash2 } from "lucide-react";
+import { assignLead, claimLead, deleteLead, setLeadStatus, setNextAction } from "@/app/(app)/leads/actions";
 import { LEAD_STATUSES, LOST_REASONS, leadStatusBadgeClass } from "@/lib/leads/status";
 import type { Owner } from "@/lib/leads/queries";
 import { Button } from "@/components/ui/button";
@@ -93,6 +93,34 @@ export function OwnerSelect({ leadId, ownerUserId, owners }: { leadId: string; o
         {owners.map((o) => <SelectItem key={o.userId} value={o.userId}>{o.name}</SelectItem>)}
       </SelectContent>
     </Select>
+  );
+}
+
+export function ClaimLeadButton({ leadId, assignedToMe }: { leadId: string; assignedToMe: boolean }) {
+  const [pending, startTransition] = useTransition();
+  const router = useRouter();
+  if (assignedToMe) return null;
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      className="h-8 text-xs"
+      disabled={pending}
+      title="Vous attribuer ce lead : l'autre setter le verra comme suivi par vous"
+      onClick={() =>
+        startTransition(async () => {
+          const result = await claimLead({ leadId });
+          if (!result.ok) toast.error(result.error);
+          else {
+            toast.success("Lead attribué à vous.");
+            router.refresh();
+          }
+        })
+      }
+    >
+      <CircleUserRound className="mr-1.5 h-3.5 w-3.5" />Me l&apos;attribuer
+    </Button>
   );
 }
 

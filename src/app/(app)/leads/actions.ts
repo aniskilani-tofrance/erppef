@@ -11,7 +11,10 @@ import {
   CONTRACT_TYPE_CODES, EVENT_KIND_CODES, EVENT_OUTCOME_CODES, HACCP_STATUS_CODES, HIRING_HORIZON_CODES,
   LEAD_OFFER_CODES, LEAD_SCORE_CODES, LEAD_SEGMENT_CODES, LEAD_SOURCE_CODES, LEAD_STATUS_CODES, RDV_MODE_CODES,
 } from "@/lib/leads/status";
-import { DEFAULT_LEAD_SETTINGS } from "@/lib/leads/templates";
+import { DEFAULT_LEAD_SETTINGS, type SmsTemplateCode } from "@/lib/leads/templates";
+import { BREVO_LEAD_EVENTS, brevoEventForStatus, dispatchBrevoLeadEvent, type LeadForBrevo } from "@/lib/leads/brevo";
+import { dispatchTwilioLeadSms } from "@/lib/leads/twilio";
+import { loadLeadSettings } from "@/lib/leads/queries";
 
 // Rôles autorisés sur les leads : la direction (admin, coordination) et le setter.
 const LEAD_ROLES = ["admin", "coordinator", "setter"] as const;
@@ -29,6 +32,18 @@ function revalidateLeads(id?: string | null) {
   revalidatePath("/leads");
   if (id) revalidatePath(`/leads/${id}`);
   revalidatePath("/dashboard");
+}
+
+async function dispatchStatusEmail(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  orgId: string,
+  lead: LeadForBrevo | null,
+  status: string | null | undefined,
+) {
+  const eventName = brevoEventForStatus(status);
+  if (!eventName || !lead) return;
+  const settings = await loadLeadSettings(supabase, orgId);
+  await dispatchBrevoLeadEvent(supabase, { orgId, lead, settings, eventName });
 }
 
 // ── Fiche ────────────────────────────────────────────────────────────────────
@@ -169,11 +184,60 @@ export async function logLeadEvent(raw: z.infer<typeof eventSchema>): Promise<Ac
   if (d.nextActionOn !== undefined) patch.next_action_on = d.nextActionOn;
   if (d.kind === "sms" && d.outcome === "envoye" && d.note?.startsWith("SMS n°3")) patch.rdv_reminder_sent_at = new Date().toISOString();
   if (Object.keys(patch).length) {
-    const { error: e2 } = await supabase.from("employer_leads").update(patch).eq("id", d.leadId).eq("org_id", orgId);
+    const { data: updated, error: e2 } = await supabase
+      .from("employer_leads")
+      .update(patch)
+      .eq("id", d.leadId)
+      .eq("org_id", orgId)
+      .select("*")
+      .single();
     if (e2) return { ok: false, error: translatePgError(e2) };
+    if (d.status) await dispatchStatusEmail(supabase, orgId, updated as LeadForBrevo | null, d.status);
   }
   revalidateLeads(d.leadId);
   return { ok: true };
+}
+
+const smsTemplateCode = z.enum(["appel_manque", "derniere_tentative", "rappel_rdv", "creneau_promis", "no_show"]);
+
+/**
+ * Sends an approved template through Twilio from the CRM, rather than opening
+ * the setter's personal SMS application. The provider response is journaled
+ * against the lead, preventing the same model being sent twice by mistake.
+ */
+export async function sendLeadSms(raw: { leadId: string; code: SmsTemplateCode }): Promise<ActionResult> {
+  const parsed = z.object({ leadId: uuid, code: smsTemplateCode }).safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Données SMS invalides" };
+  const { orgId, userId } = await requireRole([...LEAD_ROLES]);
+  const supabase = await createClient();
+  const { data: lead } = await supabase
+    .from("employer_leads")
+    .select("*")
+    .eq("id", parsed.data.leadId)
+    .eq("org_id", orgId)
+    .maybeSingle();
+  if (!lead) return { ok: false, error: "Lead introuvable" };
+  const settings = await loadLeadSettings(supabase, orgId);
+  const result = await dispatchTwilioLeadSms(supabase, {
+    orgId,
+    lead: lead as LeadForBrevo,
+    settings,
+    code: parsed.data.code,
+    byUserId: userId,
+    automatic: false,
+  });
+  if (result.sent) {
+    revalidateLeads(parsed.data.leadId);
+    return { ok: true };
+  }
+  const messages: Record<Exclude<typeof result, { sent: true }> ["reason"], string> = {
+    not_configured: "Twilio n'est pas encore configuré.",
+    no_phone: "Ce lead n'a pas de numéro de téléphone exploitable.",
+    already_sent: "Ce modèle SMS a déjà été envoyé pour ce lead.",
+    outside_sending_window: "L'envoi automatique est bloqué hors plage horaire.",
+    delivery_failed: "Twilio n'a pas pu envoyer le SMS. Réessayez dans quelques instants.",
+  };
+  return { ok: false, error: messages[result.reason] };
 }
 
 export async function setLeadStatus(raw: { leadId: string; status: string; lostReason?: string | null }): Promise<ActionResult> {
@@ -188,12 +252,28 @@ export async function setLeadStatus(raw: { leadId: string; status: string; lostR
     patch.next_action = null;
     patch.next_action_on = null;
   }
-  const { error } = await supabase.from("employer_leads").update(patch).eq("id", d.leadId).eq("org_id", orgId);
+  const { data: updated, error } = await supabase
+    .from("employer_leads")
+    .update(patch)
+    .eq("id", d.leadId)
+    .eq("org_id", orgId)
+    .select("*")
+    .single();
   if (error) return { ok: false, error: translatePgError(error) };
   await supabase.from("employer_lead_events").insert({
     org_id: orgId, lead_id: d.leadId, kind: "statut", outcome: null, by_user_id: userId,
     note: `Statut → ${d.status}${d.lostReason ? ` (${d.lostReason})` : ""}`,
   });
+  await dispatchStatusEmail(supabase, orgId, updated as LeadForBrevo | null, d.status);
+  if (d.status === "perdu" && /injoignable/i.test(d.lostReason ?? "") && updated) {
+    const settings = await loadLeadSettings(supabase, orgId);
+    await dispatchBrevoLeadEvent(supabase, {
+      orgId,
+      lead: updated as LeadForBrevo,
+      settings,
+      eventName: BREVO_LEAD_EVENTS.dernierMessage,
+    });
+  }
   revalidateLeads(d.leadId);
   return { ok: true };
 }
@@ -229,6 +309,30 @@ export async function assignLead(raw: { leadId: string; ownerUserId: string | nu
   return { ok: true };
 }
 
+/** Lets either approved setter take responsibility for a lead in one action. */
+export async function claimLead(raw: { leadId: string }): Promise<ActionResult> {
+  const parsed = z.object({ leadId: uuid }).safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Données invalides" };
+  const { orgId, userId } = await requireRole([...LEAD_ROLES]);
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("employer_leads")
+    .update({ owner_user_id: userId })
+    .eq("id", parsed.data.leadId)
+    .eq("org_id", orgId);
+  if (error) return { ok: false, error: translatePgError(error) };
+  await supabase.from("employer_lead_events").insert({
+    org_id: orgId,
+    lead_id: parsed.data.leadId,
+    kind: "note",
+    outcome: "autre",
+    by_user_id: userId,
+    note: "Lead repris par le membre connecté.",
+  });
+  revalidateLeads(parsed.data.leadId);
+  return { ok: true };
+}
+
 // ── Rendez-vous avec la direction ────────────────────────────────────────────
 const rdvSchema = z.object({
   leadId: uuid,
@@ -244,7 +348,7 @@ export async function setLeadRdv(raw: z.infer<typeof rdvSchema>): Promise<Action
   const { orgId, userId } = await requireRole([...LEAD_ROLES]);
   const supabase = await createClient();
   const rdvAt = localToUtc(d.date, d.time);
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("employer_leads")
     .update({
       rdv_at: rdvAt,
@@ -256,12 +360,15 @@ export async function setLeadRdv(raw: z.infer<typeof rdvSchema>): Promise<Action
       next_action_on: addDaysIso(d.date, -1),
     })
     .eq("id", d.leadId)
-    .eq("org_id", orgId);
+    .eq("org_id", orgId)
+    .select("*")
+    .single();
   if (error) return { ok: false, error: translatePgError(error) };
   await supabase.from("employer_lead_events").insert({
     org_id: orgId, lead_id: d.leadId, kind: "rdv", outcome: "rdv_pose", by_user_id: userId,
     note: `RDV posé le ${d.date.split("-").reverse().join("/")} à ${d.time} (${d.mode})`,
   });
+  await dispatchStatusEmail(supabase, orgId, updated as LeadForBrevo | null, "rdv_pris");
   revalidateLeads(d.leadId);
   return { ok: true };
 }
@@ -278,12 +385,27 @@ export async function setRdvOutcome(raw: { leadId: string; outcome: "tenu" | "no
       : d.outcome === "no_show"
         ? { rdv_outcome: "no_show", status: "a_rappeler", next_action: "Recaler le RDV (email n°6 + SMS no-show)", next_action_on: today() }
         : { rdv_outcome: "reporte", rdv_at: null, rdv_mode: null, status: "qualifie", next_action: "Reposer deux créneaux hors service", next_action_on: today() };
-  const { error } = await supabase.from("employer_leads").update(patch).eq("id", d.leadId).eq("org_id", orgId);
+  const { data: updated, error } = await supabase
+    .from("employer_leads")
+    .update(patch)
+    .eq("id", d.leadId)
+    .eq("org_id", orgId)
+    .select("*")
+    .single();
   if (error) return { ok: false, error: translatePgError(error) };
   await supabase.from("employer_lead_events").insert({
     org_id: orgId, lead_id: d.leadId, kind: "rdv", outcome: d.outcome === "tenu" ? "rdv_tenu" : d.outcome === "no_show" ? "no_show" : "autre",
     by_user_id: userId, note: d.outcome === "reporte" ? "RDV reporté, à reposer" : null,
   });
+  if (d.outcome === "no_show" && updated) {
+    const settings = await loadLeadSettings(supabase, orgId);
+    await dispatchBrevoLeadEvent(supabase, {
+      orgId,
+      lead: updated as LeadForBrevo,
+      settings,
+      eventName: BREVO_LEAD_EVENTS.noShow,
+    });
+  }
   revalidateLeads(d.leadId);
   return { ok: true };
 }

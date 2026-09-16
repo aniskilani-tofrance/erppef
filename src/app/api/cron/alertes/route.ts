@@ -7,6 +7,9 @@ import { buildMeetingReminderMessage, formatMeetingWhen, textToHtml } from "@/li
 import { loadTemplates } from "@/lib/admission/load-templates";
 import { announceUpdatesEverywhere, type AnnounceResult } from "@/lib/updates-announce";
 import { sendEvaluationReminders } from "@/lib/evaluations/reminders";
+import { BREVO_LEAD_EVENTS, dispatchBrevoLeadEvent, type LeadForBrevo } from "@/lib/leads/brevo";
+import { resolveLeadSettings } from "@/lib/leads/templates";
+import { dispatchTwilioLeadSms } from "@/lib/leads/twilio";
 import {
   ABSENCE_ALERT_THRESHOLD,
   computeLearnerStats,
@@ -90,6 +93,8 @@ export async function GET(request: Request) {
   // + relance des formateurs sur leurs feuilles non clôturées. Jamais bloquant.
   let reminders: { sent: number; skippedNoEmail: number } = { sent: 0, skippedNoEmail: 0 };
   let meetingReminders: { sent: number; skippedNoEmail: number } = { sent: 0, skippedNoEmail: 0 };
+  let leadRdvEmails = { sent: 0, skipped: 0 };
+  let leadRdvSms = { sent: 0, skipped: 0 };
   let trainerRelances = 0;
   // Rappels aux formateurs avant les jalons d'évaluation (J-7, J-1)
   let evaluationReminders = 0;
@@ -121,6 +126,16 @@ export async function GET(request: Request) {
     } catch (e) {
       console.error("[évaluations]", e instanceof Error ? e.message : e);
     }
+  }
+  try {
+    leadRdvEmails = await sendLeadRdvEmails(supabase);
+  } catch (e) {
+    console.error("[leads/brevo]", e instanceof Error ? e.message : e);
+  }
+  try {
+    leadRdvSms = await sendLeadRdvSms(supabase);
+  } catch (e) {
+    console.error("[leads/twilio]", e instanceof Error ? e.message : e);
   }
 
   // Le 1er du mois : la veille Qualiopi (critère 6) du mois écoulé a-t-elle été tenue ?
@@ -181,7 +196,7 @@ export async function GET(request: Request) {
   });
 
   if (atRisk.length === 0 && sheets.length === 0 && !watchReminder && admissionLines.length === 0 && !leaveLine) {
-    return Response.json({ sent: false, reason: "rien à signaler", backup, reminders, meetingReminders, trainerRelances, evaluationReminders, updatesAnnounced });
+    return Response.json({ sent: false, reason: "rien à signaler", backup, reminders, meetingReminders, leadRdvEmails, leadRdvSms, trainerRelances, evaluationReminders, updatesAnnounced });
   }
 
   const lines = [
@@ -214,7 +229,86 @@ export async function GET(request: Request) {
   if (!res.ok) {
     return Response.json({ sent: false, error: await res.text() }, { status: 500 });
   }
-  return Response.json({ sent: true, atRisk: atRisk.length, unclosedSheets: sheets.length, admission: admissionLines.length, reminders, meetingReminders, trainerRelances, evaluationReminders, updatesAnnounced });
+  return Response.json({ sent: true, atRisk: atRisk.length, unclosedSheets: sheets.length, admission: admissionLines.length, reminders, meetingReminders, leadRdvEmails, leadRdvSms, trainerRelances, evaluationReminders, updatesAnnounced });
+}
+
+// Les emails et SMS n°3 partent la veille du rendez-vous. Les deux envois sont
+// journalisés de façon idempotente afin que le cron puisse être relancé sans doublon.
+async function sendLeadRdvEmails(
+  supabase: ReturnType<typeof createAdminClient>,
+): Promise<{ sent: number; skipped: number }> {
+  if (!process.env.BREVO_API_KEY) return { sent: 0, skipped: 0 };
+  const tomorrow = new Date(Date.now() + 24 * 3_600_000).toLocaleDateString("fr-CA", { timeZone: "Europe/Paris" });
+  const dayAfter = nextDay(tomorrow);
+  const { data: leads } = await supabase
+    .from("employer_leads")
+    .select("*")
+    .eq("status", "rdv_pris")
+    .gte("rdv_at", localToUtc(tomorrow, "00:00"))
+    .lt("rdv_at", localToUtc(dayAfter, "00:00"));
+  if (!leads?.length) return { sent: 0, skipped: 0 };
+
+  const orgIds = [...new Set(leads.map((lead) => lead.org_id as string).filter(Boolean))];
+  const { data: organizations } = await supabase.from("organizations").select("id, settings").in("id", orgIds);
+  const settingsByOrg = new Map((organizations ?? []).map((org) => [org.id as string, resolveLeadSettings(org.settings)]));
+
+  let sent = 0;
+  let skipped = 0;
+  for (const lead of leads) {
+    const settings = settingsByOrg.get(lead.org_id as string);
+    if (!settings) {
+      skipped += 1;
+      continue;
+    }
+    const result = await dispatchBrevoLeadEvent(supabase, {
+      orgId: lead.org_id as string,
+      lead: lead as LeadForBrevo,
+      settings,
+      eventName: BREVO_LEAD_EVENTS.rappelRdv,
+    });
+    if (result.sent) sent += 1;
+    else skipped += 1;
+  }
+  return { sent, skipped };
+}
+
+/** SMS n°3 is transactional: one concise reminder, only the day before a booked meeting. */
+async function sendLeadRdvSms(
+  supabase: ReturnType<typeof createAdminClient>,
+): Promise<{ sent: number; skipped: number }> {
+  const tomorrow = new Date(Date.now() + 24 * 3_600_000).toLocaleDateString("fr-CA", { timeZone: "Europe/Paris" });
+  const dayAfter = nextDay(tomorrow);
+  const { data: leads } = await supabase
+    .from("employer_leads")
+    .select("*")
+    .eq("status", "rdv_pris")
+    .gte("rdv_at", localToUtc(tomorrow, "00:00"))
+    .lt("rdv_at", localToUtc(dayAfter, "00:00"));
+  if (!leads?.length) return { sent: 0, skipped: 0 };
+
+  const orgIds = [...new Set(leads.map((lead) => lead.org_id as string).filter(Boolean))];
+  const { data: organizations } = await supabase.from("organizations").select("id, settings").in("id", orgIds);
+  const settingsByOrg = new Map((organizations ?? []).map((org) => [org.id as string, resolveLeadSettings(org.settings)]));
+
+  let sent = 0;
+  let skipped = 0;
+  for (const lead of leads) {
+    const settings = settingsByOrg.get(lead.org_id as string);
+    if (!settings) {
+      skipped += 1;
+      continue;
+    }
+    const result = await dispatchTwilioLeadSms(supabase, {
+      orgId: lead.org_id as string,
+      lead: lead as LeadForBrevo,
+      settings,
+      code: "rappel_rdv",
+      automatic: true,
+    });
+    if (result.sent) sent += 1;
+    else skipped += 1;
+  }
+  return { sent, skipped };
 }
 
 // ── Parcours d'admission : alertes du matin ──────────────────────────────────

@@ -3,8 +3,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendMail } from "@/lib/mailer";
 import { normalizeInbound, type InboundCalendly, type InboundLead } from "@/lib/leads/inbound";
 import { toWhatsAppNumber } from "@/lib/admission/phone";
-import { resolveLeadSettings } from "@/lib/leads/templates";
+import { resolveLeadSettings, type LeadSettings } from "@/lib/leads/templates";
 import { leadRef, sourceLabel } from "@/lib/leads/status";
+import { BREVO_LEAD_EVENTS, dispatchBrevoLeadEvent, type LeadForBrevo } from "@/lib/leads/brevo";
 
 // Point d'entrée des leads : POST /api/leads/inbound?token=<jeton de l'organisation>
 // Accepte JSON ou formulaire (Brevo, Make/Meta, landing Manus, Calendly). Le jeton
@@ -77,14 +78,19 @@ export async function POST(req: NextRequest) {
   const ownerId = settings.defaultOwnerUserId || null;
 
   try {
-    if (inbound.kind === "calendly") return NextResponse.json(await handleCalendly(admin, org, inbound, ownerId, settings.notifyEmail));
-    return NextResponse.json(await handleLead(admin, org, inbound, ownerId, settings.notifyEmail));
+    if (inbound.kind === "calendly") return NextResponse.json(await handleCalendly(admin, org, inbound, ownerId, settings.notifyEmail, settings));
+    return NextResponse.json(await handleLead(admin, org, inbound, ownerId, settings.notifyEmail, settings));
   } catch (e) {
     return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : "Erreur" }, { status: 500 });
   }
 }
 
 type Admin = ReturnType<typeof createAdminClient>;
+
+async function loadLeadForBrevo(admin: Admin, leadId: string): Promise<LeadForBrevo | null> {
+  const { data } = await admin.from("employer_leads").select("*").eq("id", leadId).maybeSingle();
+  return (data as LeadForBrevo | null) ?? null;
+}
 
 async function findExisting(admin: Admin, orgId: string, email: string | null, phone: string | null, days: number | null) {
   const since = days ? new Date(Date.now() - days * 86_400_000).toISOString() : null;
@@ -104,7 +110,7 @@ async function findExisting(admin: Admin, orgId: string, email: string | null, p
   return null;
 }
 
-async function handleLead(admin: Admin, org: Org, lead: InboundLead, ownerId: string | null, notifyEmail: string) {
+async function handleLead(admin: Admin, org: Org, lead: InboundLead, ownerId: string | null, notifyEmail: string, settings: LeadSettings) {
   const existing = await findExisting(admin, org.id, lead.email, lead.phone, 30);
   if (existing) {
     await admin.from("employer_lead_events").insert({
@@ -134,13 +140,20 @@ async function handleLead(admin: Admin, org: Org, lead: InboundLead, ownerId: st
       owner_user_id: ownerId,
       status: "nouveau",
     })
-    .select("id, lead_no")
+    .select("*")
     .single();
   if (error || !data) throw new Error(error?.message ?? "Création impossible");
 
   await admin.from("employer_lead_events").insert({
     org_id: org.id, lead_id: data.id, kind: "import", outcome: null,
     note: `Formulaire reçu — ${sourceLabel(lead.source)}${lead.campaign ? ` (${lead.campaign})` : ""}`,
+  });
+
+  await dispatchBrevoLeadEvent(admin, {
+    orgId: org.id,
+    lead: data as LeadForBrevo,
+    settings,
+    eventName: BREVO_LEAD_EVENTS.nouveau,
   });
 
   if (notifyEmail) {
@@ -234,7 +247,7 @@ async function handleSetterCall(admin: Admin, org: Org, c: InboundCalendly, owne
   return { ok: true, leadId, ref: leadRef(leadNo), setterCall: true, at: c.startsAt };
 }
 
-async function handleCalendly(admin: Admin, org: Org, c: InboundCalendly, ownerId: string | null, notifyEmail: string) {
+async function handleCalendly(admin: Admin, org: Org, c: InboundCalendly, ownerId: string | null, notifyEmail: string, settings: LeadSettings) {
   if (isSetterCall(c, notifyEmail)) return handleSetterCall(admin, org, c, ownerId, notifyEmail);
   const existing = await findExisting(admin, org.id, c.email, c.phone, null);
   if (c.action === "canceled") {
@@ -284,6 +297,15 @@ async function handleCalendly(admin: Admin, org: Org, c: InboundCalendly, ownerI
     org_id: org.id, lead_id: leadId, kind: "rdv", outcome: "rdv_pose",
     note: `RDV pris via Calendly${c.startsAt ? ` — ${new Date(c.startsAt).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Paris" })}` : ""}${c.answers ? ` · ${c.answers}` : ""}`,
   });
+  const leadForBrevo = await loadLeadForBrevo(admin, leadId);
+  if (leadForBrevo?.status === "rdv_pris") {
+    await dispatchBrevoLeadEvent(admin, {
+      orgId: org.id,
+      lead: leadForBrevo,
+      settings,
+      eventName: BREVO_LEAD_EVENTS.rdvPris,
+    });
+  }
   if (notifyEmail) {
     await sendMail({
       to: notifyEmail,

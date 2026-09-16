@@ -18,7 +18,7 @@ import { LeadFormDialog } from "@/components/leads/lead-form-dialog";
 import { LeadEventDialog, type LeadEventContext } from "@/components/leads/lead-event-dialog";
 import { LeadQuickActions } from "@/components/leads/lead-quick-actions";
 import { LeadRdvDialog, RdvOutcomeButtons } from "@/components/leads/lead-rdv-dialog";
-import { DeleteLeadButton, LeadStatusSelect, NextActionEditor, OwnerSelect } from "@/components/leads/lead-status-controls";
+import { ClaimLeadButton, DeleteLeadButton, LeadStatusSelect, NextActionEditor, OwnerSelect } from "@/components/leads/lead-status-controls";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Lead — ERP PEF" };
@@ -89,6 +89,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <LeadStatusSelect leadId={lead.id} status={lead.status} />
+          <ClaimLeadButton leadId={lead.id} assignedToMe={lead.owner_user_id === userId} />
           <OwnerSelect leadId={lead.id} ownerUserId={lead.owner_user_id} owners={owners} />
         </div>
       </div>

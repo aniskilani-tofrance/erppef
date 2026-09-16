@@ -4,10 +4,10 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { CalendarClock, Copy, Mail, MessageCircle, MessageSquare, Phone } from "lucide-react";
-import { logLeadEvent } from "@/app/(app)/leads/actions";
+import { logLeadEvent, sendLeadSms } from "@/app/(app)/leads/actions";
 import { whatsappLink } from "@/lib/admission/phone";
 import {
-  EMAIL_TEMPLATES, SMS_TEMPLATES, leadVars, mailtoLink, renderEmail, renderSms, smsLink, telLink,
+  EMAIL_TEMPLATES, SMS_TEMPLATES, leadVars, mailtoLink, renderEmail, renderSms, telLink,
   type LeadSettings, type SmsTemplateCode, type EmailTemplateCode,
 } from "@/lib/leads/templates";
 import type { LeadRow } from "@/lib/leads/queries";
@@ -51,10 +51,14 @@ export function LeadQuickActions({
   }
 
   function sendSms(code: SmsTemplateCode, label: string) {
-    const url = smsLink(lead.phone, renderSms(code, vars));
-    if (!url) return;
-    window.location.assign(url);
-    trace("sms", label);
+    startTransition(async () => {
+      const result = await sendLeadSms({ leadId: lead.id, code });
+      if (!result.ok) toast.error(result.error);
+      else {
+        toast.success(`${label} envoyé via Twilio.`);
+        router.refresh();
+      }
+    });
   }
 
   function sendWhatsApp(code: SmsTemplateCode, label: string) {
@@ -96,7 +100,7 @@ export function LeadQuickActions({
           <Button variant="outline" size="sm" disabled={noPhone || pending}><MessageSquare className="mr-2 h-4 w-4" />SMS</Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-80">
-          <DropdownMenuLabel>Modèle pré-rempli</DropdownMenuLabel>
+          <DropdownMenuLabel>Envoi professionnel via Twilio</DropdownMenuLabel>
           {SMS_TEMPLATES.map((t) => (
             <DropdownMenuItem key={t.code} onSelect={() => sendSms(t.code, t.label)} title={t.when}>
               {t.label}
