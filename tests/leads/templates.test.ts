@@ -59,6 +59,26 @@ describe("modèles SMS / email restauration", () => {
     expect(DEFAULT_LEAD_SETTINGS.calendlyUrl).toContain("contact-parleremploi/30min");
   });
 
+  it("propose une reprogrammation préremplie après un rendez-vous manqué", () => {
+    const mail = renderEmail("no_show", leadVars({ ...lead, email: "karim@chezkarim.fr" }, DEFAULT_LEAD_SETTINGS, null));
+    expect(mail.subject).toContain("Karim");
+    expect(mail.subject).toContain("Chez Karim");
+    expect(mail.body).toContain("anis-kilani-parleremploi/nouvelle-reunion");
+    expect(mail.body).toContain("name=Karim+Benali");
+    expect(mail.body).toContain("email=karim%40chezkarim.fr");
+    expect(mail.body).not.toMatch(/inscription|setter|closer/i);
+  });
+
+  it("cadre les relances après rendez-vous autour d'une réponse simple", () => {
+    const vars = leadVars({ ...lead, email: "karim@chezkarim.fr" }, DEFAULT_LEAD_SETTINGS, null);
+    const recap = renderEmail("post_rdv_recap", vars);
+    const j2 = renderEmail("post_rdv_j2", vars);
+    const j7 = renderEmail("post_rdv_j7", vars);
+    expect(recap.body).toContain("validé");
+    expect(j2.body).toContain("on avance");
+    expect(j7.body).toContain("ne pas vous relancer inutilement");
+  });
+
   it("sans prénom : « Bonjour, »", () => {
     const sms = renderSms("creneau_promis", leadVars({ ...lead, contact_name: null, rdv_at: null, rdv_mode: null }, DEFAULT_LEAD_SETTINGS, "Shahzad"));
     expect(sms.startsWith("Bonjour, comme convenu")).toBe(true);

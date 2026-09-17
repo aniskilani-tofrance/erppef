@@ -4,7 +4,7 @@
 // sur la formation ». Jamais « 100 % gratuit », jamais « aucun engagement ».
 //
 // Variables : {prenom} {restaurant} {metier} {jour} {heure} {mode} {date_groupe}
-// {calendly} {setter} {direction} {creneau1} {creneau2}
+// {calendly} {calendly_direction} {setter} {direction} {creneau1} {creneau2}
 
 import { renderTemplate } from "@/lib/admission/templates";
 import { toWhatsAppNumber } from "@/lib/admission/phone";
@@ -202,14 +202,107 @@ L'équipe conseil ParlerEmploi`,
     code: "no_show",
     label: "Email n°6 — après un RDV manqué",
     when: "Le jour du no-show, sans culpabiliser.",
-    subject: `On s'est manqués — on recale ?`,
+    subject: `{prenom}, on recale le point recrutement de {restaurant} ?`,
     text: `Bonjour {prenom},
 
-Nous avons manqué notre rendez-vous du {jour} à {heure} — un coup de feu, un fournisseur, cela arrive à tout le monde en restauration.
+Notre rendez-vous du {jour} à {heure} n'a pas pu se tenir. Aucun souci : entre le service, un fournisseur et les imprévus d'équipe, cela arrive souvent en restauration.
 
-Nous vous proposons de le recaler hors service : {creneau1} ou {creneau2} ? Ou directement ici : {calendly}
+Si le besoin en {metier} pour {restaurant} est toujours d'actualité, le plus simple est de choisir un nouveau créneau hors service ici : {calendly_direction}
 
-Si entre-temps le besoin a changé, dites-le-moi en une ligne.
+L'objectif reste le même : vérifier rapidement si votre projet peut bénéficier d'une préparation avant embauche dans le cadre de la POEI, puis convenir de la suite utile. Si le besoin a changé, répondez simplement « plus d'actualité ».
+
+L'équipe conseil ParlerEmploi`,
+  },
+  {
+    code: "no_show_j1",
+    label: "Email n°7 — J+1 après RDV manqué",
+    when: "À envoyer manuellement après une tentative d'appel ou un SMS resté sans réponse.",
+    subject: `{prenom}, quel créneau protège le mieux votre service ?`,
+    text: `Bonjour {prenom},
+
+Je reviens vers vous après notre créneau manqué. Pour éviter les appels au mauvais moment, vous pouvez choisir directement le créneau le plus pratique pour {restaurant} : {calendly_direction}
+
+L'échange sert à décider rapidement si une solution de préparation avant embauche financée peut correspondre à votre besoin en {metier}. Si ce n'est pas le bon moment, répondez simplement avec le mois auquel revenir vers vous.
+
+L'équipe conseil ParlerEmploi`,
+  },
+  {
+    code: "no_show_j3",
+    label: "Email n°8 — dernière relance après RDV manqué",
+    when: "À envoyer manuellement à J+3 si aucun retour, avant de mettre le dossier en attente.",
+    subject: `{prenom}, je garde le recrutement de {restaurant} ouvert ?`,
+    text: `Bonjour {prenom},
+
+Avant de mettre le dossier de {restaurant} en attente, dites-nous simplement ce qui vous convient :
+
+1. Le besoin en {metier} est toujours ouvert : choisissez un créneau ici {calendly_direction}
+2. Le besoin est décalé : répondez avec le mois auquel revenir vers vous
+3. Le besoin est clos : répondez « stop » et nous ne vous relancerons pas
+
+L'équipe conseil ParlerEmploi`,
+  },
+  {
+    code: "post_rdv_recap",
+    label: "Email n°9 — synthèse après RDV tenu",
+    when: "À personnaliser et envoyer dans l'heure qui suit un rendez-vous tenu.",
+    subject: `{restaurant} — la suite proposée pour vos recrutements`,
+    text: `Bonjour {prenom},
+
+Suite à notre échange, voici le point que nous retenons pour {restaurant} :
+
+• Poste(s) prioritaire(s) : {metier}
+• Échéance de recrutement : [à compléter]
+• Contrat envisagé : [à compléter]
+• Point à valider avant lancement : [à compléter]
+
+La prochaine étape est de confirmer si le projet répond aux conditions d'une préparation avant embauche dans le cadre de la POEI, puis d'organiser les actions nécessaires pour avancer sur le recrutement.
+
+Répondez simplement « validé » si cette synthèse reflète bien votre besoin, ou corrigez le point qui doit être ajusté.
+
+L'équipe conseil ParlerEmploi`,
+  },
+  {
+    code: "post_rdv_proposition",
+    label: "Email n°10 — envoi de proposition / convention",
+    when: "À personnaliser au moment de joindre la proposition ou la convention.",
+    subject: `{restaurant} — les éléments pour avancer sur votre recrutement`,
+    text: `Bonjour {prenom},
+
+Comme convenu, vous trouverez ci-joint les éléments préparés pour avancer sur votre projet de recrutement.
+
+Ils reprennent le besoin en {metier}, le parcours envisagé et les conditions à valider avant le lancement. La préparation des candidats peut être financée dans le cadre de la POEI lorsque le projet est éligible ; nous vous accompagnons dans la vérification des conditions.
+
+Pour avancer, répondez à ce message avec l'une de ces options :
+
+• « validé » si vous souhaitez lancer la suite ;
+• « à ajuster » en précisant le point à revoir ;
+• « à rappeler [mois] » si votre calendrier a changé.
+
+L'équipe conseil ParlerEmploi`,
+  },
+  {
+    code: "post_rdv_j2",
+    label: "Email n°11 — relance J+2 après proposition",
+    when: "À envoyer manuellement deux jours ouvrés après la proposition si elle est sans réponse.",
+    subject: `{prenom}, avez-vous pu regarder la proposition pour {restaurant} ?`,
+    text: `Bonjour {prenom},
+
+Avez-vous pu regarder les éléments envoyés pour les recrutements de {restaurant} ?
+
+Le seul point à trancher est de savoir si nous lançons l'étude du projet pour vos besoins en {metier}, ou si votre calendrier a changé. Une réponse courte suffit : « on avance », « à ajuster » ou « à rappeler [mois] ».
+
+L'équipe conseil ParlerEmploi`,
+  },
+  {
+    code: "post_rdv_j7",
+    label: "Email n°12 — décision ou mise en attente",
+    when: "À envoyer manuellement à J+7 sans réponse, avant de mettre le dossier en attente.",
+    subject: `{prenom}, dois-je maintenir le dossier de {restaurant} actif ?`,
+    text: `Bonjour {prenom},
+
+Je vous écris une dernière fois avant de mettre le dossier de {restaurant} en attente.
+
+Si le recrutement en {metier} reste prioritaire, répondez « on avance » et nous reprenons la prochaine étape. Si le timing a changé, indiquez simplement le mois auquel revenir vers vous. Sans retour, nous classerons le dossier en attente afin de ne pas vous relancer inutilement.
 
 L'équipe conseil ParlerEmploi`,
   },
@@ -217,13 +310,14 @@ L'équipe conseil ParlerEmploi`,
 export type EmailTemplateCode = (typeof EMAIL_TEMPLATES)[number]["code"];
 
 export type LeadVars = Partial<Record<
-  "prenom" | "restaurant" | "metier" | "jour" | "heure" | "mode" | "date_groupe" | "calendly" | "setter" | "direction" | "creneau1" | "creneau2",
+  "prenom" | "restaurant" | "metier" | "jour" | "heure" | "mode" | "date_groupe" | "calendly" | "calendly_direction" | "setter" | "direction" | "creneau1" | "creneau2",
   string | null | undefined
 >>;
 
 export type LeadForVars = {
   company: string;
   contact_name: string | null;
+  email?: string | null;
   positions: string | null;
   rdv_at: string | null;
   rdv_mode: string | null;
@@ -266,6 +360,7 @@ export function leadVars(lead: LeadForVars, settings: LeadSettings, setterFirstN
     mode: rdvModeText(lead.rdv_mode),
     date_groupe: settings.nextGroupLabel,
     calendly: settings.calendlyUrl,
+    calendly_direction: directorCalendlyLink(lead, settings),
     setter: setterFirstName?.trim() || "L'équipe",
     direction: settings.directorName,
     creneau1: settings.slot1,

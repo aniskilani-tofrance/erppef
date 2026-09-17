@@ -101,7 +101,7 @@ describe("événements Brevo des leads restaurateurs", () => {
     expect(qualificationJ1.subject).toContain("Karim");
     expect(qualificationJ1.body).toContain("Chez Karim");
     expect(qualificationJ1.body).toContain("vendredi 18 septembre à 15h");
-    expect(qualificationH2.subject).toContain("Dans 2 heures");
+    expect(qualificationH2.subject).toMatch(/dans 2 heures/i);
     expect(directionH2.body).toContain("expert ParlerEmploi");
     expect(`${qualificationJ1.subject}\n${qualificationJ1.body}\n${qualificationH2.body}\n${directionH2.body}`).not.toMatch(/setter|closer|inscription|shahzad|anis/i);
   });

@@ -195,12 +195,16 @@ L'équipe conseil ParlerEmploi`,
 
   if (eventName === BREVO_LEAD_EVENTS.rappelRdv) {
     return {
-      subject: `Rappel : votre rendez-vous pour ${lead.company} — demain`,
+      subject: `${firstName}, demain à ${vars.heure} : le point recrutement de ${lead.company}`,
       body: `Bonjour ${firstName},
 
-Votre rendez-vous de cadrage est prévu demain ${vars.jour} à ${vars.heure}${vars.mode ? ` ${vars.mode}` : ""}, au sujet de vos recrutements en ${vars.metier} pour ${lead.company}. Un expert ParlerEmploi préparera cet échange à partir des éléments déjà transmis.
+Demain ${vars.jour} à ${vars.heure}${vars.mode ? ` ${vars.mode}` : ""}, nous faisons le point sur les recrutements en ${vars.metier} pour ${lead.company}.
 
-En cas d'empêchement, répondez directement à ce message : nous trouverons un autre créneau adapté à votre service.
+En 30 minutes, l'objectif est simple : vérifier la faisabilité de votre projet, identifier si la POEI peut financer la préparation de futurs candidats et convenir de la prochaine étape utile pour votre établissement.
+
+Pour que l'échange soit directement exploitable, gardez seulement ces trois éléments en tête : le poste prioritaire, la date d'arrivée souhaitée et le type de contrat envisagé. Aucun document n'est nécessaire.
+
+En cas d'imprévu de service, utilisez le lien de modification de votre e-mail Calendly ou répondez directement à ce message. Nous préserverons un créneau adapté à votre activité.
 
 L'équipe conseil ParlerEmploi`,
     };
@@ -208,12 +212,14 @@ L'équipe conseil ParlerEmploi`,
 
   if (eventName === BREVO_LEAD_EVENTS.rappelRdvH2) {
     return {
-      subject: `Dans 2 heures : votre rendez-vous ParlerEmploi pour ${lead.company}`,
+      subject: `${firstName}, rendez-vous dans 2 heures pour ${lead.company}`,
       body: `Bonjour ${firstName},
 
 Votre rendez-vous ParlerEmploi concernant les recrutements de ${lead.company} commence dans environ deux heures, à ${vars.heure}${vars.mode ? ` ${vars.mode}` : ""}.
 
-Un expert ParlerEmploi préparera l'échange à partir des éléments déjà transmis sur vos besoins en ${vars.metier}. Si un imprévu de service vous empêche d'être disponible, répondez directement à ce message.
+Un expert ParlerEmploi conduit l'échange à partir des éléments déjà transmis sur vos besoins en ${vars.metier}. À l'issue de l'échange, vous saurez quelle suite est réaliste pour avancer sur le recrutement. Gardez simplement en tête votre poste prioritaire et votre échéance.
+
+Si un coup de feu vous empêche d'être disponible, utilisez le lien de modification dans votre e-mail Calendly ou répondez à ce message avant le créneau.
 
 L'équipe conseil ParlerEmploi`,
     };
@@ -221,12 +227,14 @@ L'équipe conseil ParlerEmploi`,
 
   if (eventName === BREVO_LEAD_EVENTS.rappelQualificationJ1) {
     return {
-      subject: `${firstName}, votre échange ParlerEmploi est prévu demain`,
+      subject: `${firstName}, demain à ${vars.heure} : votre point recrutement pour ${lead.company}`,
       body: `Bonjour ${firstName},
 
-Votre échange de qualification est prévu demain ${vars.jour} à ${vars.heure}, au sujet des recrutements de ${lead.company}. Un conseiller ParlerEmploi vous appellera au numéro indiqué lors de votre réservation.
+Demain ${vars.jour} à ${vars.heure}, un conseiller ParlerEmploi vous appelle au numéro indiqué lors de votre réservation, au sujet des recrutements de ${lead.company}.
 
-Pour que ces 15 minutes vous soient utiles, gardez simplement en tête vos postes prioritaires, votre calendrier de recrutement et les contraintes de service de l'établissement.
+En 15 minutes, nous allons clarifier le poste prioritaire, votre calendrier de recrutement et vérifier si le projet peut correspondre à une préparation avant embauche financée dans le cadre de la POEI. L'objectif est de vous faire gagner du temps, pas de vous interrompre pendant le service.
+
+Pour préparer l'appel, gardez simplement en tête le poste à pourvoir, la date souhaitée d'arrivée et les contraintes de votre établissement. Aucun document n'est nécessaire.
 
 En cas d'empêchement, utilisez le lien de modification de votre e-mail Calendly ou répondez directement à ce message.
 
@@ -236,12 +244,14 @@ L'équipe conseil ParlerEmploi`,
 
   if (eventName === BREVO_LEAD_EVENTS.rappelQualificationH2) {
     return {
-      subject: `Dans 2 heures : votre échange pour ${lead.company}`,
+      subject: `${firstName}, votre point recrutement commence dans 2 heures`,
       body: `Bonjour ${firstName},
 
 Votre échange de qualification ParlerEmploi commence dans environ deux heures, à ${vars.heure}, au sujet des recrutements de ${lead.company}.
 
-Nous vous appellerons au numéro renseigné lors de votre réservation. Gardez simplement en tête le ou les postes prioritaires et votre échéance de recrutement.
+Nous vous appellerons au numéro renseigné lors de votre réservation. En quinze minutes, nous regarderons si une solution de recrutement et de préparation des candidats est pertinente pour votre besoin en ${vars.metier}.
+
+Gardez simplement en tête le poste prioritaire et votre échéance de recrutement. Aucun document n'est nécessaire.
 
 Si un coup de feu vous empêche d'être disponible, utilisez le lien de modification de votre e-mail Calendly ou répondez directement à ce message.
 
