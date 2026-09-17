@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { randomUUID } from "node:crypto";
 import { textToHtml } from "@/lib/admission/messages";
 import { firstNameOf, leadVars, renderEmail, type LeadSettings } from "@/lib/leads/templates";
 
@@ -12,6 +13,9 @@ export const BREVO_LEAD_EVENTS = {
   aRappeler: "poei_lead_a_rappeler",
   rdvPris: "poei_lead_rdv_pris",
   rappelRdv: "poei_lead_rappel_rdv",
+  rappelRdvH2: "poei_lead_rappel_rdv_h2",
+  rappelQualificationJ1: "poei_lead_rappel_qualification_j1",
+  rappelQualificationH2: "poei_lead_rappel_qualification_h2",
   noShow: "poei_lead_no_show",
   dernierMessage: "poei_lead_dernier_message",
 } as const;
@@ -44,7 +48,63 @@ export type LeadForBrevo = {
   owner_user_id?: string | null;
   rdv_at: string | null;
   rdv_mode: string | null;
+  qualification_at?: string | null;
+  qualification_reminder_j1_batch_id?: string | null;
+  qualification_reminder_h2_batch_id?: string | null;
+  rdv_reminder_j1_batch_id?: string | null;
+  rdv_reminder_h2_batch_id?: string | null;
 };
+
+export type AppointmentReminderKind = "qualification" | "rdv";
+type ReminderBatchColumn =
+  | "qualification_reminder_j1_batch_id"
+  | "qualification_reminder_h2_batch_id"
+  | "rdv_reminder_j1_batch_id"
+  | "rdv_reminder_h2_batch_id";
+
+type ReminderPlan = {
+  eventName: BrevoLeadEvent;
+  batchColumn: ReminderBatchColumn;
+  scheduledAt: string;
+};
+
+const BREVO_SCHEDULE_WINDOW_MS = 72 * 3_600_000;
+const MINIMUM_SCHEDULE_LEAD_MS = 5 * 60_000;
+
+/**
+ * Brevo accepts transactional schedules no more than 72 hours ahead. A booking
+ * further away is picked up by the daily CRM cron once it enters that window.
+ * A reminder already due is deliberately not recreated after the fact.
+ */
+export function appointmentReminderPlans(
+  kind: AppointmentReminderKind,
+  appointmentAt: string,
+  now: Date = new Date(),
+): ReminderPlan[] {
+  const appointmentMs = Date.parse(appointmentAt);
+  if (!Number.isFinite(appointmentMs)) return [];
+
+  const definitions = kind === "qualification"
+    ? [
+        { hoursBefore: 24, eventName: BREVO_LEAD_EVENTS.rappelQualificationJ1, batchColumn: "qualification_reminder_j1_batch_id" as const },
+        { hoursBefore: 2, eventName: BREVO_LEAD_EVENTS.rappelQualificationH2, batchColumn: "qualification_reminder_h2_batch_id" as const },
+      ]
+    : [
+        { hoursBefore: 24, eventName: BREVO_LEAD_EVENTS.rappelRdv, batchColumn: "rdv_reminder_j1_batch_id" as const },
+        { hoursBefore: 2, eventName: BREVO_LEAD_EVENTS.rappelRdvH2, batchColumn: "rdv_reminder_h2_batch_id" as const },
+      ];
+
+  return definitions.flatMap((definition) => {
+    const scheduledMs = appointmentMs - definition.hoursBefore * 3_600_000;
+    const waitMs = scheduledMs - now.getTime();
+    if (waitMs < MINIMUM_SCHEDULE_LEAD_MS || waitMs > BREVO_SCHEDULE_WINDOW_MS) return [];
+    return [{
+      eventName: definition.eventName,
+      batchColumn: definition.batchColumn,
+      scheduledAt: new Date(scheduledMs).toISOString(),
+    }];
+  });
+}
 
 /**
  * Flat event data retained for traceability and future Brevo workflow use.
@@ -96,7 +156,7 @@ function leadReference(leadNo: number | null): string | null {
   return leadNo == null ? null : `L-${String(leadNo).padStart(4, "0")}`;
 }
 
-function messageFor(eventName: BrevoLeadEvent, lead: LeadForBrevo, settings: LeadSettings) {
+export function brevoMessageFor(eventName: BrevoLeadEvent, lead: LeadForBrevo, settings: LeadSettings) {
   const firstName = firstNameOf(lead.contact_name) || "Bonjour";
   const vars = leadVars(lead, settings, "Votre conseiller ParlerEmploi");
 
@@ -146,6 +206,49 @@ L'équipe conseil ParlerEmploi`,
     };
   }
 
+  if (eventName === BREVO_LEAD_EVENTS.rappelRdvH2) {
+    return {
+      subject: `Dans 2 heures : votre rendez-vous ParlerEmploi pour ${lead.company}`,
+      body: `Bonjour ${firstName},
+
+Votre rendez-vous ParlerEmploi concernant les recrutements de ${lead.company} commence dans environ deux heures, à ${vars.heure}${vars.mode ? ` ${vars.mode}` : ""}.
+
+Un expert ParlerEmploi préparera l'échange à partir des éléments déjà transmis sur vos besoins en ${vars.metier}. Si un imprévu de service vous empêche d'être disponible, répondez directement à ce message.
+
+L'équipe conseil ParlerEmploi`,
+    };
+  }
+
+  if (eventName === BREVO_LEAD_EVENTS.rappelQualificationJ1) {
+    return {
+      subject: `${firstName}, votre échange ParlerEmploi est prévu demain`,
+      body: `Bonjour ${firstName},
+
+Votre échange de qualification est prévu demain ${vars.jour} à ${vars.heure}, au sujet des recrutements de ${lead.company}. Un conseiller ParlerEmploi vous appellera au numéro indiqué lors de votre réservation.
+
+Pour que ces 15 minutes vous soient utiles, gardez simplement en tête vos postes prioritaires, votre calendrier de recrutement et les contraintes de service de l'établissement.
+
+En cas d'empêchement, utilisez le lien de modification de votre e-mail Calendly ou répondez directement à ce message.
+
+L'équipe conseil ParlerEmploi`,
+    };
+  }
+
+  if (eventName === BREVO_LEAD_EVENTS.rappelQualificationH2) {
+    return {
+      subject: `Dans 2 heures : votre échange pour ${lead.company}`,
+      body: `Bonjour ${firstName},
+
+Votre échange de qualification ParlerEmploi commence dans environ deux heures, à ${vars.heure}, au sujet des recrutements de ${lead.company}.
+
+Nous vous appellerons au numéro renseigné lors de votre réservation. Gardez simplement en tête le ou les postes prioritaires et votre échéance de recrutement.
+
+Si un coup de feu vous empêche d'être disponible, utilisez le lien de modification de votre e-mail Calendly ou répondez directement à ce message.
+
+L'équipe conseil ParlerEmploi`,
+    };
+  }
+
   if (eventName === BREVO_LEAD_EVENTS.noShow) return renderEmail("no_show", vars);
   return renderEmail("rupture_j10", vars);
 }
@@ -157,6 +260,43 @@ function brandedHtml(body: string) {
 
 function deliveryMarker(eventName: BrevoLeadEvent): string {
   return `[brevo:${eventName}]`;
+}
+
+type BrevoApiResult = { messageId?: string; code?: string; message?: string };
+
+async function callBrevo(
+  apiKey: string,
+  payload: Record<string, unknown>,
+): Promise<{ ok: true; result: BrevoApiResult } | { ok: false; result: BrevoApiResult }> {
+  const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: { accept: "application/json", "content-type": "application/json", "api-key": apiKey },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(10_000),
+  });
+  const result = (await response.json().catch(() => ({}))) as BrevoApiResult;
+  return response.ok ? { ok: true, result } : { ok: false, result };
+}
+
+function emailPayload(
+  lead: LeadForBrevo,
+  eventName: BrevoLeadEvent,
+  message: { subject: string; body: string },
+  senderEmail: string,
+  senderName: string,
+  extra: Record<string, unknown> = {},
+) {
+  return {
+    sender: { name: senderName, email: senderEmail },
+    replyTo: { name: "Équipe conseil ParlerEmploi", email: senderEmail },
+    to: [{ email: cleanEmail(lead.email)!, name: lead.contact_name || lead.company }],
+    subject: message.subject,
+    htmlContent: brandedHtml(message.body),
+    textContent: message.body,
+    tags: ["poei_restauration", eventName],
+    headers: { "X-Mailin-custom": `lead_ref:${leadReference(lead.lead_no) ?? lead.id}|event:${eventName}` },
+    ...extra,
+  };
 }
 
 /**
@@ -184,29 +324,14 @@ export async function dispatchBrevoLeadEvent(
     .limit(1);
   if (prior?.[0]) return { sent: false, reason: "already_sent" };
 
-  const message = messageFor(params.eventName, params.lead, params.settings);
+  const message = brevoMessageFor(params.eventName, params.lead, params.settings);
   const senderEmail = process.env.BREVO_SENDER_EMAIL?.trim() || "contact@parleremploi.fr";
   const senderName = process.env.BREVO_SENDER_NAME?.trim() || "ParlerEmploi Formation";
 
   try {
-    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
-      method: "POST",
-      headers: { accept: "application/json", "content-type": "application/json", "api-key": apiKey },
-      body: JSON.stringify({
-        sender: { name: senderName, email: senderEmail },
-        replyTo: { name: "Équipe conseil ParlerEmploi", email: senderEmail },
-        to: [{ email, name: params.lead.contact_name || params.lead.company }],
-        subject: message.subject,
-        htmlContent: brandedHtml(message.body),
-        textContent: message.body,
-        tags: ["poei_restauration", params.eventName],
-        headers: { "X-Mailin-custom": `lead_ref:${leadReference(params.lead.lead_no) ?? params.lead.id}|event:${params.eventName}` },
-      }),
-      signal: AbortSignal.timeout(10_000),
-    });
-    const result = (await response.json().catch(() => ({}))) as { messageId?: string; code?: string; message?: string };
+    const response = await callBrevo(apiKey, emailPayload(params.lead, params.eventName, message, senderEmail, senderName));
     if (!response.ok) {
-      console.error(`[brevo] ${params.eventName} delivery failed: ${response.status}`, result);
+      console.error(`[brevo] ${params.eventName} delivery failed`, response.result);
       return { sent: false, reason: "delivery_failed" };
     }
 
@@ -215,12 +340,133 @@ export async function dispatchBrevoLeadEvent(
       lead_id: params.lead.id,
       kind: "note",
       outcome: "autre",
-      note: `${marker} Email envoyé via Brevo${result.messageId ? ` (${result.messageId})` : ""}.`,
+      note: `${marker} Email envoyé via Brevo${response.result.messageId ? ` (${response.result.messageId})` : ""}.`,
     });
     if (error) console.error(`[brevo] ${params.eventName} journalisation impossible`, error.message);
-    return { sent: true, messageId: result.messageId ?? null };
+    return { sent: true, messageId: response.result.messageId ?? null };
   } catch (error) {
     console.error(`[brevo] ${params.eventName} delivery failed`, error);
     return { sent: false, reason: "delivery_failed" };
   }
+}
+
+/** Programmes an exact transactional reminder in Brevo (UTC, maximum 72 hours ahead). */
+export async function scheduleBrevoLeadEvent(
+  supabase: SupabaseClient,
+  params: {
+    orgId: string;
+    lead: LeadForBrevo;
+    settings: LeadSettings;
+    eventName: BrevoLeadEvent;
+    scheduledAt: string;
+    batchId?: string;
+  },
+): Promise<DispatchResult & { batchId?: string }> {
+  const apiKey = process.env.BREVO_API_KEY?.trim();
+  const email = cleanEmail(params.lead.email);
+  if (!apiKey) return { sent: false, reason: "not_configured" };
+  if (!email) return { sent: false, reason: "no_email" };
+  const scheduledMs = Date.parse(params.scheduledAt);
+  const leadMs = scheduledMs - Date.now();
+  if (!Number.isFinite(scheduledMs) || leadMs < MINIMUM_SCHEDULE_LEAD_MS || leadMs > BREVO_SCHEDULE_WINDOW_MS) {
+    return { sent: false, reason: "delivery_failed" };
+  }
+
+  const batchId = params.batchId ?? randomUUID();
+  const message = brevoMessageFor(params.eventName, params.lead, params.settings);
+  const senderEmail = process.env.BREVO_SENDER_EMAIL?.trim() || "contact@parleremploi.fr";
+  const senderName = process.env.BREVO_SENDER_NAME?.trim() || "ParlerEmploi Formation";
+
+  try {
+    const response = await callBrevo(apiKey, emailPayload(params.lead, params.eventName, message, senderEmail, senderName, {
+      scheduledAt: new Date(scheduledMs).toISOString(),
+      batchId,
+    }));
+    if (!response.ok) {
+      console.error(`[brevo] ${params.eventName} scheduling failed`, response.result);
+      return { sent: false, reason: "delivery_failed" };
+    }
+    const { error } = await supabase.from("employer_lead_events").insert({
+      org_id: params.orgId,
+      lead_id: params.lead.id,
+      kind: "note",
+      outcome: "autre",
+      note: `${deliveryMarker(params.eventName)} Email programmé via Brevo pour ${new Date(scheduledMs).toISOString()} (batch ${batchId})${response.result.messageId ? ` (${response.result.messageId})` : ""}.`,
+    });
+    if (error) console.error(`[brevo] ${params.eventName} journalisation impossible`, error.message);
+    return { sent: true, messageId: response.result.messageId ?? null, batchId };
+  } catch (error) {
+    console.error(`[brevo] ${params.eventName} scheduling failed`, error);
+    return { sent: false, reason: "delivery_failed" };
+  }
+}
+
+/** Cancels a Brevo scheduled batch when a Calendly appointment is moved or canceled. */
+export async function cancelBrevoScheduledBatch(batchId: string | null | undefined): Promise<boolean> {
+  const apiKey = process.env.BREVO_API_KEY?.trim();
+  if (!apiKey || !batchId) return false;
+  try {
+    const response = await fetch(`https://api.brevo.com/v3/smtp/email/${encodeURIComponent(batchId)}`, {
+      method: "DELETE",
+      headers: { accept: "application/json", "api-key": apiKey },
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!response.ok && response.status !== 404) {
+      console.error(`[brevo] scheduled batch cancellation failed: ${response.status}`);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error("[brevo] scheduled batch cancellation failed", error);
+    return false;
+  }
+}
+
+/**
+ * Queues J-1 and H-2 reminders that are presently within Brevo's 72-hour
+ * scheduling window. The caller persists the returned batch identifiers on the lead.
+ */
+export async function scheduleBrevoAppointmentReminders(
+  supabase: SupabaseClient,
+  params: {
+    orgId: string;
+    lead: LeadForBrevo;
+    settings: LeadSettings;
+    kind: AppointmentReminderKind;
+    appointmentAt: string;
+    now?: Date;
+  },
+): Promise<{ scheduled: number; skipped: number; patch: Partial<Record<ReminderBatchColumn, string>> }> {
+  const plans = appointmentReminderPlans(params.kind, params.appointmentAt, params.now);
+  if (!plans.length) return { scheduled: 0, skipped: 0, patch: {} };
+
+  const patch: Partial<Record<ReminderBatchColumn, string>> = {};
+  let scheduled = 0;
+  let skipped = 0;
+  const reminderLead: LeadForBrevo = {
+    ...params.lead,
+    rdv_at: params.appointmentAt,
+    rdv_mode: params.kind === "qualification" ? "telephone" : params.lead.rdv_mode,
+  };
+
+  for (const plan of plans) {
+    if (params.lead[plan.batchColumn]) {
+      skipped += 1;
+      continue;
+    }
+    const result = await scheduleBrevoLeadEvent(supabase, {
+      orgId: params.orgId,
+      lead: reminderLead,
+      settings: params.settings,
+      eventName: plan.eventName,
+      scheduledAt: plan.scheduledAt,
+    });
+    if (result.sent && result.batchId) {
+      scheduled += 1;
+      patch[plan.batchColumn] = result.batchId;
+    } else {
+      skipped += 1;
+    }
+  }
+  return { scheduled, skipped, patch };
 }

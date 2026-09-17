@@ -71,6 +71,8 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
   };
   const rdvUpcoming = lead.rdv_at && lead.rdv_outcome === "a_venir";
   const directorBookingUrl = directorCalendlyLink(lead, settings);
+  const qualificationRemindersQueued = Boolean(lead.qualification_reminder_j1_batch_id || lead.qualification_reminder_h2_batch_id);
+  const rdvRemindersQueued = Boolean(lead.rdv_reminder_j1_batch_id || lead.rdv_reminder_h2_batch_id);
 
   return (
     <div className="mx-auto max-w-5xl space-y-5">
@@ -139,7 +141,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
                 <p className="text-sm">
                   <span className="font-medium">{fmtDateTime(lead.rdv_at)}</span> — {rdvModeLabel(lead.rdv_mode)}
                   <span className="ml-2 text-xs text-muted-foreground">
-                    {lead.rdv_outcome === "tenu" ? "tenu" : lead.rdv_outcome === "no_show" ? "manqué (no-show)" : lead.rdv_outcome === "reporte" ? "reporté" : lead.rdv_reminder_sent_at ? "rappel envoyé" : "rappel la veille à envoyer (SMS n°3)"}
+                    {lead.rdv_outcome === "tenu" ? "tenu" : lead.rdv_outcome === "no_show" ? "manqué (no-show)" : lead.rdv_outcome === "reporte" ? "reporté" : rdvRemindersQueued ? "emails Brevo J-1 et H-2 programmés" : lead.rdv_reminder_sent_at ? "rappel envoyé" : "rappels à programmer"}
                   </span>
                 </p>
               ) : (
@@ -162,6 +164,22 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
               </div>
             </CardContent>
           </Card>
+
+          {lead.qualification_at && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Appel de qualification</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm">
+                  <span className="font-medium">{fmtDateTime(lead.qualification_at)}</span>
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    {qualificationRemindersQueued ? "emails Brevo J-1 et H-2 programmés" : "rappels en attente de programmation"}
+                  </span>
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader className="flex-row items-center justify-between pb-2">

@@ -12,7 +12,14 @@ import {
   LEAD_OFFER_CODES, LEAD_SCORE_CODES, LEAD_SEGMENT_CODES, LEAD_SOURCE_CODES, LEAD_STATUS_CODES, RDV_MODE_CODES,
 } from "@/lib/leads/status";
 import { DEFAULT_LEAD_SETTINGS, MANUAL_SMS_TEMPLATE_CODES, type ManualSmsTemplateCode } from "@/lib/leads/templates";
-import { BREVO_LEAD_EVENTS, brevoEventForStatus, dispatchBrevoLeadEvent, type LeadForBrevo } from "@/lib/leads/brevo";
+import {
+  BREVO_LEAD_EVENTS,
+  brevoEventForStatus,
+  cancelBrevoScheduledBatch,
+  dispatchBrevoLeadEvent,
+  scheduleBrevoAppointmentReminders,
+  type LeadForBrevo,
+} from "@/lib/leads/brevo";
 import { dispatchTwilioLeadSms } from "@/lib/leads/twilio";
 import { loadLeadSettings } from "@/lib/leads/queries";
 
@@ -381,6 +388,18 @@ export async function setLeadRdv(raw: z.infer<typeof rdvSchema>): Promise<Action
   const { orgId, userId } = await requireRole([...LEAD_ROLES]);
   const supabase = await createClient();
   const rdvAt = localToUtc(d.date, d.time);
+  const { data: previous } = await supabase
+    .from("employer_leads")
+    .select("qualification_reminder_j1_batch_id, qualification_reminder_h2_batch_id, rdv_reminder_j1_batch_id, rdv_reminder_h2_batch_id")
+    .eq("id", d.leadId)
+    .eq("org_id", orgId)
+    .maybeSingle();
+  await Promise.all([
+    cancelBrevoScheduledBatch(previous?.qualification_reminder_j1_batch_id),
+    cancelBrevoScheduledBatch(previous?.qualification_reminder_h2_batch_id),
+    cancelBrevoScheduledBatch(previous?.rdv_reminder_j1_batch_id),
+    cancelBrevoScheduledBatch(previous?.rdv_reminder_h2_batch_id),
+  ]);
   const { data: updated, error } = await supabase
     .from("employer_leads")
     .update({
@@ -388,6 +407,11 @@ export async function setLeadRdv(raw: z.infer<typeof rdvSchema>): Promise<Action
       rdv_mode: d.mode,
       rdv_outcome: "a_venir",
       rdv_reminder_sent_at: null,
+      rdv_reminder_j1_batch_id: null,
+      rdv_reminder_h2_batch_id: null,
+      qualification_at: null,
+      qualification_reminder_j1_batch_id: null,
+      qualification_reminder_h2_batch_id: null,
       status: "rdv_pris",
       next_action: "SMS de rappel la veille du RDV (SMS n°3)",
       next_action_on: addDaysIso(d.date, -1),
@@ -411,6 +435,18 @@ export async function setLeadRdv(raw: z.infer<typeof rdvSchema>): Promise<Action
     byUserId: userId,
     automatic: true,
   });
+  if (updated) {
+    const reminders = await scheduleBrevoAppointmentReminders(supabase, {
+      orgId,
+      lead: updated as LeadForBrevo,
+      settings,
+      kind: "rdv",
+      appointmentAt: rdvAt,
+    });
+    if (Object.keys(reminders.patch).length) {
+      await supabase.from("employer_leads").update(reminders.patch).eq("id", d.leadId).eq("org_id", orgId);
+    }
+  }
   revalidateLeads(d.leadId);
   return { ok: true };
 }
@@ -421,12 +457,22 @@ export async function setRdvOutcome(raw: { leadId: string; outcome: "tenu" | "no
   const d = parsed.data;
   const { orgId, userId } = await requireRole([...LEAD_ROLES]);
   const supabase = await createClient();
+  const { data: previous } = await supabase
+    .from("employer_leads")
+    .select("rdv_reminder_j1_batch_id, rdv_reminder_h2_batch_id")
+    .eq("id", d.leadId)
+    .eq("org_id", orgId)
+    .maybeSingle();
+  await Promise.all([
+    cancelBrevoScheduledBatch(previous?.rdv_reminder_j1_batch_id),
+    cancelBrevoScheduledBatch(previous?.rdv_reminder_h2_batch_id),
+  ]);
   const patch: Record<string, unknown> =
     d.outcome === "tenu"
-      ? { rdv_outcome: "tenu", status: "rdv_tenu", next_action: "Prévenir la direction : proposition à envoyer", next_action_on: today() }
+      ? { rdv_outcome: "tenu", status: "rdv_tenu", rdv_reminder_j1_batch_id: null, rdv_reminder_h2_batch_id: null, next_action: "Prévenir la direction : proposition à envoyer", next_action_on: today() }
       : d.outcome === "no_show"
-        ? { rdv_outcome: "no_show", status: "a_rappeler", next_action: "Recaler le RDV (email n°6 + SMS no-show)", next_action_on: today() }
-        : { rdv_outcome: "reporte", rdv_at: null, rdv_mode: null, status: "qualifie", next_action: "Reposer deux créneaux hors service", next_action_on: today() };
+        ? { rdv_outcome: "no_show", status: "a_rappeler", rdv_reminder_j1_batch_id: null, rdv_reminder_h2_batch_id: null, next_action: "Recaler le RDV (email n°6 + SMS no-show)", next_action_on: today() }
+        : { rdv_outcome: "reporte", rdv_at: null, rdv_mode: null, rdv_reminder_j1_batch_id: null, rdv_reminder_h2_batch_id: null, status: "qualifie", next_action: "Reposer deux créneaux hors service", next_action_on: today() };
   const { data: updated, error } = await supabase
     .from("employer_leads")
     .update(patch)

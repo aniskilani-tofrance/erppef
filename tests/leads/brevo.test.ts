@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BREVO_LEAD_EVENTS, brevoEventForStatus, buildBrevoLeadPayload } from "@/lib/leads/brevo";
+import { appointmentReminderPlans, BREVO_LEAD_EVENTS, brevoEventForStatus, brevoMessageFor, buildBrevoLeadPayload } from "@/lib/leads/brevo";
 import { DEFAULT_LEAD_SETTINGS } from "@/lib/leads/templates";
 
 describe("événements Brevo des leads restaurateurs", () => {
@@ -51,5 +51,58 @@ describe("événements Brevo des leads restaurateurs", () => {
     expect(brevoEventForStatus("rdv_pris")).toBe(BREVO_LEAD_EVENTS.rdvPris);
     expect(brevoEventForStatus("qualifie")).toBeNull();
     expect(brevoEventForStatus("perdu")).toBeNull();
+  });
+
+  it("programme les rappels J-1 et H-2 dans la fenêtre Brevo", () => {
+    const plans = appointmentReminderPlans(
+      "qualification",
+      "2026-09-20T14:00:00.000Z",
+      new Date("2026-09-18T12:00:00.000Z"),
+    );
+    expect(plans).toEqual([
+      {
+        eventName: BREVO_LEAD_EVENTS.rappelQualificationJ1,
+        batchColumn: "qualification_reminder_j1_batch_id",
+        scheduledAt: "2026-09-19T14:00:00.000Z",
+      },
+      {
+        eventName: BREVO_LEAD_EVENTS.rappelQualificationH2,
+        batchColumn: "qualification_reminder_h2_batch_id",
+        scheduledAt: "2026-09-20T12:00:00.000Z",
+      },
+    ]);
+  });
+
+  it("ne programme pas rétroactivement un rappel déjà dû ni au-delà de 72 heures", () => {
+    expect(appointmentReminderPlans(
+      "rdv",
+      "2026-09-19T12:00:00.000Z",
+      new Date("2026-09-18T13:00:00.000Z"),
+    )).toEqual([
+      {
+        eventName: BREVO_LEAD_EVENTS.rappelRdvH2,
+        batchColumn: "rdv_reminder_h2_batch_id",
+        scheduledAt: "2026-09-19T10:00:00.000Z",
+      },
+    ]);
+
+    expect(appointmentReminderPlans(
+      "rdv",
+      "2026-09-25T14:00:00.000Z",
+      new Date("2026-09-18T12:00:00.000Z"),
+    )).toEqual([]);
+  });
+
+  it("personnalise les rappels J-1 et H-2 sans jargon de tunnel", () => {
+    const qualificationJ1 = brevoMessageFor(BREVO_LEAD_EVENTS.rappelQualificationJ1, lead, DEFAULT_LEAD_SETTINGS);
+    const qualificationH2 = brevoMessageFor(BREVO_LEAD_EVENTS.rappelQualificationH2, lead, DEFAULT_LEAD_SETTINGS);
+    const directionH2 = brevoMessageFor(BREVO_LEAD_EVENTS.rappelRdvH2, lead, DEFAULT_LEAD_SETTINGS);
+
+    expect(qualificationJ1.subject).toContain("Karim");
+    expect(qualificationJ1.body).toContain("Chez Karim");
+    expect(qualificationJ1.body).toContain("vendredi 18 septembre à 15h");
+    expect(qualificationH2.subject).toContain("Dans 2 heures");
+    expect(directionH2.body).toContain("expert ParlerEmploi");
+    expect(`${qualificationJ1.subject}\n${qualificationJ1.body}\n${qualificationH2.body}\n${directionH2.body}`).not.toMatch(/setter|closer|inscription|shahzad|anis/i);
   });
 });

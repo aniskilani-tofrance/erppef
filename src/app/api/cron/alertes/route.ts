@@ -7,7 +7,7 @@ import { buildMeetingReminderMessage, formatMeetingWhen, textToHtml } from "@/li
 import { loadTemplates } from "@/lib/admission/load-templates";
 import { announceUpdatesEverywhere, type AnnounceResult } from "@/lib/updates-announce";
 import { sendEvaluationReminders } from "@/lib/evaluations/reminders";
-import { BREVO_LEAD_EVENTS, dispatchBrevoLeadEvent, type LeadForBrevo } from "@/lib/leads/brevo";
+import { scheduleBrevoAppointmentReminders, type AppointmentReminderKind, type LeadForBrevo } from "@/lib/leads/brevo";
 import { resolveLeadSettings } from "@/lib/leads/templates";
 import { sendDeferredLeadSms, sendLeadRdvSms } from "@/lib/leads/automations";
 import {
@@ -238,20 +238,21 @@ export async function GET(request: Request) {
   return Response.json({ sent: true, atRisk: atRisk.length, unclosedSheets: sheets.length, admission: admissionLines.length, reminders, meetingReminders, leadRdvEmails, leadRdvSms, leadDeferredSms, trainerRelances, evaluationReminders, updatesAnnounced });
 }
 
-// Les emails et SMS n°3 partent la veille du rendez-vous. Les deux envois sont
-// journalisés de façon idempotente afin que le cron puisse être relancé sans doublon.
+// Brevo ne permet de programmer un message transactionnel que dans les 72 heures.
+// Le cron quotidien introduit les créneaux éloignés dans cette fenêtre ; Brevo assure
+// ensuite l'heure précise J-1 et H-2. Les batch IDs stockés sur la fiche empêchent
+// tout doublon et permettent l'annulation lors d'un report Calendly.
 async function sendLeadRdvEmails(
   supabase: ReturnType<typeof createAdminClient>,
 ): Promise<{ sent: number; skipped: number }> {
   if (!process.env.BREVO_API_KEY) return { sent: 0, skipped: 0 };
-  const tomorrow = new Date(Date.now() + 24 * 3_600_000).toLocaleDateString("fr-CA", { timeZone: "Europe/Paris" });
-  const dayAfter = nextDay(tomorrow);
+  const now = new Date().toISOString();
+  const horizon = new Date(Date.now() + 72 * 3_600_000).toISOString();
   const { data: leads } = await supabase
     .from("employer_leads")
     .select("*")
-    .eq("status", "rdv_pris")
-    .gte("rdv_at", localToUtc(tomorrow, "00:00"))
-    .lt("rdv_at", localToUtc(dayAfter, "00:00"));
+    .not("status", "in", "(gagne,perdu,hors_cible)")
+    .or(`and(rdv_at.gte.${now},rdv_at.lte.${horizon}),and(qualification_at.gte.${now},qualification_at.lte.${horizon})`);
   if (!leads?.length) return { sent: 0, skipped: 0 };
 
   const orgIds = [...new Set(leads.map((lead) => lead.org_id as string).filter(Boolean))];
@@ -266,14 +267,24 @@ async function sendLeadRdvEmails(
       skipped += 1;
       continue;
     }
-    const result = await dispatchBrevoLeadEvent(supabase, {
+    const kind: AppointmentReminderKind = lead.status === "rdv_pris" ? "rdv" : "qualification";
+    const appointmentAt = kind === "rdv" ? lead.rdv_at : lead.qualification_at;
+    if (!appointmentAt) {
+      skipped += 1;
+      continue;
+    }
+    const result = await scheduleBrevoAppointmentReminders(supabase, {
       orgId: lead.org_id as string,
       lead: lead as LeadForBrevo,
       settings,
-      eventName: BREVO_LEAD_EVENTS.rappelRdv,
+      kind,
+      appointmentAt,
     });
-    if (result.sent) sent += 1;
-    else skipped += 1;
+    if (Object.keys(result.patch).length) {
+      await supabase.from("employer_leads").update(result.patch).eq("id", lead.id).eq("org_id", lead.org_id);
+    }
+    sent += result.scheduled;
+    skipped += result.skipped;
   }
   return { sent, skipped };
 }
