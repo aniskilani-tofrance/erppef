@@ -5,7 +5,7 @@ import type { LeadForBrevo } from "@/lib/leads/brevo";
 
 export type TwilioSmsResult =
   | { sent: true; sid: string | null }
-  | { sent: false; reason: "not_configured" | "automations_off" | "no_phone" | "already_sent" | "outside_sending_window" | "delivery_failed" };
+  | { sent: false; reason: "not_configured" | "automations_off" | "no_phone" | "already_sent" | "delivery_failed" };
 
 export function twilioConfigured(): boolean {
   return Boolean(
@@ -15,23 +15,12 @@ export function twilioConfigured(): boolean {
   );
 }
 
-/**
- * Conservative window for automated traffic to French businesses. Manual calls
- * remain available to the team, but the server never starts an automatic SMS
- * before 08:00 or at/after 21:30 Paris time.
- */
-export function isFrenchSmsSendingWindow(now = new Date()): boolean {
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Europe/Paris",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(now);
-  const hour = Number(parts.find((part) => part.type === "hour")?.value ?? "99");
-  const minute = Number(parts.find((part) => part.type === "minute")?.value ?? "99");
-  const minutes = hour * 60 + minute;
-  return minutes >= 8 * 60 && minutes < 21 * 60 + 30;
-}
+// Aucune restriction horaire : les messages de ce module sont transactionnels, ils
+// répondent à une action que le restaurateur vient d'accomplir — formulaire rempli,
+// créneau réservé, rendez-vous déplacé. Les horaires légaux français encadrent la
+// prospection commerciale, pas ces réponses. Un restaurateur qui s'inscrit à minuit
+// après son service reçoit donc son accusé de réception dans la seconde. Décision
+// d'Anis du 19/09/2026, en remplacement d'une plage 08h00-21h30 qui retardait tout.
 
 function deliveryMarker(code: SmsTemplateCode): string {
   return `[twilio:${code}]`;
@@ -55,7 +44,6 @@ export async function dispatchTwilioLeadSms(
   if (params.automatic && !automationsEnabled(params.settings)) return { sent: false, reason: "automations_off" };
   const phoneDigits = toWhatsAppNumber(params.lead.phone);
   if (!phoneDigits) return { sent: false, reason: "no_phone" };
-  if (params.automatic && !isFrenchSmsSendingWindow()) return { sent: false, reason: "outside_sending_window" };
 
   const marker = deliveryMarker(params.code);
   const { data: prior } = await supabase

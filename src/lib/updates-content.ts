@@ -26,6 +26,17 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-09-19-sms-instantanes",
+    date: "2026-09-19",
+    title: "Leads resto : les SMS partent désormais à toute heure",
+    summary: "La plage d'envoi de 8h00 à 21h30 est supprimée. Un restaurateur qui remplit le formulaire à minuit après son service reçoit son SMS dans la seconde, comme l'e-mail.",
+    items: [
+      { text: "Plus aucune attente : accusé de réception, confirmation de créneau et message après un rendez-vous manqué partent immédiatement, de jour comme de nuit. C'est la nature de ces messages qui le permet : ils répondent à une action que le restaurateur vient de faire, et les horaires légaux encadrent la prospection, pas les réponses.", roles: LEADS },
+      { text: "Le rappel de la veille reste calé sur son heure, évidemment. Et si un envoi échoue, il est repris automatiquement dans le quart d'heure.", roles: LEADS },
+    ],
+    training: [{ moduleId: "m1-leads", lessonId: "messages", label: "SMS, WhatsApp, email : ce qui part tout seul et ce que vous envoyez" }],
+  },
+  {
     id: "2026-09-19-journal-lead-lisible",
     date: "2026-09-19",
     title: "Leads resto : le journal d'une fiche se lit enfin d'un coup d'œil",
@@ -45,7 +56,7 @@ export const APP_UPDATES: AppUpdate[] = [
     summary: "L'ERP écrit lui-même au restaurateur aux moments clés (demande reçue, rendez-vous confirmé, rappel la veille et deux heures avant, rendez-vous manqué). Un interrupteur dans les Réglages décide si ces envois partent ou non.",
     items: [
       { text: "Réglages des leads → « Envois automatiques au prospect » : désactivés tant que la direction ne les arme pas. Tant que c'est désactivé, l'ERP n'écrit jamais au restaurateur tout seul et rien ne change pour vous.", roles: LEADS },
-      { text: "Une fois activés : accusé de réception à l'arrivée du formulaire, confirmation du créneau Calendly, rappels par email la veille et deux heures avant, message après un rendez-vous manqué. Les SMS ne partent qu'entre 8h00 et 21h30 ; ceux du soir sont repris le lendemain matin.", roles: LEADS },
+      { text: "Une fois activés : accusé de réception à l'arrivée du formulaire, confirmation du créneau Calendly, rappels par email la veille et deux heures avant, message après un rendez-vous manqué. Les SMS partent dans la seconde, à toute heure.", roles: LEADS },
       { text: "Le menu SMS de la fiche ne garde qu'un modèle à envoyer à la main (« rappel de créneau promis ») et il part maintenant depuis l'ERP, plus depuis votre téléphone. Chaque envoi reste tracé dans le journal de la fiche.", roles: LEADS },
       { text: "Nouveau bouton « Me l'attribuer » sur une fiche, lien « Réserver via le Calendly direction » prérempli avec le contact, et carte « Appel de qualification » quand un créneau est réservé.", roles: LEADS },
       { text: "Réglages des leads : le lien Calendly de direction se saisit désormais dans l'ERP, à côté du Calendly de qualification.", roles: TEAM },

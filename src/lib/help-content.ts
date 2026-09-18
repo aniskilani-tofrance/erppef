@@ -484,7 +484,7 @@ export const HELP_SECTIONS: HelpSection[] = [
         steps: [
           "Interrupteur : Leads → Réglages → « Envois automatiques au prospect ». Tant qu'il est sur « Désactivés », l'ERP n'écrit jamais au restaurateur de lui-même — utile pendant les tests. La direction l'active le jour du lancement de la campagne.",
           "Une fois activés : accusé de réception à l'arrivée du formulaire ; confirmation dès qu'un créneau Calendly est réservé ; rappel par email la veille et deux heures avant ; message le jour d'un rendez-vous manqué, avec le lien pour recaler.",
-          "Les SMS automatiques ne partent qu'entre 8h00 et 21h30 (heure de Paris). Un message qui tombe la nuit est envoyé le lendemain matin par le cron. Le même message n'est jamais envoyé deux fois à la même fiche : chaque envoi laisse une marque dans le journal.",
+          "Il n'y a aucune restriction d'horaire : ces messages répondent à une action que le restaurateur vient de faire, ils partent donc dans la seconde, de jour comme de nuit. Le même message n'est jamais envoyé deux fois à la même fiche : chaque envoi laisse une marque dans le journal.",
           "Si le restaurateur déplace ou annule son créneau Calendly, les rappels déjà programmés chez Brevo sont annulés puis reprogrammés sur le nouvel horaire. La fiche affiche « emails Brevo J-1 et H-2 programmés ».",
           "Avant d'activer : purger les leads de test, vérifier l'expéditeur Brevo (adresse et nom validés) et l'expéditeur Twilio (numéro ou nom d'expéditeur rattaché au service de messagerie). Sans les clés Brevo et Twilio en production, rien ne part, même interrupteur sur « Activés ».",
         ],

@@ -2,16 +2,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendDeferredLeadSms, sendLeadRdvSms } from "@/lib/leads/automations";
 
 // SMS transactionnels aux restaurateurs : rappel de rendez-vous de la veille, et reprise
-// des messages qui n'ont pas pu partir dans la plage autorisée.
+// des messages qui n'ont pas pu partir du premier coup.
 //
-// Pourquoi une route séparée du cron des alertes : celui-ci tourne à 05h30 UTC, soit
-// 07h30 à Paris en été et 06h30 en hiver — dans les deux cas AVANT l'ouverture de la
-// plage d'envoi de 08h00. Les SMS y étaient donc systématiquement refusés pour cause
-// d'heure interdite, et la reprise ne rattrapait jamais rien. Cette route tourne à
-// 07h15 UTC, soit 09h15 à Paris en été et 08h15 en hiver : dans la plage toute l'année,
-// changement d'heure compris. La formule Vercel du projet ne permet qu'un passage
-// quotidien ; avec un forfait supérieur, ajouter des passages à 12h15 et 17h15 UTC
-// réduirait d'autant le délai de rattrapage.
+// Les envois immédiats ne passent pas par ici : ils partent dans la seconde depuis le
+// point d'entrée des leads, sans restriction horaire. Cette route couvre les deux cas
+// qui demandent une horloge : le rappel de la veille pour les rendez-vous du lendemain,
+// et le rattrapage d'un message qu'une panne de Twilio ou une configuration absente
+// aurait empêché de partir. Elle tourne tous les quarts d'heure sur Vercel, doublée
+// toutes les deux heures par une action GitHub indépendante de la plateforme.
 
 export const dynamic = "force-dynamic";
 

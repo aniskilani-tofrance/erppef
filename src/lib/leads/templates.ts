@@ -62,7 +62,7 @@ export const SMS_TEMPLATES = [
     code: "demande_recue",
     delivery: "automatic",
     label: "SMS — demande de recrutement prise en compte",
-    when: "Immédiatement après le formulaire, pendant la plage d'envoi autorisée.",
+    when: "Immédiatement après le formulaire, à toute heure.",
     text: `Bonjour {prenom}, votre besoin de recrutement pour {restaurant} est bien pris en compte. Pour avancer sans vous déranger pendant le service, choisissez votre créneau ici : {calendly}. ParlerEmploi`,
   },
   {

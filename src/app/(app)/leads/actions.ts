@@ -267,7 +267,6 @@ export async function sendLeadSms(raw: { leadId: string; code: ManualSmsTemplate
     automations_off: "Les envois automatiques sont désactivés dans les réglages des leads.",
     no_phone: "Ce lead n'a pas de numéro de téléphone exploitable.",
     already_sent: "Ce modèle SMS a déjà été envoyé pour ce lead.",
-    outside_sending_window: "L'envoi automatique est bloqué hors plage horaire.",
     delivery_failed: "Twilio n'a pas pu envoyer le SMS. Réessayez dans quelques instants.",
   };
   return { ok: false, error: messages[result.reason] };
