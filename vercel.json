@@ -21,7 +21,7 @@
     },
     {
       "path": "/api/cron/leads-sms",
-      "schedule": "15 7,12,17 * * *"
+      "schedule": "15 7 * * *"
     }
   ],
   "git": {

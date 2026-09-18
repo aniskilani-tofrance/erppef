@@ -8,8 +8,10 @@ import { sendDeferredLeadSms, sendLeadRdvSms } from "@/lib/leads/automations";
 // 07h30 à Paris en été et 06h30 en hiver — dans les deux cas AVANT l'ouverture de la
 // plage d'envoi de 08h00. Les SMS y étaient donc systématiquement refusés pour cause
 // d'heure interdite, et la reprise ne rattrapait jamais rien. Cette route tourne à
-// 07h15, 12h15 et 17h15 UTC, ce qui tombe à l'intérieur de la plage toute l'année,
-// changement d'heure compris, et donne trois occasions de rattrapage par jour.
+// 07h15 UTC, soit 09h15 à Paris en été et 08h15 en hiver : dans la plage toute l'année,
+// changement d'heure compris. La formule Vercel du projet ne permet qu'un passage
+// quotidien ; avec un forfait supérieur, ajouter des passages à 12h15 et 17h15 UTC
+// réduirait d'autant le délai de rattrapage.
 
 export const dynamic = "force-dynamic";
 
