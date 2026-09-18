@@ -15,7 +15,7 @@ import { DEFAULT_LEAD_SETTINGS, MANUAL_SMS_TEMPLATE_CODES, type ManualSmsTemplat
 import {
   BREVO_LEAD_EVENTS,
   brevoEventForStatus,
-  cancelBrevoScheduledBatch,
+  cancelBrevoScheduledEmail,
   dispatchBrevoLeadEvent,
   scheduleBrevoAppointmentReminders,
   type LeadForBrevo,
@@ -396,10 +396,10 @@ export async function setLeadRdv(raw: z.infer<typeof rdvSchema>): Promise<Action
     .eq("org_id", orgId)
     .maybeSingle();
   await Promise.all([
-    cancelBrevoScheduledBatch(previous?.qualification_reminder_j1_batch_id),
-    cancelBrevoScheduledBatch(previous?.qualification_reminder_h2_batch_id),
-    cancelBrevoScheduledBatch(previous?.rdv_reminder_j1_batch_id),
-    cancelBrevoScheduledBatch(previous?.rdv_reminder_h2_batch_id),
+    cancelBrevoScheduledEmail(previous?.qualification_reminder_j1_batch_id),
+    cancelBrevoScheduledEmail(previous?.qualification_reminder_h2_batch_id),
+    cancelBrevoScheduledEmail(previous?.rdv_reminder_j1_batch_id),
+    cancelBrevoScheduledEmail(previous?.rdv_reminder_h2_batch_id),
   ]);
   const { data: updated, error } = await supabase
     .from("employer_leads")
@@ -465,8 +465,8 @@ export async function setRdvOutcome(raw: { leadId: string; outcome: "tenu" | "no
     .eq("org_id", orgId)
     .maybeSingle();
   await Promise.all([
-    cancelBrevoScheduledBatch(previous?.rdv_reminder_j1_batch_id),
-    cancelBrevoScheduledBatch(previous?.rdv_reminder_h2_batch_id),
+    cancelBrevoScheduledEmail(previous?.rdv_reminder_j1_batch_id),
+    cancelBrevoScheduledEmail(previous?.rdv_reminder_h2_batch_id),
   ]);
   const patch: Record<string, unknown> =
     d.outcome === "tenu"

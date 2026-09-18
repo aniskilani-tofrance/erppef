@@ -7,7 +7,7 @@ import { resolveLeadSettings, type LeadSettings } from "@/lib/leads/templates";
 import { leadRef, sourceLabel } from "@/lib/leads/status";
 import {
   BREVO_LEAD_EVENTS,
-  cancelBrevoScheduledBatch,
+  cancelBrevoScheduledEmail,
   dispatchBrevoLeadEvent,
   scheduleBrevoAppointmentReminders,
   type AppointmentReminderKind,
@@ -126,10 +126,11 @@ type ReminderBatchOwner = Pick<LeadForBrevo,
 >;
 
 async function cancelLeadReminderBatches(lead: ReminderBatchOwner, kind: AppointmentReminderKind) {
-  const batchIds = kind === "qualification"
+  // Les colonnes *_batch_id conservent l'identifiant renvoyé par Brevo à la programmation.
+  const cancelIds = kind === "qualification"
     ? [lead.qualification_reminder_j1_batch_id, lead.qualification_reminder_h2_batch_id]
     : [lead.rdv_reminder_j1_batch_id, lead.rdv_reminder_h2_batch_id];
-  await Promise.all(batchIds.filter(Boolean).map((batchId) => cancelBrevoScheduledBatch(batchId)));
+  await Promise.all(cancelIds.filter(Boolean).map((cancelId) => cancelBrevoScheduledEmail(cancelId)));
 }
 
 async function queueAppointmentReminders(

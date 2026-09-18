@@ -272,7 +272,7 @@ function deliveryMarker(eventName: BrevoLeadEvent): string {
   return `[brevo:${eventName}]`;
 }
 
-type BrevoApiResult = { messageId?: string; code?: string; message?: string };
+type BrevoApiResult = { messageId?: string; batchId?: string; code?: string; message?: string };
 
 async function callBrevo(
   apiKey: string,
@@ -374,7 +374,7 @@ export async function scheduleBrevoLeadEvent(
     scheduledAt: string;
     batchId?: string;
   },
-): Promise<DispatchResult & { batchId?: string }> {
+): Promise<DispatchResult & { cancelId?: string }> {
   const apiKey = process.env.BREVO_API_KEY?.trim();
   const email = cleanEmail(params.lead.email);
   if (!apiKey) return { sent: false, reason: "not_configured" };
@@ -400,38 +400,48 @@ export async function scheduleBrevoLeadEvent(
       console.error(`[brevo] ${params.eventName} scheduling failed`, response.result);
       return { sent: false, reason: "delivery_failed" };
     }
+    // Vérifié en production le 18/09/2026 : Brevo ignore le batchId fourni par le
+    // client et ne renvoie qu'un messageId ; une annulation par ce batchId répond 404.
+    // Seul l'identifiant renvoyé par Brevo permet d'annuler, d'où sa conservation.
+    const cancelId = response.result.batchId ?? response.result.messageId ?? null;
     const { error } = await supabase.from("employer_lead_events").insert({
       org_id: params.orgId,
       lead_id: params.lead.id,
       kind: "note",
       outcome: "autre",
-      note: `${deliveryMarker(params.eventName)} Email programmé via Brevo pour ${new Date(scheduledMs).toISOString()} (batch ${batchId})${response.result.messageId ? ` (${response.result.messageId})` : ""}.`,
+      note: `${deliveryMarker(params.eventName)} Email programmé via Brevo pour ${new Date(scheduledMs).toISOString()}${cancelId ? ` (${cancelId})` : " (identifiant d'annulation absent)"}.`,
     });
     if (error) console.error(`[brevo] ${params.eventName} journalisation impossible`, error.message);
-    return { sent: true, messageId: response.result.messageId ?? null, batchId };
+    if (!cancelId) console.error(`[brevo] ${params.eventName} programmé sans identifiant d'annulation`);
+    return { sent: true, messageId: response.result.messageId ?? null, ...(cancelId ? { cancelId } : {}) };
   } catch (error) {
     console.error(`[brevo] ${params.eventName} scheduling failed`, error);
     return { sent: false, reason: "delivery_failed" };
   }
 }
 
-/** Cancels a Brevo scheduled batch when a Calendly appointment is moved or canceled. */
-export async function cancelBrevoScheduledBatch(batchId: string | null | undefined): Promise<boolean> {
+/**
+ * Cancels a scheduled Brevo email when a Calendly appointment is moved or canceled.
+ * The identifier is the one Brevo returned when scheduling (a messageId such as
+ * `<…@smtp-relay.mailin.fr>`, hence the percent-encoding). A 404 means the message
+ * has already left or was already canceled: nothing left to do.
+ */
+export async function cancelBrevoScheduledEmail(cancelId: string | null | undefined): Promise<boolean> {
   const apiKey = process.env.BREVO_API_KEY?.trim();
-  if (!apiKey || !batchId) return false;
+  if (!apiKey || !cancelId) return false;
   try {
-    const response = await fetch(`https://api.brevo.com/v3/smtp/email/${encodeURIComponent(batchId)}`, {
+    const response = await fetch(`https://api.brevo.com/v3/smtp/email/${encodeURIComponent(cancelId)}`, {
       method: "DELETE",
       headers: { accept: "application/json", "api-key": apiKey },
       signal: AbortSignal.timeout(10_000),
     });
     if (!response.ok && response.status !== 404) {
-      console.error(`[brevo] scheduled batch cancellation failed: ${response.status}`);
+      console.error(`[brevo] scheduled email cancellation failed: ${response.status}`);
       return false;
     }
     return true;
   } catch (error) {
-    console.error("[brevo] scheduled batch cancellation failed", error);
+    console.error("[brevo] scheduled email cancellation failed", error);
     return false;
   }
 }
@@ -475,9 +485,9 @@ export async function scheduleBrevoAppointmentReminders(
       eventName: plan.eventName,
       scheduledAt: plan.scheduledAt,
     });
-    if (result.sent && result.batchId) {
+    if (result.sent && result.cancelId) {
       scheduled += 1;
-      patch[plan.batchColumn] = result.batchId;
+      patch[plan.batchColumn] = result.cancelId;
     } else {
       skipped += 1;
     }
