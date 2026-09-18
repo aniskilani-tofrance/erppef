@@ -39,11 +39,13 @@ export function LeadSettingsDialog({ settings, owners }: { settings: LeadSetting
       const r = await saveLeadSettings({
         nextGroupLabel: f.nextGroupLabel,
         calendlyUrl: f.calendlyUrl,
+        directorCalendlyUrl: f.directorCalendlyUrl,
         slot1: f.slot1,
         slot2: f.slot2,
         directorName: f.directorName,
         notifyEmail: f.notifyEmail,
         defaultOwnerUserId: f.defaultOwnerUserId,
+        automations: f.automations === "on" ? "on" : "off",
         inboundTokenAction: tokenAction,
       });
       if (!r.ok) {
@@ -72,8 +74,27 @@ export function LeadSettingsDialog({ settings, owners }: { settings: LeadSetting
               <Input id="ls-group" value={f.nextGroupLabel} onChange={(e) => set("nextGroupLabel", e.target.value)} placeholder="le 2 novembre" />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="ls-calendly">Lien Calendly (proposé dans les SMS et emails)</Label>
+              <Label htmlFor="ls-calendly">Lien Calendly de qualification (SMS et emails prospects)</Label>
               <Input id="ls-calendly" value={f.calendlyUrl} onChange={(e) => set("calendlyUrl", e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="ls-automations">Envois automatiques au prospect (emails et SMS)</Label>
+              <Select value={f.automations === "on" ? "on" : "off"} onValueChange={(v) => set("automations", v)}>
+                <SelectTrigger id="ls-automations"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="off">Désactivés — seuls les envois faits à la main partent</SelectItem>
+                  <SelectItem value="on">Activés — accusé de réception, confirmation, rappels J-1 et H-2, no-show</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                À activer seulement quand la campagne démarre : les leads de test doivent être purgés et les expéditeurs Brevo et Twilio vérifiés.
+                Tant que c’est désactivé, l’ERP n’écrit jamais au prospect tout seul.
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="ls-director-calendly">Lien Calendly de direction (après qualification)</Label>
+              <Input id="ls-director-calendly" value={f.directorCalendlyUrl} onChange={(e) => set("directorCalendlyUrl", e.target.value)} />
+              <p className="text-xs text-muted-foreground">Utilisé par le conseiller depuis la fiche lead pour réserver le rendez-vous avec la direction.</p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">

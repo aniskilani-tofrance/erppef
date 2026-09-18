@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ShieldAlert } from "lucide-react";
+import { ArrowLeft, ExternalLink, ShieldAlert } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -12,13 +12,14 @@ import {
   potentialAmount, rdvModeLabel, sourceLabel,
 } from "@/lib/leads/status";
 import { formatPhone } from "@/lib/admission/phone";
+import { directorCalendlyLink } from "@/lib/leads/templates";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScoreBadge, SegmentBadge } from "@/components/leads/lead-badges";
 import { LeadFormDialog } from "@/components/leads/lead-form-dialog";
 import { LeadEventDialog, type LeadEventContext } from "@/components/leads/lead-event-dialog";
 import { LeadQuickActions } from "@/components/leads/lead-quick-actions";
 import { LeadRdvDialog, RdvOutcomeButtons } from "@/components/leads/lead-rdv-dialog";
-import { DeleteLeadButton, LeadStatusSelect, NextActionEditor, OwnerSelect } from "@/components/leads/lead-status-controls";
+import { ClaimLeadButton, DeleteLeadButton, LeadStatusSelect, NextActionEditor, OwnerSelect } from "@/components/leads/lead-status-controls";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Lead — ERP PEF" };
@@ -69,6 +70,9 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
     today,
   };
   const rdvUpcoming = lead.rdv_at && lead.rdv_outcome === "a_venir";
+  const directorBookingUrl = directorCalendlyLink(lead, settings);
+  const qualificationRemindersQueued = Boolean(lead.qualification_reminder_j1_batch_id || lead.qualification_reminder_h2_batch_id);
+  const rdvRemindersQueued = Boolean(lead.rdv_reminder_j1_batch_id || lead.rdv_reminder_h2_batch_id);
 
   return (
     <div className="mx-auto max-w-5xl space-y-5">
@@ -89,6 +93,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <LeadStatusSelect leadId={lead.id} status={lead.status} />
+          <ClaimLeadButton leadId={lead.id} assignedToMe={lead.owner_user_id === userId} />
           <OwnerSelect leadId={lead.id} ownerUserId={lead.owner_user_id} owners={owners} />
         </div>
       </div>
@@ -136,18 +141,45 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
                 <p className="text-sm">
                   <span className="font-medium">{fmtDateTime(lead.rdv_at)}</span> — {rdvModeLabel(lead.rdv_mode)}
                   <span className="ml-2 text-xs text-muted-foreground">
-                    {lead.rdv_outcome === "tenu" ? "tenu" : lead.rdv_outcome === "no_show" ? "manqué (no-show)" : lead.rdv_outcome === "reporte" ? "reporté" : lead.rdv_reminder_sent_at ? "rappel envoyé" : "rappel la veille à envoyer (SMS n°3)"}
+                    {lead.rdv_outcome === "tenu" ? "tenu" : lead.rdv_outcome === "no_show" ? "manqué (no-show)" : lead.rdv_outcome === "reporte" ? "reporté" : rdvRemindersQueued ? "emails Brevo J-1 et H-2 programmés" : lead.rdv_reminder_sent_at ? "rappel envoyé" : "rappels à programmer"}
                   </span>
                 </p>
               ) : (
                 <p className="text-sm text-muted-foreground">Pas encore de RDV. Deux créneaux hors service : {settings.slot1} ou {settings.slot2}.</p>
               )}
               <div className="flex flex-wrap items-center gap-2">
+                {!isFinalStatus(lead.status) && (
+                  <a
+                    href={directorBookingUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground"
+                    title="Ouvre le Calendly de direction avec le nom et l’email du lead préremplis"
+                  >
+                    <ExternalLink className="mr-2 h-4 w-4" />Réserver via le Calendly direction
+                  </a>
+                )}
                 {!isFinalStatus(lead.status) && <LeadRdvDialog leadId={lead.id} slot1={settings.slot1} slot2={settings.slot2} hasRdv={Boolean(lead.rdv_at)} />}
                 {rdvUpcoming && <RdvOutcomeButtons leadId={lead.id} />}
               </div>
             </CardContent>
           </Card>
+
+          {lead.qualification_at && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Appel de qualification</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm">
+                  <span className="font-medium">{fmtDateTime(lead.qualification_at)}</span>
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    {qualificationRemindersQueued ? "emails Brevo J-1 et H-2 programmés" : "rappels en attente de programmation"}
+                  </span>
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader className="flex-row items-center justify-between pb-2">

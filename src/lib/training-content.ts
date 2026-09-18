@@ -757,7 +757,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
     objectives: [
       "Rappeler chaque nouveau lead sous 24 h, aux bonnes heures",
       "Qualifier en 7 questions et noter le résultat en 2 minutes",
-      "Envoyer les SMS et emails du kit sans rien réécrire",
+      "Savoir quels messages partent tout seuls et lesquels restent de votre main",
       "Poser un RDV qui se tient, et relancer J0 → J10 sans harceler",
     ],
     lessons: [
@@ -792,16 +792,17 @@ export const TRAINING_MODULES: TrainingModule[] = [
       },
       {
         id: "messages",
-        title: "SMS, WhatsApp, email : les modèles du kit",
-        intro: "Vous n'écrivez jamais un message de zéro : chaque modèle du kit est pré-rempli avec le prénom, les postes, le RDV, le prochain groupe et le Calendly.",
+        title: "SMS, WhatsApp, email : ce qui part tout seul et ce que vous envoyez",
+        intro: "Quand la direction a activé les envois automatiques, l'ERP écrit lui-même au restaurateur aux moments clés. Vous, vous gardez la parole : l'appel, les emails du kit et un SMS d'exception.",
         steps: [
-          "Sur la fiche : SMS → « SMS n°1 — après appel manqué » s'ouvre dans Messages, déjà écrit. Relisez, envoyez. Le journal note « SMS envoyé » et compte une tentative.",
-          "WhatsApp : mêmes textes, pour les restaurateurs qui y répondent mieux. Email : confirmation de RDV (n°1), documentation (n°2), relance J3 (n°3), rupture J10 (n°4), réponse écrite (n°5), no-show (n°6).",
-          "Les mots viennent de la pub parlerresto : « formé directement dans votre restaurant », « 3 jours chez vous / 2 jours chez nous », « 0 € de reste à charge sur la formation ».",
-          "Interdits, même par écrit : « 100 % gratuit », « aucun engagement », un tarif, un montant AKTO, une promesse sur l'attestation HACCP ou les titres de séjour.",
+          "Ce qui part sans vous : accusé de réception dès le formulaire, confirmation du créneau Calendly, rappel la veille et deux heures avant, message après un rendez-vous manqué. Chaque envoi est écrit dans le journal de la fiche — lisez-le avant de rappeler, le restaurateur l'a déjà reçu.",
+          "Les SMS automatiques ne partent qu'entre 8h00 et 21h30 : un lead de 23h reçoit son SMS le lendemain matin. Un même message n'est jamais envoyé deux fois à la même fiche.",
+          "Ce que vous envoyez à la main : le menu SMS ne garde que « rappel de créneau promis » (le jour où vous avez promis d'appeler à 15h) et il part depuis l'ERP, pas depuis votre téléphone. WhatsApp reste disponible pour les restaurateurs qui y répondent mieux.",
+          "Email : confirmation de RDV (n°1), documentation (n°2), relance J3 (n°3), rupture J10 (n°4), réponse écrite (n°5), no-show (n°6) — toujours pré-remplis, toujours relus par vous.",
+          "Les mots viennent de la pub parlerresto : « formé directement dans votre restaurant », « 3 jours chez vous / 2 jours chez nous », « 0 € de reste à charge sur la formation ». Interdits, même par écrit : « 100 % gratuit », « aucun engagement », un tarif, un montant AKTO, une promesse sur l'attestation HACCP ou les titres de séjour.",
         ],
         tip: "Question technique par écrit ? Ne répondez pas sur le fond : proposez l'appel de 5 minutes hors service.",
-        practice: { instruction: "Sur un lead, ouvrez le menu SMS et lisez les 5 modèles, puis le menu Email et ses 6 modèles. Repérez « n°3 — rappel de RDV » : c'est celui de la veille.", href: "/leads", hrefLabel: "Ouvrir les leads" },
+        practice: { instruction: "Ouvrez une fiche et lisez son journal : repérez les lignes « SMS envoyé via Twilio » et « Email envoyé via Brevo ». Ouvrez ensuite le menu SMS : un seul modèle, « rappel de créneau promis ».", href: "/leads", hrefLabel: "Ouvrir les leads" },
       },
       {
         id: "rdv",

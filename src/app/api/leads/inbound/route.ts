@@ -3,8 +3,17 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendMail } from "@/lib/mailer";
 import { normalizeInbound, type InboundCalendly, type InboundLead } from "@/lib/leads/inbound";
 import { toWhatsAppNumber } from "@/lib/admission/phone";
-import { resolveLeadSettings } from "@/lib/leads/templates";
+import { resolveLeadSettings, type LeadSettings } from "@/lib/leads/templates";
 import { leadRef, sourceLabel } from "@/lib/leads/status";
+import {
+  BREVO_LEAD_EVENTS,
+  cancelBrevoScheduledBatch,
+  dispatchBrevoLeadEvent,
+  scheduleBrevoAppointmentReminders,
+  type AppointmentReminderKind,
+  type LeadForBrevo,
+} from "@/lib/leads/brevo";
+import { dispatchTwilioLeadSms } from "@/lib/leads/twilio";
 
 // Point d'entrée des leads : POST /api/leads/inbound?token=<jeton de l'organisation>
 // Accepte JSON ou formulaire (Brevo, Make/Meta, landing Manus, Calendly). Le jeton
@@ -77,8 +86,8 @@ export async function POST(req: NextRequest) {
   const ownerId = settings.defaultOwnerUserId || null;
 
   try {
-    if (inbound.kind === "calendly") return NextResponse.json(await handleCalendly(admin, org, inbound, ownerId, settings.notifyEmail));
-    return NextResponse.json(await handleLead(admin, org, inbound, ownerId, settings.notifyEmail));
+    if (inbound.kind === "calendly") return NextResponse.json(await handleCalendly(admin, org, inbound, ownerId, settings.notifyEmail, settings));
+    return NextResponse.json(await handleLead(admin, org, inbound, ownerId, settings.notifyEmail, settings));
   } catch (e) {
     return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : "Erreur" }, { status: 500 });
   }
@@ -86,17 +95,22 @@ export async function POST(req: NextRequest) {
 
 type Admin = ReturnType<typeof createAdminClient>;
 
+async function loadLeadForBrevo(admin: Admin, leadId: string): Promise<LeadForBrevo | null> {
+  const { data } = await admin.from("employer_leads").select("*").eq("id", leadId).maybeSingle();
+  return (data as LeadForBrevo | null) ?? null;
+}
+
 async function findExisting(admin: Admin, orgId: string, email: string | null, phone: string | null, days: number | null) {
   const since = days ? new Date(Date.now() - days * 86_400_000).toISOString() : null;
   if (email?.includes("@")) {
-    let q = admin.from("employer_leads").select("id, lead_no, status, campaign").eq("org_id", orgId).ilike("email", email.trim()).order("received_at", { ascending: false }).limit(1);
+    let q = admin.from("employer_leads").select("id, lead_no, status, campaign, qualification_at, qualification_reminder_j1_batch_id, qualification_reminder_h2_batch_id, rdv_at, rdv_reminder_j1_batch_id, rdv_reminder_h2_batch_id").eq("org_id", orgId).ilike("email", email.trim()).order("received_at", { ascending: false }).limit(1);
     if (since) q = q.gte("received_at", since);
     const { data } = await q;
     if (data?.[0]) return data[0];
   }
   const digits = toWhatsAppNumber(phone);
   if (digits) {
-    let q = admin.from("employer_leads").select("id, lead_no, status, campaign, phone").eq("org_id", orgId).not("phone", "is", null).order("received_at", { ascending: false }).limit(500);
+    let q = admin.from("employer_leads").select("id, lead_no, status, campaign, phone, qualification_at, qualification_reminder_j1_batch_id, qualification_reminder_h2_batch_id, rdv_at, rdv_reminder_j1_batch_id, rdv_reminder_h2_batch_id").eq("org_id", orgId).not("phone", "is", null).order("received_at", { ascending: false }).limit(500);
     if (since) q = q.gte("received_at", since);
     const { data } = await q;
     return data?.find((l) => toWhatsAppNumber(l.phone) === digits) ?? null;
@@ -104,7 +118,44 @@ async function findExisting(admin: Admin, orgId: string, email: string | null, p
   return null;
 }
 
-async function handleLead(admin: Admin, org: Org, lead: InboundLead, ownerId: string | null, notifyEmail: string) {
+type ReminderBatchOwner = Pick<LeadForBrevo,
+  | "qualification_reminder_j1_batch_id"
+  | "qualification_reminder_h2_batch_id"
+  | "rdv_reminder_j1_batch_id"
+  | "rdv_reminder_h2_batch_id"
+>;
+
+async function cancelLeadReminderBatches(lead: ReminderBatchOwner, kind: AppointmentReminderKind) {
+  const batchIds = kind === "qualification"
+    ? [lead.qualification_reminder_j1_batch_id, lead.qualification_reminder_h2_batch_id]
+    : [lead.rdv_reminder_j1_batch_id, lead.rdv_reminder_h2_batch_id];
+  await Promise.all(batchIds.filter(Boolean).map((batchId) => cancelBrevoScheduledBatch(batchId)));
+}
+
+async function queueAppointmentReminders(
+  admin: Admin,
+  orgId: string,
+  leadId: string,
+  kind: AppointmentReminderKind,
+  appointmentAt: string | null,
+  settings: LeadSettings,
+) {
+  if (!appointmentAt) return;
+  const lead = await loadLeadForBrevo(admin, leadId);
+  if (!lead) return;
+  const result = await scheduleBrevoAppointmentReminders(admin, {
+    orgId,
+    lead,
+    settings,
+    kind,
+    appointmentAt,
+  });
+  if (Object.keys(result.patch).length) {
+    await admin.from("employer_leads").update(result.patch).eq("id", leadId).eq("org_id", orgId);
+  }
+}
+
+async function handleLead(admin: Admin, org: Org, lead: InboundLead, ownerId: string | null, notifyEmail: string, settings: LeadSettings) {
   const existing = await findExisting(admin, org.id, lead.email, lead.phone, 30);
   if (existing) {
     await admin.from("employer_lead_events").insert({
@@ -134,13 +185,27 @@ async function handleLead(admin: Admin, org: Org, lead: InboundLead, ownerId: st
       owner_user_id: ownerId,
       status: "nouveau",
     })
-    .select("id, lead_no")
+    .select("*")
     .single();
   if (error || !data) throw new Error(error?.message ?? "Création impossible");
 
   await admin.from("employer_lead_events").insert({
     org_id: org.id, lead_id: data.id, kind: "import", outcome: null,
     note: `Formulaire reçu — ${sourceLabel(lead.source)}${lead.campaign ? ` (${lead.campaign})` : ""}`,
+  });
+
+  await dispatchBrevoLeadEvent(admin, {
+    orgId: org.id,
+    lead: data as LeadForBrevo,
+    settings,
+    eventName: BREVO_LEAD_EVENTS.nouveau,
+  });
+  await dispatchTwilioLeadSms(admin, {
+    orgId: org.id,
+    lead: data as LeadForBrevo,
+    settings,
+    code: "demande_recue",
+    automatic: true,
   });
 
   if (notifyEmail) {
@@ -179,22 +244,33 @@ function fmtWhen(iso: string | null): string {
   return iso ? new Date(iso).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Paris" }) : "";
 }
 
-async function handleSetterCall(admin: Admin, org: Org, c: InboundCalendly, ownerId: string | null, notifyEmail: string) {
+async function handleSetterCall(admin: Admin, org: Org, c: InboundCalendly, ownerId: string | null, notifyEmail: string, settings: LeadSettings) {
   const existing = await findExisting(admin, org.id, c.email, c.phone, null);
   const when = fmtWhen(c.startsAt);
   if (c.action === "canceled") {
     if (!existing) return { ok: true, ignored: true, reason: "Annulation Calendly sans fiche correspondante" };
-    await admin.from("employer_leads").update({ next_action: "Créneau d'appel Calendly annulé : rappeler", next_action_on: today() }).eq("id", existing.id);
+    await cancelLeadReminderBatches(existing, "qualification");
+    await admin.from("employer_leads").update({
+      qualification_at: null,
+      qualification_reminder_j1_batch_id: null,
+      qualification_reminder_h2_batch_id: null,
+      next_action: "Créneau d'appel Calendly annulé : rappeler",
+      next_action_on: today(),
+    }).eq("id", existing.id);
     await admin.from("employer_lead_events").insert({ org_id: org.id, lead_id: existing.id, kind: "note", outcome: "autre", note: `Créneau d'appel Calendly annulé${c.cancelReason ? ` — ${c.cancelReason}` : ""}` });
     return { ok: true, leadId: existing.id, ref: leadRef(existing.lead_no), canceled: true };
   }
   const patch = {
+    qualification_at: c.startsAt,
+    qualification_reminder_j1_batch_id: null,
+    qualification_reminder_h2_batch_id: null,
     next_action: `Appel de qualification réservé via Calendly${when ? ` — ${when}` : ""}`,
     next_action_on: c.startsAt ? new Date(c.startsAt).toLocaleDateString("sv-SE", { timeZone: "Europe/Paris" }) : today(),
   };
   let leadId: string;
   let leadNo: number | null;
   if (existing) {
+    await cancelLeadReminderBatches(existing, "qualification");
     await admin.from("employer_leads").update({ ...patch, ...(existing.status === "nouveau" ? { status: "a_rappeler" } : {}) }).eq("id", existing.id);
     leadId = existing.id;
     leadNo = existing.lead_no;
@@ -224,6 +300,17 @@ async function handleSetterCall(admin: Admin, org: Org, c: InboundCalendly, owne
     org_id: org.id, lead_id: leadId, kind: "note", outcome: "rappel_convenu",
     note: `Créneau d'appel réservé via Calendly${when ? ` — ${when}` : ""}${c.eventName ? ` (${c.eventName})` : ""}${c.answers ? ` · ${c.answers}` : ""}`,
   });
+  const leadForSms = await loadLeadForBrevo(admin, leadId);
+  if (leadForSms) {
+    await dispatchTwilioLeadSms(admin, {
+      orgId: org.id,
+      lead: leadForSms,
+      settings,
+      code: "qualification_reservee",
+      automatic: true,
+    });
+  }
+  await queueAppointmentReminders(admin, org.id, leadId, "qualification", c.startsAt, settings);
   if (notifyEmail) {
     await sendMail({
       to: notifyEmail,
@@ -234,12 +321,18 @@ async function handleSetterCall(admin: Admin, org: Org, c: InboundCalendly, owne
   return { ok: true, leadId, ref: leadRef(leadNo), setterCall: true, at: c.startsAt };
 }
 
-async function handleCalendly(admin: Admin, org: Org, c: InboundCalendly, ownerId: string | null, notifyEmail: string) {
-  if (isSetterCall(c, notifyEmail)) return handleSetterCall(admin, org, c, ownerId, notifyEmail);
+async function handleCalendly(admin: Admin, org: Org, c: InboundCalendly, ownerId: string | null, notifyEmail: string, settings: LeadSettings) {
+  if (isSetterCall(c, notifyEmail)) return handleSetterCall(admin, org, c, ownerId, notifyEmail, settings);
   const existing = await findExisting(admin, org.id, c.email, c.phone, null);
   if (c.action === "canceled") {
     if (!existing) return { ok: true, ignored: true, reason: "Annulation Calendly sans fiche correspondante" };
-    await admin.from("employer_leads").update({ rdv_outcome: "reporte", ...(existing.status === "rdv_pris" ? { status: "qualifie", next_action: "Reposer deux créneaux hors service", next_action_on: today() } : {}) }).eq("id", existing.id);
+    await cancelLeadReminderBatches(existing, "rdv");
+    await admin.from("employer_leads").update({
+      rdv_outcome: "reporte",
+      rdv_reminder_j1_batch_id: null,
+      rdv_reminder_h2_batch_id: null,
+      ...(existing.status === "rdv_pris" ? { status: "qualifie", next_action: "Reposer deux créneaux hors service", next_action_on: today() } : {}),
+    }).eq("id", existing.id);
     await admin.from("employer_lead_events").insert({ org_id: org.id, lead_id: existing.id, kind: "rdv", outcome: "autre", note: `RDV annulé via Calendly${c.cancelReason ? ` — ${c.cancelReason}` : ""}` });
     return { ok: true, leadId: existing.id, ref: leadRef(existing.lead_no), canceled: true };
   }
@@ -249,12 +342,19 @@ async function handleCalendly(admin: Admin, org: Org, c: InboundCalendly, ownerI
     rdv_mode: c.locationKind ?? "telephone",
     rdv_outcome: "a_venir",
     rdv_reminder_sent_at: null,
+    rdv_reminder_j1_batch_id: null,
+    rdv_reminder_h2_batch_id: null,
+    qualification_at: null,
+    qualification_reminder_j1_batch_id: null,
+    qualification_reminder_h2_batch_id: null,
     next_action: "SMS de rappel la veille du RDV (SMS n°3)",
     next_action_on: c.startsAt ? addDays(c.startsAt.slice(0, 10), -1) : today(),
   };
   let leadId: string;
   let leadNo: number | null;
   if (existing) {
+    await cancelLeadReminderBatches(existing, "qualification");
+    await cancelLeadReminderBatches(existing, "rdv");
     await admin.from("employer_leads").update({ ...rdvPatch, ...(FINAL.includes(existing.status) ? {} : { status: "rdv_pris" }) }).eq("id", existing.id);
     leadId = existing.id;
     leadNo = existing.lead_no;
@@ -284,6 +384,23 @@ async function handleCalendly(admin: Admin, org: Org, c: InboundCalendly, ownerI
     org_id: org.id, lead_id: leadId, kind: "rdv", outcome: "rdv_pose",
     note: `RDV pris via Calendly${c.startsAt ? ` — ${new Date(c.startsAt).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Paris" })}` : ""}${c.answers ? ` · ${c.answers}` : ""}`,
   });
+  const leadForBrevo = await loadLeadForBrevo(admin, leadId);
+  if (leadForBrevo?.status === "rdv_pris") {
+    await dispatchBrevoLeadEvent(admin, {
+      orgId: org.id,
+      lead: leadForBrevo,
+      settings,
+      eventName: BREVO_LEAD_EVENTS.rdvPris,
+    });
+    await dispatchTwilioLeadSms(admin, {
+      orgId: org.id,
+      lead: leadForBrevo,
+      settings,
+      code: "confirmation_rdv",
+      automatic: true,
+    });
+  }
+  await queueAppointmentReminders(admin, org.id, leadId, "rdv", c.startsAt, settings);
   if (notifyEmail) {
     await sendMail({
       to: notifyEmail,

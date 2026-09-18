@@ -7,6 +7,9 @@ import { buildMeetingReminderMessage, formatMeetingWhen, textToHtml } from "@/li
 import { loadTemplates } from "@/lib/admission/load-templates";
 import { announceUpdatesEverywhere, type AnnounceResult } from "@/lib/updates-announce";
 import { sendEvaluationReminders } from "@/lib/evaluations/reminders";
+import { scheduleBrevoAppointmentReminders, type AppointmentReminderKind, type LeadForBrevo } from "@/lib/leads/brevo";
+import { resolveLeadSettings } from "@/lib/leads/templates";
+import { sendDeferredLeadSms, sendLeadRdvSms } from "@/lib/leads/automations";
 import {
   ABSENCE_ALERT_THRESHOLD,
   computeLearnerStats,
@@ -90,6 +93,9 @@ export async function GET(request: Request) {
   // + relance des formateurs sur leurs feuilles non clôturées. Jamais bloquant.
   let reminders: { sent: number; skippedNoEmail: number } = { sent: 0, skippedNoEmail: 0 };
   let meetingReminders: { sent: number; skippedNoEmail: number } = { sent: 0, skippedNoEmail: 0 };
+  let leadRdvEmails = { sent: 0, skipped: 0 };
+  let leadRdvSms = { sent: 0, skipped: 0 };
+  let leadDeferredSms = { sent: 0, skipped: 0 };
   let trainerRelances = 0;
   // Rappels aux formateurs avant les jalons d'évaluation (J-7, J-1)
   let evaluationReminders = 0;
@@ -121,6 +127,21 @@ export async function GET(request: Request) {
     } catch (e) {
       console.error("[évaluations]", e instanceof Error ? e.message : e);
     }
+  }
+  try {
+    leadRdvEmails = await sendLeadRdvEmails(supabase);
+  } catch (e) {
+    console.error("[leads/brevo]", e instanceof Error ? e.message : e);
+  }
+  try {
+    leadRdvSms = await sendLeadRdvSms(supabase);
+  } catch (e) {
+    console.error("[leads/twilio]", e instanceof Error ? e.message : e);
+  }
+  try {
+    leadDeferredSms = await sendDeferredLeadSms(supabase);
+  } catch (e) {
+    console.error("[leads/twilio deferred]", e instanceof Error ? e.message : e);
   }
 
   // Le 1er du mois : la veille Qualiopi (critère 6) du mois écoulé a-t-elle été tenue ?
@@ -181,7 +202,7 @@ export async function GET(request: Request) {
   });
 
   if (atRisk.length === 0 && sheets.length === 0 && !watchReminder && admissionLines.length === 0 && !leaveLine) {
-    return Response.json({ sent: false, reason: "rien à signaler", backup, reminders, meetingReminders, trainerRelances, evaluationReminders, updatesAnnounced });
+    return Response.json({ sent: false, reason: "rien à signaler", backup, reminders, meetingReminders, leadRdvEmails, leadRdvSms, leadDeferredSms, trainerRelances, evaluationReminders, updatesAnnounced });
   }
 
   const lines = [
@@ -214,7 +235,58 @@ export async function GET(request: Request) {
   if (!res.ok) {
     return Response.json({ sent: false, error: await res.text() }, { status: 500 });
   }
-  return Response.json({ sent: true, atRisk: atRisk.length, unclosedSheets: sheets.length, admission: admissionLines.length, reminders, meetingReminders, trainerRelances, evaluationReminders, updatesAnnounced });
+  return Response.json({ sent: true, atRisk: atRisk.length, unclosedSheets: sheets.length, admission: admissionLines.length, reminders, meetingReminders, leadRdvEmails, leadRdvSms, leadDeferredSms, trainerRelances, evaluationReminders, updatesAnnounced });
+}
+
+// Brevo ne permet de programmer un message transactionnel que dans les 72 heures.
+// Le cron quotidien introduit les créneaux éloignés dans cette fenêtre ; Brevo assure
+// ensuite l'heure précise J-1 et H-2. Les batch IDs stockés sur la fiche empêchent
+// tout doublon et permettent l'annulation lors d'un report Calendly.
+async function sendLeadRdvEmails(
+  supabase: ReturnType<typeof createAdminClient>,
+): Promise<{ sent: number; skipped: number }> {
+  if (!process.env.BREVO_API_KEY) return { sent: 0, skipped: 0 };
+  const now = new Date().toISOString();
+  const horizon = new Date(Date.now() + 72 * 3_600_000).toISOString();
+  const { data: leads } = await supabase
+    .from("employer_leads")
+    .select("*")
+    .not("status", "in", "(gagne,perdu,hors_cible)")
+    .or(`and(rdv_at.gte.${now},rdv_at.lte.${horizon}),and(qualification_at.gte.${now},qualification_at.lte.${horizon})`);
+  if (!leads?.length) return { sent: 0, skipped: 0 };
+
+  const orgIds = [...new Set(leads.map((lead) => lead.org_id as string).filter(Boolean))];
+  const { data: organizations } = await supabase.from("organizations").select("id, settings").in("id", orgIds);
+  const settingsByOrg = new Map((organizations ?? []).map((org) => [org.id as string, resolveLeadSettings(org.settings)]));
+
+  let sent = 0;
+  let skipped = 0;
+  for (const lead of leads) {
+    const settings = settingsByOrg.get(lead.org_id as string);
+    if (!settings) {
+      skipped += 1;
+      continue;
+    }
+    const kind: AppointmentReminderKind = lead.status === "rdv_pris" ? "rdv" : "qualification";
+    const appointmentAt = kind === "rdv" ? lead.rdv_at : lead.qualification_at;
+    if (!appointmentAt) {
+      skipped += 1;
+      continue;
+    }
+    const result = await scheduleBrevoAppointmentReminders(supabase, {
+      orgId: lead.org_id as string,
+      lead: lead as LeadForBrevo,
+      settings,
+      kind,
+      appointmentAt,
+    });
+    if (Object.keys(result.patch).length) {
+      await supabase.from("employer_leads").update(result.patch).eq("id", lead.id).eq("org_id", lead.org_id);
+    }
+    sent += result.scheduled;
+    skipped += result.skipped;
+  }
+  return { sent, skipped };
 }
 
 // ── Parcours d'admission : alertes du matin ──────────────────────────────────

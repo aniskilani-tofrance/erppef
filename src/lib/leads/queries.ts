@@ -40,10 +40,15 @@ export type LeadRow = {
   attempts: number;
   next_action: string | null;
   next_action_on: string | null;
+  qualification_at: string | null;
+  qualification_reminder_j1_batch_id: string | null;
+  qualification_reminder_h2_batch_id: string | null;
   rdv_at: string | null;
   rdv_mode: string | null;
   rdv_outcome: string | null;
   rdv_reminder_sent_at: string | null;
+  rdv_reminder_j1_batch_id: string | null;
+  rdv_reminder_h2_batch_id: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -53,7 +58,8 @@ export const LEAD_COLUMNS =
   "id, lead_no, received_at, source, campaign, company, segment, contact_name, contact_role, phone, email, city, postal_code, " +
   "positions, positions_count, contract_type, hours_per_week, hiring_horizon, hiring_deadline, decision_maker, haccp_status, covers, " +
   "team_size, pain, score, status, lost_reason, offer, owner_user_id, first_contact_at, last_contact_at, attempts, next_action, " +
-  "next_action_on, rdv_at, rdv_mode, rdv_outcome, rdv_reminder_sent_at, notes, created_at, updated_at";
+  "next_action_on, qualification_at, qualification_reminder_j1_batch_id, qualification_reminder_h2_batch_id, rdv_at, rdv_mode, rdv_outcome, " +
+  "rdv_reminder_sent_at, rdv_reminder_j1_batch_id, rdv_reminder_h2_batch_id, notes, created_at, updated_at";
 
 export type LeadEventRow = {
   id: string;
