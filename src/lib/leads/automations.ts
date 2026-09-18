@@ -63,7 +63,7 @@ export async function sendLeadRdvSms(supabase: SupabaseClient): Promise<Automate
 export function deferredSmsCode(lead: Pick<LeadAutomationRow, "status" | "rdv_outcome" | "next_action">) {
   // L'accusé de réception d'un lead encore « nouveau » n'est volontairement PAS repris ici :
   // il obéit au délai de courtoisie de sendPendingLeadIntro, qui laisse au restaurateur le
-  // temps de réserver son créneau sur la page de remerciement avant qu'on l'y invite.
+  // temps de réserver son créneau dans le Calendly de la landing avant qu'on l'y invite.
   if (lead.rdv_outcome === "no_show") return "no_show" as const;
   if (lead.status === "rdv_pris") return "confirmation_rdv" as const;
   if (lead.status === "a_rappeler" && /calendly|qualification/i.test(lead.next_action ?? "")) {
@@ -113,13 +113,14 @@ export async function sendDeferredLeadSms(supabase: SupabaseClient): Promise<Aut
   return { sent, skipped };
 }
 
-/** Délai laissé au restaurateur pour réserver son créneau sur la page de remerciement. */
+/** Délai laissé au restaurateur pour réserver son créneau dans le Calendly de la landing. */
 export const DELAI_AVANT_INVITATION_MS = 10 * 60_000;
 
 /**
  * L'accusé de réception invite à choisir un créneau de qualification. Il ne doit donc
- * partir que vers ceux qui n'en ont pas choisi : le formulaire de la landing renvoie sur
- * une page qui porte le Calendly, et la plupart réservent dans la minute. On laisse dix
+ * partir que vers ceux qui n'en ont pas choisi : sur la landing, le formulaire s'efface
+ * une fois validé et le Calendly apparaît à sa place, dans la même section, si bien que
+ * la plupart réservent dans la minute sans même changer de page. On leur laisse dix
  * minutes, puis on écrit à ceux qui sont partis sans réserver. Les marques de journal
  * rendent l'opération idempotente, et ceux qui réservent entre-temps ne reçoivent rien.
  */

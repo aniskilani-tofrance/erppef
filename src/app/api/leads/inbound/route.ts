@@ -195,13 +195,15 @@ async function handleLead(admin: Admin, org: Org, lead: InboundLead, ownerId: st
     note: `Formulaire reçu — ${sourceLabel(lead.source)}${lead.campaign ? ` (${lead.campaign})` : ""}`,
   });
 
-  // Ni e-mail ni SMS ici, volontairement. Le formulaire de la landing renvoie sur une
-  // page qui porte le Calendly de qualification : dans la grande majorité des cas, le
-  // restaurateur réserve son créneau dans la minute qui suit. Un accusé de réception
-  // immédiat l'inviterait à choisir un créneau qu'il vient de choisir, ce qui donne
-  // l'impression que nous ne savons pas ce qu'il a fait, et l'expose à réserver deux
-  // fois. L'invitation part donc en différé, par /api/cron/leads-sms, et seulement
-  // pour ceux qui n'ont rien réservé — voir sendPendingLeadIntro.
+  // Ni e-mail ni SMS ici, volontairement. Sur la landing, le formulaire disparaît dès
+  // qu'il est validé et le Calendly de qualification s'affiche à sa place, dans la même
+  // section : dans la grande majorité des cas, le restaurateur réserve son créneau dans
+  // la minute qui suit, sans changer de page. La redirection vers /merci n'intervient
+  // qu'APRÈS la réservation, pour afficher la confirmation et la vidéo de remerciement.
+  // Un accusé de réception immédiat l'inviterait donc à choisir un créneau qu'il est en
+  // train de choisir, ce qui donne l'impression que nous ne savons pas ce qu'il fait, et
+  // l'expose à réserver deux fois. L'invitation part en différé, par /api/cron/leads-sms,
+  // et seulement pour ceux qui n'ont rien réservé — voir sendPendingLeadIntro.
 
   if (notifyEmail) {
     const url = `${BASE_URL}/leads/${data.id}`;

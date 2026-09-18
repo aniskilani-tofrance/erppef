@@ -5,7 +5,7 @@ describe("routage automatique des SMS leads", () => {
   it("laisse l'accusé de réception d'un nouveau lead au circuit différé", () => {
     // Depuis le 19/09/2026, l'invitation à réserver un créneau n'est plus rattrapée ici :
     // elle passe par sendPendingLeadIntro, qui attend dix minutes et ne l'envoie qu'à ceux
-    // qui n'ont pas réservé sur la page de remerciement. Voir invitation-differee.test.ts.
+    // qui n'ont pas réservé dans le Calendly de la landing. Voir invitation-differee.test.ts.
     expect(deferredSmsCode({ status: "nouveau", rdv_outcome: null, next_action: null })).toBeNull();
   });
 

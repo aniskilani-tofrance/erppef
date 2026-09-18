@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { deferredSmsCode, DELAI_AVANT_INVITATION_MS } from "@/lib/leads/automations";
 
-// Le formulaire de la landing renvoie sur une page qui porte le Calendly de qualification.
-// Inviter le restaurateur à choisir un créneau dans la seconde qui suit reviendrait à lui
-// proposer ce qu'il est en train de faire. L'invitation attend donc, et ne part qu'à ceux
-// qui sont repartis sans réserver.
+// Sur la landing, le formulaire s'efface une fois validé et le Calendly de qualification
+// s'affiche à sa place, dans la même section. Inviter le restaurateur à choisir un créneau
+// dans la seconde qui suit reviendrait donc à lui proposer ce qu'il est en train de faire.
+// L'invitation attend, et ne part qu'à ceux qui sont repartis sans réserver.
 
 describe("invitation différée à réserver un créneau", () => {
   it("laisse dix minutes au restaurateur", () => {
