@@ -1,9 +1,10 @@
 # Déclencheur externe des SMS transactionnels aux restaurateurs.
 #
-# Pourquoi : les SMS automatiques ne partent qu'entre 08h00 et 21h30 à Paris, et un
-# message qui rate sa fenêtre doit être repris rapidement. La formule Vercel du projet
-# ne permet qu'un cron quotidien, ce qui laisserait un message en attente jusqu'au
-# lendemain. Cette action appelle le même point d'entrée toutes les demi-heures.
+# Pourquoi : depuis le passage en formule Vercel Pro, le cron de la plateforme appelle
+# déjà ce point d'entrée tous les quarts d'heure. Cette action est un filet de sécurité,
+# indépendant de Vercel : si la plateforme a une panne de crons, comme la nuit du 18 au
+# 19 septembre 2026, les SMS partent quand même. Elle tourne donc toutes les deux heures,
+# ce qui suffit à rattraper et reste dans les minutes offertes d'un dépôt privé.
 #
 # Le point d'entrée est idempotent : un message déjà envoyé n'est jamais renvoyé, et
 # hors plage horaire il ne se passe rien. Un appel de trop est donc sans conséquence.
@@ -15,7 +16,7 @@ name: SMS des leads restaurateurs
 
 on:
   schedule:
-    - cron: "5,35 * * * *" # toutes les demi-heures, heure UTC
+    - cron: "25 */2 * * *" # toutes les deux heures, heure UTC
   workflow_dispatch: # déclenchement manuel depuis l'onglet Actions
 
 concurrency:
