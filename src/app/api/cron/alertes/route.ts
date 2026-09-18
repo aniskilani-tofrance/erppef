@@ -9,7 +9,6 @@ import { announceUpdatesEverywhere, type AnnounceResult } from "@/lib/updates-an
 import { sendEvaluationReminders } from "@/lib/evaluations/reminders";
 import { scheduleBrevoAppointmentReminders, type AppointmentReminderKind, type LeadForBrevo } from "@/lib/leads/brevo";
 import { resolveLeadSettings } from "@/lib/leads/templates";
-import { sendDeferredLeadSms, sendLeadRdvSms } from "@/lib/leads/automations";
 import {
   ABSENCE_ALERT_THRESHOLD,
   computeLearnerStats,
@@ -94,8 +93,6 @@ export async function GET(request: Request) {
   let reminders: { sent: number; skippedNoEmail: number } = { sent: 0, skippedNoEmail: 0 };
   let meetingReminders: { sent: number; skippedNoEmail: number } = { sent: 0, skippedNoEmail: 0 };
   let leadRdvEmails = { sent: 0, skipped: 0 };
-  let leadRdvSms = { sent: 0, skipped: 0 };
-  let leadDeferredSms = { sent: 0, skipped: 0 };
   let trainerRelances = 0;
   // Rappels aux formateurs avant les jalons d'évaluation (J-7, J-1)
   let evaluationReminders = 0;
@@ -133,16 +130,8 @@ export async function GET(request: Request) {
   } catch (e) {
     console.error("[leads/brevo]", e instanceof Error ? e.message : e);
   }
-  try {
-    leadRdvSms = await sendLeadRdvSms(supabase);
-  } catch (e) {
-    console.error("[leads/twilio]", e instanceof Error ? e.message : e);
-  }
-  try {
-    leadDeferredSms = await sendDeferredLeadSms(supabase);
-  } catch (e) {
-    console.error("[leads/twilio deferred]", e instanceof Error ? e.message : e);
-  }
+  // Les SMS ne sont pas traités ici : ce cron tourne avant l'ouverture de la plage
+  // d'envoi de 08h00. Ils le sont par /api/cron/leads-sms.
 
   // Le 1er du mois : la veille Qualiopi (critère 6) du mois écoulé a-t-elle été tenue ?
   // L'auditeur juge la régularité — une entrée par mois est le minimum visé.
@@ -202,7 +191,7 @@ export async function GET(request: Request) {
   });
 
   if (atRisk.length === 0 && sheets.length === 0 && !watchReminder && admissionLines.length === 0 && !leaveLine) {
-    return Response.json({ sent: false, reason: "rien à signaler", backup, reminders, meetingReminders, leadRdvEmails, leadRdvSms, leadDeferredSms, trainerRelances, evaluationReminders, updatesAnnounced });
+    return Response.json({ sent: false, reason: "rien à signaler", backup, reminders, meetingReminders, leadRdvEmails, trainerRelances, evaluationReminders, updatesAnnounced });
   }
 
   const lines = [
@@ -235,7 +224,7 @@ export async function GET(request: Request) {
   if (!res.ok) {
     return Response.json({ sent: false, error: await res.text() }, { status: 500 });
   }
-  return Response.json({ sent: true, atRisk: atRisk.length, unclosedSheets: sheets.length, admission: admissionLines.length, reminders, meetingReminders, leadRdvEmails, leadRdvSms, leadDeferredSms, trainerRelances, evaluationReminders, updatesAnnounced });
+  return Response.json({ sent: true, atRisk: atRisk.length, unclosedSheets: sheets.length, admission: admissionLines.length, reminders, meetingReminders, leadRdvEmails, trainerRelances, evaluationReminders, updatesAnnounced });
 }
 
 // Brevo ne permet de programmer un message transactionnel que dans les 72 heures.
