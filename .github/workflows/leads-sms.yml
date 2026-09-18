@@ -1,0 +1,49 @@
+# Déclencheur externe des SMS transactionnels aux restaurateurs.
+#
+# Pourquoi : les SMS automatiques ne partent qu'entre 08h00 et 21h30 à Paris, et un
+# message qui rate sa fenêtre doit être repris rapidement. La formule Vercel du projet
+# ne permet qu'un cron quotidien, ce qui laisserait un message en attente jusqu'au
+# lendemain. Cette action appelle le même point d'entrée toutes les demi-heures.
+#
+# Le point d'entrée est idempotent : un message déjà envoyé n'est jamais renvoyé, et
+# hors plage horaire il ne se passe rien. Un appel de trop est donc sans conséquence.
+#
+# Secret à créer dans le dépôt, sous Settings puis Secrets and variables puis Actions :
+#   CRON_SECRET — la même valeur que la variable du même nom sur Vercel.
+
+name: SMS des leads restaurateurs
+
+on:
+  schedule:
+    - cron: "5,35 * * * *" # toutes les demi-heures, heure UTC
+  workflow_dispatch: # déclenchement manuel depuis l'onglet Actions
+
+concurrency:
+  group: leads-sms
+  cancel-in-progress: false
+
+jobs:
+  declencher:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Appeler le point d'entrée des SMS
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          BASE_URL: ${{ vars.ERP_BASE_URL || 'https://pef-erp.vercel.app' }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::Le secret CRON_SECRET n'est pas défini dans le dépôt."
+            exit 1
+          fi
+          code=$(curl -sS -o reponse.json -w "%{http_code}" \
+            --max-time 60 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$BASE_URL/api/cron/leads-sms")
+          echo "Réponse HTTP $code"
+          cat reponse.json || true
+          echo
+          if [ "$code" != "200" ]; then
+            echo "::error::Le point d'entrée a répondu $code"
+            exit 1
+          fi
