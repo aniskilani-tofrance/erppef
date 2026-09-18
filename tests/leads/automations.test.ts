@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 import { deferredSmsCode } from "@/lib/leads/automations";
 
 describe("routage automatique des SMS leads", () => {
-  it("confirme la demande à un nouveau lead", () => {
-    expect(deferredSmsCode({ status: "nouveau", rdv_outcome: null, next_action: null })).toBe("demande_recue");
+  it("laisse l'accusé de réception d'un nouveau lead au circuit différé", () => {
+    // Depuis le 19/09/2026, l'invitation à réserver un créneau n'est plus rattrapée ici :
+    // elle passe par sendPendingLeadIntro, qui attend dix minutes et ne l'envoie qu'à ceux
+    // qui n'ont pas réservé sur la page de remerciement. Voir invitation-differee.test.ts.
+    expect(deferredSmsCode({ status: "nouveau", rdv_outcome: null, next_action: null })).toBeNull();
   });
 
   it("confirme un créneau Calendly de qualification", () => {

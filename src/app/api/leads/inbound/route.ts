@@ -195,19 +195,13 @@ async function handleLead(admin: Admin, org: Org, lead: InboundLead, ownerId: st
     note: `Formulaire reçu — ${sourceLabel(lead.source)}${lead.campaign ? ` (${lead.campaign})` : ""}`,
   });
 
-  await dispatchBrevoLeadEvent(admin, {
-    orgId: org.id,
-    lead: data as LeadForBrevo,
-    settings,
-    eventName: BREVO_LEAD_EVENTS.nouveau,
-  });
-  await dispatchTwilioLeadSms(admin, {
-    orgId: org.id,
-    lead: data as LeadForBrevo,
-    settings,
-    code: "demande_recue",
-    automatic: true,
-  });
+  // Ni e-mail ni SMS ici, volontairement. Le formulaire de la landing renvoie sur une
+  // page qui porte le Calendly de qualification : dans la grande majorité des cas, le
+  // restaurateur réserve son créneau dans la minute qui suit. Un accusé de réception
+  // immédiat l'inviterait à choisir un créneau qu'il vient de choisir, ce qui donne
+  // l'impression que nous ne savons pas ce qu'il a fait, et l'expose à réserver deux
+  // fois. L'invitation part donc en différé, par /api/cron/leads-sms, et seulement
+  // pour ceux qui n'ont rien réservé — voir sendPendingLeadIntro.
 
   if (notifyEmail) {
     const url = `${BASE_URL}/leads/${data.id}`;

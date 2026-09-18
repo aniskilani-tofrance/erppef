@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { localToUtc, nextDay } from "@/lib/dates";
 import { resolveLeadSettings } from "@/lib/leads/templates";
 import { dispatchTwilioLeadSms } from "@/lib/leads/twilio";
-import type { LeadForBrevo } from "@/lib/leads/brevo";
+import { BREVO_LEAD_EVENTS, dispatchBrevoLeadEvent, type LeadForBrevo } from "@/lib/leads/brevo";
 
 export type AutomatedSmsSummary = { sent: number; skipped: number };
 
@@ -61,7 +61,9 @@ export async function sendLeadRdvSms(supabase: SupabaseClient): Promise<Automate
 }
 
 export function deferredSmsCode(lead: Pick<LeadAutomationRow, "status" | "rdv_outcome" | "next_action">) {
-  if (lead.status === "nouveau") return "demande_recue" as const;
+  // L'accusé de réception d'un lead encore « nouveau » n'est volontairement PAS repris ici :
+  // il obéit au délai de courtoisie de sendPendingLeadIntro, qui laisse au restaurateur le
+  // temps de réserver son créneau sur la page de remerciement avant qu'on l'y invite.
   if (lead.rdv_outcome === "no_show") return "no_show" as const;
   if (lead.status === "rdv_pris") return "confirmation_rdv" as const;
   if (lead.status === "a_rappeler" && /calendly|qualification/i.test(lead.next_action ?? "")) {
@@ -80,7 +82,7 @@ export async function sendDeferredLeadSms(supabase: SupabaseClient): Promise<Aut
     .from("employer_leads")
     .select("*")
     .gte("updated_at", since)
-    .in("status", ["nouveau", "a_rappeler", "rdv_pris"])
+    .in("status", ["a_rappeler", "rdv_pris"])
     .limit(200);
   if (!leads?.length) return { sent: 0, skipped: 0 };
 
@@ -106,6 +108,57 @@ export async function sendDeferredLeadSms(supabase: SupabaseClient): Promise<Aut
       automatic: true,
     });
     if (result.sent) sent += 1;
+    else skipped += 1;
+  }
+  return { sent, skipped };
+}
+
+/** Délai laissé au restaurateur pour réserver son créneau sur la page de remerciement. */
+export const DELAI_AVANT_INVITATION_MS = 10 * 60_000;
+
+/**
+ * L'accusé de réception invite à choisir un créneau de qualification. Il ne doit donc
+ * partir que vers ceux qui n'en ont pas choisi : le formulaire de la landing renvoie sur
+ * une page qui porte le Calendly, et la plupart réservent dans la minute. On laisse dix
+ * minutes, puis on écrit à ceux qui sont partis sans réserver. Les marques de journal
+ * rendent l'opération idempotente, et ceux qui réservent entre-temps ne reçoivent rien.
+ */
+export async function sendPendingLeadIntro(supabase: SupabaseClient): Promise<AutomatedSmsSummary> {
+  const limite = new Date(Date.now() - DELAI_AVANT_INVITATION_MS).toISOString();
+  const { data: leads } = await supabase
+    .from("employer_leads")
+    .select("*")
+    .eq("status", "nouveau")
+    .is("qualification_at", null)
+    .is("rdv_at", null)
+    .lte("received_at", limite)
+    .gte("received_at", new Date(Date.now() - 36 * 3_600_000).toISOString())
+    .limit(200);
+  if (!leads?.length) return { sent: 0, skipped: 0 };
+
+  const settingsByOrg = await loadSettingsByOrg(supabase, leads.map((lead) => lead.org_id as string));
+  let sent = 0;
+  let skipped = 0;
+  for (const lead of leads as LeadAutomationRow[]) {
+    const settings = settingsByOrg.get(lead.org_id);
+    if (!settings) {
+      skipped += 1;
+      continue;
+    }
+    const email = await dispatchBrevoLeadEvent(supabase, {
+      orgId: lead.org_id,
+      lead,
+      settings,
+      eventName: BREVO_LEAD_EVENTS.nouveau,
+    });
+    const sms = await dispatchTwilioLeadSms(supabase, {
+      orgId: lead.org_id,
+      lead,
+      settings,
+      code: "demande_recue",
+      automatic: true,
+    });
+    if (email.sent || sms.sent) sent += 1;
     else skipped += 1;
   }
   return { sent, skipped };
