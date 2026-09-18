@@ -297,6 +297,15 @@ async function handleSetterCall(admin: Admin, org: Org, c: InboundCalendly, owne
   });
   const leadForSms = await loadLeadForBrevo(admin, leadId);
   if (leadForSms) {
+    // Calendly envoie déjà son propre accusé, mais il ne parle ni de la POEI ni de ce que
+    // nous allons demander. Celui-ci porte le cadre de l'échange, comme pour le rendez-vous
+    // avec un expert, et évite que le restaurateur n'ait de nous qu'un SMS.
+    await dispatchBrevoLeadEvent(admin, {
+      orgId: org.id,
+      lead: leadForSms,
+      settings,
+      eventName: BREVO_LEAD_EVENTS.qualificationConfirmee,
+    });
     await dispatchTwilioLeadSms(admin, {
       orgId: org.id,
       lead: leadForSms,

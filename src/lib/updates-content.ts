@@ -33,6 +33,7 @@ export const APP_UPDATES: AppUpdate[] = [
     items: [
       { text: "Avant : le restaurateur remplissait le formulaire, réservait son créneau dans la minute, et recevait quand même un e-mail et un SMS lui proposant de choisir un créneau. Cela donnait l'impression qu'on ne savait pas ce qu'il venait de faire, et l'exposait à réserver deux fois.", roles: LEADS },
       { text: "Maintenant : celui qui réserve reçoit la confirmation de son créneau et rien d'autre. Celui qui part sans réserver reçoit l'invitation dix minutes plus tard, avec le lien. Le reste du parcours ne change pas.", roles: LEADS },
+      { text: "Nouveauté au passage : réserver un créneau de qualification déclenche désormais un e-mail de confirmation de notre part, en plus du SMS. Jusqu'ici le restaurateur n'avait que l'accusé de Calendly, qui ne dit rien de la POEI ni de ce qu'on va lui demander. Le nôtre annonce les trois points de l'échange et précise qu'il n'a rien à préparer.", roles: LEADS },
     ],
     training: [{ moduleId: "m1-leads", lessonId: "messages", label: "SMS, WhatsApp, email : ce qui part tout seul et ce que vous envoyez" }],
   },

@@ -61,3 +61,20 @@ describe("lecture du journal d'une fiche", () => {
     expect(decrireMessage("[brevo:evenement_inexistant] ...", lead, DEFAULT_LEAD_SETTINGS)).toBeNull();
   });
 });
+
+describe("confirmation de l'appel de qualification", () => {
+  it("porte le créneau, le cadre de l'échange et une porte de sortie", () => {
+    const m = decrireMessage(
+      "[brevo:poei_lead_qualification_confirmee] Email envoyé via Brevo (<id@x>).",
+      lead,
+      DEFAULT_LEAD_SETTINGS,
+    );
+    expect(m).toBeTruthy();
+    expect(m!.titre).toBe("Confirmation de l'appel de qualification");
+    expect(m!.sujet).toContain("réservé");
+    expect(m!.corps).toContain("quinze minutes");
+    expect(m!.corps).toContain("Le Bistrot des Docks");
+    expect(m!.corps).toContain("lien de modification");
+    expect(m!.corps).not.toContain("Anis");
+  });
+});

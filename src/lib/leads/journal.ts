@@ -21,6 +21,7 @@ export type JournalMessage = {
 const TITRE_EMAIL: Record<string, string> = {
   [BREVO_LEAD_EVENTS.nouveau]: "Demande de recrutement prise en compte",
   [BREVO_LEAD_EVENTS.aRappeler]: "Quel créneau pour avancer ?",
+  [BREVO_LEAD_EVENTS.qualificationConfirmee]: "Confirmation de l'appel de qualification",
   [BREVO_LEAD_EVENTS.rdvPris]: "Confirmation du rendez-vous",
   [BREVO_LEAD_EVENTS.rappelRdv]: "Rappel du rendez-vous, la veille",
   [BREVO_LEAD_EVENTS.rappelRdvH2]: "Rappel du rendez-vous, deux heures avant",

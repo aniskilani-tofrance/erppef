@@ -11,6 +11,7 @@ import { automationsEnabled, firstNameOf, leadVars, renderEmail, type LeadSettin
 export const BREVO_LEAD_EVENTS = {
   nouveau: "poei_lead_nouveau",
   aRappeler: "poei_lead_a_rappeler",
+  qualificationConfirmee: "poei_lead_qualification_confirmee",
   rdvPris: "poei_lead_rdv_pris",
   rappelRdv: "poei_lead_rappel_rdv",
   rappelRdvH2: "poei_lead_rappel_rdv_h2",
@@ -188,6 +189,24 @@ Choisissez le créneau de 15 minutes le plus pratique pour échanger sur vos bes
 Ou répondez simplement à ce mail avec le meilleur moment pour vous rappeler.
 
 L'équipe conseil ParlerEmploi`,
+    };
+  }
+
+  if (eventName === BREVO_LEAD_EVENTS.qualificationConfirmee) {
+    return {
+      subject: `${firstName}, votre point recrutement est réservé — ${vars.jour} à ${vars.heure}`,
+      body: `Bonjour ${firstName},
+
+Votre échange téléphonique avec l'équipe conseil ParlerEmploi est bien réservé ${vars.jour} à ${vars.heure}. Nous vous appellerons au numéro indiqué lors de votre réservation.
+
+En quinze minutes, nous ferons le tour de trois points : le poste à pourvoir en ${vars.metier}, la date à laquelle vous souhaitez que la personne soit opérationnelle, et le type de contrat envisagé. Cela nous suffit pour vous dire si la POEI peut financer la préparation d'un candidat avant son embauche dans ${lead.company}, et ce que cela implique concrètement pour vous.
+
+Aucun document n'est nécessaire, et vous n'avez rien à préparer.
+
+En cas d'imprévu de service, utilisez le lien de modification de votre e-mail Calendly ou répondez directement à ce message : nous préserverons un créneau adapté à votre activité.
+
+L'équipe conseil ParlerEmploi
+Recrutement & formation restauration`,
     };
   }
 
