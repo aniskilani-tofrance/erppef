@@ -77,7 +77,10 @@ export const SMS_TEMPLATES = [
     delivery: "automatic",
     label: "SMS — rendez-vous avec un expert confirmé",
     when: "Dès que le rendez-vous avec un expert ParlerEmploi est posé.",
-    text: `Bonjour {prenom}, votre rendez-vous ParlerEmploi est confirmé {jour} à {heure} {mode}, au sujet des recrutements de {restaurant}. En cas d'empêchement, répondez à ce SMS.`,
+    // Ne jamais inviter à répondre par SMS : l'expéditeur est un nom de marque
+    // (« ParlerResto »), techniquement incapable de recevoir une réponse. Le lien de
+    // modification figure dans l'e-mail de confirmation, qui est lui bien réponsable.
+    text: `Bonjour {prenom}, votre rendez-vous ParlerEmploi est confirmé {jour} à {heure} {mode}, au sujet des recrutements de {restaurant}. Un imprévu ? Utilisez le lien de modification dans votre e-mail de confirmation.`,
   },
   {
     code: "appel_manque",
@@ -98,7 +101,7 @@ export const SMS_TEMPLATES = [
     delivery: "automatic",
     label: "SMS n°3 — rappel de RDV (la veille)",
     when: "Obligatoire la veille de chaque rendez-vous.",
-    text: `Bonjour {prenom}, rappel de votre rendez-vous demain {jour} à {heure} {mode} avec un expert ParlerEmploi, au sujet de vos recrutements en {metier}. À demain !`,
+    text: `Bonjour {prenom}, rappel de votre rendez-vous demain {jour} à {heure} {mode} avec un expert ParlerEmploi, au sujet de vos recrutements en {metier}. Un imprévu ? Utilisez le lien de modification dans votre e-mail de confirmation. À demain !`,
   },
   {
     code: "creneau_promis",

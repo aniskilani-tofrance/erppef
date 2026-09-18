@@ -486,6 +486,7 @@ export const HELP_SECTIONS: HelpSection[] = [
           "Une fois activés : accusé de réception à l'arrivée du formulaire ; confirmation dès qu'un créneau Calendly est réservé ; rappel par email la veille et deux heures avant ; message le jour d'un rendez-vous manqué, avec le lien pour recaler.",
           "Il n'y a aucune restriction d'horaire : ces messages répondent à une action que le restaurateur vient de faire, ils partent donc dans la seconde, de jour comme de nuit. Le même message n'est jamais envoyé deux fois à la même fiche : chaque envoi laisse une marque dans le journal.",
           "Si le restaurateur déplace ou annule son créneau Calendly, les rappels déjà programmés chez Brevo sont annulés puis reprogrammés sur le nouvel horaire. La fiche affiche « emails Brevo J-1 et H-2 programmés ».",
+          "Un restaurateur ne peut pas répondre à nos SMS : ils partent sous un nom de marque, pas sous un numéro, et un nom de marque ne reçoit rien. Aucun message ne l'invite donc à répondre ; ils renvoient tous vers le lien de modification de son e-mail de confirmation, vers le Calendly, ou annoncent un appel. Les e-mails, eux, sont bien réponsables : les réponses arrivent sur contact@parleremploi.fr.",
           "Avant d'activer : purger les leads de test, vérifier l'expéditeur Brevo (adresse et nom validés) et l'expéditeur Twilio (numéro ou nom d'expéditeur rattaché au service de messagerie). Sans les clés Brevo et Twilio en production, rien ne part, même interrupteur sur « Activés ».",
         ],
       },

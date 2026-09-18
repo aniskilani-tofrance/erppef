@@ -33,6 +33,7 @@ export const APP_UPDATES: AppUpdate[] = [
     items: [
       { text: "Plus aucune attente : accusé de réception, confirmation de créneau et message après un rendez-vous manqué partent immédiatement, de jour comme de nuit. C'est la nature de ces messages qui le permet : ils répondent à une action que le restaurateur vient de faire, et les horaires légaux encadrent la prospection, pas les réponses.", roles: LEADS },
       { text: "Le rappel de la veille reste calé sur son heure, évidemment. Et si un envoi échoue, il est repris automatiquement dans le quart d'heure.", roles: LEADS },
+      { text: "Deux SMS ont été réécrits : aucun n'invite plus à « répondre à ce SMS », ce qui était une impasse puisque nos messages partent sous un nom de marque incapable de recevoir une réponse. La confirmation et le rappel de la veille renvoient désormais vers le lien de modification de l'e-mail de confirmation. Les e-mails restent réponsables normalement.", roles: LEADS },
     ],
     training: [{ moduleId: "m1-leads", lessonId: "messages", label: "SMS, WhatsApp, email : ce qui part tout seul et ce que vous envoyez" }],
   },
