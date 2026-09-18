@@ -470,6 +470,16 @@ export const HELP_SECTIONS: HelpSection[] = [
         ],
       },
       {
+        title: "Lire le journal d'une fiche avant de rappeler",
+        steps: [
+          "Le journal, en bas à droite de la fiche, raconte toute l'histoire du lead dans l'ordre, du plus récent au plus ancien.",
+          "Une ligne « E-mail envoyé » ou « SMS envoyé » signale un message parti automatiquement. Survolez-la : l'objet et le texte complet s'affichent. Lisez-les avant d'appeler, le restaurateur les a déjà reçus et il s'attend à ce que vous le sachiez.",
+          "Une ligne « E-mail programmé » signale un rappel encore à venir, avec la date et l'heure auxquelles il partira. Si le rendez-vous bouge, ces rappels sont annulés puis reprogrammés tout seuls.",
+          "La couleur du trait et l'icône disent le type : e-mail, SMS, appel, rendez-vous, changement de statut, note d'équipe. En tête, le compte des messages envoyés et des rappels programmés.",
+          "L'aperçu est reconstitué avec les informations actuelles de la fiche : si le rendez-vous a été déplacé depuis, l'aperçu affiche le nouvel horaire. Pour retrouver le message tel qu'il est parti, ouvrez Brevo ou Twilio, l'identifiant figure dans la ligne.",
+        ],
+      },
+      {
         title: "Les messages qui partent tout seuls (emails Brevo, SMS Twilio)",
         steps: [
           "Interrupteur : Leads → Réglages → « Envois automatiques au prospect ». Tant qu'il est sur « Désactivés », l'ERP n'écrit jamais au restaurateur de lui-même — utile pendant les tests. La direction l'active le jour du lancement de la campagne.",

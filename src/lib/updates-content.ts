@@ -26,6 +26,19 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-09-19-journal-lead-lisible",
+    date: "2026-09-19",
+    title: "Leads resto : le journal d'une fiche se lit enfin d'un coup d'œil",
+    summary: "Chaque ligne dit en clair ce qui s'est passé, et survoler une ligne affiche le message exact reçu par le restaurateur, e-mail ou SMS, sans ouvrir d'autre outil.",
+    items: [
+      { text: "Les lignes d'envoi automatique ne montrent plus de code technique : vous lisez « E-mail envoyé · Confirmation du rendez-vous » ou « SMS envoyé · Demande de recrutement prise en compte ».", roles: LEADS },
+      { text: "Survolez une de ces lignes : l'objet et le texte complet du message s'affichent. Vous savez donc exactement ce que le restaurateur a lu avant de l'appeler.", roles: LEADS },
+      { text: "Un rappel encore à venir est signalé « programmé », avec la date et l'heure auxquelles il partira.", roles: LEADS },
+      { text: "Un trait de couleur et une icône distinguent d'un coup d'œil un e-mail, un SMS, un appel, un rendez-vous, un changement de statut et une note d'équipe. En tête du journal, le compte des messages envoyés et des rappels programmés.", roles: LEADS },
+    ],
+    training: [{ moduleId: "m1-leads", lessonId: "messages", label: "SMS, WhatsApp, email : ce qui part tout seul et ce que vous envoyez" }],
+  },
+  {
     id: "2026-09-18-leads-messages-automatiques",
     date: "2026-09-18",
     title: "Leads resto : les emails et SMS de suivi partent tout seuls",

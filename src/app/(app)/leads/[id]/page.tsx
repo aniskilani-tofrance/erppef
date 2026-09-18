@@ -20,6 +20,9 @@ import { LeadEventDialog, type LeadEventContext } from "@/components/leads/lead-
 import { LeadQuickActions } from "@/components/leads/lead-quick-actions";
 import { LeadRdvDialog, RdvOutcomeButtons } from "@/components/leads/lead-rdv-dialog";
 import { ClaimLeadButton, DeleteLeadButton, LeadStatusSelect, NextActionEditor, OwnerSelect } from "@/components/leads/lead-status-controls";
+import { LeadJournal, type LigneJournal } from "@/components/leads/lead-journal";
+import { decrireMessage } from "@/lib/leads/journal";
+import type { LeadForBrevo } from "@/lib/leads/brevo";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Lead — ERP PEF" };
@@ -70,6 +73,22 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
     today,
   };
   const rdvUpcoming = lead.rdv_at && lead.rdv_outcome === "a_venir";
+
+  // Le journal : les marques techniques des envois automatiques deviennent des lignes
+  // lisibles, et le message correspondant est reconstitué pour l'aperçu au survol.
+  const lignesJournal: LigneJournal[] = events.map((e) => {
+    const message = decrireMessage(e.note, lead as unknown as LeadForBrevo, settings);
+    return {
+      id: e.id,
+      quand: fmtDateTime(e.at),
+      auteur: ownerName(owners, e.by_user_id),
+      genre: e.kind,
+      genreLabel: eventKindLabel(e.kind),
+      resultatLabel: e.outcome ? eventOutcomeLabel(e.outcome) : null,
+      note: e.note,
+      message: message ? { ...message, quand: message.quand ? fmtDateTime(message.quand) : null } : null,
+    };
+  });
   const directorBookingUrl = directorCalendlyLink(lead, settings);
   const qualificationRemindersQueued = Boolean(lead.qualification_reminder_j1_batch_id || lead.qualification_reminder_h2_batch_id);
   const rdvRemindersQueued = Boolean(lead.rdv_reminder_j1_batch_id || lead.rdv_reminder_h2_batch_id);
@@ -225,24 +244,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
             <CardTitle className="text-base">Journal ({events.length})</CardTitle>
           </CardHeader>
           <CardContent>
-            {events.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Aucune trace. Le premier appel s&apos;écrit ici.</p>
-            ) : (
-              <ul className="max-h-[70vh] space-y-2 overflow-y-auto text-sm">
-                {events.map((e) => (
-                  <li key={e.id} className="border-l-2 pl-3">
-                    <p className="text-xs text-muted-foreground">
-                      {fmtDateTime(e.at)} · {ownerName(owners, e.by_user_id) ?? "—"}
-                    </p>
-                    <p>
-                      <span className="font-medium">{eventKindLabel(e.kind)}</span>
-                      {e.outcome && <span className="text-muted-foreground"> · {eventOutcomeLabel(e.outcome)}</span>}
-                    </p>
-                    {e.note && <p className="text-xs text-muted-foreground">{e.note}</p>}
-                  </li>
-                ))}
-              </ul>
-            )}
+            <LeadJournal lignes={lignesJournal} />
           </CardContent>
         </Card>
       </div>
