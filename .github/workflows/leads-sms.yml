@@ -48,3 +48,10 @@ jobs:
             echo "::error::Le point d'entrée a répondu $code"
             exit 1
           fi
+
+# Note d'exploitation : le dépôt local pousse vers deux distants, le dépôt de
+# référence aniskilani-tofrance/erppef et un miroir privé aniskilani/erppef.
+# Cette action n'est active que sur le dépôt de référence, qui porte le secret ;
+# elle a été désactivée à la main sur le miroir le 19/09/2026, sans quoi elle y
+# aurait échoué toutes les deux heures faute de secret, et aurait appelé l'ERP
+# deux fois pour rien.
