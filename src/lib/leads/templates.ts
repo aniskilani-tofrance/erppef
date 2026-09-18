@@ -19,6 +19,11 @@ export type LeadSettings = {
   inboundToken: string; // jeton du webhook /api/leads/inbound (vide = webhook fermé)
   notifyEmail: string; // email prévenu à chaque nouveau lead (le setter)
   defaultOwnerUserId: string; // à qui attribuer les leads entrants
+  // Interrupteur des envois automatiques au prospect (emails Brevo + SMS Twilio).
+  // « off » = l'ERP n'écrit plus jamais au prospect tout seul : seuls les envois
+  // déclenchés à la main par un conseiller partent. À n'activer qu'après avoir
+  // purgé les leads de test et vérifié les expéditeurs Brevo et Twilio.
+  automations: string; // "on" | "off"
 };
 
 export const DEFAULT_LEAD_SETTINGS: LeadSettings = {
@@ -31,6 +36,7 @@ export const DEFAULT_LEAD_SETTINGS: LeadSettings = {
   inboundToken: "",
   notifyEmail: "",
   defaultOwnerUserId: "",
+  automations: "off",
 };
 
 // Réglages effectifs = défauts + retouches de l'organisme (organizations.settings.leads)
@@ -41,7 +47,14 @@ export function resolveLeadSettings(settings: unknown): LeadSettings {
     const v = raw[key];
     if (typeof v === "string" && v.trim()) out[key] = v.trim();
   }
+  // Tout ce qui n'est pas explicitement « on » laisse les automatismes à l'arrêt.
+  out.automations = out.automations === "on" ? "on" : "off";
   return out;
+}
+
+/** Vrai seulement si la direction a activé les envois automatiques au prospect. */
+export function automationsEnabled(settings: Pick<LeadSettings, "automations">): boolean {
+  return settings.automations === "on";
 }
 
 export const SMS_TEMPLATES = [

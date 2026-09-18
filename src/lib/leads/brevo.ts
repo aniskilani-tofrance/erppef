@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
 import { textToHtml } from "@/lib/admission/messages";
-import { firstNameOf, leadVars, renderEmail, type LeadSettings } from "@/lib/leads/templates";
+import { automationsEnabled, firstNameOf, leadVars, renderEmail, type LeadSettings } from "@/lib/leads/templates";
 
 /**
  * Customer-facing points in the POEI restaurant journey. One marker per lead and
@@ -145,7 +145,7 @@ export function buildBrevoLeadPayload(
 
 type DispatchResult =
   | { sent: true; messageId: string | null }
-  | { sent: false; reason: "not_configured" | "no_email" | "already_sent" | "delivery_failed" };
+  | { sent: false; reason: "not_configured" | "automations_off" | "no_email" | "already_sent" | "delivery_failed" };
 
 function cleanEmail(value: string | null | undefined): string | null {
   const email = value?.trim().toLowerCase();
@@ -322,6 +322,9 @@ export async function dispatchBrevoLeadEvent(
   const apiKey = process.env.BREVO_API_KEY?.trim();
   const email = cleanEmail(params.lead.email);
   if (!apiKey) return { sent: false, reason: "not_configured" };
+  // Tous les emails de ce module partent sans intervention humaine : ils suivent
+  // donc l'interrupteur d'envois automatiques des réglages Leads.
+  if (!automationsEnabled(params.settings)) return { sent: false, reason: "automations_off" };
   if (!email) return { sent: false, reason: "no_email" };
 
   const marker = deliveryMarker(params.eventName);
@@ -375,6 +378,7 @@ export async function scheduleBrevoLeadEvent(
   const apiKey = process.env.BREVO_API_KEY?.trim();
   const email = cleanEmail(params.lead.email);
   if (!apiKey) return { sent: false, reason: "not_configured" };
+  if (!automationsEnabled(params.settings)) return { sent: false, reason: "automations_off" };
   if (!email) return { sent: false, reason: "no_email" };
   const scheduledMs = Date.parse(params.scheduledAt);
   const leadMs = scheduledMs - Date.now();

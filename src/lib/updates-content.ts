@@ -26,6 +26,20 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-09-18-leads-messages-automatiques",
+    date: "2026-09-18",
+    title: "Leads resto : les emails et SMS de suivi partent tout seuls",
+    summary: "L'ERP écrit lui-même au restaurateur aux moments clés (demande reçue, rendez-vous confirmé, rappel la veille et deux heures avant, rendez-vous manqué). Un interrupteur dans les Réglages décide si ces envois partent ou non.",
+    items: [
+      { text: "Réglages des leads → « Envois automatiques au prospect » : désactivés tant que la direction ne les arme pas. Tant que c'est désactivé, l'ERP n'écrit jamais au restaurateur tout seul et rien ne change pour vous.", roles: LEADS },
+      { text: "Une fois activés : accusé de réception à l'arrivée du formulaire, confirmation du créneau Calendly, rappels par email la veille et deux heures avant, message après un rendez-vous manqué. Les SMS ne partent qu'entre 8h00 et 21h30 ; ceux du soir sont repris le lendemain matin.", roles: LEADS },
+      { text: "Le menu SMS de la fiche ne garde qu'un modèle à envoyer à la main (« rappel de créneau promis ») et il part maintenant depuis l'ERP, plus depuis votre téléphone. Chaque envoi reste tracé dans le journal de la fiche.", roles: LEADS },
+      { text: "Nouveau bouton « Me l'attribuer » sur une fiche, lien « Réserver via le Calendly direction » prérempli avec le contact, et carte « Appel de qualification » quand un créneau est réservé.", roles: LEADS },
+      { text: "Réglages des leads : le lien Calendly de direction se saisit désormais dans l'ERP, à côté du Calendly de qualification.", roles: TEAM },
+    ],
+    training: [{ moduleId: "m1-leads", lessonId: "messages", label: "SMS, WhatsApp, email : les modèles du kit" }],
+  },
+  {
     id: "2026-09-15-stagiaires-co-animation",
     date: "2026-09-15",
     title: "Stagiaires : co-animation d'un cours ou atelier propre",

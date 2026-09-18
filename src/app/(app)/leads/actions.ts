@@ -264,6 +264,7 @@ export async function sendLeadSms(raw: { leadId: string; code: ManualSmsTemplate
   }
   const messages: Record<Exclude<typeof result, { sent: true }> ["reason"], string> = {
     not_configured: "Twilio n'est pas encore configuré.",
+    automations_off: "Les envois automatiques sont désactivés dans les réglages des leads.",
     no_phone: "Ce lead n'a pas de numéro de téléphone exploitable.",
     already_sent: "Ce modèle SMS a déjà été envoyé pour ce lead.",
     outside_sending_window: "L'envoi automatique est bloqué hors plage horaire.",
@@ -582,6 +583,8 @@ const settingsSchema = z.object({
   directorName: z.string().trim().min(1),
   notifyEmail: z.string().trim().email().or(z.literal("")).default(""),
   defaultOwnerUserId: uuid.or(z.literal("")).default(""),
+  // Emails Brevo et SMS Twilio partant sans intervention humaine : à l'arrêt par défaut.
+  automations: z.enum(["off", "on"]).default("off"),
   // Jeton du webhook : "keep" = inchangé, "regenerate" = nouveau, "disable" = fermé
   inboundTokenAction: z.enum(["keep", "regenerate", "disable"]).default("keep"),
 });

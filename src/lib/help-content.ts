@@ -463,10 +463,20 @@ export const HELP_SECTIONS: HelpSection[] = [
       {
         title: "Envoyer un SMS, un WhatsApp ou un email du kit",
         steps: [
-          "Sur la fiche : SMS, WhatsApp et Email ouvrent une liste de modèles (appel manqué, dernière tentative, rappel de RDV, créneau promis, no-show ; confirmation, documentation, relance J3, rupture J10, réponse écrite, no-show).",
-          "Le message s'ouvre dans votre application (Messages, WhatsApp, votre messagerie) déjà rempli : prénom du contact, postes, date et heure du RDV, prochain groupe, lien Calendly, votre prénom. Relisez, envoyez.",
-          "Chaque envoi est tracé dans le journal de la fiche et compte comme une tentative.",
+          "Sur la fiche : le menu SMS ne contient qu'un modèle à envoyer à la main, « rappel de créneau promis » — il part depuis l'ERP via Twilio, pas depuis votre téléphone, et le journal note l'envoi. Les autres SMS sont automatiques (voir l'article suivant).",
+          "WhatsApp : mêmes textes, pour les restaurateurs qui y répondent mieux ; le message s'ouvre dans WhatsApp déjà rempli. Email : six modèles (confirmation, documentation, relance J3, rupture J10, réponse écrite, no-show) qui s'ouvrent dans votre messagerie.",
+          "Tout est pré-rempli : prénom du contact, postes, date et heure du RDV, prochain groupe, lien Calendly, votre prénom. Relisez, envoyez. Chaque envoi est tracé dans le journal de la fiche et compte comme une tentative.",
           "Les mots viennent de la campagne parlerresto : « formé directement dans votre restaurant », « 3 jours chez vous / 2 jours chez nous », « 0 € de reste à charge sur la formation ». Ne les remplacez pas par « gratuit ».",
+        ],
+      },
+      {
+        title: "Les messages qui partent tout seuls (emails Brevo, SMS Twilio)",
+        steps: [
+          "Interrupteur : Leads → Réglages → « Envois automatiques au prospect ». Tant qu'il est sur « Désactivés », l'ERP n'écrit jamais au restaurateur de lui-même — utile pendant les tests. La direction l'active le jour du lancement de la campagne.",
+          "Une fois activés : accusé de réception à l'arrivée du formulaire ; confirmation dès qu'un créneau Calendly est réservé ; rappel par email la veille et deux heures avant ; message le jour d'un rendez-vous manqué, avec le lien pour recaler.",
+          "Les SMS automatiques ne partent qu'entre 8h00 et 21h30 (heure de Paris). Un message qui tombe la nuit est envoyé le lendemain matin par le cron. Le même message n'est jamais envoyé deux fois à la même fiche : chaque envoi laisse une marque dans le journal.",
+          "Si le restaurateur déplace ou annule son créneau Calendly, les rappels déjà programmés chez Brevo sont annulés puis reprogrammés sur le nouvel horaire. La fiche affiche « emails Brevo J-1 et H-2 programmés ».",
+          "Avant d'activer : purger les leads de test, vérifier l'expéditeur Brevo (adresse et nom validés) et l'expéditeur Twilio (numéro ou nom d'expéditeur rattaché au service de messagerie). Sans les clés Brevo et Twilio en production, rien ne part, même interrupteur sur « Activés ».",
         ],
       },
       {
@@ -491,7 +501,7 @@ export const HELP_SECTIONS: HelpSection[] = [
         steps: [
           "« Importer » : collez les lignes du Google Sheet de suivi (avec la ligne d'en-têtes) ou une liste simple « Entreprise ; Contact ; Téléphone ; Email ; Ville CP ; Postes ; Nb ; Notes » — un aperçu s'affiche avant l'import.",
           "« Exporter CSV » : les 24 colonnes du Sheet de suivi dans le même ordre, puis les colonnes propres à l'ERP (référence, offre, heures, décideur, HACCP, RDV). Ouvrable dans Excel ou Google Sheets.",
-          "« Réglages » (direction) : la date du prochain groupe restauration (l'argument d'urgence des scripts), le lien Calendly, les deux créneaux types, le nom de la personne qui tient le RDV. Ils alimentent tous les modèles.",
+          "« Réglages » (direction) : la date du prochain groupe restauration (l'argument d'urgence des scripts), le lien Calendly de qualification, le lien Calendly de direction, les deux créneaux types, le nom de la personne qui tient le RDV, et l'interrupteur des envois automatiques. Ils alimentent tous les modèles.",
           "Paramètres → Utilisateurs → « Inviter » avec le rôle « Commercial (setter) » : la personne ne voit que les leads, la Formation et l'Aide.",
         ],
       },

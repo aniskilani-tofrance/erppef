@@ -1,11 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { toWhatsAppNumber } from "@/lib/admission/phone";
-import { leadVars, renderSms, type LeadSettings, type SmsTemplateCode } from "@/lib/leads/templates";
+import { automationsEnabled, leadVars, renderSms, type LeadSettings, type SmsTemplateCode } from "@/lib/leads/templates";
 import type { LeadForBrevo } from "@/lib/leads/brevo";
 
 export type TwilioSmsResult =
   | { sent: true; sid: string | null }
-  | { sent: false; reason: "not_configured" | "no_phone" | "already_sent" | "outside_sending_window" | "delivery_failed" };
+  | { sent: false; reason: "not_configured" | "automations_off" | "no_phone" | "already_sent" | "outside_sending_window" | "delivery_failed" };
 
 export function twilioConfigured(): boolean {
   return Boolean(
@@ -50,6 +50,9 @@ export async function dispatchTwilioLeadSms(
   },
 ): Promise<TwilioSmsResult> {
   if (!twilioConfigured()) return { sent: false, reason: "not_configured" };
+  // Un envoi automatique n'a lieu que si la direction a armé les automatismes.
+  // Les envois déclenchés à la main par un conseiller ne sont jamais bloqués.
+  if (params.automatic && !automationsEnabled(params.settings)) return { sent: false, reason: "automations_off" };
   const phoneDigits = toWhatsAppNumber(params.lead.phone);
   if (!phoneDigits) return { sent: false, reason: "no_phone" };
   if (params.automatic && !isFrenchSmsSendingWindow()) return { sent: false, reason: "outside_sending_window" };

@@ -45,6 +45,7 @@ export function LeadSettingsDialog({ settings, owners }: { settings: LeadSetting
         directorName: f.directorName,
         notifyEmail: f.notifyEmail,
         defaultOwnerUserId: f.defaultOwnerUserId,
+        automations: f.automations === "on" ? "on" : "off",
         inboundTokenAction: tokenAction,
       });
       if (!r.ok) {
@@ -75,6 +76,20 @@ export function LeadSettingsDialog({ settings, owners }: { settings: LeadSetting
             <div className="space-y-1.5">
               <Label htmlFor="ls-calendly">Lien Calendly de qualification (SMS et emails prospects)</Label>
               <Input id="ls-calendly" value={f.calendlyUrl} onChange={(e) => set("calendlyUrl", e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="ls-automations">Envois automatiques au prospect (emails et SMS)</Label>
+              <Select value={f.automations === "on" ? "on" : "off"} onValueChange={(v) => set("automations", v)}>
+                <SelectTrigger id="ls-automations"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="off">Désactivés — seuls les envois faits à la main partent</SelectItem>
+                  <SelectItem value="on">Activés — accusé de réception, confirmation, rappels J-1 et H-2, no-show</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                À activer seulement quand la campagne démarre : les leads de test doivent être purgés et les expéditeurs Brevo et Twilio vérifiés.
+                Tant que c’est désactivé, l’ERP n’écrit jamais au prospect tout seul.
+              </p>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="ls-director-calendly">Lien Calendly de direction (après qualification)</Label>
