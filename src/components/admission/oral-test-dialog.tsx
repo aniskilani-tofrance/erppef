@@ -25,7 +25,7 @@ export type OralTestValues = {
   comment: string | null;
 };
 
-// Test oral d'entrée (entretien de positionnement) : saisi en 20 secondes pendant la
+// Entretien oral d'entrée : saisi en 20 secondes pendant la
 // réunion d'information. Le niveau retenu remplit le « Niveau évalué » de la fiche.
 export function OralTestDialog({
   learnerId,
@@ -66,7 +66,7 @@ export function OralTestDialog({
         toast.error(result.error);
         return;
       }
-      toast.success("Test oral enregistré.");
+      toast.success("Entretien oral enregistré.");
       setOpen(false);
       router.refresh();
     });
@@ -76,21 +76,21 @@ export function OralTestDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {initial ? (
-          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" title={`Test oral du ${new Date(`${initial.on}T12:00:00Z`).toLocaleDateString("fr-FR")} — modifier`}>
+          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" title={`Entretien oral du ${new Date(`${initial.on}T12:00:00Z`).toLocaleDateString("fr-FR")} — modifier`}>
             <Mic className="mr-1 h-3.5 w-3.5 text-teal-700" />
             {initial.level ?? "fait"}
             <Pencil className="ml-1 h-3 w-3 text-muted-foreground" />
           </Button>
         ) : (
-          <Button variant="outline" size="sm" className="h-7 px-2 text-xs" title="Enregistrer le test oral">
+          <Button variant="outline" size="sm" className="h-7 px-2 text-xs" title="Enregistrer l'entretien oral">
             <Mic className="mr-1 h-3.5 w-3.5" />
-            Test oral
+            Entretien oral
           </Button>
         )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Test oral — {learnerName}</DialogTitle>
+          <DialogTitle>Entretien oral — {learnerName}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">

@@ -55,7 +55,7 @@ export type LearnerFormValues = {
   entryGoal: string; // 'nc' = non renseigné
   entryNeed: string;
   entryInterviewOn: string;
-  // Parcours d'admission (prise de contact → inscription) + test oral d'entrée
+  // Parcours d'admission (prise de contact → inscription) + entretien oral d'entrée
   contactSource: string; // 'nc' = non renseigné
   contactSourceDetail: string;
   admissionStatus: string;
@@ -370,11 +370,11 @@ export function LearnerFormDialog({
             </div>
           </div>
 
-          {/* Parcours d'admission : statut + test oral d'entrée (entretien de positionnement). */}
+          {/* Parcours d'admission : statut + entretien oral d'entrée. */}
           <div className="rounded-md border p-3">
             <p className="mb-3 text-sm font-medium">
               Parcours d&apos;admission{" "}
-              <span className="font-normal text-muted-foreground">(contact → réunion → test oral → inscription)</span>
+              <span className="font-normal text-muted-foreground">(contact → réunion → entretien oral → inscription)</span>
             </p>
             <div className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
@@ -399,7 +399,7 @@ export function LearnerFormDialog({
               <SelectField label="Statut d'admission" value={values.admissionStatus} options={ADMISSION_OPTIONS} onChange={(v) => set("admissionStatus", v)} />
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Test oral le</Label>
+                  <Label>Entretien oral le</Label>
                   <Input type="date" value={values.oralTestOn} onChange={(e) => set("oralTestOn", e.target.value)} />
                 </div>
                 <SelectField label="Niveau à l'oral" value={values.oralTestLevel} options={ORAL_LEVEL_OPTIONS} onChange={(v) => set("oralTestLevel", v)} />
@@ -410,7 +410,7 @@ export function LearnerFormDialog({
                   <Input value={values.oralTestEvaluator} onChange={(e) => set("oralTestEvaluator", e.target.value)} placeholder="Prénom Nom" />
                 </div>
                 <div className="space-y-2">
-                  <Label>Commentaire du test oral</Label>
+                  <Label>Commentaire de l'entretien oral</Label>
                   <Input value={values.oralTestComment} onChange={(e) => set("oralTestComment", e.target.value)} placeholder="Comprend les questions simples…" />
                 </div>
               </div>

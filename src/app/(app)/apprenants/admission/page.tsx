@@ -199,7 +199,7 @@ export default async function AdmissionPage() {
   const toInvite = (learners ?? [])
     .filter((l) => l.admission_status === "contacte")
     .sort((a, b) => (lastContactAt(a.id) ?? "").localeCompare(lastContactAt(b.id) ?? ""));
-  // Évalués (test oral fait) mais pas encore inscrits dans un groupe
+  // Évalués (entretien oral fait) mais pas encore inscrits dans un groupe
   const toEnroll = (learners ?? []).filter((l) => l.admission_status === "evalue");
 
   // D'où viennent les demandes : par famille de provenance (maison de quartier, contact
@@ -259,7 +259,7 @@ export default async function AdmissionPage() {
       <LearnersTabs active="admission" toContact={toContact.length} />
 
       <p className="text-sm text-muted-foreground">
-        Prise de contact sur WhatsApp, réunions d&apos;information, test oral — jusqu&apos;à l&apos;inscription.
+        Prise de contact sur WhatsApp, réunions d&apos;information, entretien oral — jusqu&apos;à l&apos;inscription.
       </p>
 
       {/* Entonnoir */}
@@ -423,7 +423,7 @@ export default async function AdmissionPage() {
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Évalués, à inscrire ({toEnroll.length})</CardTitle>
           <p className="text-xs text-muted-foreground">
-            Test oral fait, pas encore de groupe. Le bouton envoie « place proposée » ; l&apos;inscription se fait depuis la fiche du groupe → « Inscrire des apprenants… ».
+            Entretien oral fait, pas encore de groupe. Le bouton envoie « place proposée » ; l&apos;inscription se fait depuis la fiche du groupe → « Inscrire des apprenants… ».
           </p>
         </CardHeader>
         <CardContent>

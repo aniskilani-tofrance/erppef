@@ -406,7 +406,7 @@ export async function saveMessageTemplates(raw: Record<string, string>): Promise
   return { ok: true };
 }
 
-// ── Test oral ────────────────────────────────────────────────────────────────
+// ── Entretien oral d'entrée ──────────────────────────────────────────────────
 const oralSchema = z.object({
   learnerId: uuid,
   on: day,
@@ -418,8 +418,13 @@ const oralSchema = z.object({
   meetingId: uuid.nullable().optional(),
 });
 
-// Enregistre le test oral d'entrée : date, niveau, évaluateur, commentaire.
+// Enregistre l'entretien oral d'entrée : date, niveau, évaluateur, commentaire.
 // Le statut d'admission passe à « évalué ».
+//
+// La date sert aussi de date d'entretien d'entrée (preuve Qualiopi ind. 4) : dans notre
+// organisation, la réunion d'information, l'entretien oral et l'entretien d'entrée ont
+// lieu le même jour. Elle n'est recopiée que si le champ est vide, jamais par-dessus une
+// date saisie à la main, et elle reste modifiable dans le bloc « Analyse du besoin ».
 export async function recordOralTest(raw: z.infer<typeof oralSchema>): Promise<ActionResult> {
   const parsed = oralSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "Données invalides (date obligatoire)" };
@@ -428,12 +433,20 @@ export async function recordOralTest(raw: z.infer<typeof oralSchema>): Promise<A
   const { orgId } = await requireRole(["admin", "coordinator"]);
   const supabase = await createClient();
 
+  const { data: existant } = await supabase
+    .from("learners")
+    .select("entry_interview_on")
+    .eq("id", d.learnerId)
+    .eq("org_id", orgId)
+    .maybeSingle();
+
   const patch: Record<string, unknown> = {
     oral_test_on: d.on,
     oral_test_level: d.level,
     oral_test_evaluator: d.evaluator?.trim() || null,
     oral_test_comment: d.comment?.trim() || null,
   };
+  if (!existant?.entry_interview_on) patch.entry_interview_on = d.on;
   if (d.applyLevel && d.level) patch.level_assessed = d.level;
   const { error } = await supabase.from("learners").update(patch).eq("id", d.learnerId).eq("org_id", orgId);
   if (error) return { ok: false, error: translatePgError(error) };

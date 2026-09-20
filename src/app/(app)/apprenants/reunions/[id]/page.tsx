@@ -26,7 +26,7 @@ import { utcToLocalDate, utcToLocalTime } from "@/lib/dates";
 import { learnerRef } from "@/lib/refs";
 
 // Page d'une réunion d'information : la liste des convoqués et, pour chacun, l'envoi
-// WhatsApp en un clic, la confirmation, la présence et le test oral.
+// WhatsApp en un clic, la confirmation, la présence et l'entretien oral.
 
 type InvitationRow = {
   id: string;
@@ -162,7 +162,7 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
               <TableHead>Apprenant</TableHead>
               <TableHead className="hidden md:table-cell">Téléphone</TableHead>
               <TableHead>Convocation</TableHead>
-              <TableHead>Test oral</TableHead>
+              <TableHead>Entretien oral</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -228,7 +228,7 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Pendant la réunion : passez chaque personne en « Présent(e) », puis « Test oral » pour noter le niveau en 20 secondes — il remplit la fiche et le dossier d&apos;entrée PDF.
+        Pendant la réunion : passez chaque personne en « Présent(e) », puis « Entretien oral » pour noter le niveau en 20 secondes — il remplit la fiche, la date de l&apos;entretien d&apos;entrée et le dossier d&apos;entrée PDF.
       </p>
     </div>
   );

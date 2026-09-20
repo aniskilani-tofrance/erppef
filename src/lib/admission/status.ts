@@ -9,7 +9,7 @@ export const ADMISSION_STATUSES = [
   { code: "injoignable", label: "Injoignable", rank: 1, hint: "Sans réponse — à relancer" },
   { code: "contacte", label: "Contacté", rank: 2, hint: "Échange engagé" },
   { code: "convoque", label: "Convoqué", rank: 3, hint: "Convoqué à une réunion d'information" },
-  { code: "evalue", label: "Évalué", rank: 4, hint: "Test oral fait" },
+  { code: "evalue", label: "Évalué", rank: 4, hint: "Entretien oral fait" },
   { code: "inscrit", label: "Inscrit", rank: 5, hint: "Inscrit dans un groupe" },
   { code: "sans_suite", label: "Sans suite", rank: 6, hint: "Ne donne pas suite" },
 ] as const;
@@ -45,7 +45,7 @@ function rankOf(code: string | null | undefined): number {
   return ADMISSION_STATUSES.find((s) => s.code === code)?.rank ?? 0;
 }
 
-// Statut résultant d'un événement automatique (convocation envoyée, test oral fait,
+// Statut résultant d'un événement automatique (convocation envoyée, entretien oral fait,
 // inscription…) : on ne recule jamais, « inscrit » est définitif, « sans suite »
 // redevient actif si la personne reprend contact.
 export function nextAdmissionStatus(

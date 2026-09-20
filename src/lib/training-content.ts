@@ -382,7 +382,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
     objectives: [
       "Créer un formateur opérationnel (dispos, coût, compte)",
       "Inscrire des apprenants un par un ou en masse",
-      "Mener l'admission : contact WhatsApp, réunion d'information, test oral",
+      "Mener l'admission : contact WhatsApp, réunion d'information, entretien oral",
     ],
     lessons: [
       {
@@ -421,7 +421,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
       },
       {
         id: "admission",
-        title: "L'admission : WhatsApp, réunion d'information, test oral",
+        title: "L'admission : WhatsApp, réunion d'information, entretien oral",
         intro: "Entre la demande de cours et l'inscription, tout se passe dans l'onglet Admission de la page Apprenants — WhatsApp d'abord, parce que c'est là que le public répond.",
         steps: [
           "Onglet Admission → « À contacter » : les nouveaux jamais contactés et les injoignables à relancer, les plus anciens d'abord. « Écrire » ouvre WhatsApp avec le premier message déjà rédigé ; vous relisez et envoyez. Le statut passe à « Contacté » tout seul.",
@@ -430,8 +430,8 @@ export const TRAINING_MODULES: TrainingModule[] = [
           "Le message WhatsApp change à chaque étape (premier contact, relance, lien du test, convocation, place proposée, inscription, porte ouverte) et se remplit tout seul : date et lieu de la réunion, groupe et premier cours. Bouton « Messages » de l'onglet Admission pour retoucher les textes, avec aperçu.",
           "« Nouvelle réunion » : date, heure, salle ou lieu, capacité. Puis « Ajouter des convoqués » (cases à cocher) ou, depuis Apprenants, cochez → « Convoquer (n) ».",
           "Sur la réunion, chaque ligne a « Convoquer » : WhatsApp s'ouvre avec la convocation complète (date, lieu, entretien oral annoncé sans stress, réponse OUI/NON). Email possible pour ceux qui préfèrent.",
-          "Réponse OUI → « Confirmée ». La veille → « Rappel » WhatsApp (l'email de rappel part seul). Le jour J → « Présent(e) » puis « Test oral » : niveau à l'oral en 20 secondes, recopié dans la fiche.",
-          "Inscription dans un groupe = statut « Inscrit » automatique. Dossier d'entrée PDF : besoin, test en ligne, test oral, réunion suivie — la preuve complète.",
+          "Réponse OUI → « Confirmée ». La veille → « Rappel » WhatsApp (l'email de rappel part seul). Le jour J → « Présent(e) » puis « Entretien oral » : niveau à l'oral en 20 secondes, recopié dans la fiche. La date remplit aussi celle de l'entretien d'entrée, puisque tout a lieu le même jour.",
+          "Inscription dans un groupe = statut « Inscrit » automatique. Dossier d'entrée PDF : besoin, test de positionnement en ligne, entretien oral, réunion suivie — la preuve complète.",
         ],
         tip: "Le message WhatsApp n'est que pré-rempli : adaptez-le, traduisez-le si besoin. L'ERP note seulement qu'un contact a eu lieu.",
         practice: {
@@ -484,7 +484,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
           "Directement dans le « Niveau évalué » de sa fiche, avec « Test fait » et le score",
         ],
         answerIndex: 2,
-        explanation: "Le résultat remplit la fiche automatiquement — et reste modifiable après votre entretien de positionnement.",
+        explanation: "Le résultat remplit la fiche automatiquement — et reste modifiable après votre entretien oral.",
       },
       {
         question: "Un nouvel apprenant est arrivé du Drive hier. Quel est le premier geste ?",

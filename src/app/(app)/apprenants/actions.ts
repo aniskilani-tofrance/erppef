@@ -70,7 +70,7 @@ const learnerSchema = z.object({
   // Canal par lequel la personne nous a contactés (+ précision libre)
   contactSource: z.enum(CONTACT_SOURCE_CODES).nullable().optional(),
   contactSourceDetail: z.string().nullable().optional(),
-  // Parcours d'admission + test oral d'entrée
+  // Parcours d'admission + entretien oral d'entrée
   admissionStatus: z.enum(ADMISSION_STATUS_CODES).optional(),
   oralTestOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   oralTestLevel: z.enum(LEVELS).nullable().optional(),

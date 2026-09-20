@@ -34,7 +34,7 @@ export type EntryFileData = {
   entryInterviewOn: string | null;
   levelAssessed: string | null;
   lastTest: { doneAt: string; level: string | null; score: number | null } | null;
-  // Parcours d'admission : réunion d'information suivie, test oral d'entrée
+  // Parcours d'admission : réunion d'information suivie, entretien oral d'entrée
   infoMeetingOn?: string | null;
   oralTest?: { on: string; level: string | null; evaluator: string | null; comment: string | null } | null;
 };
@@ -171,7 +171,7 @@ export async function buildEntryFilePdf(data: EntryFileData): Promise<Uint8Array
     field("Test de positionnement", "non réalisé");
   }
   if (data.oralTest) {
-    field("Test oral d'entrée", `fait le ${fmtDate(data.oralTest.on)}${data.oralTest.evaluator ? ` par ${data.oralTest.evaluator}` : ""}`);
+    field("Entretien oral d'entrée", `fait le ${fmtDate(data.oralTest.on)}${data.oralTest.evaluator ? ` par ${data.oralTest.evaluator}` : ""}`);
     field("Niveau à l'oral", data.oralTest.level ?? "Non déterminé");
     if (data.oralTest.comment) {
       text("Observations", MARGIN + 8, 9.5);
@@ -182,7 +182,7 @@ export async function buildEntryFilePdf(data: EntryFileData): Promise<Uint8Array
       }
     }
   } else {
-    field("Test oral d'entrée", "non réalisé");
+    field("Entretien oral d'entrée", "non réalisé");
   }
   field("Réunion d'information", data.infoMeetingOn ? `suivie le ${fmtDate(data.infoMeetingOn)}` : "—");
   y -= 20;

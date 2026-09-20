@@ -134,7 +134,7 @@ Ce n'est pas grave. Une autre réunion est possible : répondez à ce message et
   },
   {
     code: "apres_reunion",
-    label: "Après le test oral (place proposée)",
+    label: "Après l'entretien oral (place proposée)",
     when: "Statut « Évalué » : la personne est venue, l'entretien oral est fait, on lui propose une place.",
     variables: ["prenom", "expediteur", "signature", "organisme"],
     text: `Bonjour {prenom},

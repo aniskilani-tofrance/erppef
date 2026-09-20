@@ -26,6 +26,18 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-09-20-entretien-oral-et-entree",
+    date: "2026-09-20",
+    title: "Admission : une seule date à saisir, et un seul mot pour l'entretien oral",
+    summary: "L'entretien oral remplit désormais aussi la date de l'entretien d'entrée, puisque la réunion, l'entretien oral et l'entretien d'entrée ont lieu le même jour. Et le « test oral » s'appelle partout « entretien oral ».",
+    items: [
+      { text: "Quand vous enregistrez l'entretien oral pendant une réunion d'information, sa date remplit aussi la date de l'entretien d'entrée dans le bloc « Analyse du besoin » de la fiche. Une preuve Qualiopi de moins à saisir à la main. La date n'est jamais écrasée si vous en avez déjà mis une, et elle reste modifiable.", roles: TEAM },
+      { text: "Vocabulaire unifié : ce qui s'appelait tantôt « test oral », tantôt « entretien de positionnement », s'appelle partout « entretien oral ». Le mot « positionnement » est réservé au test écrit envoyé par lien, pour qu'on ne confonde plus les deux.", roles: TEAM },
+      { text: "C'est aussi ce que nous disons à l'apprenant depuis toujours dans la convocation WhatsApp : « un petit entretien oral, ce n'est pas un examen ». L'interface parle enfin la même langue.", roles: TEAM },
+    ],
+    training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "L'admission : WhatsApp, réunion d'information, entretien oral" }],
+  },
+  {
     id: "2026-09-19-invitation-creneau-differee",
     date: "2026-09-19",
     title: "Leads resto : on n'invite plus un restaurateur à réserver un créneau qu'il vient de prendre",

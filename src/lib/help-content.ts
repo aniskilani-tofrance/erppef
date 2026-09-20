@@ -249,7 +249,7 @@ export const HELP_SECTIONS: HelpSection[] = [
           "Astuce accueil : lancez le test AVEC la personne (bouton « Commencer » appuyé ensemble) — c'est ce premier geste qui active le son sur iPhone/iPad.",
           "Dès qu'il termine : « Test fait · niveau » et le score apparaissent dans la liste, et son « Niveau évalué » se remplit automatiquement sur sa fiche.",
           "Sous le niveau A1, le test est un REPÉRAGE, pas un verdict : le profil affiché (Pré-alpha, Alpha…) est à confirmer en entretien. Le candidat, lui, ne voit jamais ces étiquettes — seulement un message positif. « À évaluer avec un accompagnant » signale une difficulté avec la tablette elle-même, pas un niveau de français.",
-          "Le niveau reste modifiable à la main après votre entretien de positionnement — le test est une aide, pas une sentence.",
+          "Le niveau reste modifiable à la main après votre entretien oral — le test en ligne est une aide, pas une sentence.",
           "« Générer le test » relance une nouvelle tentative (nouveau lien) si besoin — par exemple après plusieurs mois de cours.",
         ],
       },
@@ -293,7 +293,7 @@ export const HELP_SECTIONS: HelpSection[] = [
   },
   {
     id: "admission",
-    title: "Admission : contact, réunion d'information, test oral",
+    title: "Admission : contact, réunion d'information, entretien oral",
     roles: TEAM,
     articles: [
       {
@@ -303,7 +303,7 @@ export const HELP_SECTIONS: HelpSection[] = [
           "« Écrire » ouvre WhatsApp (application ou WhatsApp Web sur ordinateur) avec le message de premier contact déjà écrit et signé de votre prénom. Relisez, adaptez si besoin, appuyez sur Envoyer.",
           "Dès que WhatsApp s'ouvre, le contact est noté dans le journal et le statut passe à « Contacté » : la personne quitte la liste « À contacter ».",
           "Un appel, une réponse, un refus : icône carnet « Noter un contact » — canal, résultat, note, et le statut proposé (modifiable). Le journal garde qui a parlé à qui, et quand.",
-          "Les statuts : Nouveau → Contacté (ou Injoignable) → Convoqué → Évalué (test oral fait) → Inscrit (dans un groupe, automatique). « Sans suite » = la personne ne donne pas suite.",
+          "Les statuts : Nouveau → Contacté (ou Injoignable) → Convoqué → Évalué (entretien oral fait) → Inscrit (dans un groupe, automatique). « Sans suite » = la personne ne donne pas suite.",
           "Le bouton WhatsApp et le carnet sont aussi dans la liste Apprenants (colonne Admission), avec un filtre par statut en haut de la page.",
           "Pas de WhatsApp ou numéro inexploitable : le bouton est grisé — appelez, puis notez le contact.",
           "Un message par étape, jamais le même texte : Nouveau → « Premier contact » ; Injoignable → « Relance » ; Contacté → le lien du test s'il reste à faire, sinon « Prochaine étape » ; Convoqué → la convocation avec date et lieu ; Évalué → « Place proposée » ; Inscrit → confirmation avec le groupe et le premier cours ; Sans suite → « Porte ouverte ». Le bouton dit toujours quelle étape il envoie.",
@@ -338,12 +338,12 @@ export const HELP_SECTIONS: HelpSection[] = [
         ],
       },
       {
-        title: "Enregistrer le test oral (entretien de positionnement)",
+        title: "Enregistrer l'entretien oral d'entrée",
         steps: [
-          "Pendant la réunion, sur la ligne de la personne : « Test oral » → date (pré-remplie), niveau à l'oral, évaluateur (pré-rempli avec votre nom), commentaire. 20 secondes.",
+          "Pendant la réunion, sur la ligne de la personne : « Entretien oral » → date (pré-remplie avec le jour de la réunion), niveau à l'oral, évaluateur (pré-rempli avec votre nom), commentaire. 20 secondes. Cette date remplit aussi la date de l'entretien d'entrée du bloc « Analyse du besoin », si elle est encore vide.",
           "Cochez « Retenir ce niveau comme Niveau évalué » : la fiche est mise à jour — c'est ce niveau que le sélecteur d'inscription des groupes utilise.",
           "Le statut d'admission passe à « Évalué ». Il ne reste qu'à inscrire la personne dans un groupe (fiche du groupe → « Inscrire des apprenants… ») : le statut devient « Inscrit » tout seul.",
-          "Le test oral est aussi modifiable depuis la fiche apprenant (bloc « Parcours d'admission »), et il figure dans le dossier d'entrée PDF avec le test en ligne et le besoin exprimé (preuve Qualiopi ind. 4 et 8).",
+          "L'entretien oral est aussi modifiable depuis la fiche apprenant (bloc « Parcours d'admission »), et il figure dans le dossier d'entrée PDF avec le test de positionnement en ligne et le besoin exprimé (preuve Qualiopi ind. 4 et 8).",
         ],
       },
     ],
