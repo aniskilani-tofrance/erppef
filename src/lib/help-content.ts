@@ -392,12 +392,14 @@ export const HELP_SECTIONS: HelpSection[] = [
         ],
       },
       {
-        title: "Tenir la veille (critère 6, ind. 23-25)",
+        title: "Tenir la veille (critère 6, ind. 23-26)",
         steps: [
-          "Qualité → « Registre de veille » → « Nouvelle entrée » : type (légale / métiers / pédagogique), source, lien, et deux lignes sur ce que vous en retenez.",
-          "Cochez « Diffusée à l'équipe » quand l'info a été partagée (réunion, mail) : c'est la preuve d'exploitation.",
-          "Visez une entrée par mois minimum — l'auditeur juge la régularité. Si un mois passe sans entrée, l'email d'alertes du 1er du mois vous le rappelle.",
-          "Sources faciles : lettre Centre Inffo (légale), France Travail / OPCO (métiers), Le français dans le monde ou fil DELF/DCL (pédagogique FLE).",
+          "Chaque semaine, le collecteur de veille (Manus) dépose ses fiches dans Qualité → « Registre de veille » avec le badge « À valider » : indicateur (23 légale, 24 métiers, 25 pédagogique, 26 handicap), titre, source, lien, résumé, impact pour ParlerEmploi et exploitation proposée. Un badge rouge « Alerte » signale une échéance ou une action à ne pas manquer.",
+          "Relecture hebdomadaire : bouton « À valider (n) » → ouvrez chaque fiche (crayon), lisez, puis passez le statut en « Validée » (on la garde) ou « Écartée » (hors sujet). Une fiche du collecteur n'est jamais modifiée par lui après dépôt : ce que vous validez reste.",
+          "Cochez « Diffusée à l'équipe » quand l'info a été partagée (réunion, mail) : c'est la preuve d'exploitation demandée par l'auditeur.",
+          "Vous pouvez toujours ajouter une entrée à la main (« Nouvelle entrée de veille ») : type, source, lien, deux lignes sur ce que vous en retenez. Visez au moins une entrée validée par mois ; l'email d'alertes du 1er du mois vous rappelle un mois vide.",
+          "Sous le registre : « Exécutions du collecteur de veille » (date, compteurs reçues / créées / doublons, CSV de secours, statut) et « Notes mensuelles de veille » (la synthèse du mois, à présenter en réunion et à l'auditeur). Un résumé par email part à la direction à chaque passage du collecteur.",
+          "Sources faciles pour vos propres entrées : lettre Centre Inffo (légale), France Travail / OPCO (métiers), Le français dans le monde ou fil DELF/DCL (pédagogique FLE), Agefiph (handicap).",
         ],
       },
       {
@@ -544,6 +546,11 @@ export const HELP_SECTIONS: HelpSection[] = [
 export type FaqItem = { q: string; a: string; roles: AppRole[] };
 
 export const FAQ: FaqItem[] = [
+  {
+    q: "Des fiches « À valider » sont apparues dans le registre de veille : d'où viennent-elles ?",
+    a: "Du collecteur de veille Qualiopi (Manus), qui lit chaque semaine les sources officielles et dépose ses fiches par l'API de l'ERP. Rien n'est validé à votre place : ouvrez chaque fiche, lisez le résumé et l'impact, passez-la en « Validée » ou « Écartée », puis cochez « Diffusée » quand vous l'avez partagée à l'équipe. La carte « Exécutions du collecteur » montre chaque passage ; la direction reçoit aussi un résumé par email.",
+    roles: TEAM,
+  },
   {
     q: "Le lien reçu par email (invitation ou mot de passe) ne fonctionne pas.",
     a: "Les liens expirent et ne servent qu'une fois. Refaites une demande : « Mot de passe oublié ? » sur l'écran de connexion, ou demandez à l'administrateur de renvoyer l'invitation depuis votre fiche.",

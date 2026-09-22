@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/table";
 import { ComplaintsManager } from "@/components/qualite/complaints-manager";
 import { WatchManager, type WatchEntry } from "@/components/qualite/watch-manager";
+import { VeilleCollector, type VeilleNoteView, type VeilleRunView } from "@/components/qualite/veille-collector";
 import {
   ABSENCE_ALERT_THRESHOLD,
   computeLearnerStats,
@@ -22,7 +23,7 @@ const INDICATORS: { ind: string; label: string; proof: string; href: string }[] 
   { ind: "12", label: "Engagement et assiduité", proof: "Émargement électronique, taux d'assiduité, alertes décrochage", href: "/apprenants" },
   { ind: "17", label: "Moyens mobilisés", proof: "Salles, capacités, équipements, planning", href: "/salles" },
   { ind: "21-22", label: "Compétences des formateurs", proof: "CV, diplômes et attestations sur chaque fiche formateur", href: "/formateurs" },
-  { ind: "23-25", label: "Veille (critère 6)", proof: "Registre de veille ci-dessous", href: "/qualite" },
+  { ind: "23-26", label: "Veille (critère 6)", proof: "Registre de veille ci-dessous (saisies de l'équipe + fiches hebdomadaires du collecteur), exécutions et notes mensuelles", href: "/qualite" },
   { ind: "27", label: "Sous-traitance", proof: "Formateurs prestataires et leurs documents contractuels", href: "/qualite" },
   { ind: "30", label: "Recueil des appréciations", proof: "Enquêtes de satisfaction anonymes par groupe", href: "/groupes" },
   { ind: "31", label: "Traitement des réclamations", proof: "Registre des réclamations ci-dessous", href: "/qualite" },
@@ -33,7 +34,7 @@ export default async function QualitePage() {
   await requireRole(["admin", "coordinator"]);
   const supabase = await createClient();
 
-  const [{ data: attendanceRows }, { data: hours }, { data: surveys }, { data: complaints }, { data: learners }, { data: watchEntries }, { data: contractors }, { data: contractorDocs }] =
+  const [{ data: attendanceRows }, { data: hours }, { data: surveys }, { data: complaints }, { data: learners }, { data: watchEntries }, { data: contractors }, { data: contractorDocs }, { data: veilleRuns }, { data: veilleNotes }] =
     await Promise.all([
       supabase
         .from("attendances")
@@ -49,6 +50,8 @@ export default async function QualitePage() {
         .select("id, first_name, last_name, is_active")
         .eq("contract_type", "prestataire"),
       supabase.from("trainer_documents").select("trainer_id"),
+      supabase.from("veille_runs").select("*").order("created_at", { ascending: false }).limit(12),
+      supabase.from("veille_monthly_notes").select("*").order("month", { ascending: false }).limit(12),
     ]);
 
   // Assiduité globale + alertes décrochage
@@ -136,7 +139,7 @@ export default async function QualitePage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Registre de veille (critère 6, ind. 23-25)</CardTitle>
+          <CardTitle className="text-base">Registre de veille (critère 6, ind. 23-26)</CardTitle>
         </CardHeader>
         <CardContent>
           <WatchManager
@@ -149,11 +152,51 @@ export default async function QualitePage() {
                 url: w.url,
                 summary: w.summary,
                 sharedWithTeam: w.shared_with_team,
+                title: w.title ?? null,
+                status: (w.status ?? "validee") as WatchEntry["status"],
+                origin: (w.origin ?? "manuel") as WatchEntry["origin"],
+                indicator: w.indicator ?? null,
+                alert: Boolean(w.alert),
+                impact: w.impact ?? null,
+                exploitation: w.exploitation ?? null,
+                publishedOn: w.published_on ?? null,
+                runId: w.run_id ?? null,
               }),
             )}
           />
         </CardContent>
       </Card>
+
+      <VeilleCollector
+        runs={(veilleRuns ?? []).map(
+          (r): VeilleRunView => ({
+            runId: r.run_id,
+            status: r.status,
+            received: r.received,
+            created: r.created,
+            ignored: r.ignored,
+            rejected: r.rejected,
+            replays: r.replays,
+            startedAt: r.started_at,
+            finishedAt: r.finished_at,
+            csvUrl: r.csv_url,
+            csvName: r.csv_name,
+            message: r.message,
+            notifiedAt: r.notified_at,
+          }),
+        )}
+        notes={(veilleNotes ?? []).map(
+          (n): VeilleNoteView => ({
+            id: n.id,
+            month: n.month,
+            title: n.title,
+            content: n.content,
+            runId: n.run_id,
+            entriesCount: n.entries_count,
+            updatedAt: n.updated_at,
+          }),
+        )}
+      />
 
       <Card>
         <CardHeader>

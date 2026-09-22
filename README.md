@@ -40,6 +40,13 @@ vercel deploy --prebuilt --prod --yes
 
 ⚠️ Les variables `NEXT_PUBLIC_*` doivent être **non-sensitives** sur Vercel (sinon le build ne peut pas les lire et le proxy renvoie 500).
 
+## Intégrations
+
+- **Leads restaurateurs** : `docs/integrations/webhook-leads-restaurateurs.md`.
+- **Veille Qualiopi (collecteur Manus)** : `docs/integrations/api-veille.md` — routes `/api/veille/*`,
+  jeton de service `PEF_VEILLE_API_TOKEN`, URL `PEF_VEILLE_API_URL`, résumé hebdomadaire vers
+  `PEF_VEILLE_NOTIFY_TO`. Vérification : `node scripts/verif-veille-api.mjs`.
+
 ## Scripts d'administration (`scripts/`)
 
 | Script | Usage |

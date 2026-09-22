@@ -26,6 +26,19 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-09-22-veille-collecteur",
+    date: "2026-09-22",
+    title: "Veille Qualiopi : le collecteur dépose ses fiches chaque semaine, à vous de les valider",
+    summary: "Le registre de veille reçoit désormais chaque semaine les fiches du collecteur de veille (Manus) : légale, métiers, pédagogique et handicap (indicateurs 23 à 26). Elles arrivent « À valider » ; vous les relisez, les validez ou les écartez, et cochez « Diffusée » quand l'information a été partagée.",
+    items: [
+      { text: "Qualité → « Registre de veille » : bouton « À valider (n) » pour ne voir que les fiches à relire. Chaque fiche porte l'indicateur, la source, le lien, le résumé, l'impact pour ParlerEmploi et l'exploitation proposée ; un badge rouge « Alerte » signale une échéance à ne pas manquer.", roles: TEAM },
+      { text: "Ouvrez la fiche (crayon) → statut « Validée » ou « Écartée ». Le collecteur ne retouche jamais une fiche déposée : ce que vous validez reste. Vous gardez la main pour ajouter vos propres entrées.", roles: TEAM },
+      { text: "Deux nouvelles cartes sous le registre : « Exécutions du collecteur de veille » (chaque passage avec ses compteurs et l'éventuel CSV de secours) et « Notes mensuelles de veille » (la synthèse du mois à présenter en réunion et à l'auditeur). La direction reçoit un résumé par email à chaque passage.", roles: TEAM },
+      { text: "Le type « Handicap & accessibilité » (indicateur 26) s'ajoute aux trois types existants, pour vos saisies manuelles aussi.", roles: TEAM },
+    ],
+    training: [{ moduleId: "c5-vie-quotidienne", lessonId: "qualite", label: "Assiduité et audit Qualiopi — la veille" }],
+  },
+  {
     id: "2026-09-20-entretien-oral-et-entree",
     date: "2026-09-20",
     title: "Admission : une seule date à saisir, et un seul mot pour l'entretien oral",

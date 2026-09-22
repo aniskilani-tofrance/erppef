@@ -41,7 +41,9 @@ export async function proxy(request: NextRequest) {
     // Crons Vercel : protégés par CRON_SECRET dans la route elle-même.
     request.nextUrl.pathname.startsWith("/api/cron") ||
     // Webhook des leads restaurateurs (Brevo, Make/Meta, Calendly) : jeton d'organisation dans la route.
-    request.nextUrl.pathname.startsWith("/api/leads/inbound");
+    request.nextUrl.pathname.startsWith("/api/leads/inbound") ||
+    // API de veille Qualiopi (collecteur Manus) : jeton de service Bearer vérifié dans chaque route.
+    request.nextUrl.pathname.startsWith("/api/veille");
 
   if (!user && !isAuthRoute) {
     const url = request.nextUrl.clone();

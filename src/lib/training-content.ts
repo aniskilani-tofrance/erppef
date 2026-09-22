@@ -613,7 +613,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
           "Enquête de satisfaction : fiche du groupe → QR code anonyme en fin de session (1 minute). Les moyennes s'affichent sur la fiche.",
           "Réclamations : page Qualité → registre — consignez la réclamation ET l'action corrective (c'est elle qui compte en audit).",
           "Analyse du besoin (ind. 4) : sur la fiche apprenant, objectif visé + besoin exprimé + date d'entretien, puis « Télécharger le dossier d'entrée (PDF) » — la preuve individuelle.",
-          "Veille (critère 6) : page Qualité → registre de veille, une entrée par mois minimum (source lue + 2 lignes) ; l'email d'alertes du 1er du mois vous rappelle si un mois est vide.",
+          "Veille (critère 6, ind. 23-26) : chaque semaine le collecteur de veille dépose ses fiches dans Qualité → registre de veille, badge « À valider ». Relisez-les (bouton « À valider (n) »), passez chacune en « Validée » ou « Écartée », cochez « Diffusée » une fois partagée à l'équipe. Les cartes « Exécutions du collecteur » et « Notes mensuelles » en dessous sont vos preuves de régularité ; vous pouvez toujours ajouter une entrée à la main. L'email d'alertes du 1er du mois vous rappelle un mois vide.",
           "Sous-traitance (ind. 27) : un formateur freelance = contrat « Prestataire » sur sa fiche + ses documents ; la carte Sous-traitance de la page Qualité signale les dossiers incomplets.",
           "Jour d'audit : ouvrez la page Qualité — le tableau « où sont les preuves » guide l'auditeur indicateur par indicateur.",
         ],

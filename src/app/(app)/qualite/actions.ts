@@ -53,15 +53,24 @@ export async function upsertComplaint(raw: z.infer<typeof complaintSchema>): Pro
 const watchEntrySchema = z.object({
   id: z.string().uuid().optional(),
   entryDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  category: z.enum(["legale", "metiers", "pedagogique"]),
+  category: z.enum(["legale", "metiers", "pedagogique", "handicap"]),
   source: z.string().min(1),
   url: z.string().nullable(),
   summary: z.string().min(1),
   sharedWithTeam: z.boolean(),
+  // Champs du collecteur de veille (facultatifs pour une saisie manuelle)
+  title: z.string().nullable().optional(),
+  status: z.enum(["a_valider", "validee", "ecartee"]).optional(),
+  indicator: z.number().int().refine((n) => [23, 24, 25, 26].includes(n), "Indicateur 23 à 26").nullable().optional(),
+  alert: z.boolean().optional(),
+  impact: z.string().nullable().optional(),
+  exploitation: z.string().nullable().optional(),
+  publishedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
 });
 
-// Registre de veille (Qualiopi critère 6, ind. 23-25) : chaque entrée = une source
-// consultée, datée et catégorisée, avec ce qu'on en retient.
+// Registre de veille (Qualiopi critère 6, ind. 23-26) : chaque entrée = une source
+// consultée, datée et catégorisée, avec ce qu'on en retient. Les fiches du collecteur
+// arrivent par l'API (/api/veille) avec le statut « à valider » ; l'équipe les relit ici.
 export async function upsertWatchEntry(raw: z.infer<typeof watchEntrySchema>): Promise<ActionResult> {
   const parsed = watchEntrySchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "Données invalides" };
@@ -70,7 +79,7 @@ export async function upsertWatchEntry(raw: z.infer<typeof watchEntrySchema>): P
   const { orgId } = await requireRole(["admin", "coordinator"]);
   const supabase = await createClient();
 
-  const row = {
+  const row: Record<string, unknown> = {
     org_id: orgId,
     entry_date: d.entryDate,
     category: d.category,
@@ -79,6 +88,13 @@ export async function upsertWatchEntry(raw: z.infer<typeof watchEntrySchema>): P
     summary: d.summary,
     shared_with_team: d.sharedWithTeam,
   };
+  if (d.title !== undefined) row.title = d.title;
+  if (d.status !== undefined) row.status = d.status;
+  if (d.indicator !== undefined) row.indicator = d.indicator;
+  if (d.alert !== undefined) row.alert = d.alert;
+  if (d.impact !== undefined) row.impact = d.impact;
+  if (d.exploitation !== undefined) row.exploitation = d.exploitation;
+  if (d.publishedOn !== undefined) row.published_on = d.publishedOn;
 
   const { error } = d.id
     ? await supabase.from("watch_entries").update(row).eq("id", d.id)
