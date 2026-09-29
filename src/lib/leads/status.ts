@@ -1,5 +1,7 @@
 // Pipeline des leads restaurateurs : du formulaire à la convention POEI.
 // Les statuts sont ordonnés ; « gagné », « perdu » et « hors cible » sont des sorties.
+// « En veille (nurturing) » est une mise en attente : le besoin existe mais plus tard,
+// l'ERP entretient le contact par e-mail à J+30, J+60 et J+90 (voir sequences.ts).
 // Le vocabulaire est celui du kit Shahzad v3 (Drive « Kit Shahzad — Leads POEI »).
 
 export const LEAD_STATUSES = [
@@ -10,9 +12,10 @@ export const LEAD_STATUSES = [
   { code: "rdv_pris", label: "RDV pris", rank: 4, hint: "Rendez-vous posé avec la direction", final: false },
   { code: "rdv_tenu", label: "RDV tenu", rank: 5, hint: "Le rendez-vous a eu lieu", final: false },
   { code: "proposition", label: "Proposition envoyée", rank: 6, hint: "Devis ou convention en cours", final: false },
-  { code: "gagne", label: "Gagné", rank: 7, hint: "Convention signée", final: true },
-  { code: "perdu", label: "Perdu", rank: 8, hint: "Sans suite — raison notée", final: true },
-  { code: "hors_cible", label: "Hors cible", rank: 9, hint: "Pas un employeur, pas de besoin, hors zone", final: true },
+  { code: "nurturing", label: "En veille (nurturing)", rank: 7, hint: "Besoin décalé : contenus utiles à J+30, J+60, J+90", final: false },
+  { code: "gagne", label: "Gagné", rank: 8, hint: "Convention signée", final: true },
+  { code: "perdu", label: "Perdu", rank: 9, hint: "Sans suite — raison notée", final: true },
+  { code: "hors_cible", label: "Hors cible", rank: 10, hint: "Pas un employeur, pas de besoin, hors zone", final: true },
 ] as const;
 
 export type LeadStatus = (typeof LEAD_STATUSES)[number]["code"];
@@ -41,6 +44,8 @@ export function leadStatusBadgeClass(code: string | null | undefined): string {
       return "border-emerald-300 bg-emerald-50 text-emerald-800";
     case "proposition":
       return "border-indigo-300 bg-indigo-50 text-indigo-800";
+    case "nurturing":
+      return "border-cyan-300 bg-cyan-50 text-cyan-800";
     case "gagne":
       return "border-emerald-400 bg-emerald-100 text-emerald-900";
     case "perdu":

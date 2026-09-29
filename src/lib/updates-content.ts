@@ -26,6 +26,25 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-09-29-sequences-automatiques",
+    date: "2026-09-29",
+    title: "Leads resto : les relances tournent toutes seules, et s'arrêtent toutes seules",
+    summary: "La cadence de relance n'est plus une liste à suivre de tête : la fiche la tient. Un appel sur messagerie lance la séquence « Injoignable », un rendez-vous manqué la séquence J+1 / J+3, une proposition envoyée ses relances J+2 et J+7, et un nouveau statut « En veille » entretient le contact à J+30, J+60 et J+90. Dès que le restaurateur répond ou réserve, tout s'arrête.",
+    items: [
+      { text: "Notez un appel « Messagerie » ou « Barrage » : la séquence « Injoignable » démarre. La fiche vous pose l'appel J+1 en prochaine action, l'e-mail J+3 part tout seul, le SMS J+6 aussi (avec votre appel du jour), puis l'e-mail de rupture J+10. Au bout, c'est à vous de classer « Perdu — injoignable » : l'ERP ne clôt jamais un dossier seul.", roles: LEADS },
+      { text: "Cliquez « No-show » : le message du jour part comme avant, puis les e-mails n°7 (J+1) et n°8 (J+3) partent tout seuls tant qu'aucun nouveau créneau n'est pris. Passez un lead en « Proposition envoyée » : les e-mails n°11 (J+2 ouvré) et n°12 (J+7) suivent.", roles: LEADS },
+      { text: "Nouveau statut « En veille (nurturing) » pour le restaurateur dont le besoin est réel mais décalé : trois e-mails utiles à J+30, J+60 et J+90, sans appel. Il peut répondre « stop » à tout moment.", roles: LEADS },
+      { text: "Tout s'arrête aussitôt que le restaurateur répond, réserve un créneau, a tenu son rendez-vous, ou que le besoin est clos. Idem s'il s'oppose (nouveau bouton « Opposition du prospect » sur la fiche, ou STOP par SMS), se désinscrit ou se plaint dans un e-mail Brevo, ou si son adresse ou son numéro sont invalides.", roles: LEADS },
+      { text: "Une nouvelle carte « Séquence automatique » sur la fiche montre la séquence en cours, la dernière étape partie, la prochaine et sa date, le dernier envoi et, quand elle est arrêtée, la raison. Le journal note chaque étape, et les retours Brevo (délivré, bounce, désinscription, plainte) remontent sur la fiche.", roles: LEADS },
+      { text: "Les rappels J-1 et H-2 des créneaux réservés plus de trois jours à l'avance sont désormais programmés dès qu'ils entrent dans la fenêtre de Brevo : plus aucun rendez-vous lointain sans rappel.", roles: LEADS },
+      { text: "Direction : déclarer une fois le webhook des retours Brevo (Aide → Leads → « Brancher la landing, Brevo, Meta et Calendly »). Sans lui, les séquences tournent quand même, mais la fiche ne sait pas si un e-mail est arrivé.", roles: TEAM },
+    ],
+    training: [
+      { moduleId: "m1-leads", lessonId: "relances", label: "Relancer : la cadence J0 → J10, tenue par la fiche" },
+      { moduleId: "m1-leads", lessonId: "messages", label: "SMS, WhatsApp, email : ce qui part tout seul et ce que vous envoyez" },
+    ],
+  },
+  {
     id: "2026-09-22-veille-collecteur",
     date: "2026-09-22",
     title: "Veille Qualiopi : le collecteur dépose ses fiches chaque semaine, à vous de les valider",

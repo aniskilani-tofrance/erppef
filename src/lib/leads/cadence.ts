@@ -60,6 +60,8 @@ export function suggestNextAction(i: CadenceInput): NextAction | null {
       return done(addDays(i.today, 0), "Prévenir la direction : proposition à envoyer", "suivi");
     case "proposition":
       return done(addDays(i.today, 3), "Relancer la proposition (direction)", "suivi");
+    case "nurturing":
+      return null; // la séquence de veille pose elle-même la prochaine action sur la fiche
     case "contacte":
     case "qualifie":
       return done(i.today, "Proposer deux créneaux hors service et poser le RDV", "rdv");

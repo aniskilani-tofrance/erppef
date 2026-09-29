@@ -29,7 +29,31 @@ const TITRE_EMAIL: Record<string, string> = {
   [BREVO_LEAD_EVENTS.rappelQualificationH2]: "Rappel de l'appel de qualification, deux heures avant",
   [BREVO_LEAD_EVENTS.noShow]: "Après un rendez-vous manqué",
   [BREVO_LEAD_EVENTS.dernierMessage]: "Clôture du dossier",
+  [BREVO_LEAD_EVENTS.relanceJ3]: "Relance J+3, je n'arrive pas à vous joindre",
+  [BREVO_LEAD_EVENTS.noShowJ1]: "J+1 après le rendez-vous manqué",
+  [BREVO_LEAD_EVENTS.noShowJ3]: "J+3 après le rendez-vous manqué, dernière relance",
+  [BREVO_LEAD_EVENTS.propositionJ2]: "Relance J+2 ouvré après la proposition",
+  [BREVO_LEAD_EVENTS.propositionJ7]: "J+7 après la proposition, décision ou mise en attente",
+  [BREVO_LEAD_EVENTS.nurturingJ30]: "Veille J+30, où en êtes-vous ?",
+  [BREVO_LEAD_EVENTS.nurturingJ60]: "Veille J+60, ce que retiennent les restaurateurs",
+  [BREVO_LEAD_EVENTS.nurturingJ90]: "Veille J+90, on garde le contact ?",
 };
+
+/** Le titre lisible d'un e-mail automatique à partir de son code d'événement Brevo. */
+export function titreEmail(code: string | null | undefined): string | null {
+  return code ? TITRE_EMAIL[code] ?? null : null;
+}
+
+// Les séquences et les retours des canaux laissent aussi une marque en tête de note
+// (« [seq:etape:injoignable:j3] », « [brevo-retour:hard_bounce] », « [twilio-retour:invalide] »).
+// Elle sert à la machine ; l'écran n'affiche que le texte qui la suit.
+const MARQUE_TECHNIQUE = /^\[(seq|brevo-retour|twilio-retour):[^\]]*\]\s*/i;
+
+export function noteLisible(note: string | null | undefined): string | null {
+  if (!note) return null;
+  const propre = note.replace(MARQUE_TECHNIQUE, "").trim();
+  return propre || null;
+}
 
 const TITRE_SMS = new Map(SMS_TEMPLATES.map((t) => [t.code as string, t.label.replace(/^SMS (n°\d+ )?— /, "")]));
 

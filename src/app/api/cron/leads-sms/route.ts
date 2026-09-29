@@ -1,8 +1,11 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendDeferredLeadSms, sendLeadRdvSms, sendPendingLeadIntro } from "@/lib/leads/automations";
+import { runDueLeadSequences, scheduleUpcomingAppointmentReminders } from "@/lib/leads/sequence-engine";
 
-// SMS transactionnels aux restaurateurs : rappel de rendez-vous de la veille, et reprise
-// des messages qui n'ont pas pu partir du premier coup.
+// L'horloge du module Leads : SMS transactionnels (rappel de la veille, reprises), étapes
+// échues des séquences automatiques (injoignable, rendez-vous manqué, proposition, veille),
+// et programmation des rappels Brevo J-1 / H-2 des créneaux qui entrent dans la fenêtre
+// de 72 heures.
 //
 // Les envois immédiats ne passent pas par ici : ils partent dans la seconde depuis le
 // point d'entrée des leads, sans restriction horaire. Cette route couvre les deux cas
@@ -23,6 +26,8 @@ export async function GET(request: Request) {
   let invitations = { sent: 0, skipped: 0 };
   let rappelsRdv = { sent: 0, skipped: 0 };
   let reprises = { sent: 0, skipped: 0 };
+  let sequences = { executed: 0, stopped: 0, skipped: 0, failed: 0 };
+  let rappelsBrevo = { scheduled: 0, leads: 0 };
 
   try {
     invitations = await sendPendingLeadIntro(supabase);
@@ -40,6 +45,16 @@ export async function GET(request: Request) {
   } catch (e) {
     console.error("[leads/sms reprise]", e instanceof Error ? e.message : e);
   }
+  try {
+    sequences = await runDueLeadSequences(supabase);
+  } catch (e) {
+    console.error("[leads/sequences]", e instanceof Error ? e.message : e);
+  }
+  try {
+    rappelsBrevo = await scheduleUpcomingAppointmentReminders(supabase);
+  } catch (e) {
+    console.error("[leads/rappels brevo]", e instanceof Error ? e.message : e);
+  }
 
-  return Response.json({ ok: true, invitations, rappelsRdv, reprises });
+  return Response.json({ ok: true, invitations, rappelsRdv, reprises, sequences, rappelsBrevo });
 }
