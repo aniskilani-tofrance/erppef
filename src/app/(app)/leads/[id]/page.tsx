@@ -21,7 +21,11 @@ import { LeadQuickActions } from "@/components/leads/lead-quick-actions";
 import { LeadRdvDialog, RdvOutcomeButtons } from "@/components/leads/lead-rdv-dialog";
 import { ClaimLeadButton, DeleteLeadButton, LeadStatusSelect, NextActionEditor, OwnerSelect } from "@/components/leads/lead-status-controls";
 import { LeadJournal, type LigneJournal } from "@/components/leads/lead-journal";
-import { decrireMessage } from "@/lib/leads/journal";
+import { LeadSequenceCard } from "@/components/leads/lead-sequence-card";
+import { decrireMessage, noteLisible } from "@/lib/leads/journal";
+import { sequenceLabel, sequenceStepLabel, stopReasonLabel } from "@/lib/leads/sequences";
+import { emailStatusLabel } from "@/lib/leads/brevo-webhook";
+import { automationsEnabled } from "@/lib/leads/templates";
 import type { LeadForBrevo } from "@/lib/leads/brevo";
 import { cn } from "@/lib/utils";
 
@@ -85,10 +89,27 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
       genre: e.kind,
       genreLabel: eventKindLabel(e.kind),
       resultatLabel: e.outcome ? eventOutcomeLabel(e.outcome) : null,
-      note: e.note,
+      note: noteLisible(e.note),
       message: message ? { ...message, quand: message.quand ? fmtDateTime(message.quand) : null } : null,
     };
   });
+  // La séquence automatique de la fiche, résumée pour la carte (libellés et dates prêts à afficher).
+  const sequenceActive = Boolean(lead.sequence_next_at);
+  const sequenceCard = {
+    active: sequenceActive,
+    label: lead.sequence_kind ? sequenceLabel(lead.sequence_kind) : null,
+    lastStepLabel: sequenceStepLabel(lead.sequence_kind, lead.sequence_step),
+    nextLabel: sequenceActive ? lead.next_action : null,
+    nextAt: sequenceActive && lead.sequence_next_at ? fmtDateTime(lead.sequence_next_at) : null,
+    lastSentAt: lead.sequence_last_sent_at ? fmtDateTime(lead.sequence_last_sent_at) : null,
+    stoppedAt: lead.sequence_stopped_at ? fmtDateTime(lead.sequence_stopped_at) : null,
+    stopReasonLabel: lead.sequence_stop_reason ? stopReasonLabel(lead.sequence_stop_reason) : null,
+  };
+  const emailCard = {
+    label: emailStatusLabel(lead.email_status),
+    at: lead.email_status_at ? fmtDateTime(lead.email_status_at) : null,
+    blocking: ["hard_bounce", "unsubscribed", "complaint"].includes(lead.email_status ?? ""),
+  };
   const directorBookingUrl = directorCalendlyLink(lead, settings);
   const qualificationRemindersQueued = Boolean(lead.qualification_reminder_j1_batch_id || lead.qualification_reminder_h2_batch_id);
   const rdvRemindersQueued = Boolean(lead.rdv_reminder_j1_batch_id || lead.rdv_reminder_h2_batch_id);
@@ -150,6 +171,16 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
               {!isFinalStatus(lead.status) && <NextActionEditor leadId={lead.id} action={lead.next_action} on={lead.next_action_on} />}
             </CardContent>
           </Card>
+
+          <LeadSequenceCard
+            leadId={lead.id}
+            canLift={role === "admin" || role === "coordinator"}
+            automationsOn={automationsEnabled(settings)}
+            sequence={sequenceCard}
+            email={emailCard}
+            phoneInvalid={lead.phone_status === "invalide"}
+            optOutAt={lead.opt_out_at ? fmtDateTime(lead.opt_out_at) : null}
+          />
 
           <Card>
             <CardHeader className="pb-2">

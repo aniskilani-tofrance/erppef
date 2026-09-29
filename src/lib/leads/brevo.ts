@@ -19,6 +19,16 @@ export const BREVO_LEAD_EVENTS = {
   rappelQualificationH2: "poei_lead_rappel_qualification_h2",
   noShow: "poei_lead_no_show",
   dernierMessage: "poei_lead_dernier_message",
+  // Étapes des séquences automatiques (voir sequences.ts) : un événement par étape, donc
+  // une marque de journal par étape, donc jamais deux fois le même e-mail à une fiche.
+  relanceJ3: "poei_lead_relance_j3",
+  noShowJ1: "poei_lead_no_show_j1",
+  noShowJ3: "poei_lead_no_show_j3",
+  propositionJ2: "poei_lead_proposition_j2",
+  propositionJ7: "poei_lead_proposition_j7",
+  nurturingJ30: "poei_lead_nurturing_j30",
+  nurturingJ60: "poei_lead_nurturing_j60",
+  nurturingJ90: "poei_lead_nurturing_j90",
 } as const;
 
 export type BrevoLeadEvent = (typeof BREVO_LEAD_EVENTS)[keyof typeof BREVO_LEAD_EVENTS];
@@ -54,7 +64,20 @@ export type LeadForBrevo = {
   qualification_reminder_h2_batch_id?: string | null;
   rdv_reminder_j1_batch_id?: string | null;
   rdv_reminder_h2_batch_id?: string | null;
+  // Retours des canaux et opposition : présents quand la fiche est chargée entière (select *).
+  opt_out_at?: string | null;
+  email_status?: string | null;
+  phone_status?: string | null;
 };
+
+/**
+ * Plus aucun e-mail automatique vers cette fiche : le prospect s'est opposé, s'est
+ * désinscrit, s'est plaint, ou son adresse a produit un bounce dur. Les envois faits à
+ * la main depuis la messagerie du conseiller ne passent pas par ici.
+ */
+export function emailSuppressed(lead: Pick<LeadForBrevo, "opt_out_at" | "email_status">): boolean {
+  return Boolean(lead.opt_out_at) || ["hard_bounce", "unsubscribed", "complaint"].includes(lead.email_status ?? "");
+}
 
 export type AppointmentReminderKind = "qualification" | "rdv";
 type ReminderBatchColumn =
@@ -144,9 +167,11 @@ export function buildBrevoLeadPayload(
   };
 }
 
+export type BrevoDispatchReason = "not_configured" | "automations_off" | "suppressed" | "no_email" | "already_sent" | "delivery_failed";
+
 type DispatchResult =
   | { sent: true; messageId: string | null }
-  | { sent: false; reason: "not_configured" | "automations_off" | "no_email" | "already_sent" | "delivery_failed" };
+  | { sent: false; reason: BrevoDispatchReason };
 
 function cleanEmail(value: string | null | undefined): string | null {
   const email = value?.trim().toLowerCase();
@@ -282,7 +307,15 @@ L'équipe conseil ParlerEmploi`,
   }
 
   if (eventName === BREVO_LEAD_EVENTS.noShow) return renderEmail("no_show", vars);
-  return renderEmail("rupture_j10", vars);
+  if (eventName === BREVO_LEAD_EVENTS.relanceJ3) return renderEmail("relance_j3", vars);
+  if (eventName === BREVO_LEAD_EVENTS.noShowJ1) return renderEmail("no_show_j1", vars);
+  if (eventName === BREVO_LEAD_EVENTS.noShowJ3) return renderEmail("no_show_j3", vars);
+  if (eventName === BREVO_LEAD_EVENTS.propositionJ2) return renderEmail("post_rdv_j2", vars);
+  if (eventName === BREVO_LEAD_EVENTS.propositionJ7) return renderEmail("post_rdv_j7", vars);
+  if (eventName === BREVO_LEAD_EVENTS.nurturingJ30) return renderEmail("nurturing_j30", vars);
+  if (eventName === BREVO_LEAD_EVENTS.nurturingJ60) return renderEmail("nurturing_j60", vars);
+  if (eventName === BREVO_LEAD_EVENTS.nurturingJ90) return renderEmail("nurturing_j90", vars);
+  return renderEmail("rupture_j10", vars); // BREVO_LEAD_EVENTS.dernierMessage
 }
 
 function brandedHtml(body: string) {
@@ -347,6 +380,7 @@ export async function dispatchBrevoLeadEvent(
   // Tous les emails de ce module partent sans intervention humaine : ils suivent
   // donc l'interrupteur d'envois automatiques des réglages Leads.
   if (!automationsEnabled(params.settings)) return { sent: false, reason: "automations_off" };
+  if (emailSuppressed(params.lead)) return { sent: false, reason: "suppressed" };
   if (!email) return { sent: false, reason: "no_email" };
 
   const marker = deliveryMarker(params.eventName);
@@ -401,6 +435,7 @@ export async function scheduleBrevoLeadEvent(
   const email = cleanEmail(params.lead.email);
   if (!apiKey) return { sent: false, reason: "not_configured" };
   if (!automationsEnabled(params.settings)) return { sent: false, reason: "automations_off" };
+  if (emailSuppressed(params.lead)) return { sent: false, reason: "suppressed" };
   if (!email) return { sent: false, reason: "no_email" };
   const scheduledMs = Date.parse(params.scheduledAt);
   const leadMs = scheduledMs - Date.now();
@@ -448,9 +483,14 @@ export async function scheduleBrevoLeadEvent(
  * `<…@smtp-relay.mailin.fr>`, hence the percent-encoding). A 404 means the message
  * has already left or was already canceled: nothing left to do.
  */
+/** Valeur posée dans une colonne `*_batch_id` le temps de l'appel à Brevo (réservation). */
+export const REMINDER_CLAIM_PREFIX = "claim:";
+
 export async function cancelBrevoScheduledEmail(cancelId: string | null | undefined): Promise<boolean> {
   const apiKey = process.env.BREVO_API_KEY?.trim();
   if (!apiKey || !cancelId) return false;
+  // Une réservation en cours n'est pas un identifiant Brevo : rien à annuler côté API.
+  if (cancelId.startsWith(REMINDER_CLAIM_PREFIX)) return false;
   try {
     const response = await fetch(`https://api.brevo.com/v3/smtp/email/${encodeURIComponent(cancelId)}`, {
       method: "DELETE",
@@ -470,7 +510,12 @@ export async function cancelBrevoScheduledEmail(cancelId: string | null | undefi
 
 /**
  * Queues J-1 and H-2 reminders that are presently within Brevo's 72-hour
- * scheduling window. The caller persists the returned batch identifiers on the lead.
+ * scheduling window. Chaque colonne `*_batch_id` est d'abord RÉSERVÉE par une mise à
+ * jour conditionnelle (`… is null` → `claim:<uuid>`) : deux passages simultanés (cron
+ * Vercel + action GitHub, ou rejeu) ne programment jamais deux fois le même rappel ;
+ * celui qui perd la réservation passe son chemin. L'identifiant Brevo remplace la
+ * réservation dès la réponse ; en cas d'échec, la colonne est libérée pour le passage
+ * suivant. The caller may still persist the returned batch identifiers on the lead.
  */
 export async function scheduleBrevoAppointmentReminders(
   supabase: SupabaseClient,
@@ -500,6 +545,18 @@ export async function scheduleBrevoAppointmentReminders(
       skipped += 1;
       continue;
     }
+    const claim = `${REMINDER_CLAIM_PREFIX}${randomUUID()}`;
+    const { data: claimed } = await supabase
+      .from("employer_leads")
+      .update({ [plan.batchColumn]: claim })
+      .eq("id", params.lead.id)
+      .eq("org_id", params.orgId)
+      .is(plan.batchColumn, null)
+      .select("id");
+    if (!claimed?.length) {
+      skipped += 1; // un autre passage a déjà pris ce rappel
+      continue;
+    }
     const result = await scheduleBrevoLeadEvent(supabase, {
       orgId: params.orgId,
       lead: reminderLead,
@@ -507,9 +564,16 @@ export async function scheduleBrevoAppointmentReminders(
       eventName: plan.eventName,
       scheduledAt: plan.scheduledAt,
     });
-    if (result.sent && result.cancelId) {
+    const final = result.sent && result.cancelId ? result.cancelId : null;
+    await supabase
+      .from("employer_leads")
+      .update({ [plan.batchColumn]: final })
+      .eq("id", params.lead.id)
+      .eq("org_id", params.orgId)
+      .eq(plan.batchColumn, claim);
+    if (final) {
       scheduled += 1;
-      patch[plan.batchColumn] = result.cancelId;
+      patch[plan.batchColumn] = final;
     } else {
       skipped += 1;
     }

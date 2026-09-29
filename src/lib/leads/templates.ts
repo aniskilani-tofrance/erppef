@@ -359,6 +359,66 @@ Si le recrutement en {metier} reste prioritaire, répondez « on avance » et no
 
 L'équipe conseil ParlerEmploi`,
   },
+  // ── Veille (nurturing) : le besoin existe mais plus tard. Trois e-mails automatiques,
+  // espacés d'un mois, qui apportent chacun quelque chose et laissent toujours une porte
+  // de sortie (« stop »). Jamais de relance téléphonique automatique à ce stade.
+  {
+    code: "nurturing_j30",
+    label: "Email n°13 — veille J+30 « où en êtes-vous ? »",
+    when: "Automatique, 30 jours après le passage en veille (nurturing).",
+    subject: `{prenom}, où en sont vos recrutements pour {restaurant} ?`,
+    text: `Bonjour {prenom},
+
+Il y a un mois, nous avions échangé au sujet de vos recrutements en {metier} pour {restaurant}, et le moment n'était pas le bon. Je reviens vers vous simplement pour savoir où vous en êtes.
+
+Pour mémoire, la POEI permet de préparer un candidat avant son embauche : 3 jours par semaine dans votre restaurant, 2 jours dans notre centre, et 0 € de reste à charge sur la formation. Notre prochain groupe restauration démarre {date_groupe}.
+
+Si le besoin revient, un échange de 15 minutes hors service suffit pour vérifier l'éligibilité de votre projet : {calendly}
+Si le moment n'est toujours pas venu, répondez simplement avec le mois auquel revenir vers vous.
+
+L'équipe conseil ParlerEmploi
+Recrutement & formation restauration
+
+Pour ne plus recevoir nos messages, répondez « stop ».`,
+  },
+  {
+    code: "nurturing_j60",
+    label: "Email n°14 — veille J+60 « ce que retiennent les restaurateurs »",
+    when: "Automatique, 60 jours après le passage en veille (nurturing).",
+    subject: `{restaurant} : ce que les restaurateurs retiennent de la POEI`,
+    text: `Bonjour {prenom},
+
+Deux mois après notre échange, un point concret plutôt qu'une relance : ce que retiennent les restaurateurs qui ont préparé une recrue en POEI.
+
+1. Le candidat apprend sur leur carte, avec leur chef ou leur manager, 3 jours par semaine : le jour de l'embauche, il connaît déjà la maison.
+2. Les 2 jours au centre couvrent ce qui prend du temps en cuisine : hygiène et HACCP, relation client, français du service.
+3. L'embauche n'a lieu qu'à la fin, si le niveau est atteint : 85 % des POEI se concluent par une embauche.
+
+Si un poste en {metier} se profile pour {restaurant}, le prochain groupe restauration démarre {date_groupe}. Un échange de 15 minutes hors service : {calendly}
+
+L'équipe conseil ParlerEmploi
+Recrutement & formation restauration
+
+Pour ne plus recevoir nos messages, répondez « stop ».`,
+  },
+  {
+    code: "nurturing_j90",
+    label: "Email n°15 — veille J+90 « on garde le contact ? »",
+    when: "Automatique, 90 jours après le passage en veille (nurturing) : le dernier message de la veille.",
+    subject: `{prenom}, on garde le contact pour {restaurant} ?`,
+    text: `Bonjour {prenom},
+
+Trois mois se sont écoulés depuis notre premier échange. Avant de mettre le dossier de {restaurant} de côté, dites-nous simplement ce qui vous convient :
+
+1. Un recrutement en {metier} se prépare : choisissez un créneau de 15 minutes hors service, {calendly}
+2. Le besoin reviendra plus tard : répondez avec le mois auquel revenir vers vous.
+3. Le besoin est clos : répondez « stop », nous ne vous écrirons plus.
+
+Sans réponse, nous n'insisterons pas. Vous pourrez toujours nous retrouver sur parlerresto.com le jour où vous recrutez.
+
+L'équipe conseil ParlerEmploi
+Recrutement & formation restauration`,
+  },
 ] as const;
 export type EmailTemplateCode = (typeof EMAIL_TEMPLATES)[number]["code"];
 

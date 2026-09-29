@@ -14,6 +14,7 @@ import {
   type LeadForBrevo,
 } from "@/lib/leads/brevo";
 import { dispatchTwilioLeadSms } from "@/lib/leads/twilio";
+import { stopLeadSequence, type SequenceLead } from "@/lib/leads/sequence-engine";
 
 // Point d'entrée des leads : POST /api/leads/inbound?token=<jeton de l'organisation>
 // Accepte JSON ou formulaire (Brevo, Make/Meta, landing Manus, Calendly). Le jeton
@@ -315,6 +316,8 @@ async function handleSetterCall(admin: Admin, org: Org, c: InboundCalendly, owne
       code: "qualification_reservee",
       automatic: true,
     });
+    // Le restaurateur a réservé : toute relance en cours (injoignable, rendez-vous manqué…) s'arrête.
+    await stopLeadSequence(admin, { orgId: org.id, lead: leadForSms as SequenceLead, reason: "reservation" });
   }
   await queueAppointmentReminders(admin, org.id, leadId, "qualification", c.startsAt, settings);
   if (notifyEmail) {
@@ -406,6 +409,8 @@ async function handleCalendly(admin: Admin, org: Org, c: InboundCalendly, ownerI
       automatic: true,
     });
   }
+  // Un rendez-vous pris avec la direction arrête toute séquence de relance en cours.
+  if (leadForBrevo) await stopLeadSequence(admin, { orgId: org.id, lead: leadForBrevo as SequenceLead, reason: "reservation" });
   await queueAppointmentReminders(admin, org.id, leadId, "rdv", c.startsAt, settings);
   if (notifyEmail) {
     await sendMail({

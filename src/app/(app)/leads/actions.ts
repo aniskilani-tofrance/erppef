@@ -22,6 +22,8 @@ import {
 } from "@/lib/leads/brevo";
 import { dispatchTwilioLeadSms } from "@/lib/leads/twilio";
 import { loadLeadSettings } from "@/lib/leads/queries";
+import { applySequenceTransition, loadSequenceLead, stopLeadSequence } from "@/lib/leads/sequence-engine";
+import { transitionForOutcome, transitionForStatus, type SequenceTransition } from "@/lib/leads/sequences";
 
 // Rôles autorisés sur les leads : la direction (admin, coordination) et le setter.
 const LEAD_ROLES = ["admin", "coordinator", "setter"] as const;
@@ -39,6 +41,24 @@ function revalidateLeads(id?: string | null) {
   revalidatePath("/leads");
   if (id) revalidatePath(`/leads/${id}`);
   revalidatePath("/dashboard");
+}
+
+// Les séquences automatiques (lib/leads/sequences.ts) suivent la fiche : un statut ou un
+// résultat d'appel peut en démarrer une ou arrêter celle en cours. La fiche est rechargée
+// entre deux transitions pour que la seconde voie l'effet de la première.
+async function applyTransitions(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  orgId: string,
+  leadId: string,
+  userId: string,
+  transitions: SequenceTransition[],
+) {
+  for (const transition of transitions) {
+    if (!transition) continue;
+    const lead = await loadSequenceLead(supabase, orgId, leadId);
+    if (!lead) return;
+    await applySequenceTransition(supabase, { orgId, lead, transition, byUserId: userId });
+  }
 }
 
 async function dispatchStatusEmail(
@@ -226,6 +246,11 @@ export async function logLeadEvent(raw: z.infer<typeof eventSchema>): Promise<Ac
     const current = await supabase.from("employer_leads").select("*").eq("id", d.leadId).eq("org_id", orgId).maybeSingle();
     if (current.data) await dispatchCallOutcomeSms(supabase, orgId, userId, current.data as LeadForBrevo, d.outcome);
   }
+  const after = await loadSequenceLead(supabase, orgId, d.leadId);
+  await applyTransitions(supabase, orgId, d.leadId, userId, [
+    d.status ? transitionForStatus(d.status) : null,
+    transitionForOutcome(d.kind, d.outcome, after?.status ?? d.status ?? "nouveau"),
+  ]);
   revalidateLeads(d.leadId);
   return { ok: true };
 }
@@ -265,8 +290,11 @@ export async function sendLeadSms(raw: { leadId: string; code: ManualSmsTemplate
   const messages: Record<Exclude<typeof result, { sent: true }> ["reason"], string> = {
     not_configured: "Twilio n'est pas encore configuré.",
     automations_off: "Les envois automatiques sont désactivés dans les réglages des leads.",
+    suppressed: "Ce lead s'est opposé aux messages, ou son numéro a déjà été refusé par Twilio.",
     no_phone: "Ce lead n'a pas de numéro de téléphone exploitable.",
     already_sent: "Ce modèle SMS a déjà été envoyé pour ce lead.",
+    invalid_number: "Twilio refuse ce numéro : vérifiez-le avec le restaurateur.",
+    opt_out: "Le restaurateur a répondu STOP à nos SMS : plus aucun envoi possible.",
     delivery_failed: "Twilio n'a pas pu envoyer le SMS. Réessayez dans quelques instants.",
   };
   return { ok: false, error: messages[result.reason] };
@@ -314,7 +342,47 @@ export async function setLeadStatus(raw: { leadId: string; status: string; lostR
       automatic: true,
     });
   }
+  await applyTransitions(supabase, orgId, d.leadId, userId, [transitionForStatus(d.status)]);
   revalidateLeads(d.leadId);
+  return { ok: true };
+}
+
+/**
+ * Arrête la séquence automatique de la fiche. « Opposition » va plus loin : le
+ * restaurateur ne veut plus rien recevoir, plus aucun message automatique ne partira,
+ * sur aucun canal, et les rappels de rendez-vous programmés chez Brevo sont annulés.
+ */
+export async function stopLeadSequenceAction(raw: { leadId: string; opposition?: boolean }): Promise<ActionResult> {
+  const parsed = z.object({ leadId: uuid, opposition: z.boolean().optional() }).safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Données invalides" };
+  const { orgId, userId } = await requireRole([...LEAD_ROLES]);
+  const supabase = await createClient();
+  const lead = await loadSequenceLead(supabase, orgId, parsed.data.leadId);
+  if (!lead) return { ok: false, error: "Lead introuvable" };
+  await stopLeadSequence(supabase, { orgId, lead, reason: parsed.data.opposition ? "opposition" : "manuel", byUserId: userId });
+  revalidateLeads(parsed.data.leadId);
+  return { ok: true };
+}
+
+/** Lève une opposition posée par erreur (direction seulement) ; les retours Brevo restent tels quels. */
+export async function liftLeadOppositionAction(raw: { leadId: string }): Promise<ActionResult> {
+  const parsed = z.object({ leadId: uuid }).safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Données invalides" };
+  const { orgId, userId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+  // Seule l'opposition est levée : un numéro marqué « invalide » par Twilio le reste,
+  // ce n'est pas une volonté du prospect mais un fait technique.
+  const { error } = await supabase
+    .from("employer_leads")
+    .update({ opt_out_at: null })
+    .eq("id", parsed.data.leadId)
+    .eq("org_id", orgId);
+  if (error) return { ok: false, error: translatePgError(error) };
+  await supabase.from("employer_lead_events").insert({
+    org_id: orgId, lead_id: parsed.data.leadId, kind: "note", outcome: "autre", by_user_id: userId,
+    note: "Opposition levée par la direction : les messages automatiques peuvent reprendre (une nouvelle séquence démarre au prochain statut ou appel noté). Un numéro refusé par Twilio reste marqué invalide.",
+  });
+  revalidateLeads(parsed.data.leadId);
   return { ok: true };
 }
 
@@ -425,6 +493,7 @@ export async function setLeadRdv(raw: z.infer<typeof rdvSchema>): Promise<Action
     org_id: orgId, lead_id: d.leadId, kind: "rdv", outcome: "rdv_pose", by_user_id: userId,
     note: `RDV posé le ${d.date.split("-").reverse().join("/")} à ${d.time} (${d.mode})`,
   });
+  await applyTransitions(supabase, orgId, d.leadId, userId, [{ stop: "reservation" }]);
   await dispatchStatusEmail(supabase, orgId, updated as LeadForBrevo | null, "rdv_pris");
   const settings = await loadLeadSettings(supabase, orgId);
   await dispatchTwilioLeadSms(supabase, {
@@ -502,6 +571,11 @@ export async function setRdvOutcome(raw: { leadId: string; outcome: "tenu" | "no
       automatic: true,
     });
   }
+  // Tenu : les relances s'arrêtent. Manqué : la séquence « rendez-vous manqué » prend le relais
+  // (J+1, J+3). Reporté : le restaurateur a répondu, on repose deux créneaux à la main.
+  await applyTransitions(supabase, orgId, d.leadId, userId, [
+    d.outcome === "tenu" ? { stop: "rdv_tenu" } : d.outcome === "no_show" ? { start: "no_show" } : { stop: "reponse" },
+  ]);
   revalidateLeads(d.leadId);
   return { ok: true };
 }

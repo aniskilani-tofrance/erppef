@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cancelBrevoScheduledEmail, scheduleBrevoAppointmentReminders, type LeadForBrevo } from "@/lib/leads/brevo";
 import { DEFAULT_LEAD_SETTINGS } from "@/lib/leads/templates";
+import { FakeSupabase, asSupabase } from "../helpers/fake-supabase";
 
 // Vérifié en production le 18/09/2026 : Brevo ignore le batchId fourni par l'appelant
 // et ne renvoie qu'un messageId ; annuler avec ce batchId répond 404, annuler avec le
@@ -25,7 +26,15 @@ const lead: LeadForBrevo = {
 };
 
 const settings = { ...DEFAULT_LEAD_SETTINGS, automations: "on" };
-const supabase = { from: () => ({ insert: async () => ({ error: null }) }) } as never;
+const ORG = "a0000000-0000-4000-8000-000000000001";
+
+// La fiche vit dans le faux client : la réservation atomique des colonnes *_batch_id
+// (update … is null) doit pouvoir s'y exercer.
+function base() {
+  const fake = new FakeSupabase();
+  fake.seed("employer_leads", [{ ...lead, org_id: ORG, rdv_reminder_j1_batch_id: null, rdv_reminder_h2_batch_id: null }]);
+  return { fake, supabase: asSupabase(fake) };
+}
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -43,8 +52,9 @@ describe("programmation des rappels Brevo", () => {
     }));
 
     const dans30h = new Date(Date.now() + 30 * 3_600_000).toISOString();
+    const { fake, supabase } = base();
     const result = await scheduleBrevoAppointmentReminders(supabase, {
-      orgId: "a0000000-0000-4000-8000-000000000001",
+      orgId: ORG,
       lead,
       settings,
       kind: "rdv",
@@ -57,6 +67,59 @@ describe("programmation des rappels Brevo", () => {
       rdv_reminder_h2_batch_id: "<rappel-h2@smtp-relay.mailin.fr>",
     });
     expect(corps.every((c) => typeof c.scheduledAt === "string")).toBe(true);
+    // La fiche porte déjà les identifiants Brevo, sans attendre que l'appelant applique le patch.
+    expect(fake.lead(lead.id).rdv_reminder_j1_batch_id).toBe("<rappel-j1@smtp-relay.mailin.fr>");
+    expect(fake.lead(lead.id).rdv_reminder_h2_batch_id).toBe("<rappel-h2@smtp-relay.mailin.fr>");
+  });
+
+  it("deux passages simultanés ne programment chaque rappel qu'une seule fois", async () => {
+    vi.stubEnv("BREVO_API_KEY", "xkeysib-test");
+    let n = 0;
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      n += 1;
+      return { ok: true, json: async () => ({ messageId: `<rappel-${n}@smtp-relay.mailin.fr>` }) };
+    }));
+    const dans30h = new Date(Date.now() + 30 * 3_600_000).toISOString();
+    const { fake, supabase } = base();
+    const params = { orgId: ORG, lead, settings, kind: "rdv" as const, appointmentAt: dans30h };
+
+    // Le cron Vercel et l'action GitHub lisent la même fiche au même instant.
+    const [a, b] = await Promise.all([scheduleBrevoAppointmentReminders(supabase, params), scheduleBrevoAppointmentReminders(supabase, params)]);
+
+    expect(n).toBe(2); // J-1 et H-2, une fois chacun
+    expect(a.scheduled + b.scheduled).toBe(2);
+    expect(a.skipped + b.skipped).toBe(2);
+    const row = fake.lead(lead.id);
+    expect(row.rdv_reminder_j1_batch_id).toMatch(/^<rappel-\d@smtp-relay\.mailin\.fr>$/);
+    expect(row.rdv_reminder_h2_batch_id).toMatch(/^<rappel-\d@smtp-relay\.mailin\.fr>$/);
+    expect(row.rdv_reminder_j1_batch_id).not.toBe(row.rdv_reminder_h2_batch_id);
+  });
+
+  it("libère la réservation quand Brevo échoue, pour réessayer au passage suivant", async () => {
+    vi.stubEnv("BREVO_API_KEY", "xkeysib-test");
+    let ok = false;
+    vi.stubGlobal("fetch", vi.fn(async () => (ok ? { ok: true, json: async () => ({ messageId: "<retry@smtp-relay.mailin.fr>" }) } : { ok: false, json: async () => ({ code: "server_error" }) })));
+    const dans30h = new Date(Date.now() + 30 * 3_600_000).toISOString();
+    const { fake, supabase } = base();
+    const params = { orgId: ORG, lead, settings, kind: "rdv" as const, appointmentAt: dans30h };
+
+    const first = await scheduleBrevoAppointmentReminders(supabase, params);
+    expect(first.scheduled).toBe(0);
+    expect(fake.lead(lead.id).rdv_reminder_j1_batch_id).toBeNull(); // réservation rendue, pas de « claim: » qui traîne
+    expect(fake.lead(lead.id).rdv_reminder_h2_batch_id).toBeNull();
+
+    ok = true;
+    const second = await scheduleBrevoAppointmentReminders(supabase, params);
+    expect(second.scheduled).toBe(2);
+    expect(fake.lead(lead.id).rdv_reminder_j1_batch_id).toBe("<retry@smtp-relay.mailin.fr>");
+  });
+
+  it("une réservation en cours n'est jamais envoyée à l'API d'annulation", async () => {
+    vi.stubEnv("BREVO_API_KEY", "xkeysib-test");
+    const appel = vi.fn();
+    vi.stubGlobal("fetch", appel);
+    expect(await cancelBrevoScheduledEmail("claim:3f1c0e5c-9a1e-4c5d-8f2a-1c3d5e7f9a11")).toBe(false);
+    expect(appel).not.toHaveBeenCalled();
   });
 
   it("annule en encodant l'identifiant, et considère un 404 comme déjà réglé", async () => {

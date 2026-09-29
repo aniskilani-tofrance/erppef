@@ -50,6 +50,18 @@ export type LeadRow = {
   rdv_reminder_j1_batch_id: string | null;
   rdv_reminder_h2_batch_id: string | null;
   notes: string | null;
+  // Séquence automatique en cours (voir lib/leads/sequences.ts) et retours des canaux.
+  sequence_kind: string | null;
+  sequence_step: string | null;
+  sequence_started_at: string | null;
+  sequence_next_at: string | null;
+  sequence_last_sent_at: string | null;
+  sequence_stopped_at: string | null;
+  sequence_stop_reason: string | null;
+  email_status: string | null;
+  email_status_at: string | null;
+  phone_status: string | null;
+  opt_out_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -59,7 +71,9 @@ export const LEAD_COLUMNS =
   "positions, positions_count, contract_type, hours_per_week, hiring_horizon, hiring_deadline, decision_maker, haccp_status, covers, " +
   "team_size, pain, score, status, lost_reason, offer, owner_user_id, first_contact_at, last_contact_at, attempts, next_action, " +
   "next_action_on, qualification_at, qualification_reminder_j1_batch_id, qualification_reminder_h2_batch_id, rdv_at, rdv_mode, rdv_outcome, " +
-  "rdv_reminder_sent_at, rdv_reminder_j1_batch_id, rdv_reminder_h2_batch_id, notes, created_at, updated_at";
+  "rdv_reminder_sent_at, rdv_reminder_j1_batch_id, rdv_reminder_h2_batch_id, notes, " +
+  "sequence_kind, sequence_step, sequence_started_at, sequence_next_at, sequence_last_sent_at, sequence_stopped_at, sequence_stop_reason, " +
+  "email_status, email_status_at, phone_status, opt_out_at, created_at, updated_at";
 
 export type LeadEventRow = {
   id: string;

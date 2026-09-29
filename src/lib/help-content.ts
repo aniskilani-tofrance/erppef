@@ -487,6 +487,8 @@ export const HELP_SECTIONS: HelpSection[] = [
         steps: [
           "Interrupteur : Leads → Réglages → « Envois automatiques au prospect ». Tant qu'il est sur « Désactivés », l'ERP n'écrit jamais au restaurateur de lui-même — utile pendant les tests. La direction l'active le jour du lancement de la campagne.",
           "Une fois activés : invitation à réserver un créneau, envoyée dix minutes après le formulaire et uniquement à ceux qui n'ont rien réservé dans le Calendly affiché juste après le formulaire ; confirmation par e-mail et par SMS dès qu'un créneau Calendly est réservé ; rappel par email la veille et deux heures avant ; message le jour d'un rendez-vous manqué, avec le lien pour recaler.",
+          "Puis les séquences de relance, pilotées par la fiche (voir l'article « Les relances qui tournent toutes seules ») : injoignable (J+1, J+3, J+6, J+10), rendez-vous manqué (J+1, J+3), proposition envoyée (J+2 ouvré, J+7) et veille (J+30, J+60, J+90). Elles partent à 10 h, jamais le week-end, jamais deux étapes le même jour.",
+          "Les rappels J-1 et H-2 d'un créneau réservé plus de trois jours à l'avance ne peuvent pas être programmés tout de suite (Brevo refuse au-delà de 72 h) : l'ERP les programme lui-même dès que le créneau entre dans la fenêtre. La fiche passe alors de « rappels en attente de programmation » à « emails Brevo J-1 et H-2 programmés », sans rien à faire.",
           "Il n'y a aucune restriction d'horaire : ces messages répondent à une action que le restaurateur vient de faire, ils partent donc dans la seconde, de jour comme de nuit. Le même message n'est jamais envoyé deux fois à la même fiche : chaque envoi laisse une marque dans le journal.",
           "Si le restaurateur déplace ou annule son créneau Calendly, les rappels déjà programmés chez Brevo sont annulés puis reprogrammés sur le nouvel horaire. La fiche affiche « emails Brevo J-1 et H-2 programmés ».",
           "Le numéro du setter n'apparaît qu'au moment où un appel est annoncé ou vient d'être tenté : invitation à réserver, confirmation du créneau, rappels la veille et deux heures avant, message après appel manqué, relance J3 et réponse à un lead qui écrit. Jamais sur la pub ni sur la landing : un numéro affiché trop tôt génère des appels en plein service et contourne la qualification. Si le réglage est vide, les messages n'en parlent pas.",
@@ -507,8 +509,31 @@ export const HELP_SECTIONS: HelpSection[] = [
         title: "Relancer sans harceler : la cadence J0 → J10",
         steps: [
           "J0 appel + SMS n°1 si messagerie · J1 appel à un autre créneau (matin ↔ coupure) · J3 email n°3 · J6 appel + SMS n°2 « dernière tentative » · J10 email n°4 « je ferme votre dossier ? ».",
-          "Après chaque tentative notée, la fiche affiche l'étape suivante et sa date ; la carte « Relances dues » de la page Leads regroupe tout ce qui est à faire aujourd'hui ou en retard.",
-          "Au-delà de 5 tentatives sans réponse : statut « Perdu », raison « Injoignable ». Jamais plus de deux messages vocaux sur un même lead.",
+          "Depuis le 29/09/2026, c'est la fiche qui tient cette cadence : dès que vous notez un appel « Messagerie » ou « Barrage », la séquence « Injoignable » démarre. Les e-mails J+3 et J+10 et le SMS J+6 partent tout seuls ; les appels J+1 et J+6 restent les vôtres, la fiche vous les pose en « Prochaine action » à la bonne date.",
+          "Vous n'avez rien à programmer et rien à annuler : le jour où le restaurateur répond, réserve ou avance dans le parcours, la séquence s'arrête d'elle-même (voir l'article suivant). La carte « Relances dues » de la page Leads regroupe ce qui est à faire aujourd'hui ou en retard.",
+          "Au-delà de J+10 sans réponse, la fiche vous demande de classer « Perdu », raison « Injoignable » : ce choix reste le vôtre, l'ERP ne clôt jamais un dossier tout seul. Jamais plus de deux messages vocaux sur un même lead.",
+        ],
+      },
+      {
+        title: "Les relances qui tournent toutes seules (séquences)",
+        steps: [
+          "Quatre séquences, chacune déclenchée par la fiche : « Injoignable » (appel noté messagerie ou barrage) → J+1 tâche d'appel, J+3 e-mail, J+6 appel + SMS, J+10 e-mail de rupture · « Rendez-vous manqué » (bouton No-show) → message du jour même, puis e-mails J+1 et J+3 si aucun nouveau créneau · « Proposition envoyée » (statut) → e-mails J+2 ouvré et J+7 · « En veille » (statut) → e-mails J+30, J+60, J+90.",
+          "Les étapes partent à 10 h (heure de Paris), jamais le samedi ni le dimanche (décalées au lundi), et jamais deux le même jour : si le cron a pris du retard, les étapes en attente partent une par jour.",
+          "La carte « Séquence automatique » de la fiche dit tout : la séquence en cours, la dernière étape partie, la prochaine et sa date, le dernier message envoyé, et, quand elle est arrêtée, la raison. Le journal garde une ligne par étape (« J+3 — e-mail de relance n°3 — e-mail envoyé »).",
+          "Tout s'arrête aussitôt que : le restaurateur répond (appel noté « joint » ou « rappel convenu », réponse écrite notée « Réponse reçue », statut Contacté ou Qualifié), réserve un créneau (Calendly ou RDV posé), le rendez-vous a eu lieu, le besoin est clos (Gagné, Perdu, Hors cible), il s'oppose (bouton ou STOP par SMS), il se désinscrit ou se plaint via Brevo, son adresse produit un bounce dur, ou Twilio refuse son numéro.",
+          "Quand une séquence arrive au bout sans réponse, la fiche vous propose la décision qui reste humaine : classer perdu, mettre en veille, ou rappeler la direction. Rien n'est jamais clos automatiquement.",
+          "« En veille (nurturing) » est un statut à choisir quand le besoin existe mais plus tard (saison, budget, ouverture) : trois e-mails utiles, espacés d'un mois, qui gardent le contact sans appeler. Le restaurateur peut répondre « stop » à tout moment.",
+        ],
+      },
+      {
+        title: "Arrêter une séquence, opposition, retours Brevo",
+        steps: [
+          "Carte « Séquence automatique » → « Arrêter la séquence » : vous reprenez la main, la fiche garde la trace et la raison (« arrêtée par l'équipe »). Une nouvelle séquence pourra démarrer plus tard, au prochain statut ou appel noté.",
+          "Le restaurateur vous écrit (e-mail sur contact@parleremploi.fr, SMS, WhatsApp) ? L'ERP ne lit pas la boîte mail : c'est vous qui l'arrêtez, en une ligne. Sur la fiche, « Noter » → type Email, SMS ou WhatsApp → résultat « Réponse reçue » : la séquence s'arrête, le statut passe à « Contacté » et la prochaine action vous revient. Sans cette ligne, les relances continuent.",
+          "« Opposition du prospect » : le restaurateur ne veut plus rien recevoir. Plus aucun e-mail ni SMS automatique ne partira vers cette fiche, sur aucun canal, et les rappels de rendez-vous déjà programmés chez Brevo sont annulés. Les envois que vous faites à la main depuis votre messagerie ou WhatsApp ne sont pas concernés : c'est à vous de respecter son choix.",
+          "Un restaurateur qui répond STOP à un SMS, qui clique « se désinscrire » dans un e-mail Brevo ou qui le signale comme indésirable produit le même effet, tout seul. La direction peut lever une opposition posée par erreur (bouton réservé à l'admin et à la coordination).",
+          "Retours Brevo : chaque e-mail automatique remonte son sort sur la fiche (délivré, bounce doux, bounce dur, désinscription, plainte) et dans le journal. Un bounce dur bloque les e-mails automatiques ; vérifiez l'adresse avec le restaurateur, corrigez-la, puis la direction lève le blocage si besoin.",
+          "Pour recevoir ces retours, le webhook Brevo doit être déclaré une fois (direction) : voir l'article « Brancher la landing, Brevo, Meta et Calendly ».",
         ],
       },
       {
@@ -528,6 +553,7 @@ export const HELP_SECTIONS: HelpSection[] = [
           "Formulaire de la landing (Manus) : en plus de Brevo, envoyez le formulaire en POST vers la même adresse (JSON ou formulaire classique) avec entreprise, prénom, nom, téléphone, email, ville, postes, utm_source, utm_campaign.",
           "Meta Lead Ads : dans Make, module « Facebook Lead Ads → Watch leads » puis « HTTP → Make a request » (POST, JSON, corps = le lead) vers l'adresse : le nom du visuel (ad_name) devient la campagne de la fiche.",
           "Calendly (forfait Standard ou plus) : Intégrations → Webhooks → événements « Invitee Created » et « Invitee Canceled » vers la même adresse. Deux cas : le Calendly du setter (l'hôte du créneau = l'email de notification, ou un créneau nommé « appel » / « découverte ») note un appel de qualification réservé (statut « À rappeler », prochaine action à la date du créneau) ; le Calendly de la direction pose le RDV sur la fiche (statut « RDV pris »). La fiche est retrouvée par email ou téléphone, ou créée.",
+          "Retours Brevo (délivré, bounce, désinscription, plainte) : dans Brevo → Transactionnel → Paramètres → Webhooks → Ajouter, collez la même adresse en remplaçant « inbound » par « brevo-webhook » (…/api/leads/brevo-webhook?token=…), et cochez les événements Délivré, Soft bounce, Hard bounce, Bloqué, Adresse invalide, Désinscrit et Plainte (spam). Ouvrez l'adresse dans le navigateur pour vérifier le jeton : « Point d'entrée des retours Brevo actif ».",
           "Test : ouvrez l'adresse du webhook dans le navigateur : « Point d'entrée actif » confirme le jeton. Un même téléphone ou email reçu deux fois en 30 jours ne crée pas de doublon : l'événement est noté sur la fiche existante.",
           "Le jeton est un secret : s'il fuit, Réglages → « Régénérer le jeton » (l'ancienne adresse cesse de fonctionner) ; « Fermer le webhook » coupe tout.",
         ],

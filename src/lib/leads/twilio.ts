@@ -3,9 +3,30 @@ import { toWhatsAppNumber } from "@/lib/admission/phone";
 import { automationsEnabled, leadVars, renderSms, type LeadSettings, type SmsTemplateCode } from "@/lib/leads/templates";
 import type { LeadForBrevo } from "@/lib/leads/brevo";
 
+export type TwilioSmsReason =
+  | "not_configured"
+  | "automations_off"
+  | "suppressed" // opposition du prospect ou numéro déjà reconnu invalide
+  | "no_phone"
+  | "already_sent"
+  | "invalid_number" // Twilio refuse le numéro : plus aucun SMS automatique vers cette fiche
+  | "opt_out" // le destinataire a répondu STOP à Twilio
+  | "delivery_failed";
+
 export type TwilioSmsResult =
   | { sent: true; sid: string | null }
-  | { sent: false; reason: "not_configured" | "automations_off" | "no_phone" | "already_sent" | "delivery_failed" };
+  | { sent: false; reason: TwilioSmsReason };
+
+// Codes d'erreur Twilio qui désignent le numéro lui-même, pas une panne passagère.
+// 21211 numéro invalide · 21214 injoignable · 21217 hors zone · 21408 pays non autorisé
+// 21612 non routable · 21614 pas un mobile. 21610 = le destinataire a envoyé STOP.
+const INVALID_NUMBER_CODES = new Set([21211, 21214, 21217, 21408, 21612, 21614]);
+const OPT_OUT_CODE = 21610;
+
+/** Plus aucun SMS automatique vers cette fiche : opposition, ou numéro déjà refusé par Twilio. */
+export function smsSuppressed(lead: Pick<LeadForBrevo, "opt_out_at" | "phone_status">): boolean {
+  return Boolean(lead.opt_out_at) || lead.phone_status === "invalide";
+}
 
 export function twilioConfigured(): boolean {
   return Boolean(
@@ -42,6 +63,7 @@ export async function dispatchTwilioLeadSms(
   // Un envoi automatique n'a lieu que si la direction a armé les automatismes.
   // Les envois déclenchés à la main par un conseiller ne sont jamais bloqués.
   if (params.automatic && !automationsEnabled(params.settings)) return { sent: false, reason: "automations_off" };
+  if (smsSuppressed(params.lead)) return { sent: false, reason: "suppressed" };
   const phoneDigits = toWhatsAppNumber(params.lead.phone);
   if (!phoneDigits) return { sent: false, reason: "no_phone" };
 
@@ -78,6 +100,30 @@ export async function dispatchTwilioLeadSms(
     const result = (await response.json().catch(() => ({}))) as { sid?: string; message?: string; code?: number };
     if (!response.ok) {
       console.error(`[twilio] ${params.code} delivery failed: ${response.status}`, result);
+      // Un numéro refusé ou un STOP n'est pas une panne : on le note sur la fiche pour
+      // que plus aucun SMS automatique ne parte, et le journal dit pourquoi.
+      if (result.code != null && INVALID_NUMBER_CODES.has(result.code)) {
+        await supabase.from("employer_leads").update({ phone_status: "invalide" }).eq("id", params.lead.id).eq("org_id", params.orgId);
+        await supabase.from("employer_lead_events").insert({
+          org_id: params.orgId,
+          lead_id: params.lead.id,
+          kind: "note",
+          outcome: "autre",
+          note: `[twilio-retour:invalide] Numéro refusé par Twilio (erreur ${result.code}) : plus aucun SMS automatique. Vérifier le numéro avec le restaurateur.`,
+        });
+        return { sent: false, reason: "invalid_number" };
+      }
+      if (result.code === OPT_OUT_CODE) {
+        await supabase.from("employer_leads").update({ opt_out_at: new Date().toISOString() }).eq("id", params.lead.id).eq("org_id", params.orgId);
+        await supabase.from("employer_lead_events").insert({
+          org_id: params.orgId,
+          lead_id: params.lead.id,
+          kind: "note",
+          outcome: "autre",
+          note: `[twilio-retour:stop] Le restaurateur a répondu STOP à nos SMS : opposition enregistrée, plus aucun message automatique.`,
+        });
+        return { sent: false, reason: "opt_out" };
+      }
       return { sent: false, reason: "delivery_failed" };
     }
 
