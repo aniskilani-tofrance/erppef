@@ -370,15 +370,17 @@ export async function liftLeadOppositionAction(raw: { leadId: string }): Promise
   if (!parsed.success) return { ok: false, error: "Données invalides" };
   const { orgId, userId } = await requireRole(["admin", "coordinator"]);
   const supabase = await createClient();
+  // Seule l'opposition est levée : un numéro marqué « invalide » par Twilio le reste,
+  // ce n'est pas une volonté du prospect mais un fait technique.
   const { error } = await supabase
     .from("employer_leads")
-    .update({ opt_out_at: null, phone_status: null })
+    .update({ opt_out_at: null })
     .eq("id", parsed.data.leadId)
     .eq("org_id", orgId);
   if (error) return { ok: false, error: translatePgError(error) };
   await supabase.from("employer_lead_events").insert({
     org_id: orgId, lead_id: parsed.data.leadId, kind: "note", outcome: "autre", by_user_id: userId,
-    note: "Opposition levée par la direction : les messages automatiques peuvent reprendre (une nouvelle séquence démarre au prochain statut ou appel noté).",
+    note: "Opposition levée par la direction : les messages automatiques peuvent reprendre (une nouvelle séquence démarre au prochain statut ou appel noté). Un numéro refusé par Twilio reste marqué invalide.",
   });
   revalidateLeads(parsed.data.leadId);
   return { ok: true };

@@ -232,6 +232,7 @@ export function transitionForOutcome(kind: string, outcome: string | null | unde
   switch (outcome) {
     case "joint":
     case "rappel_convenu":
+    case "reponse_recue": // le restaurateur a écrit (e-mail sur contact@, SMS, WhatsApp) : l'ERP ne lit pas la boîte, c'est ce geste qui arrête
       return { stop: "reponse" };
     case "rdv_tenu":
       return { stop: "rdv_tenu" };

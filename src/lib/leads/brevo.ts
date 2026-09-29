@@ -483,9 +483,14 @@ export async function scheduleBrevoLeadEvent(
  * `<…@smtp-relay.mailin.fr>`, hence the percent-encoding). A 404 means the message
  * has already left or was already canceled: nothing left to do.
  */
+/** Valeur posée dans une colonne `*_batch_id` le temps de l'appel à Brevo (réservation). */
+export const REMINDER_CLAIM_PREFIX = "claim:";
+
 export async function cancelBrevoScheduledEmail(cancelId: string | null | undefined): Promise<boolean> {
   const apiKey = process.env.BREVO_API_KEY?.trim();
   if (!apiKey || !cancelId) return false;
+  // Une réservation en cours n'est pas un identifiant Brevo : rien à annuler côté API.
+  if (cancelId.startsWith(REMINDER_CLAIM_PREFIX)) return false;
   try {
     const response = await fetch(`https://api.brevo.com/v3/smtp/email/${encodeURIComponent(cancelId)}`, {
       method: "DELETE",
@@ -505,7 +510,12 @@ export async function cancelBrevoScheduledEmail(cancelId: string | null | undefi
 
 /**
  * Queues J-1 and H-2 reminders that are presently within Brevo's 72-hour
- * scheduling window. The caller persists the returned batch identifiers on the lead.
+ * scheduling window. Chaque colonne `*_batch_id` est d'abord RÉSERVÉE par une mise à
+ * jour conditionnelle (`… is null` → `claim:<uuid>`) : deux passages simultanés (cron
+ * Vercel + action GitHub, ou rejeu) ne programment jamais deux fois le même rappel ;
+ * celui qui perd la réservation passe son chemin. L'identifiant Brevo remplace la
+ * réservation dès la réponse ; en cas d'échec, la colonne est libérée pour le passage
+ * suivant. The caller may still persist the returned batch identifiers on the lead.
  */
 export async function scheduleBrevoAppointmentReminders(
   supabase: SupabaseClient,
@@ -535,6 +545,18 @@ export async function scheduleBrevoAppointmentReminders(
       skipped += 1;
       continue;
     }
+    const claim = `${REMINDER_CLAIM_PREFIX}${randomUUID()}`;
+    const { data: claimed } = await supabase
+      .from("employer_leads")
+      .update({ [plan.batchColumn]: claim })
+      .eq("id", params.lead.id)
+      .eq("org_id", params.orgId)
+      .is(plan.batchColumn, null)
+      .select("id");
+    if (!claimed?.length) {
+      skipped += 1; // un autre passage a déjà pris ce rappel
+      continue;
+    }
     const result = await scheduleBrevoLeadEvent(supabase, {
       orgId: params.orgId,
       lead: reminderLead,
@@ -542,9 +564,16 @@ export async function scheduleBrevoAppointmentReminders(
       eventName: plan.eventName,
       scheduledAt: plan.scheduledAt,
     });
-    if (result.sent && result.cancelId) {
+    const final = result.sent && result.cancelId ? result.cancelId : null;
+    await supabase
+      .from("employer_leads")
+      .update({ [plan.batchColumn]: final })
+      .eq("id", params.lead.id)
+      .eq("org_id", params.orgId)
+      .eq(plan.batchColumn, claim);
+    if (final) {
       scheduled += 1;
-      patch[plan.batchColumn] = result.cancelId;
+      patch[plan.batchColumn] = final;
     } else {
       skipped += 1;
     }

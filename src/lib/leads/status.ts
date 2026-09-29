@@ -183,6 +183,7 @@ export const EVENT_OUTCOMES = [
   { code: "messagerie", label: "Messagerie (vocal + SMS)" },
   { code: "barrage", label: "Barrage — pas le décideur" },
   { code: "rappel_convenu", label: "Rappel convenu à une heure précise" },
+  { code: "reponse_recue", label: "Réponse reçue (e-mail, SMS, WhatsApp)" },
   { code: "envoye", label: "Message envoyé" },
   { code: "refus", label: "Refus" },
   { code: "rdv_pose", label: "RDV posé" },
@@ -203,6 +204,7 @@ export function suggestedLeadStatus(outcome: EventOutcome, current: string | nul
   const candidate: LeadStatus = (() => {
     switch (outcome) {
       case "joint":
+      case "reponse_recue":
         return "contacte";
       case "messagerie":
       case "barrage":

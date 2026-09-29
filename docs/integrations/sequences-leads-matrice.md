@@ -126,8 +126,29 @@ La table `employer_lead_email_events` garde tous les retours Brevo bruts.
   (« À faire à la main (échec de l'envoi automatique) : … »). La marque manquante permet
   toujours un envoi ultérieur.
 - **Rappels J-1 / H-2 au-delà de 72 h** : `scheduleUpcomingAppointmentReminders`, appelé par
-  le cron, programme chez Brevo les rappels des créneaux qui entrent dans la fenêtre
-  (J-1 dès H-96, H-2 dès H-74). Les colonnes `*_batch_id` déjà remplies sont ignorées.
+  le cron `leads-sms`, programme chez Brevo les rappels des créneaux qui entrent dans la
+  fenêtre (J-1 dès H-96, H-2 dès H-74). Les colonnes `*_batch_id` déjà remplies sont ignorées.
+  **Un seul rattrapage** : l'ancien passage quotidien du cron `alertes` (`sendLeadRdvEmails`)
+  est retiré le 30/09/2026, il pouvait programmer deux fois le même rappel quand les deux
+  crons passaient au même instant.
+- **Réservation atomique des rappels** : avant l'appel à Brevo, la colonne `*_batch_id` est
+  réservée par `update … where <colonne> is null` (valeur `claim:<uuid>`) ; l'identifiant
+  Brevo la remplace à la réponse, un échec la libère. Deux passages simultanés (Vercel +
+  GitHub, ou rejeu) ne programment donc jamais deux fois ; une réservation en cours n'est
+  jamais envoyée à l'API d'annulation.
+- **Réponse écrite du prospect** : non détectée automatiquement (Brevo ne remonte pas les
+  réponses ; la boîte contact@parleremploi.fr n'est pas lue par l'ERP). Le conseiller note
+  « Réponse reçue » au journal (Noter → e-mail, SMS ou WhatsApp) : la séquence s'arrête
+  (motif « Le prospect a répondu ») et le statut proposé devient « Contacté ».
+- **Fiche visée par un retour Brevo** : numéro de fiche de l'e-mail, sinon identifiant de
+  message au journal, sinon adresse e-mail — et dans ce cas une fiche encore ouverte passe
+  avant une fiche close plus récente.
+- **Lever l'opposition** ne réhabilite pas un numéro marqué « invalide » par Twilio : c'est
+  un fait technique, pas une volonté du prospect.
+- **Limites connues** : les jours fériés ne sont pas gérés (une étape peut tomber un jour
+  férié en semaine) ; les accusés de non-livraison Twilio (status callbacks `undelivered`)
+  ne sont pas branchés, seuls les refus immédiats de l'API (numéro invalide, STOP) sont pris
+  en compte ; un échec fournisseur consomme l'étape (voir ci-dessus).
 - **Rien n'est clos automatiquement** : au bout d'une séquence, la fiche propose la
   décision (perdu, veille, appel de la direction) ; l'équipe la prend.
 
