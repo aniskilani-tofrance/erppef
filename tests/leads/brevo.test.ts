@@ -105,4 +105,26 @@ describe("événements Brevo des leads restaurateurs", () => {
     expect(directionH2.body).toContain("expert ParlerEmploi");
     expect(`${qualificationJ1.subject}\n${qualificationJ1.body}\n${qualificationH2.body}\n${directionH2.body}`).not.toMatch(/setter|closer|inscription|shahzad|anis/i);
   });
+
+  it("annonce le téléphone du setter dans les emails qui promettent un appel, et seulement là", () => {
+    const withPhone = { ...DEFAULT_LEAD_SETTINGS, setterPhone: "0759119097" };
+    const nouveau = brevoMessageFor(BREVO_LEAD_EVENTS.nouveau, lead, withPhone);
+    const aRappeler = brevoMessageFor(BREVO_LEAD_EVENTS.aRappeler, lead, withPhone);
+    const confirmee = brevoMessageFor(BREVO_LEAD_EVENTS.qualificationConfirmee, lead, withPhone);
+    const j1 = brevoMessageFor(BREVO_LEAD_EVENTS.rappelQualificationJ1, lead, withPhone);
+    const h2 = brevoMessageFor(BREVO_LEAD_EVENTS.rappelQualificationH2, lead, withPhone);
+    const direction = brevoMessageFor(BREVO_LEAD_EVENTS.rappelRdv, lead, withPhone);
+
+    expect(nouveau.body).toContain("Un conseiller vous appellera depuis le 07 59 11 90 97 : enregistrez ce numéro pour reconnaître l'appel.");
+    expect(aRappeler.body).toContain("Vous pouvez aussi nous rappeler entre deux services au 07 59 11 90 97.");
+    expect(confirmee.body).toContain("lors de votre réservation, depuis le 07 59 11 90 97 : enregistrez ce numéro pour reconnaître l'appel.");
+    expect(j1.body).toContain("lors de votre réservation, depuis le 07 59 11 90 97, au sujet des recrutements de Chez Karim.");
+    expect(h2.body).toContain("lors de votre réservation, depuis le 07 59 11 90 97. En quinze minutes");
+    expect(direction.body).not.toContain("07 59");
+
+    const sans = brevoMessageFor(BREVO_LEAD_EVENTS.qualificationConfirmee, lead, DEFAULT_LEAD_SETTINGS);
+    expect(sans.body).toContain("lors de votre réservation.\n");
+    expect(sans.body).not.toContain("07 59");
+    expect(brevoMessageFor(BREVO_LEAD_EVENTS.nouveau, lead, DEFAULT_LEAD_SETTINGS).body).not.toMatch(/\n{3,}/);
+  });
 });

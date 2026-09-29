@@ -5,6 +5,14 @@
 //
 // Variables : {prenom} {restaurant} {metier} {jour} {heure} {mode} {date_groupe}
 // {calendly} {calendly_direction} {setter} {direction} {creneau1} {creneau2}
+// Téléphone du setter (Réglages) — quatre variables, phrases complètes (le moteur de rendu
+// rogne les espaces d'une variable, donc jamais de demi-phrase) : {numero_setter}
+// « 07 59 11 90 97 » ; {annonce_numero} « Un conseiller vous appellera depuis le …, enregistrez
+// ce numéro. » ; {enregistrez_numero} « L'appel viendra du … : enregistrez ce numéro. » ;
+// {rappel_numero} « Vous pouvez aussi nous rappeler entre deux services au …. ». Toutes vides
+// quand le réglage est vide : les modèles restent corrects sans elles.
+// Règle : le numéro n'apparaît que lorsqu'un appel est annoncé ou vient d'être tenté
+// (un restaurateur ne décroche pas un numéro inconnu) — jamais sur la pub ni la landing.
 
 import { renderTemplate } from "@/lib/admission/templates";
 import { toWhatsAppNumber } from "@/lib/admission/phone";
@@ -19,6 +27,9 @@ export type LeadSettings = {
   inboundToken: string; // jeton du webhook /api/leads/inbound (vide = webhook fermé)
   notifyEmail: string; // email prévenu à chaque nouveau lead (le setter)
   defaultOwnerUserId: string; // à qui attribuer les leads entrants
+  // Téléphone depuis lequel le setter appelle, affiché au restaurateur dans les messages
+  // qui annoncent un appel (« enregistrez ce numéro »). Vide = les messages n'en parlent pas.
+  setterPhone: string;
   // Interrupteur des envois automatiques au prospect (emails Brevo + SMS Twilio).
   // « off » = l'ERP n'écrit plus jamais au prospect tout seul : seuls les envois
   // déclenchés à la main par un conseiller partent. À n'activer qu'après avoir
@@ -36,8 +47,32 @@ export const DEFAULT_LEAD_SETTINGS: LeadSettings = {
   inboundToken: "",
   notifyEmail: "",
   defaultOwnerUserId: "",
+  setterPhone: "",
   automations: "off",
 };
+
+/** « 0759119097 », « +33 7 59 11 90 97 » ou « 33759119097 » → « 07 59 11 90 97 » ; sinon tel que saisi. */
+export function formatSetterPhone(raw: string | null | undefined): string {
+  const typed = raw?.trim() ?? "";
+  if (!typed) return "";
+  const e164 = toWhatsAppNumber(typed);
+  if (e164 && e164.startsWith("33") && e164.length === 11) {
+    return `0${e164.slice(2)}`.replace(/(\d{2})(?=\d)/g, "$1 ");
+  }
+  return typed.replace(/\s+/g, " ");
+}
+
+/** Les quatre variables dérivées du téléphone du setter (toutes vides sans réglage). */
+export function setterPhoneVars(settings: Pick<LeadSettings, "setterPhone">): Pick<LeadVars, "numero_setter" | "annonce_numero" | "enregistrez_numero" | "rappel_numero"> {
+  const numero = formatSetterPhone(settings.setterPhone);
+  if (!numero) return { numero_setter: "", annonce_numero: "", enregistrez_numero: "", rappel_numero: "" };
+  return {
+    numero_setter: numero,
+    annonce_numero: `Un conseiller vous appellera depuis le ${numero}, enregistrez ce numéro.`,
+    enregistrez_numero: `L'appel viendra du ${numero} : enregistrez ce numéro.`,
+    rappel_numero: `Vous pouvez aussi nous rappeler entre deux services au ${numero}.`,
+  };
+}
 
 // Réglages effectifs = défauts + retouches de l'organisme (organizations.settings.leads)
 export function resolveLeadSettings(settings: unknown): LeadSettings {
@@ -63,14 +98,14 @@ export const SMS_TEMPLATES = [
     delivery: "automatic",
     label: "SMS — demande de recrutement prise en compte",
     when: "Dix minutes après le formulaire, et seulement s'il n'a pas réservé de créneau entre-temps.",
-    text: `Bonjour {prenom}, votre besoin de recrutement pour {restaurant} est bien pris en compte. Pour avancer sans vous déranger pendant le service, choisissez votre créneau ici : {calendly}. ParlerEmploi`,
+    text: `Bonjour {prenom}, votre besoin de recrutement pour {restaurant} est bien pris en compte. Pour avancer sans vous déranger pendant le service, choisissez votre créneau ici : {calendly}. {annonce_numero} ParlerEmploi`,
   },
   {
     code: "qualification_reservee",
     delivery: "automatic",
     label: "SMS — appel de qualification réservé",
     when: "Dès qu'un créneau Calendly de qualification est confirmé.",
-    text: `Bonjour {prenom}, votre appel de qualification ParlerEmploi est réservé {jour} à {heure}. Nous vous appellerons au numéro indiqué. À très vite pour avancer sur les recrutements de {restaurant}.`,
+    text: `Bonjour {prenom}, votre appel de qualification ParlerEmploi est réservé {jour} à {heure}. Nous vous appellerons au numéro indiqué. {enregistrez_numero} À très vite pour avancer sur les recrutements de {restaurant}.`,
   },
   {
     code: "confirmation_rdv",
@@ -87,7 +122,7 @@ export const SMS_TEMPLATES = [
     delivery: "automatic",
     label: "SMS n°1 — après appel manqué (J0)",
     when: "Systématique après un message vocal.",
-    text: `Bonjour {prenom}, ParlerEmploi vous a appelé au sujet de votre demande pour {restaurant}. Pour éviter de vous déranger pendant le service, indiquez-nous votre meilleur créneau ou réservez ici : {calendly}.`,
+    text: `Bonjour {prenom}, ParlerEmploi vous a appelé au sujet de votre demande pour {restaurant}. {rappel_numero} Pour éviter de vous déranger pendant le service, indiquez-nous votre meilleur créneau ou réservez ici : {calendly}.`,
   },
   {
     code: "derniere_tentative",
@@ -108,7 +143,7 @@ export const SMS_TEMPLATES = [
     delivery: "manual",
     label: "SMS n°4 — rappel de créneau promis",
     when: "Le jour même, avant de rappeler à l'heure convenue.",
-    text: `Bonjour {prenom}, comme convenu, un conseiller ParlerEmploi vous appelle aujourd'hui à {heure}, en dehors du service.`,
+    text: `Bonjour {prenom}, comme convenu, un conseiller ParlerEmploi vous appelle aujourd'hui à {heure}, en dehors du service. {enregistrez_numero}`,
   },
   {
     code: "no_show",
@@ -183,6 +218,7 @@ En bref : vous recrutez en cuisine ou en salle, France Travail peut financer la 
 
 Le plus simple : choisissez un créneau de 15 min hors service ici → {calendly}
 Ou indiquez-moi à quelle heure vous appeler entre deux services.
+{rappel_numero}
 
 L'équipe conseil ParlerEmploi`,
   },
@@ -209,6 +245,7 @@ L'équipe conseil ParlerEmploi`,
     text: `Bonjour {prenom},
 
 Merci pour votre message. Pour vous répondre précisément (postes, calendrier, profil), le plus efficace est un échange de 5 minutes : je peux vous appeler aujourd'hui en dehors du service — quel créneau vous arrange ?
+{rappel_numero}
 
 En attendant, l'essentiel : France Travail finance la formation de vos futures recrues AVANT l'embauche (3 jours chez vous / 2 jours chez nous pendant 3 mois, 0 € de reste à charge sur la formation), nous fournissons les candidats et la formation, vous n'embauchez qu'à la fin si le niveau est atteint.
 
@@ -386,7 +423,8 @@ Recrutement & formation restauration`,
 export type EmailTemplateCode = (typeof EMAIL_TEMPLATES)[number]["code"];
 
 export type LeadVars = Partial<Record<
-  "prenom" | "restaurant" | "metier" | "jour" | "heure" | "mode" | "date_groupe" | "calendly" | "calendly_direction" | "setter" | "direction" | "creneau1" | "creneau2",
+  | "prenom" | "restaurant" | "metier" | "jour" | "heure" | "mode" | "date_groupe" | "calendly" | "calendly_direction" | "setter" | "direction" | "creneau1" | "creneau2"
+  | "numero_setter" | "annonce_numero" | "enregistrez_numero" | "rappel_numero",
   string | null | undefined
 >>;
 
@@ -441,6 +479,7 @@ export function leadVars(lead: LeadForVars, settings: LeadSettings, setterFirstN
     direction: settings.directorName,
     creneau1: settings.slot1,
     creneau2: settings.slot2,
+    ...setterPhoneVars(settings),
   };
 }
 

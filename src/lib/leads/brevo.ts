@@ -196,7 +196,9 @@ Votre demande concernant ${lead.company} est bien prise en compte par notre équ
 L'objectif du premier échange est de comprendre vos besoins en ${vars.metier}, vos contraintes d'exploitation et de vérifier si la POEI peut préparer une solution de recrutement adaptée à votre établissement.
 
 Vous pouvez choisir dès maintenant un créneau de 15 minutes, en dehors du service si nécessaire : ${settings.calendlyUrl}
-
+${vars.numero_setter ? `
+Un conseiller vous appellera depuis le ${vars.numero_setter} : enregistrez ce numéro pour reconnaître l'appel.
+` : ""}
 L'équipe conseil ParlerEmploi
 Recrutement & formation restauration`,
     };
@@ -212,7 +214,8 @@ Nous avons tenté de vous joindre au sujet de votre recherche de personnel pour 
 Choisissez le créneau de 15 minutes le plus pratique pour échanger sur vos besoins en ${vars.metier} : ${settings.calendlyUrl}
 
 Ou répondez simplement à ce mail avec le meilleur moment pour vous rappeler.
-
+${vars.numero_setter ? `Vous pouvez aussi nous rappeler entre deux services au ${vars.numero_setter}.
+` : ""}
 L'équipe conseil ParlerEmploi`,
     };
   }
@@ -222,7 +225,7 @@ L'équipe conseil ParlerEmploi`,
       subject: `${firstName}, votre point recrutement est réservé — ${vars.jour} à ${vars.heure}`,
       body: `Bonjour ${firstName},
 
-Votre échange téléphonique avec l'équipe conseil ParlerEmploi est bien réservé ${vars.jour} à ${vars.heure}. Nous vous appellerons au numéro indiqué lors de votre réservation.
+Votre échange téléphonique avec l'équipe conseil ParlerEmploi est bien réservé ${vars.jour} à ${vars.heure}. Nous vous appellerons au numéro indiqué lors de votre réservation${vars.numero_setter ? `, depuis le ${vars.numero_setter} : enregistrez ce numéro pour reconnaître l'appel` : ""}.
 
 En quinze minutes, nous ferons le tour de trois points : le poste à pourvoir en ${vars.metier}, la date à laquelle vous souhaitez que la personne soit opérationnelle, et le type de contrat envisagé. Cela nous suffit pour vous dire si la POEI peut financer la préparation d'un candidat avant son embauche dans ${lead.company}, et ce que cela implique concrètement pour vous.
 
@@ -274,7 +277,7 @@ L'équipe conseil ParlerEmploi`,
       subject: `${firstName}, demain à ${vars.heure} : votre point recrutement pour ${lead.company}`,
       body: `Bonjour ${firstName},
 
-Demain ${vars.jour} à ${vars.heure}, un conseiller ParlerEmploi vous appelle au numéro indiqué lors de votre réservation, au sujet des recrutements de ${lead.company}.
+Demain ${vars.jour} à ${vars.heure}, un conseiller ParlerEmploi vous appelle au numéro indiqué lors de votre réservation${vars.numero_setter ? `, depuis le ${vars.numero_setter}` : ""}, au sujet des recrutements de ${lead.company}.
 
 En 15 minutes, nous allons clarifier le poste prioritaire, votre calendrier de recrutement et vérifier si le projet peut correspondre à une préparation avant embauche financée dans le cadre de la POEI. L'objectif est de vous faire gagner du temps, pas de vous interrompre pendant le service.
 
@@ -293,7 +296,7 @@ L'équipe conseil ParlerEmploi`,
 
 Votre échange de qualification ParlerEmploi commence dans environ deux heures, à ${vars.heure}, au sujet des recrutements de ${lead.company}.
 
-Nous vous appellerons au numéro renseigné lors de votre réservation. En quinze minutes, nous regarderons si une solution de recrutement et de préparation des candidats est pertinente pour votre besoin en ${vars.metier}.
+Nous vous appellerons au numéro renseigné lors de votre réservation${vars.numero_setter ? `, depuis le ${vars.numero_setter}` : ""}. En quinze minutes, nous regarderons si une solution de recrutement et de préparation des candidats est pertinente pour votre besoin en ${vars.metier}.
 
 Gardez simplement en tête le poste prioritaire et votre échéance de recrutement. Aucun document n'est nécessaire.
 
