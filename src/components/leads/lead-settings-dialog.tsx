@@ -45,6 +45,7 @@ export function LeadSettingsDialog({ settings, owners }: { settings: LeadSetting
         directorName: f.directorName,
         notifyEmail: f.notifyEmail,
         defaultOwnerUserId: f.defaultOwnerUserId,
+        setterPhone: f.setterPhone,
         automations: f.automations === "on" ? "on" : "off",
         inboundTokenAction: tokenAction,
       });
@@ -127,6 +128,11 @@ export function LeadSettingsDialog({ settings, owners }: { settings: LeadSetting
             <div className="space-y-1.5">
               <Label htmlFor="ls-notify">Email prévenu à chaque nouveau lead</Label>
               <Input id="ls-notify" value={f.notifyEmail} onChange={(e) => set("notifyEmail", e.target.value)} placeholder="mohammad.shahzad9@gmail.com" inputMode="email" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="ls-setter-phone">Téléphone du setter (annoncé au restaurateur : « enregistrez ce numéro »)</Label>
+              <Input id="ls-setter-phone" value={f.setterPhone} onChange={(e) => set("setterPhone", e.target.value)} placeholder="07 59 11 90 97" inputMode="tel" />
+              <p className="text-xs text-muted-foreground">Le numéro depuis lequel le setter appelle. Il n'apparaît que dans les messages qui annoncent un appel (invitation, confirmation de créneau, rappels, appel manqué). Vide : les messages n'en parlent pas.</p>
             </div>
             <div className="space-y-1.5">
               <Label>Adresse du webhook (à coller dans Brevo, Make ou Calendly)</Label>

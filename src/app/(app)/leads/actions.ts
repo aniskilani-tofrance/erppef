@@ -582,6 +582,8 @@ const settingsSchema = z.object({
   directorName: z.string().trim().min(1),
   notifyEmail: z.string().trim().email().or(z.literal("")).default(""),
   defaultOwnerUserId: uuid.or(z.literal("")).default(""),
+  // Téléphone du setter affiché au restaurateur : chiffres, espaces, +, points, tirets ; vide = absent des messages.
+  setterPhone: z.string().trim().max(30).regex(/^[+0-9 .-]*$/).default(""),
   // Emails Brevo et SMS Twilio partant sans intervention humaine : à l'arrêt par défaut.
   automations: z.enum(["off", "on"]).default("off"),
   // Jeton du webhook : "keep" = inchangé, "regenerate" = nouveau, "disable" = fermé

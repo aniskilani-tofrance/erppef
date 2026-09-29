@@ -26,6 +26,18 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-09-29-telephone-setter",
+    date: "2026-09-29",
+    title: "Leads resto : le restaurateur sait désormais quel numéro va l'appeler",
+    summary: "Un restaurateur ne décroche pas un numéro inconnu. Les messages qui annoncent un appel affichent maintenant le téléphone du setter, renseigné une fois dans Réglages, avec « enregistrez ce numéro ».",
+    items: [
+      { text: "Leads → Réglages → nouveau champ « Téléphone du setter » (par exemple 07 59 11 90 97). Il alimente l'invitation à réserver, la confirmation du créneau, les rappels la veille et deux heures avant, le SMS après appel manqué, le SMS de créneau promis, la relance J3 et la réponse à un lead qui écrit. Vide, les messages restent tels qu'avant.", roles: LEADS },
+      { text: "Le numéro n'est jamais montré avant qu'un appel soit annoncé : ni sur la pub, ni sur la landing. Il sert à être reconnu, pas à recevoir des appels en plein service.", roles: LEADS },
+      { text: "Appelez toujours depuis ce numéro : c'est celui que le restaurateur a enregistré. Un appel depuis un autre téléphone arrive en inconnu.", roles: ["setter"] },
+    ],
+    training: [{ moduleId: "m1-leads", lessonId: "messages", label: "SMS, WhatsApp, email : ce qui part tout seul et ce que vous envoyez" }],
+  },
+  {
     id: "2026-09-22-veille-collecteur",
     date: "2026-09-22",
     title: "Veille Qualiopi : le collecteur dépose ses fiches chaque semaine, à vous de les valider",

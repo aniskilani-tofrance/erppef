@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_LEAD_SETTINGS,
   directorCalendlyLink,
+  formatSetterPhone,
   MANUAL_SMS_TEMPLATES,
   leadVars,
   mailtoLink,
@@ -13,6 +14,49 @@ import {
 } from "@/lib/leads/templates";
 
 const lead = { company: "Chez Karim", contact_name: "Karim Benali", positions: "commis de cuisine", rdv_at: "2026-09-18T13:00:00Z", rdv_mode: "sur_site" };
+
+describe("téléphone du setter dans les messages", () => {
+  const withPhone = resolveLeadSettings({ leads: { setterPhone: "0759119097" } });
+
+  it("met en forme le numéro saisi sous toutes ses formes", () => {
+    expect(formatSetterPhone("0759119097")).toBe("07 59 11 90 97");
+    expect(formatSetterPhone("+33 7 59 11 90 97")).toBe("07 59 11 90 97");
+    expect(formatSetterPhone("33759119097")).toBe("07 59 11 90 97");
+    expect(formatSetterPhone("  ")).toBe("");
+    expect(formatSetterPhone("01 23")).toBe("01 23");
+  });
+
+  it("annonce le numéro quand un appel est promis ou vient d'être tenté", () => {
+    const vars = leadVars(lead, withPhone, null);
+    expect(renderSms("demande_recue", vars)).toContain("30min. Un conseiller vous appellera depuis le 07 59 11 90 97, enregistrez ce numéro. ParlerEmploi");
+    expect(renderSms("qualification_reservee", vars)).toContain("au numéro indiqué. L'appel viendra du 07 59 11 90 97 : enregistrez ce numéro. À très vite");
+    expect(renderSms("appel_manque", vars)).toContain("pour Chez Karim. Vous pouvez aussi nous rappeler entre deux services au 07 59 11 90 97. Pour éviter");
+    expect(renderSms("creneau_promis", vars)).toMatch(/en dehors du service\. L'appel viendra du 07 59 11 90 97 : enregistrez ce numéro\.$/);
+    expect(renderEmail("relance_j3", vars).body).toContain("entre deux services.\nVous pouvez aussi nous rappeler entre deux services au 07 59 11 90 97.\n\nL'équipe");
+    expect(renderEmail("reponse_ecrite", vars).body).toContain("rappeler entre deux services au 07 59 11 90 97.");
+  });
+
+  it("sans réglage, les phrases restent correctes et aucune ligne vide ne traîne", () => {
+    const vars = leadVars(lead, DEFAULT_LEAD_SETTINGS, null);
+    expect(renderSms("demande_recue", vars)).toContain("30min. ParlerEmploi");
+    expect(renderSms("qualification_reservee", vars)).toContain("Nous vous appellerons au numéro indiqué. À très vite");
+    expect(renderSms("appel_manque", vars)).toContain("pour Chez Karim. Pour éviter");
+    expect(renderSms("creneau_promis", vars)).toMatch(/en dehors du service\.$/);
+    const relance = renderEmail("relance_j3", vars).body;
+    expect(relance).not.toMatch(/rappeler entre deux services/);
+    expect(relance).toContain("entre deux services.\n\nL'équipe conseil ParlerEmploi");
+    for (const sms of ["demande_recue", "qualification_reservee", "appel_manque", "creneau_promis"] as const) {
+      expect(renderSms(sms, vars)).not.toMatch(/ [.,]| {2,}/);
+    }
+  });
+
+  it("le numéro du setter reste hors des messages de rendez-vous avec la direction", () => {
+    const vars = leadVars(lead, withPhone, null);
+    expect(renderSms("confirmation_rdv", vars)).not.toContain("07 59");
+    expect(renderSms("rappel_rdv", vars)).not.toContain("07 59");
+    expect(renderEmail("no_show", vars).body).not.toContain("07 59");
+  });
+});
 
 describe("modèles SMS / email restauration", () => {
   it("SMS après appel manqué : marque, Calendly et aucun prénom d'équipe exposé", () => {
