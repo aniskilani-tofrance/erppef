@@ -26,6 +26,18 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-09-30-terrain-manuel",
+    date: "2026-09-30",
+    title: "Leads resto : la prospection terrain reste 100 % manuelle",
+    summary: "Les fiches de source « Terrain / visite » ne reçoivent plus aucun e-mail ni SMS automatique : quand le setter a rencontré le restaurateur, c'est lui qui garde la relation.",
+    items: [
+      { text: "Source « Terrain / visite » : ni e-mail Brevo ni SMS Twilio automatique, même quand l'interrupteur des envois est activé. Pas de confirmation ni de rappel de rendez-vous automatiques non plus : prévenez vous-même le restaurateur (appel, WhatsApp, e-mail du kit).", roles: LEADS },
+      { text: "Les envois faits à la main restent possibles, comme le SMS « rappel de créneau promis ». Les fiches qui arrivent par la landing, Meta ou Calendly ne changent pas.", roles: LEADS },
+      { text: "En créant une fiche après une visite, choisissez bien la source « Terrain / visite » : c'est elle qui coupe les envois automatiques.", roles: ["setter"] },
+    ],
+    training: [{ moduleId: "m1-leads", lessonId: "messages", label: "SMS, WhatsApp, email : ce qui part tout seul et ce que vous envoyez" }],
+  },
+  {
     id: "2026-09-29-telephone-setter",
     date: "2026-09-29",
     title: "Leads resto : le restaurateur sait désormais quel numéro va l'appeler",

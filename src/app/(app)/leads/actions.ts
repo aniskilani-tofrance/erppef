@@ -265,6 +265,7 @@ export async function sendLeadSms(raw: { leadId: string; code: ManualSmsTemplate
   const messages: Record<Exclude<typeof result, { sent: true }> ["reason"], string> = {
     not_configured: "Twilio n'est pas encore configuré.",
     automations_off: "Les envois automatiques sont désactivés dans les réglages des leads.",
+    manual_source: "Fiche de prospection terrain : aucun envoi automatique, tout se fait à la main.",
     no_phone: "Ce lead n'a pas de numéro de téléphone exploitable.",
     already_sent: "Ce modèle SMS a déjà été envoyé pour ce lead.",
     delivery_failed: "Twilio n'a pas pu envoyer le SMS. Réessayez dans quelques instants.",

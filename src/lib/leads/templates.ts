@@ -87,6 +87,16 @@ export function resolveLeadSettings(settings: unknown): LeadSettings {
   return out;
 }
 
+// Sources où le contact est humain de bout en bout : le setter a rencontré le
+// restaurateur (terrain). Aucun e-mail ni SMS automatique ne part vers ces fiches,
+// quel que soit l'interrupteur ; les envois déclenchés à la main restent possibles.
+export const MANUAL_ONLY_SOURCES = ["terrain"] as const;
+
+/** Vrai si la fiche vient d'une source où tout doit rester manuel (prospection terrain). */
+export function manualOnlyLead(lead: { source?: string | null }): boolean {
+  return (MANUAL_ONLY_SOURCES as readonly string[]).includes(lead.source ?? "");
+}
+
 /** Vrai seulement si la direction a activé les envois automatiques au prospect. */
 export function automationsEnabled(settings: Pick<LeadSettings, "automations">): boolean {
   return settings.automations === "on";

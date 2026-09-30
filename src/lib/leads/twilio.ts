@@ -1,11 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { toWhatsAppNumber } from "@/lib/admission/phone";
-import { automationsEnabled, leadVars, renderSms, type LeadSettings, type SmsTemplateCode } from "@/lib/leads/templates";
+import { automationsEnabled, leadVars, manualOnlyLead, renderSms, type LeadSettings, type SmsTemplateCode } from "@/lib/leads/templates";
 import type { LeadForBrevo } from "@/lib/leads/brevo";
 
 export type TwilioSmsResult =
   | { sent: true; sid: string | null }
-  | { sent: false; reason: "not_configured" | "automations_off" | "no_phone" | "already_sent" | "delivery_failed" };
+  | { sent: false; reason: "not_configured" | "automations_off" | "manual_source" | "no_phone" | "already_sent" | "delivery_failed" };
 
 export function twilioConfigured(): boolean {
   return Boolean(
@@ -42,6 +42,8 @@ export async function dispatchTwilioLeadSms(
   // Un envoi automatique n'a lieu que si la direction a armé les automatismes.
   // Les envois déclenchés à la main par un conseiller ne sont jamais bloqués.
   if (params.automatic && !automationsEnabled(params.settings)) return { sent: false, reason: "automations_off" };
+  // Prospection terrain : aucun SMS automatique, seuls les envois faits à la main partent.
+  if (params.automatic && manualOnlyLead(params.lead)) return { sent: false, reason: "manual_source" };
   const phoneDigits = toWhatsAppNumber(params.lead.phone);
   if (!phoneDigits) return { sent: false, reason: "no_phone" };
 

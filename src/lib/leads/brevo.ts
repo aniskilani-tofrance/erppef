@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
 import { textToHtml } from "@/lib/admission/messages";
-import { automationsEnabled, firstNameOf, leadVars, renderEmail, type LeadSettings } from "@/lib/leads/templates";
+import { automationsEnabled, firstNameOf, leadVars, manualOnlyLead, renderEmail, type LeadSettings } from "@/lib/leads/templates";
 
 /**
  * Customer-facing points in the POEI restaurant journey. One marker per lead and
@@ -46,6 +46,7 @@ export type LeadForBrevo = {
   positions_count: number | null;
   segment: string | null;
   status: string;
+  source?: string | null;
   owner_user_id?: string | null;
   rdv_at: string | null;
   rdv_mode: string | null;
@@ -146,7 +147,7 @@ export function buildBrevoLeadPayload(
 
 type DispatchResult =
   | { sent: true; messageId: string | null }
-  | { sent: false; reason: "not_configured" | "automations_off" | "no_email" | "already_sent" | "delivery_failed" };
+  | { sent: false; reason: "not_configured" | "automations_off" | "manual_source" | "no_email" | "already_sent" | "delivery_failed" };
 
 function cleanEmail(value: string | null | undefined): string | null {
   const email = value?.trim().toLowerCase();
@@ -347,6 +348,8 @@ export async function dispatchBrevoLeadEvent(
   // Tous les emails de ce module partent sans intervention humaine : ils suivent
   // donc l'interrupteur d'envois automatiques des réglages Leads.
   if (!automationsEnabled(params.settings)) return { sent: false, reason: "automations_off" };
+  // Prospection terrain : le setter a rencontré le restaurateur, tout reste manuel.
+  if (manualOnlyLead(params.lead)) return { sent: false, reason: "manual_source" };
   if (!email) return { sent: false, reason: "no_email" };
 
   const marker = deliveryMarker(params.eventName);
@@ -401,6 +404,7 @@ export async function scheduleBrevoLeadEvent(
   const email = cleanEmail(params.lead.email);
   if (!apiKey) return { sent: false, reason: "not_configured" };
   if (!automationsEnabled(params.settings)) return { sent: false, reason: "automations_off" };
+  if (manualOnlyLead(params.lead)) return { sent: false, reason: "manual_source" };
   if (!email) return { sent: false, reason: "no_email" };
   const scheduledMs = Date.parse(params.scheduledAt);
   const leadMs = scheduledMs - Date.now();
