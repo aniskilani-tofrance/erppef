@@ -23,7 +23,7 @@ export type TrainerFormValues = {
   lastName: string;
   email: string;
   phone: string;
-  contractType: "salarie" | "vacataire" | "prestataire" | "stagiaire";
+  contractType: "salarie" | "vacataire" | "prestataire" | "stagiaire" | "benevole";
   hourlyCost: string;
   weeklyHoursMax: string;
   priority: string;
@@ -151,7 +151,7 @@ export function TrainerFormDialog({ initial }: { initial?: TrainerFormValues }) 
             <Field label="Contrat">
               <Select
                 value={values.contractType}
-                onValueChange={(v) => set("contractType", v as "salarie" | "vacataire" | "prestataire" | "stagiaire")}
+                onValueChange={(v) => { set("contractType", v as "salarie" | "vacataire" | "prestataire" | "stagiaire" | "benevole"); if (v === "benevole") set("hourlyCost", "0"); }}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -161,8 +161,15 @@ export function TrainerFormDialog({ initial }: { initial?: TrainerFormValues }) 
                   <SelectItem value="vacataire">Vacataire</SelectItem>
                   <SelectItem value="prestataire">Prestataire (freelance)</SelectItem>
                   <SelectItem value="stagiaire">Stagiaire (co-animation ou atelier)</SelectItem>
+                  <SelectItem value="benevole">Bénévole (atelier, sans rémunération)</SelectItem>
                 </SelectContent>
               </Select>
+              {values.contractType === "benevole" && (
+                <p className="text-xs text-muted-foreground">
+                  Un bénévole anime un atelier (groupe dont il est le formateur) ou co-anime un cours. Coût horaire fixé à 0 €.
+                  Le moteur ne le propose jamais d&apos;office : vous le choisissez à la main.
+                </p>
+              )}
               {values.contractType === "stagiaire" && (
                 <p className="text-xs text-muted-foreground">
                   Un stagiaire co-anime les séances d&apos;une formatrice (fiche groupe → « Co-animation ») ou tient son propre atelier
@@ -171,7 +178,7 @@ export function TrainerFormDialog({ initial }: { initial?: TrainerFormValues }) 
               )}
             </Field>
             <Field label="Coût horaire chargé (€)">
-              <Input type="number" step="0.5" value={values.hourlyCost} onChange={(e) => set("hourlyCost", e.target.value)} />
+              <Input type="number" step="0.5" min="0" value={values.hourlyCost} disabled={values.contractType === "benevole"} onChange={(e) => set("hourlyCost", e.target.value)} />
             </Field>
           </div>
           {values.contractType === "stagiaire" && (
@@ -218,7 +225,7 @@ export function TrainerFormDialog({ initial }: { initial?: TrainerFormValues }) 
             <Button variant="outline" onClick={() => setOpen(false)} disabled={pending}>
               Annuler
             </Button>
-            <Button onClick={submit} disabled={pending || !values.firstName || !values.hourlyCost}>
+            <Button onClick={submit} disabled={pending || !values.firstName || values.hourlyCost === ""}>
               {pending ? "Enregistrement…" : "Enregistrer"}
             </Button>
           </div>

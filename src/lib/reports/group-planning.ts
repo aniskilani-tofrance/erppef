@@ -2,6 +2,7 @@ import { PDFDocument, PDFFont, PDFPage, StandardFonts, rgb } from "pdf-lib";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { LOGO_PEF_BASE64 } from "@/lib/emargement/logo-data";
 import { groupRef } from "@/lib/refs";
+import { trainerStatusSuffix } from "@/lib/referentiels";
 
 // Planning d'un groupe à diffuser : PDF (version apprenants ou version financeur),
 // CSV (tableur du financeur) et calendrier .ics (téléphone de l'apprenant).
@@ -152,7 +153,7 @@ export async function loadGroupPlanning(supabase: SupabaseClient, groupId: strin
     .order("starts_on");
   const t = g.trainers as unknown as { first_name: string; last_name: string } | null;
   const co = g.co_trainers as unknown as { first_name: string; last_name: string | null; contract_type: string } | null;
-  const coLabel = co ? `${co.first_name} ${co.last_name ?? ""}`.trim() + (co.contract_type === "stagiaire" ? " (stagiaire)" : "") : null;
+  const coLabel = co ? `${co.first_name} ${co.last_name ?? ""}`.trim() + trainerStatusSuffix(co.contract_type) : null;
   const r = g.rooms as unknown as { name: string; address: string | null; access_notes: string | null } | null;
   return {
     groupId: g.id,

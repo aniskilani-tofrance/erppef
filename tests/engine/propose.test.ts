@@ -264,3 +264,24 @@ describe("moteur — stagiaires jamais recommandés d'office", () => {
     expect(sorted).toEqual(["e", "v", "s", "b"]);
   });
 });
+
+describe("moteur — bénévoles jamais recommandés d'office", () => {
+  it("classe un bénévole (coût 0) après les salariés et vacataires, mais avant les inéligibles", async () => {
+    const { compareTrainers } = await import("@/lib/engine/propose");
+    const base = { name: "", hourlyCost: 30, priority: 10, score: 0, projectedCost: 0, hardViolations: [] as string[], softNotes: [] as string[] };
+    const benevole = { ...base, trainerId: "n", contractType: "benevole" as const, hourlyCost: 0 };
+    const vacataire = { ...base, trainerId: "v", contractType: "vacataire" as const, hourlyCost: 40 };
+    const salarie = { ...base, trainerId: "e", contractType: "salarie" as const, hourlyCost: 45 };
+    const bloque = { ...base, trainerId: "b", contractType: "salarie" as const, hardViolations: ["indisponible"] };
+    const sorted = [benevole, bloque, vacataire, salarie].sort(compareTrainers).map((t) => t.trainerId);
+    expect(sorted).toEqual(["e", "v", "n", "b"]);
+  });
+
+  it("mention du statut sur l'émargement et les plannings", async () => {
+    const { trainerStatusSuffix } = await import("@/lib/referentiels");
+    expect(trainerStatusSuffix("benevole")).toBe(" (bénévole)");
+    expect(trainerStatusSuffix("stagiaire")).toBe(" (stagiaire)");
+    expect(trainerStatusSuffix("salarie")).toBe("");
+    expect(trainerStatusSuffix(null)).toBe("");
+  });
+});

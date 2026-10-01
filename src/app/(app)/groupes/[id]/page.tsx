@@ -40,6 +40,7 @@ import {
   sessionHours,
   type AttendanceRecord,
 } from "@/lib/attendance-stats";
+import { trainerStatusSuffix } from "@/lib/referentiels";
 
 export default async function GroupePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -286,7 +287,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
                 />
               </>
             ) : coTrainer ? (
-              <p className="text-sm text-muted-foreground">avec {`${coTrainer.first_name} ${coTrainer.last_name ?? ""}`.trim()}{coTrainer.contract_type === "stagiaire" ? " (stagiaire)" : ""}</p>
+              <p className="text-sm text-muted-foreground">avec {`${coTrainer.first_name} ${coTrainer.last_name ?? ""}`.trim()}{trainerStatusSuffix(coTrainer.contract_type)}</p>
             ) : null}
           </CardContent>
         </Card>

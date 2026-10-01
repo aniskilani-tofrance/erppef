@@ -181,6 +181,17 @@ export const HELP_SECTIONS: HelpSection[] = [
         ],
       },
       {
+        title: "Accueillir un bénévole : animer un atelier",
+        steps: [
+          "Un bénévole est une fiche formateur avec le contrat « Bénévole » (Formateurs → Nouveau formateur). Son coût horaire est fixé à 0 € : il n'est jamais rémunéré. Email pour son compte (rôle formateur), téléphone, disponibilités, couleur sur le planning, agenda Google : comme pour une formatrice.",
+          "Atelier : créez le groupe (lecture-écriture, conversation, alphabétisation…) et choisissez le bénévole comme formateur. Le moteur ne propose jamais un bénévole d'office (il le classe après les salariés et vacataires) : choisissez-le à la main.",
+          "Un atelier est complémentaire : un apprenant déjà inscrit dans un cours municipal ou associatif peut être inscrit aussi dans un atelier, tant que les horaires ne se chevauchent pas.",
+          "Co-animation : un bénévole peut aussi épauler une formatrice (fiche groupe → carte Formateur → « Co-animation »). Son nom apparaît « avec … (bénévole) » sur la feuille d'émargement et les plannings.",
+          "Ce que voit le bénévole : ses séances sur son Dashboard, dans le Planning et dans son agenda Google ; il fait l'appel et signe la feuille d'émargement de ses ateliers.",
+          "Congés : un bénévole déclare ses absences comme un vacataire (pas de validation), la coordination est prévenue pour trouver un remplaçant ou annuler la séance.",
+        ],
+      },
+      {
         title: "Gérer les comptes et les rôles",
         steps: [
           "Paramètres → « Utilisateurs et rôles » : la liste des comptes, avec le rôle modifiable (admin seulement).",

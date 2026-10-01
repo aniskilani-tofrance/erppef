@@ -7,6 +7,7 @@ import { setGroupCoTrainer } from "@/app/(app)/groupes/actions";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { trainerStatusSuffix } from "@/lib/referentiels";
 
 const NONE = "none";
 
@@ -41,14 +42,14 @@ export function CoTrainerSelect({
 
   return (
     <Select value={current} onValueChange={change} disabled={pending}>
-      <SelectTrigger className="mt-1 h-8 w-full text-sm" title="Stagiaire ou second formateur présent sur les séances à venir">
+      <SelectTrigger className="mt-1 h-8 w-full text-sm" title="Stagiaire, bénévole ou second formateur présent sur les séances à venir">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
         <SelectItem value={NONE}>Personne</SelectItem>
         {trainers.map((t) => (
           <SelectItem key={t.id} value={t.id}>
-            {t.name}{t.contractType === "stagiaire" ? " (stagiaire)" : ""}
+            {t.name}{trainerStatusSuffix(t.contractType)}
           </SelectItem>
         ))}
       </SelectContent>

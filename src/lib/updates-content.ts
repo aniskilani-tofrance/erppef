@@ -26,6 +26,19 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-10-02-benevoles-ateliers",
+    date: "2026-10-02",
+    title: "Bénévoles : un nouveau contrat pour animer les ateliers",
+    summary: "Les bénévoles ont désormais leur fiche dans Formateurs, avec le contrat « Bénévole » : ils animent les ateliers lecture-écriture, conversation et alphabétisation, font l'appel et signent l'émargement.",
+    items: [
+      { text: "Formateurs → Nouveau formateur → contrat « Bénévole » : le coût horaire est fixé à 0 €. Le moteur ne propose jamais un bénévole d'office : vous le choisissez à la main comme formateur d'un atelier, ou en co-animation.", roles: TEAM },
+      { text: "Trois ateliers bénévoles ouvrent à Bachelet, salle 13, jusqu'au 5 février : lecture-écriture (jeudi 10h-12h), conversation (jeudi 14h-16h) et alphabétisation (vendredi 10h-12h), 8 places chacun. Ils complètent les cours : un apprenant peut suivre un cours et un atelier.", roles: ALL },
+      { text: "Vacances scolaires : les dates officielles de la zone C sont en place (hiver du 6 au 21 février 2027, printemps du 3 au 18 avril 2027). Le groupe A2 Landy a été replanifié en conséquence, sans changer son volume d'heures.", roles: ALL },
+      { text: "Sur la feuille d'émargement et les plannings, un bénévole en co-animation apparaît « avec … (bénévole) ».", roles: ALL },
+    ],
+    training: [{ moduleId: "c3-equipe", lessonId: "formateurs", label: "Un formateur prêt à planifier" }],
+  },
+  {
     id: "2026-09-30-terrain-manuel",
     date: "2026-09-30",
     title: "Leads resto : la prospection terrain reste 100 % manuelle",

@@ -26,3 +26,11 @@ describe("règles du module congés — stagiaires", () => {
     expect(requestWording("stagiaire").button).toBe("Déclarer une absence");
   });
 });
+
+describe("règles du module congés — bénévoles", () => {
+  it("un bénévole déclare ses absences sans validation, comme un vacataire", () => {
+    expect(needsApproval("benevole")).toBe(false);
+    expect(initialStatus("benevole")).toBe("approuvee");
+    expect(requestWording("benevole").button).toBe("Déclarer une absence");
+  });
+});

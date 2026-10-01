@@ -15,10 +15,10 @@ const trainerSchema = z.object({
   lastName: z.string(),
   email: z.string().email().nullable(),
   phone: z.string().nullable(),
-  contractType: z.enum(["salarie", "vacataire", "prestataire", "stagiaire"]),
+  contractType: z.enum(["salarie", "vacataire", "prestataire", "stagiaire", "benevole"]),
   internshipSchool: z.string().max(200).nullable().optional(),
   internshipEndsOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
-  hourlyCost: z.number().positive(),
+  hourlyCost: z.number().min(0), // 0 = bénévole ou stagiaire non gratifié
   weeklyHoursMax: z.number().positive(),
   priority: z.number().int().min(1),
   skills: z.array(z.string()),
@@ -51,7 +51,7 @@ export async function upsertTrainer(raw: z.infer<typeof trainerSchema>): Promise
     // Stage : établissement et date de fin (vides pour les autres contrats)
     internship_school: d.contractType === "stagiaire" ? d.internshipSchool?.trim() || null : null,
     internship_ends_on: d.contractType === "stagiaire" ? d.internshipEndsOn || null : null,
-    hourly_cost: d.hourlyCost,
+    hourly_cost: d.contractType === "benevole" ? 0 : d.hourlyCost, // un bénévole n'est jamais rémunéré
     weekly_hours_max: d.weeklyHoursMax,
     priority: d.priority,
     ...(d.color !== undefined ? { color: d.color } : {}),

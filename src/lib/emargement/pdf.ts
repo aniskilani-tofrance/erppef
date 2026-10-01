@@ -2,6 +2,7 @@ import { PDFDocument, PDFFont, PDFImage, PDFPage, StandardFonts, rgb } from "pdf
 import { createAdminClient } from "@/lib/supabase/admin";
 import { utcToLocalTime } from "@/lib/dates";
 import { LOGO_PEF_BASE64 } from "./logo-data";
+import { trainerStatusSuffix } from "@/lib/referentiels";
 
 // Charte ParlerEmploi
 const PEF_GREEN = rgb(0.059, 0.298, 0.227); // #0F4C3A
@@ -93,7 +94,7 @@ export async function loadAttendanceSheetData(
       const co = session.co_trainers as unknown as { first_name: string; last_name: string | null; contract_type: string } | null;
       const main = trainer ? `${trainer.first_name} ${trainer.last_name ?? ""}`.trim() : null;
       if (!co) return main;
-      const coName = `${co.first_name} ${co.last_name ?? ""}`.trim() + (co.contract_type === "stagiaire" ? " (stagiaire)" : "");
+      const coName = `${co.first_name} ${co.last_name ?? ""}`.trim() + trainerStatusSuffix(co.contract_type);
       return main ? `${main}, avec ${coName}` : coName;
     })(),
     roomName: room?.name ?? null,

@@ -54,10 +54,19 @@ export const CONTRACT_LABELS: Record<string, string> = {
   vacataire: "Vacataire",
   prestataire: "Prestataire",
   stagiaire: "Stagiaire",
+  benevole: "Bénévole",
 };
 
-export type ContractType = "salarie" | "vacataire" | "prestataire" | "stagiaire";
-export const CONTRACT_TYPES: ContractType[] = ["salarie", "vacataire", "prestataire", "stagiaire"];
+export type ContractType = "salarie" | "vacataire" | "prestataire" | "stagiaire" | "benevole";
+export const CONTRACT_TYPES: ContractType[] = ["salarie", "vacataire", "prestataire", "stagiaire", "benevole"];
+
+// Mention ajoutée au nom d'un intervenant non salarié de l'équipe pédagogique (émargement,
+// plannings, co-animation) : « Prénom Nom (stagiaire) », « Prénom Nom (bénévole) ».
+export function trainerStatusSuffix(contractType: string | null | undefined): string {
+  if (contractType === "stagiaire") return " (stagiaire)";
+  if (contractType === "benevole") return " (bénévole)";
+  return "";
+}
 
 // Objectifs d'entrée (analyse du besoin, Qualiopi ind. 4)
 export const GOALS = [
