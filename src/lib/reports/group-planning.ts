@@ -282,7 +282,7 @@ export async function buildPlanningPdf(p: GroupPlanning, audience: PlanningAudie
   let y = A4.height - MARGIN;
   const pages: PDFPage[] = [page];
   const text = (str: string, x: number, size: number, f: PDFFont = font, color = rgb(0, 0, 0)) =>
-    page.drawText(str, { x, y, size, font: f, color });
+    page.drawText(pdfSafe(str), { x, y, size, font: f, color });
 
   // Colonnes
   const cols = learners
@@ -440,7 +440,7 @@ export async function buildPlanningPdf(p: GroupPlanning, audience: PlanningAudie
     for (const c of cols) {
       const v = values[c.k] ?? "";
       const size = base - (c.k === "date" ? 0 : 0.5);
-      let str = v;
+      let str = pdfSafe(v);
       while (str.length > 3 && (c.k === "date" ? bold : font).widthOfTextAtSize(str, size) > c.w - 8) str = str.slice(0, -2) + "…";
       page.drawText(str, { x, y, size, font: c.k === "date" ? bold : font, color: c.k === "date" ? color : cancelled ? RED : rgb(0.15, 0.15, 0.15) });
       x += c.w;
@@ -463,7 +463,7 @@ export async function buildPlanningPdf(p: GroupPlanning, audience: PlanningAudie
   }
   // numéros de page
   pages.forEach((pg, i) => {
-    pg.drawText(`${p.name} · page ${i + 1} / ${pages.length}`, { x: A4.width - MARGIN - 160, y: 28, size: 7.5, font, color: GRAY });
+    pg.drawText(`${pdfSafe(p.name)} · page ${i + 1} / ${pages.length}`, { x: A4.width - MARGIN - 160, y: 28, size: 7.5, font, color: GRAY });
   });
   return doc.save();
 }

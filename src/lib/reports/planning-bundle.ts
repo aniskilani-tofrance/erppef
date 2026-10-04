@@ -10,6 +10,7 @@ import {
   icsEvents,
   localDate,
   localTime,
+  pdfSafe,
   slug,
   wrapIcs,
   type GroupPlanning,
@@ -119,9 +120,10 @@ async function buildCoverPdf(bundle: PlanningBundle): Promise<Uint8Array> {
   let y = A4.height - MARGIN;
   const pages = [page];
   const text = (str: string, x: number, size: number, f: PDFFont = font, color = rgb(0, 0, 0)) =>
-    page.drawText(str, { x, y, size, font: f, color });
+    page.drawText(pdfSafe(str), { x, y, size, font: f, color });
+  // Textes passés par pdfSafe : une flèche ou un emoji ne doit pas faire échouer tout le recueil.
   const fit = (str: string, w: number, size: number, f: PDFFont = font) => {
-    let s = str;
+    let s = pdfSafe(str);
     while (s.length > 3 && f.widthOfTextAtSize(s, size) > w - 8) s = s.slice(0, -2) + "…";
     return s;
   };

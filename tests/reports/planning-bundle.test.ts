@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { GroupPlanning } from "@/lib/reports/group-planning";
-import { buildBundleCsv, buildBundleIcs, bundleFileName, summarizePlanning } from "@/lib/reports/planning-bundle";
+import { buildBundleCsv, buildBundleIcs, buildBundlePdf, bundleFileName, summarizePlanning } from "@/lib/reports/planning-bundle";
 
 const a1: GroupPlanning = {
   groupId: "g1", groupNo: 4, name: "Cours municipaux A1 — Cordon", programName: "Cours municipaux A1", funderName: "Ville de Saint-Ouen (via BOP104)",
@@ -53,5 +53,9 @@ describe("plannings groupés (financeur, apprenant, accueil)", () => {
     expect(bundleFileName({ title: "Plannings", subtitle: "Ville de Saint-Ouen (via BOP104)", audience: "financeur" }, "pdf")).toBe("plannings_Ville-de-Saint-Ouen-via-BOP104_financeur.pdf");
     expect(bundleFileName({ title: "Vos plannings de cours", subtitle: "Aïcha Benali", audience: "apprenants" }, "ics")).toBe("plannings_Aicha-Benali_apprenants.ics");
     expect(bundleFileName({ title: "Plannings des cours", subtitle: null, audience: "apprenants" }, "pdf")).toBe("plannings_Plannings-des-cours_apprenants.pdf");
+  });
+  it("PDF de tous les groupes : la flèche de la période et un emoji ne font plus échouer la page de garde", async () => {
+    const pdf = await buildBundlePdf({ title: "Plannings des cours", subtitle: "Tous les groupes — 2026", audience: "apprenants", plannings: [a1, { ...a2, name: "Atelier conversation 💬" }], cover: true });
+    expect(Buffer.from(pdf.slice(0, 5)).toString()).toBe("%PDF-");
   });
 });
