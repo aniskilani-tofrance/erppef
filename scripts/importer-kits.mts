@@ -2,7 +2,7 @@
 //   kit_G3_2026-10-05_14h00_A2_S1-1.pdf  →  groupe G-3, séance du 05/10/2026 à 14h00 (heure de Paris)
 // Usage : npx tsx scripts/importer-kits.mts [dossier]          (simulation, rien n'est écrit)
 //         DRY=0 npx tsx scripts/importer-kits.mts [dossier]    (dépôt réel, après lecture de la simulation)
-// Dossier par défaut : ~/parleremploi/kits. Organisation ParlerEmploi Formation uniquement.
+// Dossier par défaut : « Kits ERP » sur le Bureau. Organisation ParlerEmploi Formation uniquement.
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -11,7 +11,7 @@ import { KIT_BUCKET, KIT_MAX_BYTES, kitStoragePath, parisDateTime, parseKitFileN
 
 const PEF = "a0000000-0000-4000-8000-000000000001";
 const DRY = process.env.DRY !== "0";
-const dir = process.argv[2] ?? join(homedir(), "parleremploi", "kits");
+const dir = process.argv[2] ?? join(homedir(), "Desktop", "Kits ERP");
 
 const env = Object.fromEntries(
   readFileSync(new URL("../.env.local", import.meta.url), "utf8")
