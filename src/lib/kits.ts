@@ -45,6 +45,13 @@ export function parisDateTime(iso: string): { date: string; time: string } {
   return { date, time };
 }
 
+/** Sous-dossier de rangement après import : « semaine du 5 octobre 2026 » (lundi de la semaine). */
+export function kitWeekFolder(date: string): string {
+  const d = new Date(`${date}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+  return `semaine du ${d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })}`;
+}
+
 /** Un seul kit par séance : le dépôt suivant remplace le précédent. */
 export function kitStoragePath(orgId: string, sessionId: string): string {
   return `${orgId}/${sessionId}.pdf`;

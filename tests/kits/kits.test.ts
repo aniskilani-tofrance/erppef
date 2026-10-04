@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { canDownloadKit, canManageKits, kitDownloadName, kitStoragePath, parisDateTime, parseKitFileName } from "@/lib/kits";
+import { canDownloadKit, canManageKits, kitDownloadName, kitStoragePath, kitWeekFolder, parisDateTime, parseKitFileName } from "@/lib/kits";
 
 describe("kits de séance : nom de fichier", () => {
   it("lit groupe, date, heure, niveau, séquence et séance", () => {
@@ -27,6 +27,13 @@ describe("kits de séance : nom de fichier", () => {
   it("retrouve l'heure de Paris d'une séance (heure d'été comme d'hiver)", () => {
     expect(parisDateTime("2026-10-05T12:00:00+00:00")).toEqual({ date: "2026-10-05", time: "14:00" });
     expect(parisDateTime("2026-12-08T08:00:00Z")).toEqual({ date: "2026-12-08", time: "09:00" });
+  });
+
+  it("range les kits importés par semaine, au lundi", () => {
+    expect(kitWeekFolder("2026-10-05")).toBe("semaine du 5 octobre 2026");
+    expect(kitWeekFolder("2026-10-08")).toBe("semaine du 5 octobre 2026");
+    expect(kitWeekFolder("2026-10-11")).toBe("semaine du 5 octobre 2026");
+    expect(kitWeekFolder("2026-10-12")).toBe("semaine du 12 octobre 2026");
   });
 
   it("range un seul kit par séance et propose un nom propre au téléchargement", () => {

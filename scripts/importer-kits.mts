@@ -3,11 +3,12 @@
 // Usage : npx tsx scripts/importer-kits.mts [dossier]          (simulation, rien n'est écrit)
 //         DRY=0 npx tsx scripts/importer-kits.mts [dossier]    (dépôt réel, après lecture de la simulation)
 // Dossier par défaut : « Kits ERP » sur le Bureau. Organisation ParlerEmploi Formation uniquement.
-import { readdirSync, readFileSync, statSync } from "node:fs";
+// Après dépôt, chaque PDF déposé est rangé dans « importés/semaine du <lundi> » du même dossier.
+import { mkdirSync, readdirSync, readFileSync, renameSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { createClient } from "@supabase/supabase-js";
-import { KIT_BUCKET, KIT_MAX_BYTES, kitStoragePath, parisDateTime, parseKitFileName } from "../src/lib/kits";
+import { KIT_BUCKET, KIT_MAX_BYTES, kitStoragePath, kitWeekFolder, parisDateTime, parseKitFileName } from "../src/lib/kits";
 
 const PEF = "a0000000-0000-4000-8000-000000000001";
 const DRY = process.env.DRY !== "0";
@@ -122,5 +123,9 @@ for (const l of okLines) {
     continue;
   }
   done++;
+  // Rangé : le dossier principal ne garde que les kits restant à importer.
+  const target = join(dir, "importés", kitWeekFolder(l.parsed!.date));
+  mkdirSync(target, { recursive: true });
+  renameSync(join(dir, l.file), join(target, l.file));
 }
-console.log(`${done} kit(s) déposé(s).`);
+console.log(`${done} kit(s) déposé(s) et rangé(s) dans « importés ».`);
