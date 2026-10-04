@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
 import { utcToLocalTime } from "@/lib/dates";
+import { SessionKit } from "./session-kit";
 
 type Option = { id: string; name: string };
 const NONE = "none";
@@ -135,6 +136,8 @@ export function SessionSheet({
               </SelectContent>
             </Select>
           </div>
+
+          <SessionKit sessionId={session.id} />
 
           <Link
             href={`/seances/${session.id}/emargement`}
