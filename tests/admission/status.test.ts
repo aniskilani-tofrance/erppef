@@ -31,6 +31,11 @@ describe("statut d'admission", () => {
     expect(suggestedStatus("sans_reponse", "contacte")).toBe("contacte");
     expect(suggestedStatus("convoque", "contacte")).toBe("convoque");
     expect(suggestedStatus("refus", "convoque")).toBe("sans_suite");
+    // Place refusée : liste d'attente ; une relance sans réponse ne l'en fait pas sortir
+    expect(suggestedStatus("place_refusee", "evalue")).toBe("liste_attente");
+    expect(suggestedStatus("sans_reponse", "liste_attente")).toBe("liste_attente");
+    expect(nextAdmissionStatus("liste_attente", "evalue")).toBe("liste_attente");
+    expect(nextAdmissionStatus("liste_attente", "inscrit")).toBe("inscrit");
     expect(suggestedStatus("autre", "contacte")).toBe("contacte");
     expect(suggestedStatus("joint", "inscrit")).toBe("inscrit");
   });

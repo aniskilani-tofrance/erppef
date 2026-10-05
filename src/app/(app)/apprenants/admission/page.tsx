@@ -201,6 +201,10 @@ export default async function AdmissionPage() {
     .sort((a, b) => (lastContactAt(a.id) ?? "").localeCompare(lastContactAt(b.id) ?? ""));
   // Évalués (entretien oral fait) mais pas encore inscrits dans un groupe
   const toEnroll = (learners ?? []).filter((l) => l.admission_status === "evalue");
+  // Liste d'attente : place refusée ou incompatible — les plus anciens contacts d'abord (à reproposer en premier)
+  const waiting = (learners ?? [])
+    .filter((l) => l.admission_status === "liste_attente")
+    .sort((a, b) => (lastContactAt(a.id) ?? a.created_at).localeCompare(lastContactAt(b.id) ?? b.created_at));
 
   // D'où viennent les demandes : par famille de provenance (maison de quartier, contact
   // direct, prescripteur), puis le détail (quelle maison de quartier, quel canal) — total
@@ -428,6 +432,18 @@ export default async function AdmissionPage() {
         </CardHeader>
         <CardContent>
           <LearnerRows rows={toEnroll} senderFirstName={senderFirstName} history={historyByLearner} templates={templates} pendingTestUrl={pendingTestUrl} empty="Personne en attente d'inscription." />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Liste d&apos;attente ({waiting.length})</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Évalués qui ont refusé la place proposée (horaire, garde d&apos;enfant…) ou pour qui aucun groupe compatible n&apos;existe. Le motif est dans le carnet de contact. Dès qu&apos;une place se libère, inscrivez la personne depuis la fiche du groupe : elle passe « Inscrit » toute seule.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <LearnerRows rows={waiting} senderFirstName={senderFirstName} history={historyByLearner} templates={templates} pendingTestUrl={pendingTestUrl} empty="Personne en liste d'attente." />
         </CardContent>
       </Card>
     </div>

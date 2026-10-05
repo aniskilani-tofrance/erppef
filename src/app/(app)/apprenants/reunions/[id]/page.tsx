@@ -50,7 +50,7 @@ type InvitationRow = {
 };
 
 const CANDIDATE_ORDER: Record<string, number> = {
-  contacte: 0, injoignable: 1, nouveau: 2, convoque: 3, evalue: 4, sans_suite: 5, inscrit: 6,
+  contacte: 0, injoignable: 1, nouveau: 2, convoque: 3, evalue: 4, liste_attente: 5, sans_suite: 6, inscrit: 7,
 };
 
 export default async function MeetingPage({ params }: { params: Promise<{ id: string }> }) {

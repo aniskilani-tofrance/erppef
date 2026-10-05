@@ -48,6 +48,7 @@ describe("modèles de messages par étape", () => {
     expect(pickStage({ admissionStatus: "evalue" })).toBe("apres_reunion");
     expect(pickStage({ admissionStatus: "inscrit", enrollment: { group: "A1", startsOn: "1er octobre", place: null } })).toBe("inscription");
     expect(pickStage({ admissionStatus: "sans_suite" })).toBe("porte_ouverte");
+    expect(pickStage({ admissionStatus: "liste_attente" })).toBe("liste_attente");
   });
 
   it("« à contacter » et « à convoquer » ne reçoivent jamais le même texte", () => {

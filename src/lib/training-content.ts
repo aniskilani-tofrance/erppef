@@ -432,6 +432,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
           "« Nouvelle réunion » : date, heure, salle ou lieu, capacité. Puis « Ajouter des convoqués » (cases à cocher) ou, depuis Apprenants, cochez → « Convoquer (n) ».",
           "Sur la réunion, chaque ligne a « Convoquer » : WhatsApp s'ouvre avec la convocation complète (date, lieu, entretien oral annoncé sans stress, réponse OUI/NON). Email possible pour ceux qui préfèrent.",
           "Réponse OUI → « Confirmée ». La veille → « Rappel » WhatsApp (l'email de rappel part seul). Le jour J → « Présent(e) » puis « Entretien oral » : niveau à l'oral en 20 secondes, recopié dans la fiche. La date remplit aussi celle de l'entretien d'entrée, puisque tout a lieu le même jour.",
+          "Place refusée (horaire, garde d'enfant…) ou aucun groupe compatible : carnet « Noter un contact » → « Place refusée — liste d'attente », motif dans la note. La fiche passe en « Liste d'attente » (carte dédiée dans l'onglet Admission, message WhatsApp « Liste d'attente ») : c'est la première liste à regarder quand une place se libère.",
           "Inscription dans un groupe = statut « Inscrit » automatique. Dossier d'entrée PDF : besoin, test de positionnement en ligne, entretien oral, réunion suivie — la preuve complète.",
         ],
         tip: "Le message WhatsApp n'est que pré-rempli : adaptez-le, traduisez-le si besoin. L'ERP note seulement qu'un contact a eu lieu.",

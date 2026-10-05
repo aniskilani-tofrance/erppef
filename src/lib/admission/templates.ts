@@ -149,6 +149,22 @@ Nous vous confirmons très bientôt le jour du premier cours et les horaires. R�
 {signature}`,
   },
   {
+    code: "liste_attente",
+    label: "Liste d'attente",
+    when: "Statut « Liste d'attente » : la place proposée ne convenait pas (horaire, garde d'enfant…), on garde le contact et on reproposera.",
+    variables: ["prenom", "expediteur", "signature", "organisme"],
+    text: `Bonjour {prenom},
+
+Je suis {expediteur} de {organisme}. Nous avons bien noté que le créneau proposé ne vous convient pas.
+
+Vous êtes sur notre liste d'attente : dès qu'une place compatible avec vos disponibilités se libère, nous vous écrivons.
+
+Si vos disponibilités changent, répondez simplement à ce message.
+
+À bientôt,
+{signature}`,
+  },
+  {
     code: "inscription",
     label: "Confirmation d'inscription",
     when: "Statut « Inscrit » : le groupe, le premier cours et le lieu sont remplis automatiquement.",
@@ -293,6 +309,8 @@ export function pickStage(s: LearnerSituation): MessageStage {
       return s.upcomingMeeting ? "convocation" : s.pendingTestUrl ? "test_positionnement" : "suite_contact";
     case "evalue":
       return "apres_reunion";
+    case "liste_attente":
+      return "liste_attente";
     case "inscrit":
       return "inscription";
     case "sans_suite":

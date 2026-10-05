@@ -55,7 +55,7 @@ async function advanceStatus(
 const contactSchema = z.object({
   learnerId: uuid,
   channel: z.enum(["whatsapp", "telephone", "sms", "email", "presentiel"]),
-  outcome: z.enum(["message_envoye", "joint", "sans_reponse", "convoque", "refus", "autre"]),
+  outcome: z.enum(["message_envoye", "joint", "sans_reponse", "convoque", "place_refusee", "refus", "autre"]),
   note: z.string().nullable(),
   // Statut choisi dans le dialog (pré-rempli d'après le résultat, modifiable) ;
   // null = ne pas toucher au statut (ex. bouton WhatsApp : on avance juste à « contacté »).

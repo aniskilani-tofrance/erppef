@@ -26,6 +26,18 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-10-05-liste-attente",
+    date: "2026-10-05",
+    title: "Admission : un statut « Liste d'attente »",
+    summary: "Les personnes évaluées qui ont refusé la place proposée ne restent plus mélangées aux « Évalués » : elles ont leur statut « Liste d'attente » et leur carte dans l'onglet Admission.",
+    items: [
+      { text: "Nouveau statut « Liste d'attente » (badge orange) : évalué(e), mais la place proposée a été refusée (horaire, garde d'enfant…) ou aucun groupe ne convient. Les 7 personnes qui ont refusé leur place le 2 octobre y sont déjà, avec leur motif dans le carnet de contact.", roles: TEAM },
+      { text: "Carnet « Noter un contact » → résultat « Place refusée — liste d'attente » : le statut change tout seul. Onglet Admission → carte « Liste d'attente » ; liste Apprenants → filtre « Liste d'attente ».", roles: TEAM },
+      { text: "Le bouton WhatsApp d'une personne en liste d'attente envoie un message dédié : on a bien noté que le créneau ne convient pas, on la recontacte dès qu'une place compatible se libère (texte modifiable dans « Messages »).", roles: TEAM },
+    ],
+    training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "L'admission : WhatsApp, réunion d'information, entretien oral" }],
+  },
+  {
     id: "2026-10-02-benevoles-ateliers",
     date: "2026-10-02",
     title: "Bénévoles : un nouveau contrat pour animer les ateliers",
