@@ -26,6 +26,18 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-10-06-attestations-entree",
+    date: "2026-10-06",
+    title: "Attestations d'entrée en formation",
+    summary: "Chaque apprenant qui a commencé son cours (au moins une présence émargée) peut recevoir son attestation d'entrée en formation, signée par l'association : à imprimer pour la classe ou à envoyer par email.",
+    items: [
+      { text: "Fiche du groupe → carte « Attestations d'entrée en formation » : la liste des apprenants présents au moins une fois sur une feuille clôturée, avec leur date d'entrée (la première présence). « PDF à imprimer » : une page par personne, à remettre en cours.", roles: ALL },
+      { text: "Clôturez vos feuilles d'émargement après chaque séance : sans clôture, la présence ne compte pas et l'attestation n'apparaît pas.", roles: ["trainer"] },
+      { text: "« Envoyer par email et classer » : l'attestation part par email à ceux qui ont une adresse, une copie est rangée dans leur dossier administratif, et l'envoi est noté dans le carnet de contact. Personne ne la reçoit deux fois ; ceux qui n'ont pas d'email sont signalés « à remettre imprimée ».", roles: TEAM },
+    ],
+    training: [{ moduleId: "c5-vie-quotidienne", lessonId: "documents", label: "Les documents financeurs" }],
+  },
+  {
     id: "2026-10-06-alertes-prod",
     date: "2026-10-06",
     title: "Alertes du matin : seulement la production",

@@ -391,6 +391,7 @@ export const HELP_SECTIONS: HelpSection[] = [
         steps: [
           "Feuille d'émargement PDF : sur la séance clôturée → « Télécharger le PDF » ou « Déposer sur le Drive » (classée par formation dans le Drive partagé).",
           "Certificat de réalisation : fiche du groupe → lien « Certificat » à côté de l'apprenant (dates et heures réellement suivies).",
+          "Attestation d'entrée en formation : fiche du groupe → carte « Attestations d'entrée en formation ». Elle liste chaque apprenant présent au moins une fois sur une feuille clôturée, avec sa date d'entrée (première présence). « PDF à imprimer » donne une page par personne, à remettre en cours ; « Envoyer par email et classer » l'envoie à ceux qui ont une adresse et range une copie dans leur dossier administratif. Chaque personne ne la reçoit qu'une fois (« envoyée le … »).",
           "Export d'assiduité : fiche du groupe → « Export assiduité (CSV) » — s'ouvre dans Excel.",
         ],
       },

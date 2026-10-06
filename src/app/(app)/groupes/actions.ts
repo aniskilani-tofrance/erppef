@@ -16,6 +16,9 @@ import { baseVars, buildStageMessage } from "@/lib/admission/templates";
 import { textToHtml } from "@/lib/admission/messages";
 import { buildPlanningPdf, describeHolidays, describePattern, fmtDay, loadGroupPlanning, planningFileName } from "@/lib/reports/group-planning";
 import { dispatchGroupAttendance, parseEmails } from "@/lib/emargement/dispatch";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { documentStoragePath } from "@/lib/dossier/documents";
+import { ENTRY_CONTACT_MARK, buildEntryAttestationsPdf, entryAttestationFileName, loadEntryAttestations } from "@/lib/attestations/entree";
 
 // Envoie le planning (message + PDF apprenants en pièce jointe) à chaque inscrit qui a un email.
 export async function emailGroupPlanning(groupId: string): Promise<{ ok: true; message: string } | { ok: false; error: string }> {
@@ -516,4 +519,87 @@ export async function setGroupCoTrainer(raw: z.infer<typeof coTrainerSchema>): P
   revalidatePath(`/groupes/${groupId}`);
   revalidatePath("/planning");
   return { ok: true, sessions: (updated ?? []).length };
+}
+
+// ───────────── Attestations d'entrée en formation ─────────────
+
+export type EntryAttestationsResult =
+  | { ok: true; message: string; sent: number; archived: number; withoutEmail: string[] }
+  | { ok: false; error: string };
+
+// Pour chaque apprenant du groupe ayant au moins une présence émargée : une copie PDF classée
+// dans son dossier administratif (une seule fois), et l'envoi par email s'il a une adresse et
+// ne l'a pas déjà reçue. Chaque envoi est noté dans le carnet de contact (jamais de doublon).
+export async function sendEntryAttestations(groupId: string): Promise<EntryAttestationsResult> {
+  if (!z.string().uuid().safeParse(groupId).success) return { ok: false, error: "Groupe invalide" };
+  const { orgId, userId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+
+  const list = await loadEntryAttestations(supabase, groupId, orgId);
+  if (!list.length) return { ok: false, error: "Personne n'a encore de présence sur une feuille d'émargement clôturée." };
+  const ids = list.map((a) => a.learnerId);
+  const docLabel = `Attestation d'entrée en formation — ${list[0].groupName}`;
+
+  const [{ data: docs }, { data: contacts }] = await Promise.all([
+    supabase.from("learner_documents").select("learner_id").eq("org_id", orgId).eq("label", docLabel).in("learner_id", ids),
+    supabase.from("learner_contacts").select("learner_id, note").eq("org_id", orgId).like("note", `${ENTRY_CONTACT_MARK}%`).in("learner_id", ids),
+  ]);
+  const archivedBefore = new Set((docs ?? []).map((d) => d.learner_id));
+  const emailedBefore = new Set(
+    (contacts ?? []).filter((c) => (c.note ?? "").includes(list[0].groupName) && (c.note ?? "").includes("envoyée par email")).map((c) => c.learner_id),
+  );
+  const canEmail = mailerConfigured();
+  const storage = createAdminClient().storage.from("dossiers");
+
+  let sent = 0;
+  let archived = 0;
+  const withoutEmail: string[] = [];
+  for (const a of list) {
+    const needsArchive = !archivedBefore.has(a.learnerId);
+    const needsEmail = Boolean(a.email) && canEmail && !emailedBefore.has(a.learnerId);
+    if (!a.email) withoutEmail.push(a.learnerName);
+    if (!needsArchive && !needsEmail) continue;
+
+    const pdf = await buildEntryAttestationsPdf([a]);
+    if (needsArchive) {
+      const path = documentStoragePath(orgId, a.learnerId, "autre", "pdf", crypto.randomUUID());
+      const { error: upErr } = await storage.upload(path, Buffer.from(pdf), { contentType: "application/pdf", upsert: false });
+      if (!upErr) {
+        const { error: insErr } = await supabase.from("learner_documents").insert({
+          org_id: orgId, learner_id: a.learnerId, kind: "autre", label: docLabel, file_path: path,
+          mime_type: "application/pdf", size_bytes: pdf.byteLength, uploaded_by: userId,
+        });
+        if (insErr) await storage.remove([path]).catch(() => undefined);
+        else archived += 1;
+      }
+    }
+    if (needsEmail) {
+      const firstName = a.learnerName.split(" ")[0];
+      const ok = await sendMail({
+        to: a.email!,
+        subject: "Votre attestation d'entrée en formation — ParlerEmploi Formation",
+        html: textToHtml(
+          `Bonjour ${firstName},\n\nVous trouverez en pièce jointe votre attestation d'entrée en formation pour le cours « ${a.groupName} », commencé le ${fmtDay(a.entryOn, { day: "numeric", month: "long", year: "numeric" })}.\n\nConservez-la : elle peut vous être demandée (France Travail, CAF, préfecture…).\n\nBonne continuation,\nL'équipe ParlerEmploi Formation`,
+        ),
+        attachments: [{ filename: entryAttestationFileName(a.groupName, a.learnerName), content: pdf, contentType: "application/pdf" }],
+      });
+      if (ok) {
+        sent += 1;
+        await supabase.from("learner_contacts").insert({
+          org_id: orgId, learner_id: a.learnerId, channel: "email", outcome: "message_envoye", created_by: userId,
+          note: `${ENTRY_CONTACT_MARK} — ${a.groupName} : envoyée par email à ${a.email}.`,
+        });
+      }
+    }
+  }
+
+  revalidatePath(`/groupes/${groupId}`);
+  revalidatePath("/apprenants");
+  const parts = [
+    `${sent} attestation${sent > 1 ? "s" : ""} envoyée${sent > 1 ? "s" : ""} par email`,
+    `${archived} copie${archived > 1 ? "s" : ""} classée${archived > 1 ? "s" : ""} dans les dossiers`,
+  ];
+  if (!canEmail) parts.push("email non configuré : rien n'est parti");
+  if (withoutEmail.length) parts.push(`${withoutEmail.length} sans email, à remettre imprimée${withoutEmail.length > 1 ? "s" : ""}`);
+  return { ok: true, message: parts.join(" · "), sent, archived, withoutEmail };
 }

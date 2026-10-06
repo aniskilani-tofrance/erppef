@@ -20,6 +20,8 @@ import { SurveyManager } from "@/components/groupes/survey-manager";
 import { PlanningShare, type PlanningRecipient } from "@/components/groupes/planning-share";
 import { AttendanceDispatchCard, type DispatchHistoryRow } from "@/components/groupes/attendance-dispatch-card";
 import { CoTrainerSelect } from "@/components/groupes/co-trainer-select";
+import { EntryAttestationsCard, type EntryAttestationRow } from "@/components/groupes/entry-attestations-card";
+import { ENTRY_CONTACT_MARK, firstPresenceByLearner } from "@/lib/attestations/entree";
 import { KIND_LABELS } from "@/lib/evaluations/grid";
 import { STATE_LABELS, computeMilestones, milestoneState, type MilestoneSession, type MilestoneState } from "@/lib/evaluations/milestones";
 
@@ -148,6 +150,35 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
       className: MILESTONE_CLASS[state],
     };
   });
+  // Attestations d'entrée : apprenants présents au moins une fois sur une feuille clôturée.
+  const entryOnByLearner = firstPresenceByLearner(
+    (attendanceRows ?? []).map((a) => {
+      const s = a.sessions as unknown as { starts_at: string; attendance_closed_at: string | null };
+      return { learnerId: a.learner_id, status: a.status, startsAt: s.starts_at, closed: Boolean(s.attendance_closed_at) };
+    }),
+  );
+  const { data: entryContacts } = canWrite && entryOnByLearner.size
+    ? await supabase
+        .from("learner_contacts")
+        .select("learner_id, created_at, note")
+        .like("note", `${ENTRY_CONTACT_MARK} — ${group.name} : envoyée par email%`)
+        .in("learner_id", [...entryOnByLearner.keys()])
+    : { data: [] as { learner_id: string; created_at: string; note: string | null }[] };
+  const entrySentOn = new Map((entryContacts ?? []).map((c) => [c.learner_id, c.created_at.slice(0, 10)]));
+  const entryRows: EntryAttestationRow[] = (enrollments ?? [])
+    .filter((e) => entryOnByLearner.has(e.learner_id))
+    .map((e) => {
+      const l = e.learners as unknown as { first_name: string; last_name: string; email: string | null } | null;
+      return {
+        learnerId: e.learner_id,
+        name: l ? `${l.first_name === "?" ? "" : l.first_name} ${l.last_name}`.trim() : "—",
+        entryOn: entryOnByLearner.get(e.learner_id)!,
+        hasEmail: Boolean(l?.email?.trim()),
+        sentOn: entrySentOn.get(e.learner_id) ?? null,
+      };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, "fr"));
+
   const dispatchHistory: DispatchHistoryRow[] = (dispatchRows ?? []).map((d) => ({
     id: d.id,
     sentAt: d.sent_at,
@@ -353,6 +384,18 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
             </span>
           ))}
           <Link href={`/groupes/${id}/evaluations`} className="ml-auto text-sm font-medium hover:underline">Ouvrir les évaluations →</Link>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Attestations d&apos;entrée en formation</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Pour chaque apprenant présent au moins une fois sur une feuille d&apos;émargement clôturée : date d&apos;entrée = première présence. PDF à imprimer et remettre en cours ; envoi par email à ceux qui ont une adresse, copie classée dans leur dossier.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <EntryAttestationsCard groupId={id} rows={entryRows} canWrite={canWrite} />
         </CardContent>
       </Card>
 
