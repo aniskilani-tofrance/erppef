@@ -7,6 +7,7 @@ import { buildMeetingReminderMessage, formatMeetingWhen, textToHtml } from "@/li
 import { loadTemplates } from "@/lib/admission/load-templates";
 import { announceUpdatesEverywhere, type AnnounceResult } from "@/lib/updates-announce";
 import { sendEvaluationReminders } from "@/lib/evaluations/reminders";
+import { productionOrgIds } from "@/lib/production-orgs";
 import { scheduleBrevoAppointmentReminders, type AppointmentReminderKind, type LeadForBrevo } from "@/lib/leads/brevo";
 import { resolveLeadSettings } from "@/lib/leads/templates";
 import {
@@ -61,6 +62,9 @@ export async function GET(request: Request) {
 
   const supabase = createAdminClient();
   const now = new Date();
+  // Jamais le bac à sable : ses données de démo ne doivent ni apparaître dans les alertes
+  // ni déclencher de rappels ou de relances.
+  const orgIds = await productionOrgIds(supabase);
 
   // Dimanche : sauvegarde hebdomadaire avant les alertes (jamais bloquante).
   let backup: string | null = null;
@@ -76,16 +80,18 @@ export async function GET(request: Request) {
     supabase
       .from("attendances")
       .select("learner_id, status, sessions!inner(starts_at, attendance_closed_at)")
+      .in("org_id", orgIds)
       .not("sessions.attendance_closed_at", "is", null),
     supabase
       .from("sessions")
       .select("id, starts_at, groups(name), trainers:trainer_id(first_name, email)")
+      .in("org_id", orgIds)
       .neq("status", "annulee")
       .is("attendance_closed_at", null)
       .gte("starts_at", new Date(now.getTime() - 48 * 3600_000).toISOString())
       .lt("ends_at", now.toISOString())
       .order("starts_at"),
-    supabase.from("learners").select("id, first_name, last_name"),
+    supabase.from("learners").select("id, first_name, last_name").in("org_id", orgIds),
   ]);
 
   // Rappels apprenants (séances de demain, groupes ayant activé les rappels)
@@ -105,12 +111,12 @@ export async function GET(request: Request) {
       console.error("[nouveautés]", e instanceof Error ? e.message : e);
     }
     try {
-      reminders = await sendSessionReminders(supabase);
+      reminders = await sendSessionReminders(supabase, orgIds);
     } catch (e) {
       console.error("[rappels]", e instanceof Error ? e.message : e);
     }
     try {
-      meetingReminders = await sendMeetingReminders(supabase);
+      meetingReminders = await sendMeetingReminders(supabase, orgIds);
     } catch (e) {
       console.error("[rappels réunion]", e instanceof Error ? e.message : e);
     }
@@ -120,13 +126,13 @@ export async function GET(request: Request) {
       console.error("[relances]", e instanceof Error ? e.message : e);
     }
     try {
-      evaluationReminders = await sendEvaluationReminders(supabase);
+      evaluationReminders = await sendEvaluationReminders(supabase, undefined, orgIds);
     } catch (e) {
       console.error("[évaluations]", e instanceof Error ? e.message : e);
     }
   }
   try {
-    leadRdvEmails = await sendLeadRdvEmails(supabase);
+    leadRdvEmails = await sendLeadRdvEmails(supabase, orgIds);
   } catch (e) {
     console.error("[leads/brevo]", e instanceof Error ? e.message : e);
   }
@@ -161,10 +167,10 @@ export async function GET(request: Request) {
 
   // Parcours d'admission : nouveaux jamais contactés (> 3 jours), convocations non
   // envoyées pour une réunion sous 7 jours, réunion demain. Jamais bloquant.
-  const { count: pendingLeaves } = await supabase.from("trainer_absences").select("id", { count: "exact", head: true }).eq("status", "en_attente");
+  const { count: pendingLeaves } = await supabase.from("trainer_absences").select("id", { count: "exact", head: true }).in("org_id", orgIds).eq("status", "en_attente");
   const leaveLine = pendingLeaves ? `📆 ${pendingLeaves} demande${pendingLeaves > 1 ? "s" : ""} de congé à valider — https://pef-erp.vercel.app/conges` : null;
 
-  const admissionLines = await admissionAlerts(supabase).catch((e) => {
+  const admissionLines = await admissionAlerts(supabase, orgIds).catch((e) => {
     console.error("[admission]", e instanceof Error ? e.message : e);
     return [] as string[];
   });
@@ -233,6 +239,7 @@ export async function GET(request: Request) {
 // tout doublon et permettent l'annulation lors d'un report Calendly.
 async function sendLeadRdvEmails(
   supabase: ReturnType<typeof createAdminClient>,
+  orgIds: string[],
 ): Promise<{ sent: number; skipped: number }> {
   if (!process.env.BREVO_API_KEY) return { sent: 0, skipped: 0 };
   const now = new Date().toISOString();
@@ -240,12 +247,13 @@ async function sendLeadRdvEmails(
   const { data: leads } = await supabase
     .from("employer_leads")
     .select("*")
+    .in("org_id", orgIds)
     .not("status", "in", "(gagne,perdu,hors_cible)")
     .or(`and(rdv_at.gte.${now},rdv_at.lte.${horizon}),and(qualification_at.gte.${now},qualification_at.lte.${horizon})`);
   if (!leads?.length) return { sent: 0, skipped: 0 };
 
-  const orgIds = [...new Set(leads.map((lead) => lead.org_id as string).filter(Boolean))];
-  const { data: organizations } = await supabase.from("organizations").select("id, settings").in("id", orgIds);
+  const leadOrgIds = [...new Set(leads.map((lead) => lead.org_id as string).filter(Boolean))];
+  const { data: organizations } = await supabase.from("organizations").select("id, settings").in("id", leadOrgIds);
   const settingsByOrg = new Map((organizations ?? []).map((org) => [org.id as string, resolveLeadSettings(org.settings)]));
 
   let sent = 0;
@@ -279,13 +287,14 @@ async function sendLeadRdvEmails(
 }
 
 // ── Parcours d'admission : alertes du matin ──────────────────────────────────
-async function admissionAlerts(supabase: ReturnType<typeof createAdminClient>): Promise<string[]> {
+async function admissionAlerts(supabase: ReturnType<typeof createAdminClient>, orgIds: string[]): Promise<string[]> {
   const lines: string[] = [];
   const now = Date.now();
 
   const { count: neverContacted } = await supabase
     .from("learners")
     .select("id", { count: "exact", head: true })
+    .in("org_id", orgIds)
     .eq("admission_status", "nouveau")
     .lt("created_at", new Date(now - 3 * 86_400_000).toISOString());
   if (neverContacted) {
@@ -295,6 +304,7 @@ async function admissionAlerts(supabase: ReturnType<typeof createAdminClient>): 
   const { data: meetings } = await supabase
     .from("info_meetings")
     .select("id, starts_at, info_meeting_invitations(status)")
+    .in("org_id", orgIds)
     .gte("starts_at", new Date(now).toISOString())
     .lte("starts_at", new Date(now + 7 * 86_400_000).toISOString())
     .order("starts_at");
@@ -317,12 +327,14 @@ async function admissionAlerts(supabase: ReturnType<typeof createAdminClient>): 
 // part tout seul pour les convoqués qui ont une adresse et une convocation envoyée/confirmée.
 async function sendMeetingReminders(
   supabase: ReturnType<typeof createAdminClient>,
+  orgIds: string[],
 ): Promise<{ sent: number; skippedNoEmail: number }> {
   const tomorrow = new Date(Date.now() + 24 * 3600_000).toLocaleDateString("fr-CA", { timeZone: "Europe/Paris" });
   const dayAfter = nextDay(tomorrow);
   const { data: meetings } = await supabase
     .from("info_meetings")
     .select("id, org_id, starts_at, ends_at, location, rooms:room_id(name, address, access_notes), info_meeting_invitations(status, learners(first_name, email))")
+    .in("org_id", orgIds)
     .gte("starts_at", localToUtc(tomorrow, "00:00"))
     .lt("starts_at", localToUtc(dayAfter, "00:00"));
 
@@ -363,6 +375,7 @@ async function sendMeetingReminders(
 // comptés (le canal SMS viendra ensuite).
 async function sendSessionReminders(
   supabase: ReturnType<typeof createAdminClient>,
+  orgIds: string[],
 ): Promise<{ sent: number; skippedNoEmail: number }> {
   const tomorrow = new Date(Date.now() + 24 * 3600_000)
     .toLocaleDateString("fr-CA", { timeZone: "Europe/Paris" }); // YYYY-MM-DD local
@@ -371,6 +384,7 @@ async function sendSessionReminders(
   const { data: sessions } = await supabase
     .from("sessions")
     .select("group_id, starts_at, ends_at, groups!inner(name, reminders_enabled), rooms:room_id(name)")
+    .in("org_id", orgIds)
     .eq("status", "planifiee")
     .eq("groups.reminders_enabled", true)
     .gte("starts_at", localToUtc(tomorrow, "00:00"))

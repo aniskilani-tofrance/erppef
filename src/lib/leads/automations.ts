@@ -27,12 +27,13 @@ async function loadSettingsByOrg(supabase: SupabaseClient, orgIds: string[]) {
 }
 
 /** Sends the transactional J-1 SMS once for each tomorrow appointment. */
-export async function sendLeadRdvSms(supabase: SupabaseClient): Promise<AutomatedSmsSummary> {
+export async function sendLeadRdvSms(supabase: SupabaseClient, orgIds: string[]): Promise<AutomatedSmsSummary> {
   const tomorrow = parisDate(1);
   const dayAfter = nextDay(tomorrow);
   const { data: leads } = await supabase
     .from("employer_leads")
     .select("*")
+    .in("org_id", orgIds)
     .eq("status", "rdv_pris")
     .gte("rdv_at", localToUtc(tomorrow, "00:00"))
     .lt("rdv_at", localToUtc(dayAfter, "00:00"));
@@ -76,11 +77,12 @@ export function deferredSmsCode(lead: Pick<LeadAutomationRow, "status" | "rdv_ou
  * Replays only recent customer-facing events missed outside the legal sending
  * window. Provider markers make every replay idempotent.
  */
-export async function sendDeferredLeadSms(supabase: SupabaseClient): Promise<AutomatedSmsSummary> {
+export async function sendDeferredLeadSms(supabase: SupabaseClient, orgIds: string[]): Promise<AutomatedSmsSummary> {
   const since = new Date(Date.now() - 36 * 3_600_000).toISOString();
   const { data: leads } = await supabase
     .from("employer_leads")
     .select("*")
+    .in("org_id", orgIds)
     .gte("updated_at", since)
     .in("status", ["a_rappeler", "rdv_pris"])
     .limit(200);
@@ -124,11 +126,12 @@ export const DELAI_AVANT_INVITATION_MS = 10 * 60_000;
  * minutes, puis on écrit à ceux qui sont partis sans réserver. Les marques de journal
  * rendent l'opération idempotente, et ceux qui réservent entre-temps ne reçoivent rien.
  */
-export async function sendPendingLeadIntro(supabase: SupabaseClient): Promise<AutomatedSmsSummary> {
+export async function sendPendingLeadIntro(supabase: SupabaseClient, orgIds: string[]): Promise<AutomatedSmsSummary> {
   const limite = new Date(Date.now() - DELAI_AVANT_INVITATION_MS).toISOString();
   const { data: leads } = await supabase
     .from("employer_leads")
     .select("*")
+    .in("org_id", orgIds)
     .eq("status", "nouveau")
     .is("qualification_at", null)
     .is("rdv_at", null)

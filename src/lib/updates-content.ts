@@ -26,6 +26,17 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-10-06-alertes-prod",
+    date: "2026-10-06",
+    title: "Alertes du matin : seulement la production",
+    summary: "L'email d'alertes de 7h30 ne mélange plus les données de démo du « Bac à sable » avec les vraies : il ne parle que de vos groupes, apprenants et formateurs réels.",
+    items: [
+      { text: "L'email « ERP PEF — alertes ce matin » ne liste plus les feuilles d'émargement, absences, congés ou nouveaux apprenants du Bac à sable : seulement la production.", roles: TEAM },
+      { text: "Même règle pour tout ce qui part automatiquement : rappels de cours et de réunion aux apprenants, relances d'émargement et d'évaluation aux formateurs, envoi hebdomadaire des émargements, SMS aux restaurateurs et synchronisation des agendas Google. Le Bac à sable reste un terrain d'essai sans aucun envoi.", roles: TEAM },
+    ],
+    training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "L'admission : WhatsApp, réunion d'information, entretien oral" }],
+  },
+  {
     id: "2026-10-05-liste-attente",
     date: "2026-10-05",
     title: "Admission : un statut « Liste d'attente »",

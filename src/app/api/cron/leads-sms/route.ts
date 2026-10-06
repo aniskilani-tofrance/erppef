@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendDeferredLeadSms, sendLeadRdvSms, sendPendingLeadIntro } from "@/lib/leads/automations";
+import { productionOrgIds } from "@/lib/production-orgs";
 
 // SMS transactionnels aux restaurateurs : rappel de rendez-vous de la veille, et reprise
 // des messages qui n'ont pas pu partir du premier coup.
@@ -20,23 +21,25 @@ export async function GET(request: Request) {
   }
 
   const supabase = createAdminClient();
+  // Jamais de SMS aux fiches du bac à sable.
+  const orgIds = await productionOrgIds(supabase);
   let invitations = { sent: 0, skipped: 0 };
   let rappelsRdv = { sent: 0, skipped: 0 };
   let reprises = { sent: 0, skipped: 0 };
 
   try {
-    invitations = await sendPendingLeadIntro(supabase);
+    invitations = await sendPendingLeadIntro(supabase, orgIds);
   } catch (e) {
     console.error("[leads/invitation]", e instanceof Error ? e.message : e);
   }
 
   try {
-    rappelsRdv = await sendLeadRdvSms(supabase);
+    rappelsRdv = await sendLeadRdvSms(supabase, orgIds);
   } catch (e) {
     console.error("[leads/sms rappel rdv]", e instanceof Error ? e.message : e);
   }
   try {
-    reprises = await sendDeferredLeadSms(supabase);
+    reprises = await sendDeferredLeadSms(supabase, orgIds);
   } catch (e) {
     console.error("[leads/sms reprise]", e instanceof Error ? e.message : e);
   }

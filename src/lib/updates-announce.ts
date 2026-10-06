@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { SANDBOX_SLUG } from "@/lib/production-orgs";
 import type { AppRole } from "@/lib/auth";
 import { sendMail } from "@/lib/mailer";
 import { APP_UPDATES, formatUpdateDate, updatesForRole } from "@/lib/updates-content";
@@ -96,7 +97,7 @@ export async function announceUpdates(admin: SupabaseClient, orgId: string): Pro
 
 // Toutes les organisations réelles (le bac à sable de démo est ignoré).
 export async function announceUpdatesEverywhere(admin: SupabaseClient): Promise<Record<string, AnnounceResult>> {
-  const { data: orgs } = await admin.from("organizations").select("id, slug").neq("slug", "bac-a-sable");
+  const { data: orgs } = await admin.from("organizations").select("id, slug").neq("slug", SANDBOX_SLUG);
   const out: Record<string, AnnounceResult> = {};
   for (const o of orgs ?? []) out[o.slug] = await announceUpdates(admin, o.id);
   return out;

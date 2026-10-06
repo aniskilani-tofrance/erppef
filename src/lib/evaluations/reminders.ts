@@ -9,12 +9,18 @@ import { computeMilestones, reminderStage, type MilestoneSession } from "@/lib/e
 
 const APP_URL = "https://pef-erp.vercel.app";
 
-export async function sendEvaluationReminders(supabase: SupabaseClient, today = new Date().toLocaleDateString("fr-CA", { timeZone: "Europe/Paris" })): Promise<number> {
+// `orgIds` : organisations à traiter (le cron passe celles de production, jamais le bac à sable).
+export async function sendEvaluationReminders(
+  supabase: SupabaseClient,
+  today = new Date().toLocaleDateString("fr-CA", { timeZone: "Europe/Paris" }),
+  orgIds?: string[],
+): Promise<number> {
+  const groupsQuery = supabase
+    .from("groups")
+    .select("id, name, midterm_on, final_on, trainers:trainer_id(first_name, email)")
+    .in("status", ["en_attente", "ouvert", "complet"]);
   const [{ data: groups }, { data: sessions }, { data: enrollments }, { data: evals }, { data: sent }] = await Promise.all([
-    supabase
-      .from("groups")
-      .select("id, name, midterm_on, final_on, trainers:trainer_id(first_name, email)")
-      .in("status", ["en_attente", "ouvert", "complet"]),
+    orgIds ? groupsQuery.in("org_id", orgIds) : groupsQuery,
     supabase.from("sessions").select("group_id, starts_at, ends_at, status").neq("status", "annulee"),
     supabase.from("enrollments").select("group_id").eq("status", "inscrit"),
     supabase.from("evaluations").select("group_id, kind, co, po, ce, pe"),

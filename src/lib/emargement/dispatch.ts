@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { buildAttendancePdf, loadAttendanceSheetData, sheetFileName } from "@/lib/emargement/pdf";
 import { mailerConfigured, sendMail } from "@/lib/mailer";
 import { textToHtml } from "@/lib/admission/messages";
+import { productionOrgIds } from "@/lib/production-orgs";
 
 // Envoi hebdomadaire des feuilles d'émargement au financeur (ex. cours municipaux →
 // Ville de Saint-Ouen). Réglé par groupe (fiche groupe : actif, destinataires, copies) et
@@ -268,12 +269,14 @@ export async function dispatchGroupAttendance(
   };
 }
 
-/** Passe du vendredi : tous les groupes dont l'envoi hebdomadaire est actif (toutes organisations). */
+/** Passe du vendredi : tous les groupes dont l'envoi hebdomadaire est actif (organisations réelles, jamais le bac à sable). */
 export async function runWeeklyAttendanceDispatch(): Promise<{ groups: DispatchResult[] }> {
   const supabase = createAdminClient();
+  const orgIds = await productionOrgIds(supabase);
   const { data: groups } = await supabase
     .from("groups")
     .select("id")
+    .in("org_id", orgIds)
     .eq("attendance_mail_enabled", true)
     .in("status", ["en_attente", "ouvert", "complet"]);
   const results: DispatchResult[] = [];

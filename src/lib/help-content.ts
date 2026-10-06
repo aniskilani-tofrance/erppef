@@ -346,7 +346,7 @@ export const HELP_SECTIONS: HelpSection[] = [
           "Pour ceux qui préfèrent l'email : icône enveloppe (une personne) ou « Envoyer par email (n) » (tous ceux à envoyer qui ont une adresse). L'email part de la boîte de l'organisme.",
           "Quand la personne répond OUI : passez la ligne en « Confirmée ». La veille, bouton « Rappel » (WhatsApp) ; un rappel email part automatiquement le matin pour ceux qui ont un email.",
           "Le jour J : passez chaque présent en « Présent(e) », les autres en « Absent(e) » ou « Excusé(e) ». La présence figure dans le dossier d'entrée PDF.",
-          "Le Dashboard et l'email d'alertes du matin signalent les convocations à envoyer et la réunion du lendemain.",
+          "Le Dashboard et l'email d'alertes du matin signalent les convocations à envoyer et la réunion du lendemain. Cet email ne concerne que la production : le Bac à sable n'y apparaît jamais et ne déclenche aucun envoi automatique.",
         ],
       },
       {

@@ -1,3 +1,4 @@
+import { SANDBOX_SLUG } from "@/lib/production-orgs";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { gcalConfigured, syncTrainerCalendars } from "@/lib/gcal";
 
@@ -13,9 +14,10 @@ export async function GET(request: Request) {
   }
   if (!gcalConfigured()) return Response.json({ skipped: "gcal non configuré" });
 
-  // Mono-organisation en pratique ; on synchronise chaque org existante.
+  // Chaque organisation réelle ; jamais le bac à sable (ses formateurs fictifs ne
+  // doivent pas écrire dans de vrais agendas).
   const supabase = createAdminClient();
-  const { data: orgs, error } = await supabase.from("organizations").select("id");
+  const { data: orgs, error } = await supabase.from("organizations").select("id").neq("slug", SANDBOX_SLUG);
   if (error) return new Response(error.message, { status: 500 });
 
   const results = [];
