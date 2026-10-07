@@ -580,6 +580,16 @@ export const HELP_SECTIONS: HelpSection[] = [
         ],
       },
       {
+        title: "Candidats POEI : un lead qui cherche un emploi, un apprenant pour la restauration",
+        steps: [
+          "Un lead resto rempli par une personne qui cherche du travail : sur sa fiche, « C'est un candidat ». La fiche candidat est créée (nom, téléphone, email, ville, poste indiqué) et le lead passe « Hors cible » avec la raison « Candidat POEI, pas un employeur ». Aucun e-mail automatique ne part.",
+          "Un apprenant de l'association intéressé par la restauration (direction) : Apprenants → Admission → bouton « POEI » sur sa ligne. Déjà proposé ? Le bouton ouvre sa fiche candidat.",
+          "Menu « Candidats POEI » : la liste, avec la qualification (x/10), le consentement et la prochaine action. Sur la fiche : appeler, WhatsApp (message de premier contact à relire), « Noter un contact », « Qualifier » (les 9 questions).",
+          "Consentement : l'association et ParlerEmploi sont deux structures. Tant qu'il n'est pas recueilli, on peut appeler et poser les questions, mais pas passer « Qualifié » ni présenter la personne à un restaurateur, et une fiche venue de l'association reste invisible du setter. « Retiré par la personne » classe la fiche « Sans suite ».",
+          "« Présenté(e) chez » : rattache le candidat à un restaurateur (lead resto). La fiche du restaurateur affiche alors la carte « Candidats POEI présentés ».",
+        ],
+      },
+      {
         title: "Ce qu'on ne dit jamais à un restaurateur",
         steps: [
           "Jamais « 100 % gratuit » ni « ça ne vous coûte rien » : dire « financé par France Travail, 0 € de reste à charge sur la formation ».",

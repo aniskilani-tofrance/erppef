@@ -23,6 +23,8 @@ import { ClaimLeadButton, DeleteLeadButton, LeadStatusSelect, NextActionEditor, 
 import { LeadJournal, type LigneJournal } from "@/components/leads/lead-journal";
 import { decrireMessage } from "@/lib/leads/journal";
 import type { LeadForBrevo } from "@/lib/leads/brevo";
+import { ConvertLeadButton } from "@/components/poei-candidates/candidate-controls";
+import { candidateDisplayName, candidateRef, candidateStatusLabel } from "@/lib/poei-candidates/status";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Lead — ERP PEF" };
@@ -57,6 +59,13 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
     loadSenderFirstName(supabase, userId),
   ]);
   if (!leadData) notFound();
+  // Candidats POEI liés : celui issu de ce lead (s'il a été requalifié) et ceux présentés à ce restaurateur.
+  const { data: candidateRows } = await supabase
+    .from("poei_candidates")
+    .select("id, candidate_no, first_name, last_name, status, from_lead_id, placed_lead_id")
+    .or(`from_lead_id.eq.${id},placed_lead_id.eq.${id}`);
+  const convertedTo = (candidateRows ?? []).find((c) => c.from_lead_id === id)?.id ?? null;
+  const presented = (candidateRows ?? []).filter((c) => c.placed_lead_id === id);
   const lead = leadData as unknown as LeadRow;
   const events = (eventsData ?? []) as LeadEventRow[];
   const today = todayParis();
@@ -114,6 +123,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
           <LeadStatusSelect leadId={lead.id} status={lead.status} />
           <ClaimLeadButton leadId={lead.id} assignedToMe={lead.owner_user_id === userId} />
           <OwnerSelect leadId={lead.id} ownerUserId={lead.owner_user_id} owners={owners} />
+          <ConvertLeadButton leadId={lead.id} candidateId={convertedTo} />
         </div>
       </div>
 
@@ -223,6 +233,24 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
               </dl>
             </CardContent>
           </Card>
+
+          {presented.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Candidats POEI présentés ({presented.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-1 text-sm">
+                  {presented.map((c) => (
+                    <li key={c.id}>
+                      <Link href={`/candidats-poei/${c.id}`} className="font-medium hover:underline">{candidateDisplayName(c)}</Link>
+                      <span className="ml-2 text-xs text-muted-foreground">{candidateRef(c.candidate_no)} · {candidateStatusLabel(c.status)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader className="pb-2">

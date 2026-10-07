@@ -2,6 +2,9 @@
 type PgError = { code?: string; message: string };
 
 export function translatePgError(error: PgError): string {
+  if (error.message.includes("poei_candidates_consent_before_progress")) {
+    return "Recueillez d'abord le consentement du candidat (transmission de ses coordonnées pour la POEI).";
+  }
   if (error.message.includes("no_room_overlap")) {
     return "Conflit : la salle est déjà occupée sur ce créneau.";
   }

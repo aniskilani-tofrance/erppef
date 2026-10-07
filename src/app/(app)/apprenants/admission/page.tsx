@@ -22,6 +22,7 @@ import { MessageTemplatesDialog } from "@/components/admission/message-templates
 import { formatPhone } from "@/lib/admission/phone";
 import { ADMISSION_STATUSES, admissionBadgeClass } from "@/lib/admission/status";
 import { learnerRef } from "@/lib/refs";
+import { ProposePoeiButton } from "@/components/poei-candidates/candidate-controls";
 
 // Parcours d'admission : qui contacter aujourd'hui (WhatsApp en un clic), les réunions
 // d'information à venir et où en est chacun (entonnoir).
@@ -63,6 +64,7 @@ function LearnerRows({
   history,
   templates,
   pendingTestUrl,
+  poeiByLearner,
 }: {
   rows: LearnerRow[];
   empty: string;
@@ -70,6 +72,7 @@ function LearnerRows({
   history: Map<string, ContactEntry[]>;
   templates: Templates;
   pendingTestUrl: Map<string, string>;
+  poeiByLearner: Map<string, string>;
 }) {
   if (rows.length === 0) return <p className="py-4 text-sm text-muted-foreground">{empty}</p>;
   const lastContactAt = (id: string) => history.get(id)?.[0]?.contactedAt ?? null;
@@ -81,7 +84,7 @@ function LearnerRows({
           <TableHead>Téléphone</TableHead>
           <TableHead>Statut</TableHead>
           <TableHead className="hidden sm:table-cell">Dernier contact</TableHead>
-          <TableHead className="w-40">Actions</TableHead>
+          <TableHead className="w-52">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -125,6 +128,7 @@ function LearnerRows({
                   currentStatus={l.admission_status}
                   history={history.get(l.id) ?? []}
                 />
+                <ProposePoeiButton learnerId={l.id} candidateId={poeiByLearner.get(l.id) ?? null} />
               </span>
             </TableCell>
           </TableRow>
@@ -159,6 +163,9 @@ export default async function AdmissionPage() {
     loadTemplates(supabase),
     headers(),
   ]);
+  // Apprenants déjà proposés en POEI restauration (bouton « POEI » → leur fiche candidat)
+  const { data: poeiRows } = await supabase.from("poei_candidates").select("id, learner_id").not("learner_id", "is", null);
+  const poeiByLearner = new Map((poeiRows ?? []).map((r) => [r.learner_id as string, r.id as string]));
   const senderFirstName = profile?.full_name?.trim().split(/\s+/)[0] ?? null;
   const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host") ?? "pef-erp.vercel.app"}`;
   const pendingTestUrl = new Map<string, string>();
@@ -402,7 +409,7 @@ export default async function AdmissionPage() {
           </p>
         </CardHeader>
         <CardContent>
-          <LearnerRows rows={toContact} senderFirstName={senderFirstName} history={historyByLearner} templates={templates} pendingTestUrl={pendingTestUrl} empty="Personne à contacter : tous les nouveaux ont été joints. Les fiches déposées dans le Drive arrivent ici chaque nuit." />
+          <LearnerRows rows={toContact} senderFirstName={senderFirstName} history={historyByLearner} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} empty="Personne à contacter : tous les nouveaux ont été joints. Les fiches déposées dans le Drive arrivent ici chaque nuit." />
           {toContact.length > 80 && (
             <p className="mt-2 text-xs text-muted-foreground">
               80 premiers affichés — <Link href="/apprenants?statut=nouveau" className="underline">voir tous les nouveaux</Link>.
@@ -419,7 +426,7 @@ export default async function AdmissionPage() {
           </p>
         </CardHeader>
         <CardContent>
-          <LearnerRows rows={toInvite} senderFirstName={senderFirstName} history={historyByLearner} templates={templates} pendingTestUrl={pendingTestUrl} empty="Aucun contacté en attente de convocation." />
+          <LearnerRows rows={toInvite} senderFirstName={senderFirstName} history={historyByLearner} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} empty="Aucun contacté en attente de convocation." />
         </CardContent>
       </Card>
 
@@ -431,7 +438,7 @@ export default async function AdmissionPage() {
           </p>
         </CardHeader>
         <CardContent>
-          <LearnerRows rows={toEnroll} senderFirstName={senderFirstName} history={historyByLearner} templates={templates} pendingTestUrl={pendingTestUrl} empty="Personne en attente d'inscription." />
+          <LearnerRows rows={toEnroll} senderFirstName={senderFirstName} history={historyByLearner} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} empty="Personne en attente d'inscription." />
         </CardContent>
       </Card>
 
@@ -443,7 +450,7 @@ export default async function AdmissionPage() {
           </p>
         </CardHeader>
         <CardContent>
-          <LearnerRows rows={waiting} senderFirstName={senderFirstName} history={historyByLearner} templates={templates} pendingTestUrl={pendingTestUrl} empty="Personne en liste d'attente." />
+          <LearnerRows rows={waiting} senderFirstName={senderFirstName} history={historyByLearner} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} empty="Personne en liste d'attente." />
         </CardContent>
       </Card>
     </div>

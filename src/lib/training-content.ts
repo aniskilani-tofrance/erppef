@@ -841,6 +841,21 @@ export const TRAINING_MODULES: TrainingModule[] = [
         tip: "L'email de rupture J10 est souvent celui qui fait répondre. Ne le sautez pas.",
         practice: { instruction: "Sur un lead « À rappeler », notez un appel « Messagerie » et regardez la prochaine action proposée : elle doit être « J1 — rappeler à un autre créneau ».", href: "/leads?statut=a_rappeler", hrefLabel: "Leads à rappeler" },
       },
+      {
+        id: "candidats",
+        title: "Candidats POEI : les personnes à placer",
+        intro: "Un lead resto est un EMPLOYEUR. Un candidat POEI est une PERSONNE qui cherche un emploi en restauration. Les deux se rejoignent quand on présente un candidat à un restaurateur.",
+        steps: [
+          "Un « lead » qui dit « je cherche du travail » ou « je veux la formation » n'est pas un employeur : sur sa fiche, « C'est un candidat » crée sa fiche candidat (coordonnées reprises) et classe le lead « Hors cible », sans e-mail automatique.",
+          "La coordination propose aussi des apprenants de l'association : bouton « POEI » sur la page Admission. Leur fiche reste invisible du setter tant que la personne n'a pas donné son accord.",
+          "Menu « Candidats POEI » : premier contact par WhatsApp (message prêt, à relire) ou par appel, puis « Noter un contact ». Messagerie ou rappel convenu : la fiche passe « À rappeler ».",
+          "« Qualifier » : les 9 questions dans l'ordre de l'appel (France Travail, ressources, projet, poste visé, expérience, disponibilités, mobilité, autorisation de travail, contraintes).",
+          "Question 10, le consentement : « Acceptez-vous que ParlerEmploi transmette vos coordonnées à un restaurateur pour la POEI ? ». Seulement si c'est oui : « Consentement recueilli ». Sans lui, impossible de passer « Qualifié » ou de présenter la personne.",
+          "« Présenté(e) chez » : choisissez le restaurateur (lead resto). Le candidat passe « Positionné » et apparaît sur la fiche du restaurateur, carte « Candidats POEI présentés ».",
+        ],
+        tip: "Pas inscrit(e) à France Travail = pas de POEI : notez-le et demandez à la personne de s'inscrire avant tout positionnement.",
+        practice: { instruction: "Ouvrez « Candidats POEI » et repérez les fiches « sans consentement » : ce sont les premiers appels à faire.", href: "/candidats-poei", hrefLabel: "Ouvrir les candidats POEI" },
+      },
     ],
     quiz: [
       {

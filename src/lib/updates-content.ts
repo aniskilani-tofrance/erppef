@@ -26,6 +26,19 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-10-07-candidats-poei",
+    date: "2026-10-07",
+    title: "Candidats POEI : le pont entre l'association et la POEI restauration",
+    summary: "Un nouveau menu « Candidats POEI » réunit les personnes à placer chez un restaurateur : les apprenants de l'association intéressés par la restauration, et les « leads » qui étaient en réalité des candidats.",
+    items: [
+      { text: "Apprenants → Admission : un bouton « POEI » sur chaque ligne crée la fiche candidat de la personne (nom, téléphone, niveau repris). Déjà proposée ? Le bouton ouvre sa fiche.", roles: TEAM },
+      { text: "Un lead resto rempli par quelqu'un qui cherche du travail : « C'est un candidat » sur sa fiche crée le candidat et classe le lead « Hors cible », sans e-mail automatique.", roles: LEADS },
+      { text: "Menu « Candidats POEI » : WhatsApp de premier contact prêt, 9 questions de qualification (France Travail, projet, poste visé, disponibilités, autorisation de travail…), journal, prochaine action, et « Présenté(e) chez » pour rattacher le candidat à un restaurateur.", roles: LEADS },
+      { text: "Consentement obligatoire : sans l'accord de la personne pour transmettre ses coordonnées, pas de passage « Qualifié » ni de présentation à un restaurateur. Une fiche venue de l'association reste invisible du setter jusque-là.", roles: LEADS },
+    ],
+    training: [{ moduleId: "m1-leads", lessonId: "candidats", label: "Candidats POEI : les personnes à placer" }],
+  },
+  {
     id: "2026-10-07-annulation-motif-kits",
     date: "2026-10-07",
     title: "Annuler une séance avec son motif, et les kits suivent",
