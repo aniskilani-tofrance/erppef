@@ -90,6 +90,12 @@ export function SessionKit({ sessionId }: { sessionId: string }) {
           <p className="text-sm">
             {kit.fileName}
             {detail ? <span className="block text-xs text-muted-foreground">{detail}</span> : null}
+            {kit.shiftedFrom ? (
+              <span className="block text-xs text-amber-700 dark:text-amber-400">
+                Décalé depuis la séance annulée du{" "}
+                {new Date(kit.shiftedFrom).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Paris" })}
+              </span>
+            ) : null}
           </p>
           <Button onClick={download} disabled={pending} className="w-full">
             {pending ? "Préparation…" : "Télécharger le kit (PDF)"}

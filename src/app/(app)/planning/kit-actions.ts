@@ -13,7 +13,10 @@ import {
 // après contrôle du rôle ET de l'affectation à la séance.
 
 export type SessionKitInfo = {
-  kit: { fileName: string; sizeBytes: number | null; updatedAt: string; level: string | null; sequenceNo: number | null; seanceNo: number | null } | null;
+  kit: {
+    fileName: string; sizeBytes: number | null; updatedAt: string; level: string | null; sequenceNo: number | null; seanceNo: number | null;
+    shiftedFrom: string | null; // début de la séance annulée d'où vient le kit (décalage)
+  } | null;
   canDownload: boolean;
   canManage: boolean;
 };
@@ -45,12 +48,13 @@ export async function getSessionKit(sessionId: string): Promise<SessionKitInfo> 
   if (!ctx || !ctx.allowed) return { kit: null, canDownload: false, canManage: false };
   const { data } = await ctx.supabase
     .from("session_kits")
-    .select("file_name, size_bytes, updated_at, level, sequence_no, seance_no")
+    .select("file_name, size_bytes, updated_at, level, sequence_no, seance_no, shifted_from:shifted_from_session_id(starts_at)")
     .eq("session_id", id)
     .maybeSingle();
+  const shiftedFrom = (data?.shifted_from as unknown as { starts_at: string } | null)?.starts_at ?? null;
   return {
     kit: data
-      ? { fileName: data.file_name, sizeBytes: data.size_bytes, updatedAt: data.updated_at, level: data.level, sequenceNo: data.sequence_no, seanceNo: data.seance_no }
+      ? { fileName: data.file_name, sizeBytes: data.size_bytes, updatedAt: data.updated_at, level: data.level, sequenceNo: data.sequence_no, seanceNo: data.seance_no, shiftedFrom }
       : null,
     canDownload: Boolean(data),
     canManage: canManageKits(ctx.role),
@@ -114,6 +118,8 @@ export async function confirmKitUpload(raw: z.infer<typeof uploadSchema>): Promi
       level: parsed?.level ?? null,
       sequence_no: parsed?.sequenceNo ?? null,
       seance_no: parsed?.seanceNo ?? null,
+      shifted_from_session_id: null,
+      shifted_at: null,
       uploaded_by: userId,
       updated_at: new Date().toISOString(),
     },

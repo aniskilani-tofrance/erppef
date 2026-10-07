@@ -16,6 +16,8 @@ import { EnrollmentManager } from "@/components/groupes/enrollment-manager";
 import { GroupEditDialog } from "@/components/groupes/group-edit-dialog";
 import { DuplicateGroupDialog } from "@/components/groupes/duplicate-group-dialog";
 import { ReplanButton } from "@/components/groupes/replan-button";
+import { RestoreSessionButton } from "@/components/groupes/restore-session-button";
+import { describeCancellation } from "@/lib/sessions/cancellation";
 import { SurveyManager } from "@/components/groupes/survey-manager";
 import { PlanningShare, type PlanningRecipient } from "@/components/groupes/planning-share";
 import { AttendanceDispatchCard, type DispatchHistoryRow } from "@/components/groupes/attendance-dispatch-card";
@@ -58,7 +60,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
         .single(),
       supabase
         .from("sessions")
-        .select("id, starts_at, ends_at, status, trainers:trainer_id(first_name), co_trainers:co_trainer_id(first_name), rooms:room_id(name)")
+        .select("id, starts_at, ends_at, status, cancel_reason, cancel_note, trainers:trainer_id(first_name), co_trainers:co_trainer_id(first_name), rooms:room_id(name)")
         .eq("group_id", id)
         .order("starts_at"),
       supabase.from("v_group_hours").select("*").eq("group_id", id).single(),
@@ -521,13 +523,20 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
                       <Badge variant={s.status === "annulee" ? "destructive" : s.status === "realisee" ? "secondary" : "outline"}>
                         {{ planifiee: "Planifiée", realisee: "Réalisée", annulee: "Annulée" }[s.status as string]}
                       </Badge>
+                      {s.status === "annulee" && (s.cancel_reason || s.cancel_note) && (
+                        <span className="mt-1 block max-w-56 text-xs text-muted-foreground">
+                          {describeCancellation(s.cancel_reason, s.cancel_note).replace(/^Annulée · /, "")}
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell>
-                      {s.status !== "annulee" && (
+                      {s.status !== "annulee" ? (
                         <Link href={`/seances/${s.id}/emargement`} className="text-sm text-muted-foreground hover:underline">
                           Feuille →
                         </Link>
-                      )}
+                      ) : canWrite ? (
+                        <RestoreSessionButton sessionId={s.id} />
+                      ) : null}
                     </TableCell>
                   </TableRow>
                 ))}

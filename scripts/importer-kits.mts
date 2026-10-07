@@ -3,6 +3,8 @@
 // Usage : npx tsx scripts/importer-kits.mts [dossier]          (simulation, rien n'est écrit)
 //         DRY=0 npx tsx scripts/importer-kits.mts [dossier]    (dépôt réel, après lecture de la simulation)
 // Dossier par défaut : « Kits ERP » sur le Bureau. Organisation ParlerEmploi Formation uniquement.
+// Un kit DÉCALÉ après une annulation n'est jamais remplacé (le PDF importé, daté de cette
+// séance, a pris une séance de retard) : renommez vos kits, ou FORCE=1 pour passer outre.
 // Après dépôt, chaque PDF déposé est rangé dans « importés/semaine du <lundi> » du même dossier.
 import { mkdirSync, readdirSync, readFileSync, renameSync, statSync } from "node:fs";
 import { homedir } from "node:os";
@@ -12,6 +14,7 @@ import { KIT_BUCKET, KIT_MAX_BYTES, kitStoragePath, kitWeekFolder, parisDateTime
 
 const PEF = "a0000000-0000-4000-8000-000000000001";
 const DRY = process.env.DRY !== "0";
+const FORCE = process.env.FORCE === "1";
 const dir = process.argv[2] ?? join(homedir(), "Desktop", "Kits ERP");
 
 const env = Object.fromEntries(
@@ -88,7 +91,11 @@ for (const file of files) {
     continue;
   }
   seen.set(session.id, file);
-  const { data: existing } = await sb.from("session_kits").select("file_name").eq("session_id", session.id).maybeSingle();
+  const { data: existing } = await sb.from("session_kits").select("file_name, shifted_from_session_id").eq("session_id", session.id).maybeSingle();
+  if (existing?.shifted_from_session_id && !FORCE) {
+    lines.push({ file, status: "erreur", detail: `kit décalé après une annulation déjà sur cette séance (${existing.file_name}) : décalez aussi vos fichiers, ou FORCE=1` });
+    continue;
+  }
   lines.push({
     file, parsed, size, sessionId: session.id,
     status: existing ? "remplace" : "ok",
@@ -115,6 +122,7 @@ for (const l of okLines) {
     {
       org_id: PEF, session_id: l.sessionId, file_path: path, file_name: l.file, size_bytes: l.size,
       level: l.parsed!.level, sequence_no: l.parsed!.sequenceNo, seance_no: l.parsed!.seanceNo, updated_at: new Date().toISOString(),
+      shifted_from_session_id: null, shifted_at: null,
     },
     { onConflict: "session_id" },
   );

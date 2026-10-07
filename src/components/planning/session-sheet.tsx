@@ -3,8 +3,10 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { deleteSession, updateSession, type CalendarSession } from "@/app/(app)/planning/actions";
+import { cancelSession, deleteSession, updateSession, type CalendarSession } from "@/app/(app)/planning/actions";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -13,12 +15,14 @@ import {
 } from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
 import { utcToLocalTime } from "@/lib/dates";
+import { CANCEL_REASONS, CANCEL_REASON_LABELS, type CancelReason } from "@/lib/sessions/cancellation";
 import { SessionKit } from "./session-kit";
 
 type Option = { id: string; name: string };
 const NONE = "none";
 
-// Sheet d'édition d'une séance : remplacement de formateur, changement de salle, annulation.
+// Sheet d'édition d'une séance : remplacement de formateur, changement de salle, annulation
+// avec motif (et décalage des kits sur les séances suivantes).
 export function SessionSheet({
   session,
   canEdit,
@@ -38,6 +42,10 @@ export function SessionSheet({
   const [coTrainerId, setCoTrainerId] = useState<string>(NONE);
   const [roomId, setRoomId] = useState<string>(NONE);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [reason, setReason] = useState<CancelReason | "">("");
+  const [note, setNote] = useState("");
+  const [shiftKits, setShiftKits] = useState(true);
   const [pending, startTransition] = useTransition();
 
   // Nouvelle séance ouverte : on réaligne les champs pendant le rendu (pattern React
@@ -49,24 +57,43 @@ export function SessionSheet({
     setCoTrainerId(session?.coTrainerId ?? NONE);
     setRoomId(session?.roomId ?? NONE);
     setConfirmDelete(false);
+    setCancelling(false);
+    setReason("");
+    setNote("");
+    setShiftKits(true);
   }
 
   if (!session) return <Sheet open={false} />;
 
-  function save(status: "planifiee" | "annulee") {
+  function save() {
     startTransition(async () => {
       const result = await updateSession({
         sessionId: session!.id,
         trainerId: trainerId === NONE ? null : trainerId,
         coTrainerId: coTrainerId === NONE ? null : coTrainerId,
         roomId: roomId === NONE ? null : roomId,
-        status,
       });
       if (!result.ok) {
         toast.error(result.error);
         return;
       }
-      toast.success(status === "annulee" ? "Séance annulée." : "Séance mise à jour.");
+      toast.success("Séance mise à jour.");
+      onChanged();
+    });
+  }
+
+  function cancel() {
+    if (!reason) {
+      toast.error("Choisissez un motif d'annulation.");
+      return;
+    }
+    startTransition(async () => {
+      const result = await cancelSession({ sessionId: session!.id, reason, note, shiftKits });
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(result.message, { duration: 8000 });
       onChanged();
     });
   }
@@ -156,13 +183,54 @@ export function SessionSheet({
           {canEdit && (
             <>
               <div className="flex gap-2 pt-2">
-                <Button onClick={() => save("planifiee")} disabled={pending} className="flex-1">
-                  {pending ? "Enregistrement…" : "Enregistrer"}
+                <Button onClick={save} disabled={pending || cancelling} className="flex-1">
+                  {pending && !cancelling ? "Enregistrement…" : "Enregistrer"}
                 </Button>
-                <Button variant="destructive" onClick={() => save("annulee")} disabled={pending}>
-                  Annuler la séance
-                </Button>
+                {session.status === "planifiee" && !cancelling && (
+                  <Button variant="destructive" onClick={() => setCancelling(true)} disabled={pending}>
+                    Annuler la séance
+                  </Button>
+                )}
               </div>
+              {cancelling && (
+                <div className="space-y-3 rounded-md border border-destructive/40 p-3">
+                  <div className="space-y-2">
+                    <Label>Motif de l&apos;annulation</Label>
+                    <Select value={reason} onValueChange={(v) => setReason(v as CancelReason)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choisir un motif" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CANCEL_REASONS.map((r) => (
+                          <SelectItem key={r} value={r}>
+                            {CANCEL_REASON_LABELS[r]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Input
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    maxLength={300}
+                    placeholder={reason === "autre" ? "Précisez le motif (obligatoire)" : "Précision (facultatif)"}
+                  />
+                  <label className="flex items-start gap-2 text-sm">
+                    <Checkbox checked={shiftKits} onCheckedChange={(c) => setShiftKits(c === true)} className="mt-0.5" />
+                    <span>
+                      Décaler les kits : le kit de cette séance passe à la séance suivante du groupe, et les kits suivants d&apos;autant.
+                    </span>
+                  </label>
+                  <div className="flex gap-2">
+                    <Button variant="destructive" onClick={cancel} disabled={pending} className="flex-1">
+                      {pending ? "Annulation…" : "Confirmer l'annulation"}
+                    </Button>
+                    <Button variant="ghost" onClick={() => setCancelling(false)} disabled={pending}>
+                      Retour
+                    </Button>
+                  </div>
+                </div>
+              )}
               {/* Suppression définitive en deux temps ; refusée côté serveur si la séance est émargée. */}
               <button
                 type="button"

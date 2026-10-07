@@ -79,3 +79,36 @@ export function canDownloadKit({ role, myTrainerId, session }: KitAccessInput): 
 export function canManageKits(role: string): boolean {
   return role === "admin" || role === "coordinator";
 }
+
+export type KitShiftMove = { kitId: string; fromSessionId: string; toSessionId: string };
+
+export type KitShiftPlan =
+  | { kind: "none" } // pas de kit sur la séance annulée : rien à décaler
+  | { kind: "shift"; moves: KitShiftMove[] } // ordre d'exécution : du dernier kit au premier
+  | { kind: "no-next-session"; kits: number }; // tous les créneaux suivants ont déjà un kit, le dernier n'a nulle part où aller
+
+/**
+ * Séance annulée qui n'a pas eu lieu : son kit passe à la séance suivante du groupe,
+ * dont le kit passe à la suivante, et ainsi de suite jusqu'à la première séance encore
+ * sans kit (les kits sont déposés quelques jours à l'avance). `following` = séances
+ * PLANIFIÉES du même groupe après la séance annulée, dans l'ordre chronologique.
+ * Les déplacements sont rendus du dernier au premier : chaque cible est libre au moment
+ * où l'on y pose le kit (une séance n'a qu'un kit).
+ */
+export function planKitShift(
+  cancelledSessionId: string,
+  following: string[],
+  kitBySession: Map<string, string>,
+): KitShiftPlan {
+  if (!kitBySession.has(cancelledSessionId)) return { kind: "none" };
+  const chain = [cancelledSessionId, ...following];
+  const moves: KitShiftMove[] = [];
+  for (let i = 0; i < chain.length; i++) {
+    const kitId = kitBySession.get(chain[i]);
+    if (!kitId) break;
+    const next = chain[i + 1];
+    if (!next) return { kind: "no-next-session", kits: moves.length + 1 };
+    moves.push({ kitId, fromSessionId: chain[i], toSessionId: next });
+  }
+  return { kind: "shift", moves: moves.reverse() };
+}

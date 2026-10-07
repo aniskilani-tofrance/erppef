@@ -592,6 +592,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
         steps: [
           "Déplacer une séance : glisser-déposer dans le planning. En cas de conflit, elle revient avec l'explication.",
           "Séance ponctuelle (rattrapage isolé) : sélectionnez un créneau vide dans la vue semaine.",
+          "Annuler une séance : cliquez-la dans le planning → « Annuler la séance » → un motif obligatoire (absence imprévue du formateur, fermeture du lieu, effectif insuffisant, autre). « Décaler les kits » (cochée par défaut) fait glisser son kit sur la séance suivante, et les kits suivants d'autant : le groupe reprend là où il s'était arrêté. Erreur ? « Rétablir » sur la fiche du groupe.",
           "Séances annulées : la fiche du groupe affiche un bandeau « X h manquantes » — « Replanifier automatiquement » ajoute les rattrapages à la suite du planning.",
           "Fin de parcours : fiche du groupe → « Modifier » → statut « Terminé ».",
           "Formatrice absente : Planning → « Remplacements » (ou la ligne « séances à remplacer » de « À faire aujourd'hui »). Chaque séance des 3 prochaines semaines dont la formatrice a un congé validé (ou une demande encore à valider), et chaque séance sans formateur, avec les personnes libres sur le créneau, classées comme le fait le moteur (salariées d'abord, stagiaires et bénévoles en dernier). « Confier à … » change la formatrice et la prévient par email ; son agenda se met à jour la nuit. Personne de libre ? Déplacez ou annulez la séance dans le Planning.",

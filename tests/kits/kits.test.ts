@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { canDownloadKit, canManageKits, kitDownloadName, kitStoragePath, kitWeekFolder, parisDateTime, parseKitFileName } from "@/lib/kits";
+import { canDownloadKit, canManageKits, kitDownloadName, kitStoragePath, kitWeekFolder, parisDateTime, parseKitFileName, planKitShift } from "@/lib/kits";
 
 describe("kits de séance : nom de fichier", () => {
   it("lit groupe, date, heure, niveau, séquence et séance", () => {
@@ -88,5 +88,37 @@ describe("kits de séance : jamais exposés aux apprenants", () => {
     const sql = readFileSync("supabase/migrations/20261005000039_kits_seance.sql", "utf8");
     expect(sql).not.toMatch(/on storage\.objects/);
     expect(sql).toMatch(/values \('kits', 'kits', false/);
+  });
+});
+
+describe("kits de séance : décalage après une annulation", () => {
+  const kits = (pairs: [string, string][]) => new Map(pairs);
+
+  it("rien à faire si la séance annulée n'a pas de kit", () => {
+    expect(planKitShift("s0", ["s1", "s2"], kits([["s1", "k1"]]))).toEqual({ kind: "none" });
+  });
+
+  it("le kit passe à la séance suivante encore sans kit", () => {
+    expect(planKitShift("s0", ["s1", "s2"], kits([["s0", "k0"]]))).toEqual({
+      kind: "shift",
+      moves: [{ kitId: "k0", fromSessionId: "s0", toSessionId: "s1" }],
+    });
+  });
+
+  it("décale en cascade, du dernier kit au premier, et s'arrête au premier trou", () => {
+    const plan = planKitShift("s0", ["s1", "s2", "s3", "s4"], kits([["s0", "k0"], ["s1", "k1"], ["s2", "k2"], ["s4", "k4"]]));
+    expect(plan).toEqual({
+      kind: "shift",
+      moves: [
+        { kitId: "k2", fromSessionId: "s2", toSessionId: "s3" },
+        { kitId: "k1", fromSessionId: "s1", toSessionId: "s2" },
+        { kitId: "k0", fromSessionId: "s0", toSessionId: "s1" },
+      ],
+    });
+  });
+
+  it("refuse de décaler si le dernier kit n'a plus de séance", () => {
+    expect(planKitShift("s0", ["s1"], kits([["s0", "k0"], ["s1", "k1"]]))).toEqual({ kind: "no-next-session", kits: 2 });
+    expect(planKitShift("s0", [], kits([["s0", "k0"]]))).toEqual({ kind: "no-next-session", kits: 1 });
   });
 });

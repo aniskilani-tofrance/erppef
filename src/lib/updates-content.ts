@@ -26,6 +26,20 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-10-07-annulation-motif-kits",
+    date: "2026-10-07",
+    title: "Annuler une séance avec son motif, et les kits suivent",
+    summary: "Une séance annulée dit maintenant pourquoi (absence imprévue du formateur, fermeture du lieu, effectif insuffisant…), et son kit passe automatiquement à la séance suivante pour que le groupe reprenne là où il s'était arrêté.",
+    items: [
+      { text: "Planning → cliquez une séance → « Annuler la séance » : choisissez le motif (et une ligne de précision si besoin). Le motif s'affiche sur la fiche du groupe, à côté du statut « Annulée ».", roles: TEAM },
+      { text: "« Décaler les kits » (cochée par défaut) : le kit de la séance annulée glisse sur la séance suivante du groupe, et chaque kit suivant d'une séance. Le kit décalé affiche « Décalé depuis la séance annulée du … ».", roles: TEAM },
+      { text: "Annulée par erreur ? Fiche du groupe → « Rétablir » sur la ligne de la séance.", roles: TEAM },
+      { text: "Le bouton « Enregistrer » d'une séance ne change plus son statut : modifier la salle d'une séance déjà réalisée ne la remet plus en « Planifiée ».", roles: TEAM },
+      { text: "Un empêchement de dernière minute ? Prévenez la coordination au plus tôt : elle annule la séance avec le bon motif, et le kit que vous deviez utiliser vous attend à la séance suivante.", roles: ["trainer"] },
+    ],
+    training: [{ moduleId: "c5-vie-quotidienne", lessonId: "ajustements", label: "Ajustements quotidiens" }],
+  },
+  {
     id: "2026-10-07-quotidien-equipe",
     date: "2026-10-07",
     title: "Ma journée, cahier de séance, absents à relancer, remplacements",

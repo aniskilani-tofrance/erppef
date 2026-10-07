@@ -290,6 +290,8 @@ export const HELP_SECTIONS: HelpSection[] = [
         steps: [
           "Glissez-déposez une séance pour la déplacer : si le créneau est pris (salle ou formateur), elle revient avec un message — impossible de créer un conflit.",
           "Cliquez une séance pour changer formateur, salle, ou l'annuler.",
+          "Annuler une séance : « Annuler la séance » → choisissez le motif (absence imprévue du formateur, fermeture du lieu, effectif insuffisant, autre + une ligne de précision) → « Confirmer l'annulation ». La case « Décaler les kits » (cochée par défaut) fait glisser le kit de la séance annulée sur la séance suivante du groupe, et chaque kit suivant d'une séance, jusqu'à la première séance encore sans kit. Le kit décalé affiche « Décalé depuis la séance annulée du … ».",
+          "Les séances annulées n'apparaissent plus dans le calendrier : retrouvez-les sur la fiche du groupe (statut « Annulée » et motif). « Rétablir » les remet au planning en cas d'erreur ; les kits déjà décalés restent sur leurs nouvelles séances.",
           "Sélectionnez un créneau vide pour créer une séance ponctuelle (rattrapage).",
           "Supprimer une séance : lien discret en bas de sa fiche, en deux clics de confirmation. Refusé si elle a des émargements (registre légal) — annulez-la plutôt : l'annulation garde la trace, la suppression efface tout.",
           "Les vacances et fériés apparaissent en fond grisé.",
@@ -666,6 +668,11 @@ export const FAQ: FaqItem[] = [
   {
     q: "Une séance a été annulée : comment rattraper les heures ?",
     a: "Ouvrez la fiche du groupe : un bandeau rouge indique les heures manquantes par rapport au volume du dispositif. « Replanifier automatiquement » ajoute des séances de rattrapage à la suite du planning (même rythme, mêmes formateur et salle). En cas de conflit, ajustez ensuite dans le planning.",
+    roles: TEAM,
+  },
+  {
+    q: "La formatrice est absente au dernier moment : comment annuler la séance sans perdre le fil des kits ?",
+    a: "Planning → cliquez la séance → « Annuler la séance » → motif « Absence imprévue du formateur » (précision facultative) → laissez cochée « Décaler les kits » → « Confirmer l'annulation ». Le kit prévu passe à la prochaine séance du groupe, et les kits suivants d'autant : le groupe reprend là où il s'était arrêté. Si toutes les séances restantes ont déjà un kit, rien n'est décalé : ajoutez d'abord un rattrapage (« Replanifier automatiquement » sur la fiche du groupe). Pensez à décaler aussi les dates dans les noms de vos prochains PDF : l'import en masse refuse de remplacer un kit décalé. Si une remplaçante est disponible, ne l'annulez pas : changez la formatrice (Planning → « Remplacements »).",
     roles: TEAM,
   },
   {
