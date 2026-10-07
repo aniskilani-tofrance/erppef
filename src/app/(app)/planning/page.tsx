@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PlanningCalendar } from "@/components/planning/planning-calendar";
@@ -43,6 +44,11 @@ export default async function PlanningPage() {
     <div className="mx-auto max-w-7xl space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-semibold tracking-tight">Planning</h1>
+        {(role === "admin" || role === "coordinator") && (
+          <Link href="/planning/remplacements" className="text-sm font-medium hover:underline">
+            Remplacements →
+          </Link>
+        )}
         <PlanningDownloads
           groups={(groups ?? []).map((g) => ({ id: g.id, name: g.name }))}
           // Seulement les financeurs qui ont au moins un groupe en cours (les autres n'auraient rien à télécharger)

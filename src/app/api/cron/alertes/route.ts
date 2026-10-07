@@ -6,6 +6,7 @@ import { localToUtc, nextDay, utcToLocalTime } from "@/lib/dates";
 import { buildMeetingReminderMessage, formatMeetingWhen, textToHtml } from "@/lib/admission/messages";
 import { loadTemplates } from "@/lib/admission/load-templates";
 import { announceUpdatesEverywhere, type AnnounceResult } from "@/lib/updates-announce";
+import { sendTrainerRelances } from "@/lib/emargement/relances";
 import { sendEvaluationReminders } from "@/lib/evaluations/reminders";
 import { productionOrgIds } from "@/lib/production-orgs";
 import { scheduleBrevoAppointmentReminders, type AppointmentReminderKind, type LeadForBrevo } from "@/lib/leads/brevo";
@@ -121,7 +122,7 @@ export async function GET(request: Request) {
       console.error("[rappels réunion]", e instanceof Error ? e.message : e);
     }
     try {
-      trainerRelances = await sendTrainerRelances(unclosed ?? []);
+      trainerRelances = await sendTrainerRelances(unclosed ?? [], "matin");
     } catch (e) {
       console.error("[relances]", e instanceof Error ? e.message : e);
     }
@@ -435,41 +436,4 @@ async function sendSessionReminders(
     if (ok) sent += 1;
   }
   return { sent, skippedNoEmail };
-}
-
-// ── Relance des formateurs : feuilles d'émargement non clôturées ─────────────
-type UnclosedRow = {
-  id: string;
-  starts_at: string;
-  groups: unknown;
-  trainers: unknown;
-};
-
-async function sendTrainerRelances(unclosed: UnclosedRow[]): Promise<number> {
-  const byTrainer = new Map<string, { firstName: string; lines: string[] }>();
-  for (const s of unclosed) {
-    const trainer = s.trainers as { first_name: string; email: string | null } | null;
-    if (!trainer?.email) continue;
-    const group = (s.groups as { name: string } | null)?.name ?? "?";
-    const day = new Date(s.starts_at).toLocaleDateString("fr-FR", {
-      weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Paris",
-    });
-    const entry = byTrainer.get(trainer.email) ?? { firstName: trainer.first_name, lines: [] };
-    entry.lines.push(`${group} — séance du ${day} : https://pef-erp.vercel.app/seances/${s.id}/emargement`);
-    byTrainer.set(trainer.email, entry);
-  }
-
-  let sent = 0;
-  for (const [email, entry] of byTrainer) {
-    const ok = await sendMail({
-      to: email,
-      subject: `Feuille${entry.lines.length > 1 ? "s" : ""} d'émargement à clôturer`,
-      html: `<p>Bonjour ${entry.firstName},</p>
-<p>Il reste ${entry.lines.length > 1 ? "des feuilles" : "une feuille"} d'émargement à contre-signer et clôturer :</p>
-<ul>${entry.lines.map((l) => `<li>${l}</li>`).join("")}</ul>
-<p>Merci !<br/>ParlerEmploi Formation</p>`,
-    });
-    if (ok) sent += 1;
-  }
-  return sent;
 }

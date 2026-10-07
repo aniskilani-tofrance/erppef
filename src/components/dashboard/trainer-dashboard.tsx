@@ -3,10 +3,11 @@ import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { utcToLocalDate, utcToLocalTime, weekStartOf, nextDay } from "@/lib/dates";
-import { CalendarOff, ClipboardCheck } from "lucide-react";
+import { CalendarOff } from "lucide-react";
+import { MyDay } from "@/components/dashboard/my-day";
 import { KIND_LABELS, STATUS_LABELS, type AbsenceKind, type AbsenceStatus } from "@/lib/conges/rules";
 
-// Accueil du FORMATEUR : sa journée, ses feuilles à clôturer, sa semaine.
+// Accueil du FORMATEUR : sa journée (MyDay : séances, cahier, feuilles à clôturer), sa semaine.
 // Pas d'occupation de salles ni d'indicateurs de pilotage : ce n'est pas son sujet.
 export async function TrainerDashboard({ userId }: { userId: string }) {
   const supabase = await createClient();
@@ -36,7 +37,7 @@ export async function TrainerDashboard({ userId }: { userId: string }) {
   let weekEnd = weekStart;
   for (let i = 0; i < 7; i++) weekEnd = nextDay(weekEnd);
 
-  const [{ data: weekSessions }, { data: toClose }, { data: myAbsences }] = await Promise.all([
+  const [{ data: weekSessions }, { data: myAbsences }] = await Promise.all([
     supabase
       .from("sessions")
       .select("id, starts_at, ends_at, status, attendance_closed_at, trainer_id, co_trainer_id, groups(name), rooms:room_id(name)")
@@ -45,15 +46,6 @@ export async function TrainerDashboard({ userId }: { userId: string }) {
       .neq("status", "annulee")
       .gte("starts_at", `${weekStart}T00:00:00Z`)
       .lt("starts_at", `${weekEnd}T00:00:00Z`)
-      .order("starts_at"),
-    supabase
-      .from("sessions")
-      .select("id, starts_at, ends_at, groups(name)")
-      .eq("trainer_id", trainerId)
-      .neq("status", "annulee")
-      .is("attendance_closed_at", null)
-      .gte("starts_at", new Date(now.getTime() - 7 * 86400_000).toISOString())
-      .lt("ends_at", now.toISOString())
       .order("starts_at"),
     supabase
       .from("trainer_absences")
@@ -65,74 +57,11 @@ export async function TrainerDashboard({ userId }: { userId: string }) {
       .limit(4),
   ]);
 
-  const todaySessions = (weekSessions ?? []).filter((s) => utcToLocalDate(s.starts_at) === today);
-
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <h1 className="text-2xl font-semibold tracking-tight">Bonjour {firstName} 👋</h1>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">
-            Aujourd&apos;hui ({todaySessions.length} séance{todaySessions.length > 1 ? "s" : ""})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {todaySessions.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Pas de séance aujourd&apos;hui.</p>
-          ) : (
-            <ul className="space-y-2">
-              {todaySessions.map((s) => (
-                <li key={s.id} className="flex flex-wrap items-center gap-2 rounded-md border px-3 py-2">
-                  <span className="font-medium">
-                    {utcToLocalTime(s.starts_at)} – {utcToLocalTime(s.ends_at)}
-                  </span>
-                  <span>{(s.groups as unknown as { name: string } | null)?.name}</span>
-                  {(s.rooms as unknown as { name: string } | null)?.name && (
-                    <Badge variant="outline">{(s.rooms as unknown as { name: string }).name}</Badge>
-                  )}
-                  {s.co_trainer_id === trainerId && <Badge variant="secondary">co-animation</Badge>}
-                  <Link
-                    href={`/seances/${s.id}/emargement`}
-                    className="ml-auto inline-flex items-center gap-1 text-sm font-medium hover:underline"
-                  >
-                    <ClipboardCheck className="h-4 w-4" />
-                    Émargement →
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
-
-      {(toClose ?? []).length > 0 && (
-        <Card className="border-destructive/50">
-          <CardHeader>
-            <CardTitle className="text-base">
-              ⚠️ Feuilles d&apos;émargement à clôturer ({(toClose ?? []).length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2">
-              {(toClose ?? []).map((s) => (
-                <li key={s.id} className="flex flex-wrap items-center gap-2 rounded-md border px-3 py-2 text-sm">
-                  <span>
-                    {new Date(s.starts_at).toLocaleDateString("fr-FR", {
-                      weekday: "short", day: "2-digit", month: "2-digit", timeZone: "Europe/Paris",
-                    })}{" "}
-                    {utcToLocalTime(s.starts_at)}
-                  </span>
-                  <span className="font-medium">{(s.groups as unknown as { name: string } | null)?.name}</span>
-                  <Link href={`/seances/${s.id}/emargement`} className="ml-auto text-sm hover:underline">
-                    Clôturer →
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      )}
+      <MyDay trainerId={trainerId} />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">

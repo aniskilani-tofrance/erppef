@@ -78,8 +78,9 @@ export const HELP_SECTIONS: HelpSection[] = [
       {
         title: "Ma journée",
         steps: [
-          "À la connexion, votre Dashboard affiche vos séances du jour avec un bouton « Émargement » pour chacune.",
-          "Un encadré rouge signale vos feuilles d'émargement oubliées : clôturez-les au plus vite, ce sont des documents obligatoires.",
+          "À la connexion, votre Dashboard affiche vos séances du jour (animées ou co-animées) : heure, salle, nombre d'inscrits, ce qui a été noté la dernière fois, et un bouton « Émargement et cahier de séance ». Sans cours aujourd'hui, le prochain est annoncé.",
+          "Vous êtes aussi coordinatrice ? Votre Dashboard commence par « Mes cours aujourd'hui », puis le pilotage en dessous.",
+          "Un encadré rouge signale vos feuilles d'émargement oubliées : clôturez-les au plus vite, ce sont des documents obligatoires. Un email vous les rappelle le soir même (vers 19h30) et le lendemain matin.",
           "Vos cours apparaissent aussi dans votre agenda Google personnel (« Cours PEF — votre nom »), mis à jour chaque nuit.",
         ],
       },
@@ -107,12 +108,22 @@ export const HELP_SECTIONS: HelpSection[] = [
         ],
       },
       {
+        title: "Remplir le cahier de séance",
+        steps: [
+          "Sur la page d'émargement de la séance, carte « Cahier de séance » : écrivez « Ce qu'on a fait aujourd'hui » et « Pour la prochaine fois » (deux lignes suffisent), puis « Enregistrer ».",
+          "Vous pouvez le compléter ou le corriger après la clôture de la feuille.",
+          "À la séance suivante du groupe, l'encadré « La dernière fois » le réaffiche, et votre Dashboard en montre un résumé : utile pour vous, pour une co-animatrice et pour une remplaçante.",
+          "Qui peut l'écrire ? La formatrice et la co-animatrice de la séance, et la coordination. Les autres le lisent.",
+        ],
+      },
+      {
         title: "Poser un congé ou déclarer une absence",
         steps: [
           "Menu « Congés » (ou la carte « Mes congés et absences » du Dashboard) : dates, motif, une précision si besoin.",
           "Salarié(e) : c'est une demande. La coordination la valide ou la refuse, vous recevez la réponse par email. Tant qu'elle est « À valider », vous pouvez la retirer.",
           "Vacataire ou prestataire : l'absence est enregistrée tout de suite, sans validation. La coordination est prévenue par email et déplace vos séances si besoin.",
-          "Une absence validée est respectée par le moteur de planning : aucune séance ne vous sera placée dessus. Les séances déjà planifiées sur la période sont signalées à la coordination.",
+          "Une absence validée est respectée par le moteur de planning : aucune séance ne vous sera placée dessus. Les séances déjà planifiées sur la période apparaissent dans la page « Remplacements » de la coordination, qui les confie à une collègue.",
+          "On vous confie un remplacement ? Vous recevez un email avec le groupe, la date, la salle et le lien vers la séance, où le cahier vous dit ce qui a été fait la dernière fois.",
         ],
       },
       {
@@ -230,6 +241,16 @@ export const HELP_SECTIONS: HelpSection[] = [
           "GROUPE DE NIVEAU : si le dispositif a un niveau d'entrée, le formulaire liste les apprenants de ce niveau sans groupe actif (niveau issu du test de positionnement), tous cochés — décochez au besoin : ils seront inscrits à la création du groupe.",
           "« Proposer un planning optimal » : le moteur choisit formateur et salle, saute fériés/vacances, et explique ses choix.",
           "Vérifiez la proposition (alternatives, coûts, avertissements) puis validez : toutes les séances sont créées d'un coup.",
+        ],
+      },
+      {
+        title: "Remplacer une formatrice absente",
+        steps: [
+          "Planning → « Remplacements » (ou la ligne « séances à remplacer » de « À faire aujourd'hui »).",
+          "La page liste les séances des 3 prochaines semaines : formatrice absente (congé validé), demande de congé encore à valider, et séances sans formateur (ateliers bénévoles par exemple).",
+          "Pour chacune, jusqu'à trois personnes libres sur le créneau : disponibilités de leur fiche, congés validés, plafond d'heures de la semaine et autres cours vérifiés. Le classement est celui du moteur : salariées d'abord, puis coût, stagiaires et bénévoles en dernier.",
+          "« Confier à … » : la séance change de formatrice tout de suite, la remplaçante reçoit un email (groupe, date, salle, lien vers la séance et son cahier) et son agenda Google se met à jour la nuit.",
+          "Personne de libre ? Déplacez la séance ou annulez-la dans le Planning ; les heures manquantes se replanifient depuis la fiche du groupe.",
         ],
       },
       {
@@ -365,6 +386,16 @@ export const HELP_SECTIONS: HelpSection[] = [
     title: "Preuves et conformité (Qualiopi)",
     roles: TEAM,
     articles: [
+      {
+        title: "Relancer les absents (Dashboard → « Absents à relancer »)",
+        steps: [
+          "La carte liste chaque apprenant inscrit qui était absent à son dernier cours émargé (14 derniers jours) et qu'on n'a pas contacté depuis. Les séries d'absences sont en tête, avec un badge rouge.",
+          "« WhatsApp » ouvre WhatsApp avec un message prêt : le cours manqué (ou le nombre de cours manqués), le prochain cours avec sa salle, et une invitation à répondre en cas de problème. Relisez, adaptez si besoin, puis envoyez.",
+          "« Appelé(e) » : vous avez téléphoné ou vu la personne. La relance est notée sans ouvrir WhatsApp.",
+          "Dans les deux cas, la relance est inscrite dans le carnet de contact de l'apprenant (preuve de suivi de l'assiduité pour l'audit) et la personne sort de la liste. Elle y revient seulement si elle manque un nouveau cours.",
+          "Elle n'apparaît plus dès qu'elle est revenue en cours (présente ou en retard), ou si son inscription au groupe n'est plus active.",
+        ],
+      },
       {
         title: "Envoyer chaque semaine les feuilles d'émargement au financeur",
         steps: [

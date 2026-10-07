@@ -65,8 +65,9 @@ export const TRAINING_MODULES: TrainingModule[] = [
         id: "dashboard",
         title: "Lire mon Dashboard",
         steps: [
-          "« Aujourd'hui » : vos séances du jour, avec un bouton Émargement direct pour chacune.",
-          "Un encadré rouge « Feuilles à clôturer » apparaît si une feuille d'émargement des 7 derniers jours n'est pas clôturée : traitez-le en priorité.",
+          "« Aujourd'hui » : vos séances du jour (celles que vous animez et celles que vous co-animez) avec l'heure, la salle, le nombre d'inscrits et ce qui avait été noté la dernière fois. Le grand bouton « Émargement et cahier de séance » ouvre tout ce qu'il faut pour la séance. Pas de cours aujourd'hui ? Le prochain est annoncé.",
+          "Un encadré rouge « Feuilles à clôturer » apparaît si une feuille d'émargement des 7 derniers jours n'est pas clôturée : traitez-le en priorité. Un email vous le rappelle aussi le soir même, vers 19h30.",
+          "Vous êtes aussi coordinatrice ? Votre Dashboard commence par « Mes cours aujourd'hui » (les mêmes informations), puis le pilotage en dessous.",
           "« Ma semaine » : toutes vos séances, avec un badge « émargée » quand la feuille est close.",
           "Vos cours sont aussi dans votre agenda Google personnel « Cours PEF — votre nom », mis à jour chaque nuit.",
         ],
@@ -163,8 +164,10 @@ export const TRAINING_MODULES: TrainingModule[] = [
           "« Contre-signer et clôturer » : signez à votre tour (votre signature est obligatoire sur la feuille).",
           "À la clôture : la séance passe automatiquement en « réalisée », l'assiduité de chaque apprenant se met à jour, et la feuille PDF devient disponible.",
           "Après clôture, seule l'équipe de coordination peut rouvrir la feuille pour correction.",
+          "Juste en dessous, le « Cahier de séance » : deux lignes, « Ce qu'on a fait » et « Pour la prochaine fois », puis « Enregistrer ». Il reste modifiable après la clôture. À la séance suivante, l'encadré « La dernière fois » vous le remontre, ainsi qu'à une remplaçante ou une co-animatrice.",
+          "Oubli ? Si la feuille d'une séance du jour n'est pas clôturée le soir, vous recevez un email vers 19h30 avec le lien direct ; puis un rappel le lendemain matin.",
         ],
-        tip: "Clôturez à la fin de chaque séance, pas en fin de semaine : c'est 30 secondes, et le suivi d'assiduité reste exact en continu.",
+        tip: "Clôturez à la fin de chaque séance, pas en fin de semaine : c'est 30 secondes, et le suivi d'assiduité reste exact en continu. Profitez-en pour écrire vos deux lignes de cahier : la séance est encore fraîche.",
         practice: {
           instruction: "Repérez votre prochaine séance dans le planning et localisez son bouton « Feuille d'émargement » (sans l'ouvrir si la séance n'a pas lieu).",
           href: "/planning",
@@ -591,6 +594,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
           "Séance ponctuelle (rattrapage isolé) : sélectionnez un créneau vide dans la vue semaine.",
           "Séances annulées : la fiche du groupe affiche un bandeau « X h manquantes » — « Replanifier automatiquement » ajoute les rattrapages à la suite du planning.",
           "Fin de parcours : fiche du groupe → « Modifier » → statut « Terminé ».",
+          "Formatrice absente : Planning → « Remplacements » (ou la ligne « séances à remplacer » de « À faire aujourd'hui »). Chaque séance des 3 prochaines semaines dont la formatrice a un congé validé (ou une demande encore à valider), et chaque séance sans formateur, avec les personnes libres sur le créneau, classées comme le fait le moteur (salariées d'abord, stagiaires et bénévoles en dernier). « Confier à … » change la formatrice et la prévient par email ; son agenda se met à jour la nuit. Personne de libre ? Déplacez ou annulez la séance dans le Planning.",
         ],
       },
       {
@@ -613,6 +617,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
         title: "Assiduité et audit Qualiopi",
         steps: [
           "Le Dashboard affiche le taux de présence global et les apprenants en alerte (moins de 70 % ou 3 absences de suite) : appelez-les, notez l'action dans leur fiche.",
+          "« Absents à relancer » (Dashboard) : chaque apprenant absent à son dernier cours émargé et pas encore contacté depuis. « WhatsApp » ouvre un message prêt (le cours manqué, le prochain cours et sa salle) à relire puis envoyer ; « Appelé(e) » note un appel. La relance est tracée dans son carnet de contact et la personne sort de la liste ; elle y revient si elle manque encore un cours. Relancer dès la première absence est le meilleur moyen d'éviter le décrochage.",
           "Enquête de satisfaction : fiche du groupe → QR code anonyme en fin de session (1 minute). Les moyennes s'affichent sur la fiche.",
           "Réclamations : page Qualité → registre — consignez la réclamation ET l'action corrective (c'est elle qui compte en audit).",
           "Analyse du besoin (ind. 4) : sur la fiche apprenant, objectif visé + besoin exprimé + date d'entretien, puis « Télécharger le dossier d'entrée (PDF) » — la preuve individuelle.",

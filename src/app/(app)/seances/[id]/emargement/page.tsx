@@ -6,22 +6,24 @@ import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { AttendanceManager } from "@/components/emargement/attendance-manager";
 import { utcToLocalTime } from "@/lib/dates";
+import { SessionLogCard } from "@/components/emargement/session-log-card";
+import { formatLogDay, loadSessionLogContext } from "@/lib/seances/cahier";
 
 export default async function EmargementSeancePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { role } = await requireRole(["admin", "coordinator", "trainer"]);
+  const { role, userId, orgId } = await requireRole(["admin", "coordinator", "trainer"]);
   const supabase = await createClient();
 
   const { data: session } = await supabase
     .from("sessions")
     .select(
-      "id, group_id, starts_at, ends_at, status, attendance_token, attendance_opened_at, attendance_closed_at, trainer_signature, groups(name), trainers:trainer_id(first_name, last_name), rooms:room_id(name)",
+      "id, group_id, trainer_id, co_trainer_id, starts_at, ends_at, status, attendance_token, attendance_opened_at, attendance_closed_at, trainer_signature, groups(name), trainers:trainer_id(first_name, last_name), rooms:room_id(name)",
     )
     .eq("id", id)
     .single();
   if (!session) notFound();
 
-  const [{ data: enrollments }, { data: attendances }] = await Promise.all([
+  const [{ data: enrollments }, { data: attendances }, logContext, { data: membership }] = await Promise.all([
     supabase
       .from("enrollments")
       .select("learner_id, learners(first_name, last_name)")
@@ -31,7 +33,13 @@ export default async function EmargementSeancePage({ params }: { params: Promise
       .from("attendances")
       .select("learner_id, status, signed_at, signature")
       .eq("session_id", id),
+    loadSessionLogContext(supabase, { id: session.id, groupId: session.group_id, startsAt: session.starts_at }),
+    supabase.from("memberships").select("trainer_id").eq("user_id", userId).eq("org_id", orgId).maybeSingle(),
   ]);
+  // Cahier : la coordination partout, une formatrice sur les séances qu'elle anime ou co-anime
+  const myTrainerId = membership?.trainer_id ?? null;
+  const canEditLog =
+    role !== "trainer" || (myTrainerId !== null && [session.trainer_id, session.co_trainer_id].includes(myTrainerId));
 
   const byLearner = new Map((attendances ?? []).map((a) => [a.learner_id, a]));
   const learners = (enrollments ?? [])
@@ -93,6 +101,14 @@ export default async function EmargementSeancePage({ params }: { params: Promise
         canReopen={role === "admin" || role === "coordinator"}
         publicUrl={publicUrl}
         qrDataUrl={qrDataUrl}
+      />
+
+      <SessionLogCard
+        sessionId={session.id}
+        available={logContext.available}
+        current={logContext.current}
+        previous={logContext.previous ? { ...logContext.previous, dayLabel: formatLogDay(logContext.previous.startsAt) } : null}
+        canEdit={canEditLog}
       />
     </div>
   );

@@ -26,6 +26,26 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-10-07-quotidien-equipe",
+    date: "2026-10-07",
+    title: "Ma journée, cahier de séance, absents à relancer, remplacements",
+    summary: "Le quotidien plus simple : vos cours du jour en un coup d'œil (y compris pour la coordination qui anime), un cahier de séance en deux lignes, une relance le soir pour les feuilles oubliées, les absents à relancer sur WhatsApp en un clic et une page pour remplacer une formatrice absente.",
+    items: [
+      { text: "Dashboard → « Aujourd'hui » : chaque séance du jour avec l'heure, la salle, le nombre d'inscrits, ce qui avait été noté la dernière fois, et un grand bouton « Émargement et cahier de séance » pensé pour le téléphone. Sans cours aujourd'hui, le prochain est annoncé.", roles: ["trainer"] },
+      { text: "Vous animez aussi des cours ? Votre Dashboard commence maintenant par « Mes cours aujourd'hui » (vos séances, vos feuilles à clôturer), puis le pilotage habituel en dessous.", roles: TEAM },
+      { text: "Cahier de séance (page d'émargement de chaque séance) : deux lignes en fin de cours, « Ce qu'on a fait » et « Pour la prochaine fois ». La séance suivante affiche « La dernière fois » : une remplaçante ou une co-animatrice sait où en est le groupe. C'est aussi une preuve Qualiopi du déroulé réel.", roles: ALL },
+      { text: "Feuille d'émargement oubliée : un email vous la rappelle le soir même (vers 19h30) avec le lien direct, en plus de la relance du lendemain matin.", roles: ALL },
+      { text: "Dashboard → « Absents à relancer » : chaque apprenant absent à son dernier cours émargé, pas encore contacté. « WhatsApp » ouvre un message prêt (cours manqué, prochain cours, salle) à relire puis envoyer ; « Appelé(e) » note un appel. Dans les deux cas c'est tracé dans son carnet de contact et la personne sort de la liste.", roles: TEAM },
+      { text: "Planning → « Remplacements » : les séances des 3 prochaines semaines dont la formatrice est absente (ou sans formateur, comme les ateliers bénévoles), avec les personnes libres sur le créneau classées par le moteur. « Confier à … » change la formatrice et la prévient par email. Les séances à remplacer remontent aussi dans « À faire aujourd'hui ».", roles: TEAM },
+    ],
+    training: [
+      { moduleId: "f1-prise-en-main", lessonId: "dashboard", label: "Lire mon Dashboard" },
+      { moduleId: "f2-emargement", lessonId: "cloturer", label: "Clôturer : le geste qui compte" },
+      { moduleId: "c5-vie-quotidienne", lessonId: "ajustements", label: "Ajustements quotidiens" },
+      { moduleId: "c5-vie-quotidienne", lessonId: "qualite", label: "Assiduité et audit Qualiopi" },
+    ],
+  },
+  {
     id: "2026-10-06-attestations-entree",
     date: "2026-10-06",
     title: "Attestations d'entrée en formation",

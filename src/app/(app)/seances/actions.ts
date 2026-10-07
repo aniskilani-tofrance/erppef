@@ -209,3 +209,63 @@ export async function reopenAttendanceSheet(sessionId: string): Promise<ActionRe
   revalidatePath(`/seances/${sessionId}/emargement`);
   return { ok: true };
 }
+
+const logSchema = z.object({
+  sessionId: z.string().uuid(),
+  done: z.string().max(2000),
+  next: z.string().max(2000),
+});
+
+// Cahier de séance : la coordination écrit sur toutes les séances ; une formatrice (quel
+// que soit son rôle de compte) sur celles qu'elle anime ou co-anime, via la fiche
+// formateur reliée à son compte. Modifiable après la clôture : ce n'est pas l'émargement.
+export async function saveSessionLog(raw: z.infer<typeof logSchema>): Promise<ActionResult> {
+  const parsed = logSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Texte trop long (2 000 caractères maximum par champ)" };
+  const d = parsed.data;
+
+  const { orgId, userId, role } = await requireRole([...ROLES]);
+  const supabase = createAdminClient();
+
+  const { data: session } = await supabase
+    .from("sessions")
+    .select("id, trainer_id, co_trainer_id")
+    .eq("id", d.sessionId)
+    .eq("org_id", orgId)
+    .single();
+  if (!session) return { ok: false, error: "Séance introuvable" };
+
+  if (role === "trainer") {
+    const { data: membership } = await supabase
+      .from("memberships")
+      .select("trainer_id")
+      .eq("user_id", userId)
+      .eq("org_id", orgId)
+      .maybeSingle();
+    const mine = membership?.trainer_id && [session.trainer_id, session.co_trainer_id].includes(membership.trainer_id);
+    if (!mine) return { ok: false, error: "Seule la formatrice de la séance (ou la coordination) peut remplir son cahier." };
+  }
+
+  const done = d.done.trim() || null;
+  const next = d.next.trim() || null;
+  const { error } = await supabase
+    .from("sessions")
+    .update({
+      log_done: done,
+      log_next: next,
+      log_updated_at: done || next ? new Date().toISOString() : null,
+      log_updated_by: done || next ? userId : null,
+    })
+    .eq("id", d.sessionId)
+    .eq("org_id", orgId);
+
+  if (error) {
+    // Migration 0039 pas encore appliquée : message clair plutôt qu'une erreur SQL
+    if (/log_done|log_next|column/i.test(error.message)) {
+      return { ok: false, error: "Le cahier de séance n'est pas encore activé sur la base (migration 0039 à appliquer)." };
+    }
+    return { ok: false, error: error.message };
+  }
+  revalidatePath(`/seances/${d.sessionId}/emargement`);
+  return { ok: true };
+}

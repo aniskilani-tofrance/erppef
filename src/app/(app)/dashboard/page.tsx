@@ -12,6 +12,10 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { CalendarDays, ClipboardCheck, DoorOpen, Users, UsersRound } from "lucide-react";
 import { NewsTicker } from "@/components/dashboard/news-ticker";
+import { MyDay } from "@/components/dashboard/my-day";
+import { AbsenceFollowupsCard } from "@/components/dashboard/absence-followups";
+import { FOLLOWUP_WINDOW_DAYS, computeAbsenceFollowups, type FollowupAttendance } from "@/lib/absences/followup";
+import { loadSessionsToReplace } from "@/lib/remplacements/load";
 import { tickerItemsForRole } from "@/lib/updates-content";
 import {
   ABSENCE_ALERT_THRESHOLD,
@@ -25,7 +29,7 @@ const RATE_ALERT_THRESHOLD = 70;
 // Une vue par type de compte : le formateur voit SA journée, pas les taux
 // d'occupation ; le lecteur voit l'essentiel ; l'équipe voit le pilotage complet.
 export default async function DashboardPage() {
-  const { role, userId } = await requireSession();
+  const { role, userId, orgId } = await requireSession();
   // Bandeau « Nouveau » : les dernières mises à jour qui concernent ce rôle, dès la connexion
   const ticker = <NewsTicker items={tickerItemsForRole(role)} />;
   if (role === "trainer") {
@@ -65,6 +69,20 @@ export default async function DashboardPage() {
   const nowIso = new Date().toISOString();
   const in7days = new Date(new Date().getTime() + 7 * 86_400_000).toISOString();
 
+  // Coordinatrice qui anime aussi des cours : sa journée de formatrice passe en premier
+  const followupSince = new Date(new Date().getTime() - FOLLOWUP_WINDOW_DAYS * 86_400_000).toISOString();
+  const [{ data: myMembership }, { data: myProfile }, toReplace, { data: recentMarks }] = await Promise.all([
+    supabase.from("memberships").select("trainer_id").eq("user_id", userId).eq("org_id", orgId).maybeSingle(),
+    supabase.from("profiles").select("full_name").eq("id", userId).single(),
+    loadSessionsToReplace(supabase),
+    supabase
+      .from("attendances")
+      .select("learner_id, session_id, status, sessions!inner(group_id, starts_at, attendance_closed_at, groups(name))")
+      .not("sessions.attendance_closed_at", "is", null)
+      .gte("sessions.starts_at", followupSince),
+  ]);
+  const myTrainerId = myMembership?.trainer_id ?? null;
+
   const [groups, weekLoads, roomLoads, trainers, rooms, attendanceRows, learnersList, unclosedSheets, incompleteGroups, orphanSessions, newLearners, upcomingMeetings, pendingLeaves] = await Promise.all([
     supabase.from("groups").select("id, status", { count: "exact" }).in("status", ["ouvert", "complet", "en_attente"]),
     supabase.from("v_trainer_week_load").select("*").eq("week_start", weekStart),
@@ -97,7 +115,7 @@ export default async function DashboardPage() {
     // À faire : séances des 7 prochains jours sans formateur ou sans salle
     supabase
       .from("sessions")
-      .select("id, starts_at, groups(name)")
+      .select("id, starts_at, trainer_id, groups(name)")
       .eq("status", "planifiee")
       .gte("starts_at", nowIso)
       .lte("starts_at", in7days)
@@ -165,7 +183,15 @@ export default async function DashboardPage() {
     const g = s.groups as unknown as { name: string } | null;
     todos.push({
       label: `Séance du ${fmtShortDate(s.starts_at)} (${g?.name ?? "groupe"}) sans formateur ou sans salle`,
-      href: "/planning",
+      href: s.trainer_id ? "/planning" : "/planning/remplacements",
+    });
+  }
+
+  const absentTrainerSessions = toReplace.filter((s) => s.reason === "absence");
+  if (absentTrainerSessions.length > 0) {
+    todos.unshift({
+      label: `${absentTrainerSessions.length} séance${absentTrainerSessions.length > 1 ? "s" : ""} à remplacer (formatrice absente) — dès le ${fmtShortDate(absentTrainerSessions[0].startsAt)}`,
+      href: "/planning/remplacements",
     });
   }
 
@@ -223,6 +249,49 @@ export default async function DashboardPage() {
     }))
     .sort((a, b) => a.rate - b.rate);
 
+  // Absents à relancer : dernière séance émargée manquée, aucun contact noté depuis
+  const markRows: FollowupAttendance[] = (recentMarks ?? []).map((a) => {
+    const se = a.sessions as unknown as { group_id: string; starts_at: string; groups: { name: string } | null };
+    return {
+      learnerId: a.learner_id,
+      sessionId: a.session_id,
+      groupId: se.group_id,
+      groupName: se.groups?.name ?? "Groupe",
+      startsAt: se.starts_at,
+      status: a.status as FollowupAttendance["status"],
+    };
+  });
+  const absentIds = [...new Set(markRows.filter((r) => r.status === "absent").map((r) => r.learnerId))];
+  const followupGroupIds = [...new Set(markRows.map((r) => r.groupId))];
+  const [{ data: fuLearners }, { data: fuContacts }, { data: fuNext }, { data: fuEnrolled }] = absentIds.length
+    ? await Promise.all([
+        supabase.from("learners").select("id, first_name, last_name, phone").in("id", absentIds),
+        supabase.from("learner_contacts").select("learner_id, contacted_at").in("learner_id", absentIds).gte("contacted_at", followupSince),
+        supabase
+          .from("sessions")
+          .select("group_id, starts_at, rooms:room_id(name)")
+          .in("group_id", followupGroupIds)
+          .eq("status", "planifiee")
+          .gte("starts_at", nowIso)
+          .order("starts_at")
+          .limit(200),
+        supabase.from("enrollments").select("learner_id, group_id").in("learner_id", absentIds).eq("status", "inscrit"),
+      ])
+    : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }];
+  // Seulement les inscrits encore actifs dans le groupe (un abandon déclaré ne se relance pas ici)
+  const enrolledKey = new Set((fuEnrolled ?? []).map((e) => `${e.learner_id}:${e.group_id}`));
+  const absenceFollowups = computeAbsenceFollowups({
+    attendances: markRows.filter((r) => enrolledKey.has(`${r.learnerId}:${r.groupId}`)),
+    learners: (fuLearners ?? []).map((l) => ({ id: l.id, firstName: l.first_name, lastName: l.last_name, phone: l.phone })),
+    contacts: (fuContacts ?? []).map((c) => ({ learnerId: c.learner_id, contactedAt: c.contacted_at })),
+    nextSessions: (fuNext ?? []).map((n) => ({
+      groupId: n.group_id,
+      startsAt: n.starts_at,
+      roomName: (n.rooms as unknown as { name: string } | null)?.name ?? null,
+    })),
+    now: new Date(),
+  });
+
   const hoursThisWeek = (weekLoads.data ?? []).reduce((s, l) => s + Number(l.hours_planned), 0);
 
   const trainerStats = (trainers.data ?? []).map((t) => {
@@ -269,6 +338,12 @@ export default async function DashboardPage() {
       {ticker}
       <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
 
+      {myTrainerId && (
+        <div className="space-y-4">
+          <MyDay trainerId={myTrainerId} title="Mes cours aujourd'hui" />
+        </div>
+      )}
+
       {todos.length > 0 && (
         <Card className="border-amber-300 bg-amber-50/50">
           <CardHeader className="pb-2">
@@ -288,6 +363,8 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       )}
+
+      <AbsenceFollowupsCard items={absenceFollowups} senderFirstName={myProfile?.full_name?.split(/\s+/)[0] ?? null} />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <KpiCard icon={<UsersRound className="h-4 w-4" />} label="Groupes actifs" value={String(groups.count ?? 0)} />
