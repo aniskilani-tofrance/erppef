@@ -45,6 +45,7 @@ import {
   type AttendanceRecord,
 } from "@/lib/attendance-stats";
 import { trainerStatusSuffix } from "@/lib/referentiels";
+import { groupsByLearner } from "@/lib/admission/group-colors";
 
 export default async function GroupePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -69,7 +70,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
         .select("id, learner_id, status, left_on, learners(first_name, last_name, level_assessed, phone, email)")
         .eq("group_id", id)
         .order("status"), // abandons et terminés restent visibles (badges + bilans)
-      supabase.from("learners").select("id, first_name, last_name, learner_no, level_assessed, first_language, city, district, qpv, gender, activity_status, education_level, prescriber, birth_date").order("last_name"),
+      supabase.from("learners").select("id, first_name, last_name, learner_no, level_assessed, first_language, city, district, qpv, gender, activity_status, education_level, prescriber, birth_date, contact_source, contact_source_detail").order("last_name"),
       supabase.from("funders").select("id, name").eq("is_active", true).order("name"),
       supabase
         .from("attendances")
@@ -86,6 +87,14 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
 
   if (!group) notFound();
   const planningData = await loadGroupPlanning(supabase, id);
+  // Groupes actuels de chaque apprenant disponible (pastille groupe du sélecteur d'inscription)
+  const { data: allEnrollmentRows } = await supabase
+    .from("enrollments")
+    .select("learner_id, group_id, status, groups(name, trainers:trainer_id(color))")
+    .eq("status", "inscrit");
+  const groupsOfLearner = groupsByLearner(
+    (allEnrollmentRows ?? []).map((e) => ({ learner_id: e.learner_id, group_id: e.group_id, status: e.status, groups: e.groups as unknown as { name: string; trainers?: { color: string | null } | null } | null })),
+  );
 
   // Planning à diffuser : message WhatsApp par inscrit (horaires, dates, lieu du groupe)
   const senderFirstName = profile?.full_name?.trim().split(/\s+/)[0] ?? null;
@@ -222,6 +231,9 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
       education: l.education_level,
       prescriber: l.prescriber,
       birthDate: l.birth_date,
+      contactSource: l.contact_source ?? null,
+      contactSourceDetail: l.contact_source_detail ?? null,
+      groups: groupsOfLearner.get(l.id) ?? [],
     }));
 
   // Enquête satisfaction : stats agrégées + lien public si ouverte

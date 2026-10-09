@@ -8,6 +8,10 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { AdmissionBadge } from "@/components/admission/admission-badge";
+import { SourceDot } from "@/components/admission/source-dot";
+import { DotsLegend, GroupDot } from "@/components/admission/group-dot";
+import { groupsByLearner } from "@/lib/admission/group-colors";
+import { loadActiveGroupRefs } from "@/lib/admission/load-groups";
 import { InvitationActions } from "@/components/admission/invitation-actions";
 import { InviteLearnersDialog, type Candidate } from "@/components/admission/invite-learners-dialog";
 import { MeetingFormDialog } from "@/components/admission/meeting-form-dialog";
@@ -42,6 +46,9 @@ type InvitationRow = {
     email: string | null;
     admission_status: string;
     level_assessed: string | null;
+    contact_source: string | null;
+    contact_source_detail: string | null;
+    prescriber: string | null;
     oral_test_on: string | null;
     oral_test_level: string | null;
     oral_test_evaluator: string | null;
@@ -62,11 +69,11 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
     supabase.from("info_meetings").select("*, rooms:room_id(name, address, access_notes)").eq("id", id).single(),
     supabase
       .from("info_meeting_invitations")
-      .select("id, status, channel, sent_at, learners(id, first_name, last_name, learner_no, phone, email, admission_status, level_assessed, oral_test_on, oral_test_level, oral_test_evaluator, oral_test_comment)")
+      .select("id, status, channel, sent_at, learners(id, first_name, last_name, learner_no, phone, email, admission_status, level_assessed, contact_source, contact_source_detail, prescriber, oral_test_on, oral_test_level, oral_test_evaluator, oral_test_comment)")
       .eq("meeting_id", id),
     supabase
       .from("learners")
-      .select("id, first_name, last_name, learner_no, phone, admission_status, level_assessed")
+      .select("id, first_name, last_name, learner_no, phone, admission_status, level_assessed, contact_source, contact_source_detail, prescriber")
       .order("last_name")
       .order("first_name"),
     supabase.from("rooms").select("id, name").eq("is_active", true).order("name"),
@@ -74,6 +81,14 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
     loadTemplates(supabase),
   ]);
   if (!meeting) notFound();
+  // Pastilles provenance + groupe (convoqués et candidats)
+  const [{ data: enrollmentRows }, groupRefs] = await Promise.all([
+    supabase.from("enrollments").select("learner_id, group_id, status, groups(name, trainers:trainer_id(color))").eq("status", "inscrit"),
+    loadActiveGroupRefs(supabase),
+  ]);
+  const groupsOf = groupsByLearner(
+    (enrollmentRows ?? []).map((e) => ({ learner_id: e.learner_id, group_id: e.group_id, status: e.status, groups: e.groups as unknown as { name: string; trainers?: { color: string | null } | null } | null })),
+  );
 
   const senderFirstName = profile?.full_name?.trim().split(/\s+/)[0] ?? null;
   const meetingRoom = meeting.rooms as unknown as { name: string; address: string | null; access_notes: string | null } | null;
@@ -99,6 +114,10 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
       phone: l.phone,
       status: l.admission_status ?? "nouveau",
       level: l.level_assessed,
+      contact_source: l.contact_source,
+      contact_source_detail: l.contact_source_detail,
+      prescriber: l.prescriber,
+      groups: groupsOf.get(l.id) ?? [],
     }))
     .sort((a, b) => (CANDIDATE_ORDER[a.status] ?? 9) - (CANDIDATE_ORDER[b.status] ?? 9) || a.name.localeCompare(b.name, "fr"));
 
@@ -144,6 +163,8 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
         </div>
       </div>
 
+      <DotsLegend groups={groupRefs} />
+
       <div className="flex flex-wrap gap-2 text-sm">
         <Badge variant="outline">
           {invitations.length} convoqué{invitations.length > 1 ? "s" : ""}{meeting.capacity ? ` / ${meeting.capacity} places` : ""}
@@ -180,7 +201,11 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
               return (
                 <TableRow key={inv.id}>
                   <TableCell className="font-medium">
-                    {name}
+                    <span className="inline-flex items-center gap-1.5">
+                      <SourceDot learner={l} />
+                      <GroupDot groups={groupsOf.get(l.id) ?? []} />
+                      {name}
+                    </span>
                     <span className="block font-mono text-[11px] font-normal text-muted-foreground">
                       {learnerRef(l.learner_no)}{l.level_assessed ? ` · ${l.level_assessed}` : ""}
                     </span>

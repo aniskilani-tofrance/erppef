@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import { toast } from "sonner";
 import { detectQpv, upsertLearner } from "@/app/(app)/apprenants/actions";
 import { Button } from "@/components/ui/button";
@@ -147,6 +147,7 @@ export function LearnerFormDialog({
   defaultGroupId,
   triggerLabel = "Nouvel apprenant",
   sourceDetails = [],
+  badges,
 }: {
   initial?: LearnerFormValues;
   // Groupes proposés pour l'inscription directe à la création (flux « créer et inscrire »).
@@ -155,6 +156,8 @@ export function LearnerFormDialog({
   triggerLabel?: string;
   // Précisions de provenance déjà saisies (quelle maison de quartier, quel partenaire…) : suggestions.
   sourceDetails?: string[];
+  // Pastilles provenance + groupe (rendues par la page), affichées sous le titre de la fiche.
+  badges?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [values, setValues] = useState<LearnerFormValues>(initial ?? EMPTY);
@@ -272,6 +275,7 @@ export function LearnerFormDialog({
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{isEdit ? "Modifier l'apprenant" : "Nouvel apprenant"}</DialogTitle>
+          {badges && <div className="pt-1">{badges}</div>}
         </DialogHeader>
         <div className="space-y-4">
           <PhotoUpload
@@ -410,7 +414,7 @@ export function LearnerFormDialog({
                   <Input value={values.oralTestEvaluator} onChange={(e) => set("oralTestEvaluator", e.target.value)} placeholder="Prénom Nom" />
                 </div>
                 <div className="space-y-2">
-                  <Label>Commentaire de l'entretien oral</Label>
+                  <Label>Commentaire de l&apos;entretien oral</Label>
                   <Input value={values.oralTestComment} onChange={(e) => set("oralTestComment", e.target.value)} placeholder="Comprend les questions simples…" />
                 </div>
               </div>

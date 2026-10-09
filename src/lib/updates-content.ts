@@ -26,6 +26,18 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-10-10-pastille-groupe",
+    date: "2026-10-10",
+    title: "Deux pastilles devant chaque nom : provenance et groupe",
+    summary: "À côté de la pastille de provenance, une seconde pastille dit si la personne est inscrite et dans quel groupe, avec la couleur de sa formatrice.",
+    items: [
+      { text: "Pastille groupe : grise et creuse tant que la personne n'est inscrite nulle part, puis de la couleur de la formatrice du groupe (la même que sur le Planning). Cours + atelier = deux pastilles. Survolez pour lire le nom du groupe.", roles: TEAM },
+      { text: "Les deux pastilles sont partout : liste Apprenants, onglet Admission, en-tête de la fiche, page d'une réunion d'information, sélecteurs « Ajouter des convoqués » et « Inscrire des apprenants… » (on voit ainsi qui est déjà pris ailleurs). Légende en haut de chaque page.", roles: TEAM },
+      { text: "Dans « Inscrire des apprenants… » sur la fiche de votre groupe, la pastille groupe montre si une personne est déjà inscrite dans un autre groupe.", roles: ["trainer"] },
+    ],
+    training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "L'admission : WhatsApp, réunion d'information, test oral" }],
+  },
+  {
     id: "2026-10-07-candidats-poei",
     date: "2026-10-07",
     title: "Candidats POEI : le pont entre l'association et la POEI restauration",

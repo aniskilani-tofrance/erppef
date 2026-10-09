@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import { UserPlus } from "lucide-react";
 import { enrollLearners } from "@/app/(app)/apprenants/actions";
 import { DISTRICTS } from "@/components/apprenants/learner-form-dialog";
+import { LearnerDots } from "@/components/admission/learner-dots";
+import type { GroupRef } from "@/lib/admission/group-colors";
 import { Button } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
@@ -29,6 +31,10 @@ export type PickerLearner = {
   education: string | null;
   prescriber: string | null;
   birthDate: string | null;
+  // Pastilles provenance + groupe(s) d'inscription actuels (éviter les doubles inscriptions)
+  contactSource?: string | null;
+  contactSourceDetail?: string | null;
+  groups?: GroupRef[];
 };
 
 import { ACTIVITIES as REF_ACTIVITIES, EDUCATION as REF_EDUCATION, GENDERS as REF_GENDERS } from "@/lib/referentiels";
@@ -225,6 +231,7 @@ export function EnrollmentPicker({
                     });
                   }}
                 />
+                <LearnerDots learner={{ contact_source: l.contactSource, contact_source_detail: l.contactSourceDetail, prescriber: l.prescriber }} groups={l.groups ?? []} />
                 <span className="font-mono text-[11px] text-muted-foreground">{l.ref}</span>
                 <span>{l.name}</span>
                 <span className="ml-auto flex gap-2 text-xs text-muted-foreground">

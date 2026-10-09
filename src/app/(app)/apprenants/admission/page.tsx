@@ -9,6 +9,9 @@ import {
 } from "@/components/ui/table";
 import { AdmissionBadge } from "@/components/admission/admission-badge";
 import { FamilyDot, SourceDot } from "@/components/admission/source-dot";
+import { DotsLegend, GroupDot } from "@/components/admission/group-dot";
+import { groupsByLearner, type GroupRef } from "@/lib/admission/group-colors";
+import { loadActiveGroupRefs } from "@/lib/admission/load-groups";
 import { FAMILIES, FAMILY_ORDER, resolveProvenance } from "@/lib/admission/sources";
 import { ContactDialog, type ContactEntry } from "@/components/admission/contact-dialog";
 import { MeetingFormDialog } from "@/components/admission/meeting-form-dialog";
@@ -65,6 +68,7 @@ function LearnerRows({
   templates,
   pendingTestUrl,
   poeiByLearner,
+  groupsOf,
 }: {
   rows: LearnerRow[];
   empty: string;
@@ -73,6 +77,7 @@ function LearnerRows({
   templates: Templates;
   pendingTestUrl: Map<string, string>;
   poeiByLearner: Map<string, string>;
+  groupsOf: Map<string, GroupRef[]>;
 }) {
   if (rows.length === 0) return <p className="py-4 text-sm text-muted-foreground">{empty}</p>;
   const lastContactAt = (id: string) => history.get(id)?.[0]?.contactedAt ?? null;
@@ -93,6 +98,7 @@ function LearnerRows({
             <TableCell className="font-medium">
               <span className="inline-flex items-center gap-1.5">
                 <SourceDot learner={l} />
+                <GroupDot groups={groupsOf.get(l.id) ?? []} />
                 {l.first_name} {l.last_name}
               </span>
               <span className="block font-mono text-[11px] font-normal text-muted-foreground">
@@ -163,6 +169,14 @@ export default async function AdmissionPage() {
     loadTemplates(supabase),
     headers(),
   ]);
+  // Pastille « groupe » : inscriptions actives + légende des groupes en cours
+  const [{ data: enrollmentRows }, groupRefs] = await Promise.all([
+    supabase.from("enrollments").select("learner_id, group_id, status, groups(name, trainers:trainer_id(color))").eq("status", "inscrit"),
+    loadActiveGroupRefs(supabase),
+  ]);
+  const groupsByLearnerMap = groupsByLearner(
+    (enrollmentRows ?? []).map((e) => ({ learner_id: e.learner_id, group_id: e.group_id, status: e.status, groups: e.groups as unknown as { name: string; trainers?: { color: string | null } | null } | null })),
+  );
   // Apprenants déjà proposés en POEI restauration (bouton « POEI » → leur fiche candidat)
   const { data: poeiRows } = await supabase.from("poei_candidates").select("id, learner_id").not("learner_id", "is", null);
   const poeiByLearner = new Map((poeiRows ?? []).map((r) => [r.learner_id as string, r.id as string]));
@@ -272,6 +286,8 @@ export default async function AdmissionPage() {
       <p className="text-sm text-muted-foreground">
         Prise de contact sur WhatsApp, réunions d&apos;information, entretien oral — jusqu&apos;à l&apos;inscription.
       </p>
+
+      <DotsLegend groups={groupRefs} />
 
       {/* Entonnoir */}
       <div className="flex flex-wrap gap-2">
@@ -409,7 +425,7 @@ export default async function AdmissionPage() {
           </p>
         </CardHeader>
         <CardContent>
-          <LearnerRows rows={toContact} senderFirstName={senderFirstName} history={historyByLearner} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} empty="Personne à contacter : tous les nouveaux ont été joints. Les fiches déposées dans le Drive arrivent ici chaque nuit." />
+          <LearnerRows rows={toContact} senderFirstName={senderFirstName} history={historyByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} empty="Personne à contacter : tous les nouveaux ont été joints. Les fiches déposées dans le Drive arrivent ici chaque nuit." />
           {toContact.length > 80 && (
             <p className="mt-2 text-xs text-muted-foreground">
               80 premiers affichés — <Link href="/apprenants?statut=nouveau" className="underline">voir tous les nouveaux</Link>.
@@ -426,7 +442,7 @@ export default async function AdmissionPage() {
           </p>
         </CardHeader>
         <CardContent>
-          <LearnerRows rows={toInvite} senderFirstName={senderFirstName} history={historyByLearner} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} empty="Aucun contacté en attente de convocation." />
+          <LearnerRows rows={toInvite} senderFirstName={senderFirstName} history={historyByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} empty="Aucun contacté en attente de convocation." />
         </CardContent>
       </Card>
 
@@ -438,7 +454,7 @@ export default async function AdmissionPage() {
           </p>
         </CardHeader>
         <CardContent>
-          <LearnerRows rows={toEnroll} senderFirstName={senderFirstName} history={historyByLearner} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} empty="Personne en attente d'inscription." />
+          <LearnerRows rows={toEnroll} senderFirstName={senderFirstName} history={historyByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} empty="Personne en attente d'inscription." />
         </CardContent>
       </Card>
 
@@ -450,7 +466,7 @@ export default async function AdmissionPage() {
           </p>
         </CardHeader>
         <CardContent>
-          <LearnerRows rows={waiting} senderFirstName={senderFirstName} history={historyByLearner} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} empty="Personne en liste d'attente." />
+          <LearnerRows rows={waiting} senderFirstName={senderFirstName} history={historyByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} empty="Personne en liste d'attente." />
         </CardContent>
       </Card>
     </div>

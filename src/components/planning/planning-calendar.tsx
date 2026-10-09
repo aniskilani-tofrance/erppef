@@ -22,6 +22,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { SessionSheet } from "./session-sheet";
+import { PALETTE } from "@/lib/admission/group-colors";
 import { SessionCreateDialog, type GroupOption } from "./session-create-dialog";
 
 type Filters = { trainerId: string; roomId: string; funderId: string };
@@ -31,7 +32,7 @@ type FunderOption = { id: string; name: string; color: string };
 type ColorBy = "formateur" | "financeur" | "salle";
 
 // Palette de secours (formateur ou salle sans couleur) : stable par position dans la liste.
-const FALLBACK_COLORS = ["#0ea5e9", "#14b8a6", "#a855f7", "#f59e0b", "#ef4444", "#22c55e", "#6366f1", "#ec4899", "#84cc16", "#f97316"];
+const FALLBACK_COLORS = PALETTE;
 // Texte sombre sur une couleur claire (jaune, lime…), blanc sur une couleur foncée : lisible partout.
 export function readableText(hex: string): string {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());

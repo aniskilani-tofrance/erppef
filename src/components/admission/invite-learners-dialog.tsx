@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { UserPlus } from "lucide-react";
 import { inviteToMeeting } from "@/app/(app)/apprenants/admission/actions";
 import { AdmissionBadge } from "@/components/admission/admission-badge";
+import { LearnerDots } from "@/components/admission/learner-dots";
+import type { GroupRef } from "@/lib/admission/group-colors";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -20,6 +22,11 @@ export type Candidate = {
   phone: string | null;
   status: string;
   level: string | null;
+  // Pastilles provenance + groupe (facultatives : les anciens appels restent valides)
+  contact_source?: string | null;
+  contact_source_detail?: string | null;
+  prescriber?: string | null;
+  groups?: GroupRef[];
 };
 
 // Ajout de convoqués à une réunion : recherche + cases à cocher. Par défaut, les
@@ -121,6 +128,7 @@ export function InviteLearnersDialog({ meetingId, candidates }: { meetingId: str
                     <label className="flex cursor-pointer items-center gap-3 px-3 py-1.5 text-sm hover:bg-muted/40">
                       <Checkbox checked={checked.has(c.id)} onCheckedChange={(v) => toggle(c.id, v === true)} />
                       <span className="min-w-0 flex-1">
+                        <LearnerDots learner={c} groups={c.groups ?? []} className="mr-1.5" />
                         {c.name}
                         <span className="ml-2 font-mono text-[11px] text-muted-foreground">{c.ref}</span>
                         <span className="block text-xs text-muted-foreground">

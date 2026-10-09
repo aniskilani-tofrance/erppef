@@ -17,6 +17,10 @@ import { LearnersTabs } from "@/components/apprenants/learners-tabs";
 import { AdmissionBadge } from "@/components/admission/admission-badge";
 import { AdmissionFilter } from "@/components/admission/admission-filter";
 import { SourceDot } from "@/components/admission/source-dot";
+import { DotsLegend, GroupDot } from "@/components/admission/group-dot";
+import { LearnerDots } from "@/components/admission/learner-dots";
+import { groupsByLearner } from "@/lib/admission/group-colors";
+import { loadActiveGroupRefs } from "@/lib/admission/load-groups";
 import { SourceFilter } from "@/components/admission/source-filter";
 import { matchesSourceFilter, resolveProvenance } from "@/lib/admission/sources";
 import { BulkInviteButton } from "@/components/admission/bulk-invite-button";
@@ -49,7 +53,7 @@ export default async function ApprenantsPage({
 
   const [{ data: learners }, { data: enrollments }, { data: groups }, { data: attendanceRows }, { data: placementRows }, { data: profile }, { data: contacts }, { data: upcomingMeetings }, { data: invitationRows }, templates, h] = await Promise.all([
     supabase.from("learners").select("*").order("last_name").order("first_name"),
-    supabase.from("enrollments").select("id, learner_id, group_id, status, groups(name, starts_on, rooms:room_id(name, address, access_notes))"),
+    supabase.from("enrollments").select("id, learner_id, group_id, status, groups(name, starts_on, rooms:room_id(name, address, access_notes), trainers:trainer_id(color))"),
     supabase.from("groups").select("id, name").in("status", ["en_attente", "ouvert"]).order("starts_on", { ascending: false }),
     supabase
       .from("attendances")
@@ -82,6 +86,11 @@ export default async function ApprenantsPage({
     loadTemplates(supabase),
     headers(),
   ]);
+  // Pastille « groupe » : couleur de la formatrice du groupe d'inscription (comme le planning)
+  const groupDotsByLearner = groupsByLearner(
+    (enrollments ?? []).map((e) => ({ learner_id: e.learner_id, group_id: e.group_id, status: e.status, groups: e.groups as unknown as { name: string; trainers?: { color: string | null } | null } | null })),
+  );
+  const groupRefs = await loadActiveGroupRefs(supabase);
   const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host") ?? "pef-erp.vercel.app"}`;
   type InvRow = { learner_id: string; status: string; info_meetings: { starts_at: string; ends_at: string | null; location: string | null; rooms: { name: string; address: string | null; access_notes: string | null } | null } };
   const upcomingByLearner = new Map<string, { date: string; place: string | null; access: string | null }>();
@@ -189,6 +198,8 @@ export default async function ApprenantsPage({
 
       <LearnersTabs active="liste" toContact={toContactCount} />
 
+      <DotsLegend groups={groupRefs} />
+
       <div className="rounded-lg border bg-background">
         <Table>
           <TableHeader>
@@ -236,6 +247,7 @@ export default async function ApprenantsPage({
                       <span>
                         <span className="inline-flex items-center gap-1.5">
                           <SourceDot learner={l} />
+                          <GroupDot groups={groupDotsByLearner.get(l.id) ?? []} />
                           {l.first_name} {l.last_name}
                         </span>
                         <span className="block font-mono text-[11px] font-normal text-muted-foreground">
@@ -334,6 +346,7 @@ export default async function ApprenantsPage({
                     <span className="inline-flex items-center gap-1">
                     <LearnerFormDialog
                       sourceDetails={sourceDetails}
+                      badges={<LearnerDots learner={l} groups={groupDotsByLearner.get(l.id) ?? []} withLabels />}
                       initial={{
                         id: l.id,
                         photoUrl: l.photo_url ?? null,
