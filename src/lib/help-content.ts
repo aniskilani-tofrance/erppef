@@ -385,6 +385,71 @@ export const HELP_SECTIONS: HelpSection[] = [
     ],
   },
   {
+    id: "assistant",
+    title: "L'assistant IA : il propose, vous validez",
+    roles: TEAM,
+    articles: [
+      {
+        title: "Ce que fait l'assistant (et ce qu'il ne fait jamais)",
+        steps: [
+          "Reconnaître ses boutons : une petite étincelle ✨. Ils n'apparaissent que si l'organisme a activé l'assistant (Paramètres → carte « Assistant IA » : actif / non configuré).",
+          "Règle d'or : l'assistant RÉDIGE ou PROPOSE, il n'envoie rien et n'écrit rien dans l'ERP tout seul. Un message passe toujours par une fenêtre de relecture avant WhatsApp ; une action proposée n'est enregistrée que si vous la cochez puis cliquez « Enregistrer ».",
+          "Ce qu'il reçoit : le prénom, la référence (A-0001), le groupe, les horaires, l'historique de présence et de contact, la langue. Jamais le téléphone, l'email, l'adresse, ni les champs sensibles (santé, RQTH, titre de séjour). Le numéro n'est utilisé que par votre navigateur pour ouvrir WhatsApp.",
+          "Ce qu'il peut se tromper : une date (« jeudi 16 » alors que le 16 est un vendredi), une personne homonyme, un ton. C'est pour cela que vous relisez. Une proposition « confiance basse » n'est pas cochée par défaut.",
+          "Chaque appel est compté : Paramètres → « Assistant IA » donne le nombre d'appels des 30 derniers jours par usage et un coût estimé (quelques centimes par message).",
+        ],
+      },
+      {
+        title: "Prévenir tout le groupe : annulation, report, remplacement",
+        steps: [
+          "Fiche du groupe → « Prévenir le groupe » (à côté de « Dupliquer »). Choisissez quoi : séance annulée, séance déplacée (nouvelle date, heures, salle), formatrice remplacée (par qui), ou information pratique. Ajoutez une précision si besoin (« apportez votre livret »).",
+          "« Préparer les messages » : l'assistant écrit UN message en français simple, puis sa traduction dans chaque langue parlée dans le groupe (d'après la « Langue maternelle » des fiches). Chaque personne reçoit le français suivi de sa langue ; une personne sans langue renseignée reçoit le français seul.",
+          "La liste montre une ligne par inscrit : « WhatsApp » ouvre la conversation avec son message (relisez, envoyez), l'icône copie le texte. Chaque envoi est noté dans le carnet de contact de la personne (« Message au groupe (annulation) »).",
+          "Le bouton est grisé si personne n'est inscrit, et absent si le groupe est terminé ou annulé. Pour déplacer réellement la séance ou la remplacer dans le planning, passez par le Planning (glisser-déposer, Remplacements) : « Prévenir le groupe » n'envoie que le message.",
+        ],
+      },
+      {
+        title: "Relance d'absence adaptée à la personne",
+        steps: [
+          "Dashboard → « Absents à relancer » : à côté du bouton WhatsApp standard, « Message adapté ». L'assistant lit l'historique (première absence ou série, taux de présence, dernier cours suivi, prochain cours et salle) et choisit le ton : léger pour une première absence, plus attentif pour une série, sans jamais culpabiliser.",
+          "Si la langue maternelle est renseignée, la relance est écrite en français simple puis traduite. Relisez dans la fenêtre, corrigez si besoin, « Envoyer sur WhatsApp ». La relance est tracée dans le carnet et la personne sort de la liste, comme avec le bouton standard.",
+        ],
+      },
+      {
+        title: "Dire ce qui s'est passé : une note, des actions",
+        steps: [
+          "Dashboard (coordination) → carte « Dire ce qui s'est passé ». Tapez les faits de la journée comme vous les diriez : « Fatima vient jeudi à la réunion. Ali a changé de numéro : 06 12 34 56 78. Sabrina malade vendredi. Rappeler Amina lundi après 17h. » puis « Analyser ».",
+          "L'assistant propose une action par fait, avec son niveau de confiance : noter un contact (avec le résultat), changer le statut d'admission, changer un numéro de téléphone, poser une absence de formatrice (maladie, congé…), confirmer une venue à la réunion d'information, créer un rappel daté. Ce qu'il n'a pas compris est listé « non compris » : à faire à la main.",
+          "Vous cochez ce qui est juste (les propositions à confiance haute ou moyenne sont pré-cochées, une personne non reconnue n'est pas cochable), puis « Enregistrer (n) ». Chaque action passe par les mêmes contrôles que la saisie manuelle : un numéro injoignable est refusé, une formatrice inconnue aussi.",
+          "Un numéro changé est vérifié strictement (comme sur la fiche) ; une absence de formatrice crée le même congé qu'avec le module Congés (ses séances remontent dans Remplacements) ; une confirmation de réunion passe la convocation à venir en « Confirmée ».",
+        ],
+      },
+      {
+        title: "Rappels datés, extraits de vos notes",
+        steps: [
+          "Dans le carnet « Noter un contact », écrivez naturellement « rappeler jeudi après 17h » ou « la rappeler lundi matin » : quelques secondes après, un rappel daté apparaît dans « À faire aujourd'hui » le jour venu (avec l'heure si vous l'avez dite). Rien ne bloque la saisie si l'assistant ne comprend pas.",
+          "Les rappels s'affichent en tête de « À faire aujourd'hui » : la date (en rouge si dépassée), le texte, la personne concernée. La coche marque le rappel fait ; « Ajouter un rappel » en crée un à la main, sans l'assistant.",
+          "La carte « Dire ce qui s'est passé » crée aussi des rappels (« Rappeler Amina lundi après 17h »).",
+        ],
+      },
+      {
+        title: "Place libérée : qui proposer, avec le message prêt",
+        steps: [
+          "Dès qu'un groupe a une place libre (capacité moins inscrits, abandons compris), sa fiche affiche une carte verte « n place(s) libre(s) — n candidat(s) compatible(s) ». La règle est la même que le sélecteur d'inscription : personnes en « Liste d'attente » ou « Évalué », niveau compatible avec le niveau d'entrée du dispositif, et aucun cours déjà suivi au même créneau.",
+          "« Proposer la place » : l'assistant rédige la proposition (groupe, horaires, lieu, début, invitation à répondre OUI/NON), dans la langue de la personne si elle est connue. Relisez, « Envoyer sur WhatsApp » : l'envoi est tracé dans son carnet.",
+          "Quand la personne accepte, inscrivez-la avec « Inscrire des apprenants… » juste en dessous : son statut passe « Inscrit » et la carte disparaît une fois le groupe plein.",
+        ],
+      },
+      {
+        title: "Brief avant d'appeler",
+        steps: [
+          "Liste Apprenants ou onglet Admission → icône ✨ à côté du carnet : trois à quatre lignes sur la personne (où elle en est, ce qui s'est passé aux derniers contacts, assiduité), la prochaine étape à proposer, et un point d'attention s'il y en a. Le tout en 20 secondes, sans ouvrir la fiche.",
+          "« Copier » met le brief dans le presse-papiers (pour le coller dans la note du contact, par exemple). Le brief ne contient aucune donnée sensible ; il est recalculé à chaque ouverture.",
+        ],
+      },
+    ],
+  },
+  {
     id: "conformite",
     title: "Preuves et conformité (Qualiopi)",
     roles: TEAM,
@@ -606,6 +671,11 @@ export const HELP_SECTIONS: HelpSection[] = [
 export type FaqItem = { q: string; a: string; roles: AppRole[] };
 
 export const FAQ: FaqItem[] = [
+  {
+    q: "L'assistant IA envoie-t-il des données personnelles à l'extérieur ? Peut-il écrire dans l'ERP sans moi ?",
+    a: "Non et non. Il reçoit le prénom, la référence (A-0001), le groupe, les horaires, l'historique de présence et de contact et la langue — jamais le téléphone, l'email, l'adresse ni les champs sensibles (santé, RQTH, titre de séjour). Il ne fait que rédiger ou proposer : chaque message passe par une fenêtre de relecture avant WhatsApp, chaque action proposée doit être cochée puis enregistrée par vous, et passe par les mêmes contrôles que la saisie manuelle. Paramètres → « Assistant IA » montre s'il est actif et combien il a été utilisé.",
+    roles: TEAM,
+  },
   {
     q: "Des fiches « À valider » sont apparues dans le registre de veille : d'où viennent-elles ?",
     a: "Du collecteur de veille Qualiopi (Manus), qui lit chaque semaine les sources officielles et dépose ses fiches par l'API de l'ERP. Rien n'est validé à votre place : ouvrez chaque fiche, lisez le résumé et l'impact, passez-la en « Validée » ou « Écartée », puis cochez « Diffusée » quand vous l'avez partagée à l'équipe. La carte « Exécutions du collecteur » montre chaque passage ; la direction reçoit aussi un résumé par email.",

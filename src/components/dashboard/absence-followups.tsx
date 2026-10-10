@@ -10,11 +10,12 @@ import { buildAbsenceFollowupMessage, type AbsenceFollowup } from "@/lib/absence
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FollowupDraftButton } from "@/components/assistant/followup-draft-button";
 
 // « Absents à relancer » : un clic ouvre WhatsApp avec le message prêt (à relire), un
 // autre note un appel. Dans les deux cas la relance est tracée dans le carnet de
 // contact et la personne sort de la liste.
-export function AbsenceFollowupsCard({ items, senderFirstName }: { items: AbsenceFollowup[]; senderFirstName: string | null }) {
+export function AbsenceFollowupsCard({ items, senderFirstName, aiEnabled = false }: { items: AbsenceFollowup[]; senderFirstName: string | null; aiEnabled?: boolean }) {
   if (!items.length) return null;
   return (
     <Card className="border-amber-300">
@@ -22,13 +23,13 @@ export function AbsenceFollowupsCard({ items, senderFirstName }: { items: Absenc
         <CardTitle className="text-base">Absents à relancer ({items.length})</CardTitle>
         <p className="text-xs text-muted-foreground">
           Absent(e) à sa dernière séance émargée, sans contact noté depuis. Une fois relancé(e), la personne sort de la liste ;
-          elle y revient si elle manque encore un cours.
+          elle y revient si elle manque encore un cours.{aiEnabled && " « Message adapté » : l'assistant écrit une relance selon l'historique (première absence ou série), dans sa langue, à relire avant d'envoyer."}
         </p>
       </CardHeader>
       <CardContent>
         <ul className="divide-y">
           {items.map((f) => (
-            <FollowupRow key={f.learnerId} f={f} senderFirstName={senderFirstName} />
+            <FollowupRow key={f.learnerId} f={f} senderFirstName={senderFirstName} aiEnabled={aiEnabled} />
           ))}
         </ul>
       </CardContent>
@@ -36,7 +37,7 @@ export function AbsenceFollowupsCard({ items, senderFirstName }: { items: Absenc
   );
 }
 
-function FollowupRow({ f, senderFirstName }: { f: AbsenceFollowup; senderFirstName: string | null }) {
+function FollowupRow({ f, senderFirstName, aiEnabled }: { f: AbsenceFollowup; senderFirstName: string | null; aiEnabled: boolean }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const number = toWhatsAppNumber(f.phone);
@@ -80,6 +81,7 @@ function FollowupRow({ f, senderFirstName }: { f: AbsenceFollowup; senderFirstNa
           <MessageCircle className="mr-1 h-3.5 w-3.5" />
           WhatsApp
         </Button>
+        {aiEnabled && number && <FollowupDraftButton learner={{ id: f.learnerId, firstName: f.firstName, phone: f.phone }} />}
         <Button size="sm" variant="ghost" className="h-8" onClick={() => log("telephone")} disabled={pending} title="J'ai appelé (ou vu la personne) : noter et retirer de la liste">
           <Phone className="mr-1 h-3.5 w-3.5" />
           Appelé(e)

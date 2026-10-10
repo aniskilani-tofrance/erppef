@@ -63,6 +63,17 @@ Principe directeur : **chaque amélioration retire des clics ou de la saisie, ja
 - Reste hors lot : SMS automatique (fournisseur à ouvrir, ~0,05 €/SMS) et WhatsApp Business API
   (validation Meta) — le clic WhatsApp couvre le besoin sans compte ni coût.
 
+## Lot 3 quater — Assistant IA « il propose, vous validez » (livré le 10/10/2026)
+
+Six usages choisis par Anis, tous côté coordination, tous à relecture obligatoire (`src/lib/ai/`, `src/app/(app)/assistant/actions.ts`,
+`src/components/assistant/`) : message au groupe entier dans chaque langue (annulation, report, remplacement), relance d'absence adaptée
+à l'historique, note libre → actions cochables, rappels datés extraits des notes (`reminders`), place libérée → candidats compatibles +
+message, brief avant d'appeler. Modèle Claude via `@anthropic-ai/sdk` (sorties structurées zod, cache du cadre), inerte sans
+`ANTHROPIC_API_KEY` (+ `ANTHROPIC_WORKSPACE_ID` pour une clé utilisateur). Données minimisées : prénom + référence, jamais de coordonnées
+ni de champ sensible. Journal `ai_calls` → carte Paramètres (appels, coût estimé 30 j).
+Pistes non retenues pour l'instant : résumé hebdo automatique au financeur, lecture des captures WhatsApp, réponse automatique aux apprenants
+(l'assistant n'écrit jamais directement à un apprenant).
+
 ## Lot 4 — BPF (~2 jours, à livrer en décembre pour la saison de janvier)
 
 - **Bilan Pédagogique et Financier pré-rempli** depuis les données (heures, apprenants,

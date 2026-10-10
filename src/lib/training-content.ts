@@ -633,6 +633,26 @@ export const TRAINING_MODULES: TrainingModule[] = [
           hrefLabel: "Ouvrir la page Qualité",
         },
       },
+      {
+        id: "assistant",
+        title: "L'assistant IA : il propose, vous validez",
+        intro: "Les boutons ✨ font écrire ou proposer par l'assistant ce que vous feriez à la main ; rien ne part et rien ne s'enregistre sans votre relecture. Il n'apparaît que si l'organisme l'a activé (Paramètres → « Assistant IA »).",
+        steps: [
+          "Prévenir le groupe (fiche du groupe) : séance annulée, déplacée (nouvelle date, salle), formatrice remplacée, information pratique → un message en français simple + sa traduction dans chaque langue du groupe, une ligne WhatsApp par inscrit, envoi tracé dans les carnets.",
+          "Relance d'absence adaptée (Dashboard → « Absents à relancer » → « Message adapté ») : ton selon l'historique (première absence ou série), langue de la personne, relecture avant envoi.",
+          "Dire ce qui s'est passé (Dashboard) : « Fatima vient jeudi, Ali a changé de numéro, Sabrina malade vendredi, rappeler Amina lundi après 17h » → actions proposées (contact, statut, numéro, absence de formatrice, confirmation de réunion, rappel), vous cochez, « Enregistrer ». Mêmes contrôles que la saisie manuelle.",
+          "Rappels datés : « rappeler jeudi après 17h » dans une note de contact devient une ligne datée en tête de « À faire aujourd'hui » (rouge si dépassée) ; coche = fait ; « Ajouter un rappel » à la main.",
+          "Place libérée (fiche du groupe, carte verte) : candidats compatibles (liste d'attente / évalués, bon niveau, pas de chevauchement) et « Proposer la place » rédigé dans leur langue ; l'inscription reste à vous.",
+          "Brief avant d'appeler (icône ✨ dans Apprenants et Admission) : 3 lignes, la prochaine étape, un point d'attention. Sans donnée sensible.",
+          "Données : l'assistant ne reçoit jamais téléphone, email, adresse, santé, RQTH ou titre de séjour. Coût : quelques centimes par message, visible dans Paramètres.",
+        ],
+        tip: "Relisez toujours : l'assistant se trompe parfois sur une date ou un homonyme. Il vous fait gagner la rédaction, pas la décision.",
+        practice: {
+          instruction: "Sur le Dashboard, écrivez une note de test dans « Dire ce qui s'est passé » (« Rappeler [un prénom du Bac à sable] demain matin »), analysez, cochez le rappel et enregistrez : il apparaît dans « À faire aujourd'hui » demain.",
+          href: "/dashboard",
+          hrefLabel: "Ouvrir le Dashboard",
+        },
+      },
     ],
     quiz: [
       {

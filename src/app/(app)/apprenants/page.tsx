@@ -25,6 +25,8 @@ import { SourceFilter } from "@/components/admission/source-filter";
 import { matchesSourceFilter, resolveProvenance } from "@/lib/admission/sources";
 import { BulkInviteButton } from "@/components/admission/bulk-invite-button";
 import { ContactDialog, type ContactEntry } from "@/components/admission/contact-dialog";
+import { BriefButton } from "@/components/assistant/brief-button";
+import { aiConfigured } from "@/lib/ai/client";
 import { WhatsAppButton } from "@/components/admission/whatsapp-button";
 import { headers } from "next/headers";
 import { formatMeetingWhen } from "@/lib/admission/messages";
@@ -50,6 +52,7 @@ export default async function ApprenantsPage({
   const { userId } = await requireRole(["admin", "coordinator"]);
   const { q, statut, source } = await searchParams;
   const supabase = await createClient();
+  const assistant = aiConfigured();
 
   const [{ data: learners }, { data: enrollments }, { data: groups }, { data: attendanceRows }, { data: placementRows }, { data: profile }, { data: contacts }, { data: upcomingMeetings }, { data: invitationRows }, templates, h] = await Promise.all([
     supabase.from("learners").select("*").order("last_name").order("first_name"),
@@ -295,6 +298,7 @@ export default async function ApprenantsPage({
                         currentStatus={l.admission_status}
                         history={historyByLearner.get(l.id) ?? []}
                       />
+                      {assistant && <BriefButton learnerId={l.id} learnerName={`${l.first_name} ${l.last_name}`} />}
                     </span>
                   </TableCell>
                   <TableCell>{l.level_assessed ?? "—"}</TableCell>

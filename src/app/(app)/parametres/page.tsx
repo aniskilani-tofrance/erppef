@@ -14,6 +14,8 @@ import { UsersManager } from "@/components/parametres/users-manager";
 import { SendUpdatesButton } from "@/components/parametres/updates-card";
 import { APP_UPDATES, formatUpdateDate } from "@/lib/updates-content";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { AI_MODEL, aiConfigured, estimateCostUsd } from "@/lib/ai/client";
+import { AiUsageCard, type AiUsageRow } from "@/components/parametres/ai-usage-card";
 
 export default async function ParametresPage() {
   const { orgId, userId } = await requireRole(["admin"]);
@@ -61,6 +63,18 @@ export default async function ParametresPage() {
     .sort((a, b) => b.date.localeCompare(a.date))
     .map((u) => ({ id: u.id, date: u.date, title: u.title, sent: announced[u.id] ?? null }));
   const pendingUpdates = updateRows.filter((u) => !u.sent).length;
+
+  // Assistant IA : appels des 30 derniers jours, par usage, et coût estimé
+  const since30 = new Date(new Date().getTime() - 30 * 86_400_000).toISOString();
+  const { data: aiRows } = await supabase.from("ai_calls").select("feature, input_tokens, output_tokens, cache_read_tokens").eq("org_id", orgId).gte("created_at", since30);
+  const aiByFeature = new Map<string, AiUsageRow>();
+  for (const r of aiRows ?? []) {
+    const cur = aiByFeature.get(r.feature) ?? { feature: r.feature, calls: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0 };
+    cur.calls += 1; cur.inputTokens += r.input_tokens; cur.outputTokens += r.output_tokens; cur.cacheReadTokens += r.cache_read_tokens;
+    aiByFeature.set(r.feature, cur);
+  }
+  const aiUsageRows = [...aiByFeature.values()].sort((a, b) => b.calls - a.calls);
+  const aiCostUsd = aiUsageRows.reduce((n, r) => n + estimateCostUsd(r), 0);
 
   const groupCountByProgram = new Map<string, number>();
   for (const g of groupRefs ?? []) {
@@ -174,6 +188,8 @@ export default async function ParametresPage() {
           </Table>
         </CardContent>
       </Card>
+
+      <AiUsageCard enabled={aiConfigured()} model={AI_MODEL} rows={aiUsageRows} estimatedUsd={aiCostUsd} />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">

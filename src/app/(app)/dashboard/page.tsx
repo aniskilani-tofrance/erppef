@@ -17,6 +17,9 @@ import { AbsenceFollowupsCard } from "@/components/dashboard/absence-followups";
 import { FOLLOWUP_WINDOW_DAYS, computeAbsenceFollowups, type FollowupAttendance } from "@/lib/absences/followup";
 import { loadSessionsToReplace } from "@/lib/remplacements/load";
 import { tickerItemsForRole } from "@/lib/updates-content";
+import { aiConfigured } from "@/lib/ai/client";
+import { NoteBox } from "@/components/assistant/note-box";
+import { RemindersList, type ReminderItem } from "@/components/assistant/reminders-list";
 import {
   ABSENCE_ALERT_THRESHOLD,
   computeLearnerStats,
@@ -71,7 +74,7 @@ export default async function DashboardPage() {
 
   // Coordinatrice qui anime aussi des cours : sa journée de formatrice passe en premier
   const followupSince = new Date(new Date().getTime() - FOLLOWUP_WINDOW_DAYS * 86_400_000).toISOString();
-  const [{ data: myMembership }, { data: myProfile }, toReplace, { data: recentMarks }] = await Promise.all([
+  const [{ data: myMembership }, { data: myProfile }, toReplace, { data: recentMarks }, { data: reminderRows }] = await Promise.all([
     supabase.from("memberships").select("trainer_id").eq("user_id", userId).eq("org_id", orgId).maybeSingle(),
     supabase.from("profiles").select("full_name").eq("id", userId).single(),
     loadSessionsToReplace(supabase),
@@ -80,8 +83,23 @@ export default async function DashboardPage() {
       .select("learner_id, session_id, status, sessions!inner(group_id, starts_at, attendance_closed_at, groups(name))")
       .not("sessions.attendance_closed_at", "is", null)
       .gte("sessions.starts_at", followupSince),
+    // Rappels datés (notes « rappeler jeudi après 17h », saisie directe) : dus aujourd'hui ou en retard
+    supabase
+      .from("reminders")
+      .select("id, text, due_on, due_time, learners(first_name, last_name)")
+      .eq("org_id", orgId)
+      .is("done_at", null)
+      .lte("due_on", today)
+      .order("due_on")
+      .order("due_time", { nullsFirst: false })
+      .limit(20),
   ]);
   const myTrainerId = myMembership?.trainer_id ?? null;
+  const reminders: ReminderItem[] = (reminderRows ?? []).map((r) => {
+    const l = r.learners as unknown as { first_name: string; last_name: string } | null;
+    return { id: r.id, text: r.text, dueOn: r.due_on, dueTime: r.due_time, learnerName: l ? `${l.first_name} ${l.last_name}` : null, overdue: r.due_on < today };
+  });
+  const assistant = aiConfigured();
 
   const [groups, weekLoads, roomLoads, trainers, rooms, attendanceRows, learnersList, unclosedSheets, incompleteGroups, orphanSessions, newLearners, upcomingMeetings, pendingLeaves] = await Promise.all([
     supabase.from("groups").select("id, status", { count: "exact" }).in("status", ["ouvert", "complet", "en_attente"]),
@@ -344,12 +362,15 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {todos.length > 0 && (
+      {assistant && <NoteBox />}
+
+      {(todos.length > 0 || reminders.length > 0) && (
         <Card className="border-amber-300 bg-amber-50/50">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">À faire aujourd&apos;hui ({todos.length})</CardTitle>
+            <CardTitle className="text-base">À faire aujourd&apos;hui ({todos.length + reminders.length})</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
+            <RemindersList items={reminders} />
             <ul className="space-y-1.5 text-sm">
               {todos.slice(0, 8).map((t, i) => (
                 <li key={i}>
@@ -364,7 +385,7 @@ export default async function DashboardPage() {
         </Card>
       )}
 
-      <AbsenceFollowupsCard items={absenceFollowups} senderFirstName={myProfile?.full_name?.split(/\s+/)[0] ?? null} />
+      <AbsenceFollowupsCard items={absenceFollowups} senderFirstName={myProfile?.full_name?.split(/\s+/)[0] ?? null} aiEnabled={assistant} />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <KpiCard icon={<UsersRound className="h-4 w-4" />} label="Groupes actifs" value={String(groups.count ?? 0)} />

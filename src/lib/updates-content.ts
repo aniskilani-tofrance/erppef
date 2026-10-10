@@ -26,6 +26,22 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-10-10-assistant-ia",
+    date: "2026-10-10",
+    title: "Un assistant qui rédige et propose, vous validez",
+    summary: "Six coups de main pour la coordination : prévenir tout un groupe dans chaque langue, relancer un absent avec le bon ton, transformer une note en actions, des rappels datés, la bonne personne pour une place libérée, et un brief avant d'appeler. Rien ne part ni ne s'enregistre sans votre relecture.",
+    items: [
+      { text: "Fiche du groupe → « Prévenir le groupe » : séance annulée, déplacée (nouvelle date, salle) ou formatrice remplacée → un message en français simple et sa traduction dans chaque langue du groupe, une ligne WhatsApp par inscrit, envoi tracé dans les carnets.", roles: TEAM },
+      { text: "Dashboard → « Absents à relancer » → « Message adapté » : la relance tient compte de l'historique (première absence ou série) et de la langue de la personne ; vous relisez avant d'envoyer.", roles: TEAM },
+      { text: "Dashboard → « Dire ce qui s'est passé » : tapez les faits (« Fatima vient jeudi, Ali a changé de numéro, Sabrina malade vendredi ») → les actions sont proposées, vous cochez, « Enregistrer ». Mêmes contrôles que la saisie manuelle.", roles: TEAM },
+      { text: "« Rappeler jeudi après 17h » dans une note de contact devient un rappel daté en tête de « À faire aujourd'hui » ; coche = fait ; « Ajouter un rappel » à la main.", roles: TEAM },
+      { text: "Fiche du groupe : une place se libère → carte verte avec les candidats compatibles (liste d'attente / évalués, bon niveau, pas de chevauchement) et « Proposer la place » rédigé dans leur langue.", roles: TEAM },
+      { text: "Icône ✨ dans Apprenants et Admission : un brief de 3 lignes avant d'appeler (où en est la personne, prochaine étape, point d'attention).", roles: TEAM },
+      { text: "Données : l'assistant ne reçoit jamais téléphone, email, adresse ni donnée sensible. Paramètres → « Assistant IA » : actif ou non, appels et coût estimé des 30 derniers jours.", roles: ["admin"] },
+    ],
+    training: [{ moduleId: "c5-vie-quotidienne", lessonId: "assistant", label: "L'assistant IA : il propose, vous validez" }],
+  },
+  {
     id: "2026-10-10-pastille-groupe",
     date: "2026-10-10",
     title: "Deux pastilles devant chaque nom : provenance et groupe",

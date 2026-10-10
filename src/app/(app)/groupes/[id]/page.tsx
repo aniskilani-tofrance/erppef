@@ -46,6 +46,10 @@ import {
 } from "@/lib/attendance-stats";
 import { trainerStatusSuffix } from "@/lib/referentiels";
 import { groupsByLearner } from "@/lib/admission/group-colors";
+import { aiConfigured } from "@/lib/ai/client";
+import { GroupBroadcastDialog } from "@/components/assistant/group-broadcast-dialog";
+import { FreeSeatsCard, type SeatCandidateRow } from "@/components/assistant/free-seats-card";
+import { freeSeats, matchSeatCandidates, type Slot } from "@/lib/groupes/free-seats";
 
 export default async function GroupePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -70,7 +74,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
         .select("id, learner_id, status, left_on, learners(first_name, last_name, level_assessed, phone, email)")
         .eq("group_id", id)
         .order("status"), // abandons et terminés restent visibles (badges + bilans)
-      supabase.from("learners").select("id, first_name, last_name, learner_no, level_assessed, first_language, city, district, qpv, gender, activity_status, education_level, prescriber, birth_date, contact_source, contact_source_detail").order("last_name"),
+      supabase.from("learners").select("id, first_name, last_name, learner_no, level_assessed, first_language, city, district, qpv, gender, activity_status, education_level, prescriber, birth_date, contact_source, contact_source_detail, admission_status, phone").order("last_name"),
       supabase.from("funders").select("id, name").eq("is_active", true).order("name"),
       supabase
         .from("attendances")
@@ -90,7 +94,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
   // Groupes actuels de chaque apprenant disponible (pastille groupe du sélecteur d'inscription)
   const { data: allEnrollmentRows } = await supabase
     .from("enrollments")
-    .select("learner_id, group_id, status, groups(name, trainers:trainer_id(color))")
+    .select("learner_id, group_id, status, groups(name, weekly_pattern, trainers:trainer_id(color))")
     .eq("status", "inscrit");
   const groupsOfLearner = groupsByLearner(
     (allEnrollmentRows ?? []).map((e) => ({ learner_id: e.learner_id, group_id: e.group_id, status: e.status, groups: e.groups as unknown as { name: string; trainers?: { color: string | null } | null } | null })),
@@ -123,6 +127,47 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
     .sort((a, b) => a.name.localeCompare(b.name, "fr"));
 
   const canWrite = role === "admin" || role === "coordinator";
+  const assistant = aiConfigured();
+  // Assistant : « Prévenir le groupe » (séances à venir, salles, formatrices) et places libérées
+  const nowMs = new Date().getTime();
+  const upcomingSessionOptions = (sessions ?? [])
+    .filter((s) => s.status !== "annulee" && new Date(s.starts_at).getTime() >= nowMs - 3_600_000)
+    .slice(0, 30)
+    .map((s) => ({
+      id: s.id,
+      label: `${new Date(s.starts_at).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short", timeZone: "Europe/Paris" })} ${utcToLocalTime(s.starts_at)}–${utcToLocalTime(s.ends_at)}`,
+    }));
+  const { data: roomRows } = canWrite ? await supabase.from("rooms").select("id, name").eq("is_active", true).order("name") : { data: [] as { id: string; name: string }[] };
+  const patternsByLearner = new Map<string, Slot[][]>();
+  for (const e of allEnrollmentRows ?? []) {
+    const g = e.groups as unknown as { weekly_pattern: Slot[] | null } | null;
+    if (!g?.weekly_pattern?.length) continue;
+    patternsByLearner.set(e.learner_id, [...(patternsByLearner.get(e.learner_id) ?? []), g.weekly_pattern]);
+  }
+  const seatsFree = freeSeats(group.capacity, (enrollments ?? []).filter((e) => e.status === "inscrit").length);
+  const groupEntryLevel = (group.programs as unknown as { entry_level?: string | null } | null)?.entry_level ?? null;
+  const groupPattern = ((group.weekly_pattern as Slot[] | null) ?? []);
+  const enrolledHere = new Set((enrollments ?? []).map((e) => e.learner_id));
+  const seatCandidateIds = new Set(
+    matchSeatCandidates(
+      { entryLevel: groupEntryLevel, pattern: groupPattern },
+      (learners ?? []).filter((l) => !enrolledHere.has(l.id)).map((l) => ({ id: l.id, status: l.admission_status, level: l.level_assessed, currentPatterns: patternsByLearner.get(l.id) ?? [] })),
+    ).map((c) => c.id),
+  );
+  const seatCandidates: SeatCandidateRow[] = canWrite && seatsFree > 0 && group.status !== "termine" && group.status !== "annule"
+    ? (learners ?? [])
+        .filter((l) => seatCandidateIds.has(l.id))
+        .map((l) => ({
+          id: l.id,
+          firstName: l.first_name,
+          name: `${l.first_name} ${l.last_name}`,
+          ref: l.learner_no != null ? `A-${String(l.learner_no).padStart(4, "0")}` : "—",
+          level: l.level_assessed,
+          status: l.admission_status ?? "nouveau",
+          phone: l.phone,
+        }))
+        .slice(0, 12)
+    : [];
 
   // Envoi hebdomadaire des feuilles d'émargement au financeur : réglages (colonnes du groupe) + historique.
   const { data: dispatchRows } = canWrite
@@ -286,6 +331,15 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
           <Badge style={{ backgroundColor: funder.color, color: "white" }}>{funder.name}</Badge>
         )}
         <span className="ml-auto flex items-center gap-3">
+          {canWrite && assistant && group.status !== "termine" && group.status !== "annule" && (
+            <GroupBroadcastDialog
+              groupId={id}
+              sessions={upcomingSessionOptions}
+              rooms={roomRows ?? []}
+              trainers={(coTrainerOptions ?? []).map((t) => ({ id: t.id, name: `${t.first_name} ${t.last_name ?? ""}`.trim() }))}
+              disabled={planningRecipients.length === 0}
+            />
+          )}
           {canWrite && <DuplicateGroupDialog groupId={id} groupName={group.name} />}
           {canWrite && (
             <GroupEditDialog
@@ -435,6 +489,8 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
           </CardContent>
         </Card>
       )}
+
+      <FreeSeatsCard groupId={id} free={seatsFree} candidates={seatCandidates} aiEnabled={assistant} />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -18,6 +19,9 @@ import { loadTemplates } from "@/lib/admission/load-templates";
 import { DEFAULT_TEMPLATES, MESSAGE_STAGES, type Templates } from "@/lib/admission/templates";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { LEVELS } from "@/lib/referentiels";
+import { aiConfigured } from "@/lib/ai/client";
+import { hasReminderCue } from "@/lib/ai/prompts";
+import { extractReminderFromNote } from "@/app/(app)/assistant/actions";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -89,6 +93,13 @@ export async function logContact(raw: z.infer<typeof contactSchema>): Promise<Ac
     if (statusError) return { ok: false, error: translatePgError(statusError) };
   } else {
     await advanceStatus(supabase, [d.learnerId], "contacte");
+  }
+
+  // « Rappeler jeudi après 17h » dans la note → rappel daté dans « À faire aujourd'hui »
+  // (après la réponse, sans la ralentir ; silencieux si l'assistant est absent ou se trompe).
+  const note = d.note?.trim() ?? "";
+  if (note && aiConfigured() && hasReminderCue(note)) {
+    after(() => extractReminderFromNote({ orgId, userId, learnerId: d.learnerId, note }).catch(() => undefined));
   }
 
   revalidateAdmission();

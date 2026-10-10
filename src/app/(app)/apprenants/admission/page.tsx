@@ -26,6 +26,8 @@ import { formatPhone } from "@/lib/admission/phone";
 import { ADMISSION_STATUSES, admissionBadgeClass } from "@/lib/admission/status";
 import { learnerRef } from "@/lib/refs";
 import { ProposePoeiButton } from "@/components/poei-candidates/candidate-controls";
+import { BriefButton } from "@/components/assistant/brief-button";
+import { aiConfigured } from "@/lib/ai/client";
 
 // Parcours d'admission : qui contacter aujourd'hui (WhatsApp en un clic), les réunions
 // d'information à venir et où en est chacun (entonnoir).
@@ -69,6 +71,7 @@ function LearnerRows({
   pendingTestUrl,
   poeiByLearner,
   groupsOf,
+  assistant,
 }: {
   rows: LearnerRow[];
   empty: string;
@@ -78,6 +81,7 @@ function LearnerRows({
   pendingTestUrl: Map<string, string>;
   poeiByLearner: Map<string, string>;
   groupsOf: Map<string, GroupRef[]>;
+  assistant: boolean;
 }) {
   if (rows.length === 0) return <p className="py-4 text-sm text-muted-foreground">{empty}</p>;
   const lastContactAt = (id: string) => history.get(id)?.[0]?.contactedAt ?? null;
@@ -134,6 +138,7 @@ function LearnerRows({
                   currentStatus={l.admission_status}
                   history={history.get(l.id) ?? []}
                 />
+                {assistant && <BriefButton learnerId={l.id} learnerName={`${l.first_name} ${l.last_name}`} />}
                 <ProposePoeiButton learnerId={l.id} candidateId={poeiByLearner.get(l.id) ?? null} />
               </span>
             </TableCell>
@@ -147,6 +152,7 @@ function LearnerRows({
 export default async function AdmissionPage() {
   const { userId } = await requireRole(["admin", "coordinator"]);
   const supabase = await createClient();
+  const assistant = aiConfigured();
 
   const [{ data: learners }, { data: contacts }, { data: meetingRows }, { data: rooms }, { data: profile }, { data: pendingTests }, templates, h] = await Promise.all([
     supabase
@@ -425,7 +431,7 @@ export default async function AdmissionPage() {
           </p>
         </CardHeader>
         <CardContent>
-          <LearnerRows rows={toContact} senderFirstName={senderFirstName} history={historyByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} empty="Personne à contacter : tous les nouveaux ont été joints. Les fiches déposées dans le Drive arrivent ici chaque nuit." />
+          <LearnerRows rows={toContact} senderFirstName={senderFirstName} history={historyByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} assistant={assistant} empty="Personne à contacter : tous les nouveaux ont été joints. Les fiches déposées dans le Drive arrivent ici chaque nuit." />
           {toContact.length > 80 && (
             <p className="mt-2 text-xs text-muted-foreground">
               80 premiers affichés — <Link href="/apprenants?statut=nouveau" className="underline">voir tous les nouveaux</Link>.
@@ -442,7 +448,7 @@ export default async function AdmissionPage() {
           </p>
         </CardHeader>
         <CardContent>
-          <LearnerRows rows={toInvite} senderFirstName={senderFirstName} history={historyByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} empty="Aucun contacté en attente de convocation." />
+          <LearnerRows rows={toInvite} senderFirstName={senderFirstName} history={historyByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} assistant={assistant} empty="Aucun contacté en attente de convocation." />
         </CardContent>
       </Card>
 
@@ -454,7 +460,7 @@ export default async function AdmissionPage() {
           </p>
         </CardHeader>
         <CardContent>
-          <LearnerRows rows={toEnroll} senderFirstName={senderFirstName} history={historyByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} empty="Personne en attente d'inscription." />
+          <LearnerRows rows={toEnroll} senderFirstName={senderFirstName} history={historyByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} assistant={assistant} empty="Personne en attente d'inscription." />
         </CardContent>
       </Card>
 
@@ -466,7 +472,7 @@ export default async function AdmissionPage() {
           </p>
         </CardHeader>
         <CardContent>
-          <LearnerRows rows={waiting} senderFirstName={senderFirstName} history={historyByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} empty="Personne en liste d'attente." />
+          <LearnerRows rows={waiting} senderFirstName={senderFirstName} history={historyByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} assistant={assistant} empty="Personne en liste d'attente." />
         </CardContent>
       </Card>
     </div>
