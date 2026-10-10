@@ -67,7 +67,7 @@ const broadcastSchema = z.object({
   details: z.string().max(600).nullable(),
 });
 export type BroadcastMessage = { learnerId: string; firstName: string; phone: string | null; language: string | null; text: string };
-export type BroadcastResult = { ok: true; messages: BroadcastMessage[]; fr: string } | { ok: false; error: string };
+export type BroadcastResult = { ok: true; messages: BroadcastMessage[]; fr: string; translations: { language: string; text: string }[] } | { ok: false; error: string };
 
 export async function draftGroupBroadcast(raw: z.infer<typeof broadcastSchema>): Promise<BroadcastResult> {
   const parsed = broadcastSchema.safeParse(raw);
@@ -118,7 +118,7 @@ export async function draftGroupBroadcast(raw: z.infer<typeof broadcastSchema>):
       language: l.first_language,
       text: compose(out.fr, isFrench(l.first_language) ? null : (trByKey.get(normLang(l.first_language)) ?? null)),
     }));
-    return { ok: true, messages, fr: out.fr };
+    return { ok: true, messages, fr: out.fr, translations: out.translations };
   } catch (e) {
     return fail(e);
   }

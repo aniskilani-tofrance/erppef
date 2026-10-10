@@ -3,7 +3,7 @@
 // défaut (ici) que la coordination peut retoucher dans l'onglet Admission → « Messages »
 // (enregistré dans organizations.settings.whatsapp_templates, sans redéploiement).
 //
-// Variables : {prenom} {expediteur} {signature} {organisme} {lien} {date} {lieu}
+// Variables : {prenom} {expediteur} {signature} {organisme} {lien} {date} {lieu} {lien_whatsapp}
 // {groupe} {date_debut} {niveau}. Une ligne dont toutes les variables sont vides
 // disparaît (ex. « 📍 {lieu} » sans lieu). Vouvoiement, phrases courtes : les
 // destinataires apprennent le français.
@@ -186,7 +186,7 @@ Merci d'arriver 10 minutes avant. Si vous ne pouvez pas venir un jour, prévenez
     code: "planning_groupe",
     label: "Planning du groupe",
     when: "Fiche du groupe, bouton WhatsApp à côté de chaque inscrit : les horaires, les dates et le lieu du groupe sont remplis automatiquement.",
-    variables: ["prenom", "signature", "organisme", "groupe", "horaires", "date_debut", "date_fin", "lieu", "acces", "vacances"],
+    variables: ["prenom", "signature", "organisme", "groupe", "horaires", "date_debut", "date_fin", "lieu", "acces", "vacances", "lien_whatsapp"],
     text: `Bonjour {prenom},
 
 Voici votre planning de cours de français ({groupe}) avec {organisme} :
@@ -196,6 +196,7 @@ Du {date_debut} au {date_fin}.
 📍 {lieu}
 🧭 {acces}
 {vacances}
+💬 Groupe WhatsApp de la classe (infos pratiques, rappels) : {lien_whatsapp}
 
 Merci d'arriver 10 minutes avant. Si vous ne pouvez pas venir un jour, prévenez-nous par ce message.
 
@@ -241,7 +242,7 @@ export function resolveTemplates(settings: unknown): Templates {
 }
 
 export type TemplateVars = Partial<Record<
-  "prenom" | "expediteur" | "signature" | "organisme" | "lien" | "date" | "lieu" | "acces" | "groupe" | "date_debut" | "date_fin" | "horaires" | "vacances" | "niveau",
+  "prenom" | "expediteur" | "signature" | "organisme" | "lien" | "date" | "lieu" | "acces" | "groupe" | "date_debut" | "date_fin" | "horaires" | "vacances" | "niveau" | "lien_whatsapp",
   string | null | undefined
 >>;
 

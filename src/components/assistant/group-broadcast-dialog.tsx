@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Copy, Megaphone, Sparkles } from "lucide-react";
 import { draftGroupBroadcast, type BroadcastMessage } from "@/app/(app)/assistant/actions";
 import { WhatsAppButton } from "@/components/admission/whatsapp-button";
+import { groupBroadcastText } from "@/lib/groupes/whatsapp-group";
 import { Button } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
@@ -32,12 +33,14 @@ export function GroupBroadcastDialog({
   rooms,
   trainers,
   disabled,
+  whatsappGroupUrl = null,
 }: {
   groupId: string;
   sessions: { id: string; label: string }[];
   rooms: { id: string; name: string }[];
   trainers: { id: string; name: string }[];
   disabled?: boolean;
+  whatsappGroupUrl?: string | null;
 }) {
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState<Kind>("annulation");
@@ -50,6 +53,7 @@ export function GroupBroadcastDialog({
   const [details, setDetails] = useState("");
   const [messages, setMessages] = useState<BroadcastMessage[] | null>(null);
   const [fr, setFr] = useState("");
+  const [groupText, setGroupText] = useState("");
   const [pending, startTransition] = useTransition();
 
   function prepare() {
@@ -68,6 +72,7 @@ export function GroupBroadcastDialog({
       }
       setMessages(r.messages);
       setFr(r.fr);
+      setGroupText(groupBroadcastText(r.fr, r.translations));
     });
   }
   const traceNote = `Message au groupe (${KINDS.find((k) => k.value === kind)?.label.toLowerCase()})`;
@@ -156,6 +161,21 @@ export function GroupBroadcastDialog({
               <p className="mb-1 text-xs font-medium text-muted-foreground">Message en français (chaque personne reçoit aussi sa langue si elle est connue)</p>
               <pre className="whitespace-pre-wrap font-sans text-sm">{fr}</pre>
             </div>
+            <div className="flex flex-wrap items-center gap-2 rounded-md border border-emerald-300 bg-emerald-50/50 p-2 text-sm">
+              <span className="text-xs text-muted-foreground">Groupe WhatsApp de la classe : un seul texte, le français puis chaque langue.</span>
+              <span className="ml-auto inline-flex gap-2">
+                <Button variant="outline" size="sm" className="h-8" onClick={() => { navigator.clipboard.writeText(groupText); toast.success("Message pour le groupe copié : collez-le dans le groupe WhatsApp."); }}>
+                  <Copy className="mr-1 h-3.5 w-3.5" />
+                  Copier pour le groupe
+                </Button>
+                {whatsappGroupUrl && (
+                  <Button variant="ghost" size="sm" className="h-8" asChild>
+                    <a href={whatsappGroupUrl} target="_blank" rel="noopener noreferrer">Ouvrir le groupe</a>
+                  </Button>
+                )}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">Envoi individuel ci-dessous (tracé dans le carnet de chacun) : utile pour ceux qui ne sont pas dans le groupe.</p>
             <ul className="divide-y rounded-md border">
               {messages.map((m) => (
                 <li key={m.learnerId} className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 text-sm">

@@ -26,6 +26,20 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-10-10-groupe-whatsapp",
+    date: "2026-10-10",
+    title: "Un groupe WhatsApp par classe, sans exposer les numéros",
+    summary: "La fiche du groupe garde le lien d'invitation du groupe WhatsApp de la classe (QR code à montrer en cours, lien dans le message Planning), chaque apprenant dit s'il accepte d'y être ajouté, et « Prévenir le groupe » donne le message à coller dans le groupe, en français puis dans chaque langue.",
+    items: [
+      { text: "Fiche du groupe → « Modifier » → « Groupe WhatsApp de la classe » : collez le lien d'invitation (chat.whatsapp.com/…). Créez le groupe depuis le téléphone de l'organisme, de préférence un groupe d'annonces de Communauté (seules vous et la formatrice écrivez, numéros cachés).", roles: TEAM },
+      { text: "Carte « Groupe WhatsApp de la classe » sur la fiche du groupe : QR code à montrer au premier cours, lien à copier, et qui ajouter / qui a refusé / qui retirer (abandon, fin de parcours). Le message « Planning » envoyé aux inscrits contient le lien, sauf pour ceux qui ont refusé.", roles: TEAM },
+      { text: "Fiche apprenant → « Parcours d'admission » → « Groupe WhatsApp de la classe » : accepte / refuse / pas encore demandé. La date de l'accord est gardée (RGPD).", roles: TEAM },
+      { text: "« Prévenir le groupe » → « Copier pour le groupe » : un seul texte, le français puis chaque langue, à coller dans le groupe d'annonces. L'individuel (absence, place, convocation) reste en message privé tracé.", roles: TEAM },
+      { text: "Votre classe a un groupe WhatsApp ? Son QR code est sur la fiche du groupe : montrez-le au premier cours, chaque personne rejoint elle-même. N'ajoutez personne qui n'a pas dit oui (la liste est sur la même carte).", roles: ["trainer"] },
+    ],
+    training: [{ moduleId: "c5-vie-quotidienne", lessonId: "groupe-whatsapp", label: "Le groupe WhatsApp de la classe" }],
+  },
+  {
     id: "2026-10-10-assistant-ia",
     date: "2026-10-10",
     title: "Un assistant qui rédige et propose, vous validez",

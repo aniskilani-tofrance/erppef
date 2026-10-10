@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { normalizeWhatsAppGroupLink } from "@/lib/groupes/whatsapp-group";
 import { requireRole } from "@/lib/auth";
 import { loadEngineData } from "@/lib/engine/loader";
 import { proposeGroupPlan } from "@/lib/engine/propose";
@@ -161,6 +162,7 @@ const groupUpdateSchema = z.object({
   capacity: z.number().int().positive().nullable(),
   notes: z.string().nullable(),
   remindersEnabled: z.boolean(),
+  whatsappGroupUrl: z.string().nullable().optional(),
 });
 
 // Édition d'un groupe après création : nom, statut (clôture, annulation), financeur,
@@ -169,6 +171,15 @@ export async function updateGroup(raw: z.infer<typeof groupUpdateSchema>): Promi
   const parsed = groupUpdateSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "Données invalides" };
   const d = parsed.data;
+  // Lien d'invitation WhatsApp : vide = pas de groupe ; sinon un lien chat.whatsapp.com obligatoirement
+  let whatsappGroupUrl: string | null | undefined;
+  if (d.whatsappGroupUrl !== undefined) {
+    if (!d.whatsappGroupUrl?.trim()) whatsappGroupUrl = null;
+    else {
+      whatsappGroupUrl = normalizeWhatsAppGroupLink(d.whatsappGroupUrl);
+      if (!whatsappGroupUrl) return { ok: false, error: "Le lien doit être un lien d'invitation WhatsApp (https://chat.whatsapp.com/…) : dans le groupe → Inviter via un lien." };
+    }
+  }
 
   await requireRole(["admin", "coordinator"]);
   const supabase = await createClient();
@@ -182,6 +193,7 @@ export async function updateGroup(raw: z.infer<typeof groupUpdateSchema>): Promi
       capacity: d.capacity,
       notes: d.notes,
       reminders_enabled: d.remindersEnabled,
+      ...(whatsappGroupUrl !== undefined ? { whatsapp_group_url: whatsappGroupUrl } : {}),
     })
     .eq("id", d.groupId);
   if (error) return { ok: false, error: translatePgError(error) };

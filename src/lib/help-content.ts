@@ -314,6 +314,18 @@ export const HELP_SECTIONS: HelpSection[] = [
         ],
       },
       {
+        title: "Le groupe WhatsApp de la classe (collectif) — et ce qui reste en privé",
+        steps: [
+          "Un groupe WhatsApp par classe, pour le COLLECTIF seulement : rappel de la séance, salle changée, consignes (« apportez votre livret »), photo du tableau. Tout ce qui est INDIVIDUEL (absence, place proposée, convocation, test) reste en message privé depuis l'ERP, tracé dans le carnet de contact.",
+          "Créez-le depuis le téléphone de l'organisme, jamais depuis un téléphone perso. Forme recommandée : une Communauté WhatsApp « ParlerEmploi » avec un groupe d'annonces par classe — seules la coordination et la formatrice écrivent, et les membres ne voient pas les numéros des autres. Un groupe classique expose le numéro de chacun à tous : à réserver aux classes qui le demandent, avec accord de chaque personne.",
+          "Collez le lien d'invitation (Infos du groupe → « Inviter via un lien », de la forme chat.whatsapp.com/…) sur la fiche du groupe → « Modifier » → « Groupe WhatsApp de la classe ». Tout autre lien est refusé.",
+          "La carte « Groupe WhatsApp de la classe » affiche alors le QR code à montrer au premier cours (chaque personne rejoint elle-même), le lien à copier, et le message « Planning » envoyé aux inscrits contient le lien — sauf pour ceux qui ont refusé.",
+          "L'accord de chaque personne : fiche apprenant → bloc « Parcours d'admission » → « Groupe WhatsApp de la classe » : pas encore demandé / accepte / refuse. Posez la question à l'admission ou au premier cours. La date de l'accord est gardée en base (preuve RGPD). La carte du groupe liste qui ajouter (avec le numéro), qui n'a pas encore répondu, qui a refusé, et qui RETIRER du groupe (abandon ou fin de parcours : à faire depuis le téléphone, l'ERP ne peut pas le faire).",
+          "« Prévenir le groupe » (assistant) : après « Préparer les messages », le bouton « Copier pour le groupe » assemble le français puis chaque langue en un seul texte à coller dans le groupe d'annonces (« Ouvrir le groupe » l'ouvre). L'envoi individuel reste possible juste en dessous, pour ceux qui ne sont pas dans le groupe.",
+          "L'ERP ne peut pas écrire dans un groupe WhatsApp (WhatsApp ne l'autorise à aucun outil) : il prépare, vous collez depuis le téléphone. Rien de ce qui se dit dans le groupe n'est tracé dans les carnets.",
+        ],
+      },
+      {
         title: "Faire vivre le groupe (statut, rattrapages)",
         steps: [
           "Fiche du groupe → « Modifier » : renommez, changez le financeur, la capacité, les notes, et le statut (En attente, Ouvert, Complet, Terminé, Annulé).",

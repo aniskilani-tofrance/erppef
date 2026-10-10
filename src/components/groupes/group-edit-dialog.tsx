@@ -36,6 +36,7 @@ export function GroupEditDialog({
     capacity: number | null;
     notes: string | null;
     remindersEnabled: boolean;
+    whatsappGroupUrl?: string | null;
   };
   funders: { id: string; name: string }[];
 }) {
@@ -46,6 +47,7 @@ export function GroupEditDialog({
   const [capacity, setCapacity] = useState(initial.capacity ? String(initial.capacity) : "");
   const [notes, setNotes] = useState(initial.notes ?? "");
   const [reminders, setReminders] = useState(initial.remindersEnabled);
+  const [whatsappUrl, setWhatsappUrl] = useState(initial.whatsappGroupUrl ?? "");
   const [pending, startTransition] = useTransition();
 
   function submit() {
@@ -58,6 +60,7 @@ export function GroupEditDialog({
         capacity: capacity ? Number(capacity) : null,
         notes: notes.trim() || null,
         remindersEnabled: reminders,
+        whatsappGroupUrl: whatsappUrl.trim() || null,
       });
       if (!result.ok) {
         toast.error(result.error);
@@ -117,6 +120,13 @@ export function GroupEditDialog({
           <div className="space-y-2">
             <Label>Notes</Label>
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+          </div>
+          <div className="space-y-2">
+            <Label>Groupe WhatsApp de la classe (lien d&apos;invitation)</Label>
+            <Input value={whatsappUrl} onChange={(e) => setWhatsappUrl(e.target.value)} placeholder="https://chat.whatsapp.com/…" inputMode="url" />
+            <p className="text-xs text-muted-foreground">
+              Créez le groupe depuis le téléphone de l&apos;organisme (de préférence un groupe d&apos;annonces d&apos;une Communauté : seuls vous et la formatrice écrivez, les numéros restent cachés), puis Infos du groupe → « Inviter via un lien ».
+            </p>
           </div>
           <div className="space-y-2">
             <label className="flex items-start gap-2 text-sm">

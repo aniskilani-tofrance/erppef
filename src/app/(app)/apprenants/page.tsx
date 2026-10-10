@@ -380,6 +380,7 @@ export default async function ApprenantsPage({
                         contactSource: l.contact_source ?? "nc",
                         contactSourceDetail: l.contact_source_detail ?? "",
                         admissionStatus: l.admission_status ?? "nouveau",
+                        whatsappGroupConsent: l.whatsapp_group_consent == null ? "nc" : l.whatsapp_group_consent ? "oui" : "non",
                         oralTestOn: l.oral_test_on ?? "",
                         oralTestLevel: l.oral_test_level ?? "nd",
                         oralTestEvaluator: l.oral_test_evaluator ?? "",

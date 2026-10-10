@@ -34,6 +34,7 @@ const VAR_HELP: Record<string, string> = {
   horaires: "créneaux hebdomadaires du groupe",
   vacances: "mention vacances scolaires",
   niveau: "niveau évalué",
+  lien_whatsapp: "lien d'invitation au groupe WhatsApp de la classe (fiche du groupe)",
 };
 
 const PREVIEW_VARS = {
@@ -42,6 +43,7 @@ const PREVIEW_VARS = {
   acces: "Métro 13 Mairie de Saint-Ouen. Sonner « ParlerEmploi », 2e étage.",
   groupe: "PEF A1 — Groupe 1", date_debut: "jeudi 1er octobre 2026", date_fin: "mardi 8 juin 2027",
   horaires: "lundi 9h-12h · mardi 9h-12h · mardi 13h-16h", vacances: "Pas de cours pendant les vacances scolaires.", niveau: "A1",
+  lien_whatsapp: "https://chat.whatsapp.com/exemple",
 };
 
 // Retouche des messages, étape par étape : un texte par étape, variables entre accolades,

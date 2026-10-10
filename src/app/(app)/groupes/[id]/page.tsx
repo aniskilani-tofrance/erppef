@@ -50,6 +50,8 @@ import { aiConfigured } from "@/lib/ai/client";
 import { GroupBroadcastDialog } from "@/components/assistant/group-broadcast-dialog";
 import { FreeSeatsCard, type SeatCandidateRow } from "@/components/assistant/free-seats-card";
 import { freeSeats, matchSeatCandidates, type Slot } from "@/lib/groupes/free-seats";
+import { whatsappGroupRoster, type RosterMember } from "@/lib/groupes/whatsapp-group";
+import { WhatsAppGroupCard } from "@/components/groupes/whatsapp-group-card";
 
 export default async function GroupePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -71,7 +73,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
       supabase.from("v_group_hours").select("*").eq("group_id", id).single(),
       supabase
         .from("enrollments")
-        .select("id, learner_id, status, left_on, learners(first_name, last_name, level_assessed, phone, email)")
+        .select("id, learner_id, status, left_on, learners(first_name, last_name, level_assessed, phone, email, whatsapp_group_consent)")
         .eq("group_id", id)
         .order("status"), // abandons et terminés restent visibles (badges + bilans)
       supabase.from("learners").select("id, first_name, last_name, learner_no, level_assessed, first_language, city, district, qpv, gender, activity_status, education_level, prescriber, birth_date, contact_source, contact_source_detail, admission_status, phone").order("last_name"),
@@ -112,16 +114,18 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
     acces: roomInfo?.access_notes ?? null,
     vacances: planningData ? describeHolidays(planningData) : (group.skip_school_holidays === false ? "Les cours ont lieu aussi pendant les vacances scolaires." : "Pas de cours pendant les vacances scolaires."),
   };
+  const whatsappGroupUrl = (group.whatsapp_group_url as string | null) ?? null;
   const planningRecipients: PlanningRecipient[] = (enrollments ?? [])
     .filter((e) => e.status === "inscrit")
     .map((e) => {
-      const l = e.learners as unknown as { first_name: string; last_name: string; phone: string | null; email: string | null } | null;
+      const l = e.learners as unknown as { first_name: string; last_name: string; phone: string | null; email: string | null; whatsapp_group_consent: boolean | null } | null;
       return {
         learnerId: e.learner_id,
         name: l ? `${l.first_name} ${l.last_name}` : "—",
         phone: l?.phone ?? null,
         email: l?.email ?? null,
-        message: buildStageMessage("planning_groupe", { ...baseVars(l?.first_name, senderFirstName), ...planningVars }, templates),
+        // Le lien du groupe WhatsApp n'est proposé qu'à ceux qui n'ont pas refusé
+        message: buildStageMessage("planning_groupe", { ...baseVars(l?.first_name, senderFirstName), ...planningVars, lien_whatsapp: l?.whatsapp_group_consent === false ? null : whatsappGroupUrl }, templates),
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name, "fr"));
@@ -297,6 +301,15 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
     ],
     comments: (surveyRows ?? []).map((r) => r.comment).filter((c): c is string => Boolean(c)),
   };
+  // Groupe WhatsApp de la classe : QR code du lien d'invitation + qui ajouter / retirer
+  const whatsappQr = whatsappGroupUrl ? await QRCode.toDataURL(whatsappGroupUrl, { width: 220, margin: 1 }) : null;
+  const whatsappRoster = whatsappGroupRoster(
+    (enrollments ?? []).map((e): RosterMember => {
+      const l = e.learners as unknown as { first_name: string; last_name: string; phone: string | null; whatsapp_group_consent: boolean | null } | null;
+      return { learnerId: e.learner_id, name: l ? `${l.first_name} ${l.last_name}` : "—", phone: l?.phone ?? null, status: e.status as RosterMember["status"], consent: l?.whatsapp_group_consent ?? null };
+    }),
+  );
+
   let surveyUrl: string | null = null;
   let surveyQr: string | null = null;
   if (group.survey_token) {
@@ -338,6 +351,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
               rooms={roomRows ?? []}
               trainers={(coTrainerOptions ?? []).map((t) => ({ id: t.id, name: `${t.first_name} ${t.last_name ?? ""}`.trim() }))}
               disabled={planningRecipients.length === 0}
+              whatsappGroupUrl={whatsappGroupUrl}
             />
           )}
           {canWrite && <DuplicateGroupDialog groupId={id} groupName={group.name} />}
@@ -351,6 +365,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
                 capacity: group.capacity,
                 notes: group.notes,
                 remindersEnabled: group.reminders_enabled ?? false,
+                whatsappGroupUrl,
               }}
               funders={allFunders ?? []}
             />
@@ -435,6 +450,8 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
           <PlanningShare groupId={id} recipients={planningRecipients} canWrite={canWrite} />
         </CardContent>
       </Card>
+
+      <WhatsAppGroupCard url={whatsappGroupUrl} qrDataUrl={whatsappQr} roster={whatsappRoster} canWrite={canWrite} />
 
       <Card>
         <CardHeader className="pb-2">

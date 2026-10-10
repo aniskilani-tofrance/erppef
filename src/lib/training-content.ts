@@ -615,6 +615,20 @@ export const TRAINING_MODULES: TrainingModule[] = [
         tip: "Tout est calculé depuis les émargements réels : si les feuilles sont clôturées au fil de l'eau, vos documents sont toujours justes.",
       },
       {
+        id: "groupe-whatsapp",
+        title: "Le groupe WhatsApp de la classe",
+        intro: "Un groupe par classe pour le collectif ; l'individuel reste en message privé tracé. Le groupe est créé depuis le téléphone de l'organisme, l'ERP garde le lien, le QR code et l'accord de chacun.",
+        steps: [
+          "Créez une Communauté WhatsApp « ParlerEmploi » depuis le téléphone de l'organisme, avec un groupe d'annonces par classe (seules vous et la formatrice écrivez, numéros cachés). Un groupe classique montre le numéro de chacun à tous : seulement si la classe le demande, avec l'accord de chaque personne.",
+          "Fiche du groupe → « Modifier » → collez le lien d'invitation (chat.whatsapp.com/…). La carte « Groupe WhatsApp de la classe » affiche le QR code à montrer au premier cours et le lien à copier ; le message « Planning » envoyé aux inscrits le contient aussi (sauf refus).",
+          "Fiche apprenant → « Parcours d'admission » → « Groupe WhatsApp de la classe » : accepte / refuse / pas encore demandé. Posez la question à l'admission ou au premier cours ; la date de l'accord est conservée.",
+          "La carte du groupe dit qui ajouter (avec le numéro), qui n'a pas répondu, qui a refusé, et qui retirer (abandon, fin de parcours). Ajouts et retraits se font depuis le téléphone : l'ERP ne peut pas écrire dans un groupe WhatsApp.",
+          "« Prévenir le groupe » → « Copier pour le groupe » : le français puis chaque langue en un seul texte, à coller dans le groupe d'annonces. Gardez l'envoi individuel pour ceux qui n'y sont pas.",
+          "Règle : collectif dans le groupe (rappels, salle, consignes) ; individuel en privé et tracé (absence, place, convocation, test).",
+        ],
+        tip: "Le groupe d'annonces d'une Communauté règle le vrai problème : les apprenants ne voient pas les numéros des autres.",
+      },
+      {
         id: "qualite",
         title: "Assiduité et audit Qualiopi",
         steps: [

@@ -72,6 +72,7 @@ const learnerSchema = z.object({
   contactSourceDetail: z.string().nullable().optional(),
   // Parcours d'admission + entretien oral d'entrée
   admissionStatus: z.enum(ADMISSION_STATUS_CODES).optional(),
+  whatsappGroupConsent: z.boolean().nullable().optional(),
   oralTestOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   oralTestLevel: z.enum(LEVELS).nullable().optional(),
   oralTestEvaluator: z.string().nullable().optional(),
@@ -117,6 +118,7 @@ export async function upsertLearner(raw: z.infer<typeof learnerSchema>): Promise
     ...(d.contactSource !== undefined ? { contact_source: d.contactSource } : {}),
     ...(d.contactSourceDetail !== undefined ? { contact_source_detail: d.contactSourceDetail?.trim() || null } : {}),
     ...(d.admissionStatus ? { admission_status: d.enrollGroupId ? "inscrit" : d.admissionStatus } : {}),
+    ...(d.whatsappGroupConsent !== undefined ? { whatsapp_group_consent: d.whatsappGroupConsent } : {}),
     ...(d.oralTestOn !== undefined ? { oral_test_on: d.oralTestOn } : {}),
     ...(d.oralTestLevel !== undefined ? { oral_test_level: d.oralTestLevel } : {}),
     ...(d.oralTestEvaluator !== undefined ? { oral_test_evaluator: d.oralTestEvaluator?.trim() || null } : {}),

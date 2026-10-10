@@ -59,6 +59,7 @@ export type LearnerFormValues = {
   contactSource: string; // 'nc' = non renseigné
   contactSourceDetail: string;
   admissionStatus: string;
+  whatsappGroupConsent: string; // 'nc' = pas encore demandé | 'oui' | 'non'
   oralTestOn: string;
   oralTestLevel: string; // 'nd' = non déterminé
   oralTestEvaluator: string;
@@ -93,6 +94,7 @@ const EMPTY: LearnerFormValues = {
   contactSource: "nc",
   contactSourceDetail: "",
   admissionStatus: "nouveau",
+  whatsappGroupConsent: "nc",
   oralTestOn: "",
   oralTestLevel: "nd",
   oralTestEvaluator: "",
@@ -128,6 +130,12 @@ const YES_NO = [
 const LEVELS = ["Non évalué", ...REF_LEVELS];
 const ORAL_LEVEL_OPTIONS = [{ value: "nd", label: "Non déterminé" }, ...REF_LEVELS.map((l) => ({ value: l, label: l }))];
 const ADMISSION_OPTIONS = ADMISSION_STATUSES.map((s) => ({ value: s.code, label: `${s.label} — ${s.hint}` }));
+// Consentement à rejoindre le groupe WhatsApp de la classe (demandé à l'admission, preuve datée en base)
+const WHATSAPP_CONSENT_OPTIONS = [
+  { value: "nc", label: "Pas encore demandé" },
+  { value: "oui", label: "Accepte d'être ajouté(e)" },
+  { value: "non", label: "Refuse (jamais ajouté·e)" },
+];
 const SOURCE_OPTIONS = [{ value: "nc", label: "Non renseigné" }, ...REF_SOURCES.map((s) => ({ value: s.code, label: s.label }))];
 // Aide à la saisie de la précision selon le canal (la maison de quartier est la plus utile :
 // c'est elle qui détaille la provenance des cours municipaux).
@@ -233,6 +241,7 @@ export function LearnerFormDialog({
         contactSource: values.contactSource === "nc" ? null : (values.contactSource as (typeof REF_SOURCES)[number]["code"]),
         contactSourceDetail: values.contactSourceDetail.trim() || null,
         admissionStatus: values.admissionStatus as (typeof ADMISSION_STATUSES)[number]["code"],
+        whatsappGroupConsent: values.whatsappGroupConsent === "nc" ? null : values.whatsappGroupConsent === "oui",
         oralTestOn: values.oralTestOn || null,
         oralTestLevel: values.oralTestLevel === "nd" ? null : (values.oralTestLevel as (typeof REF_LEVELS)[number]),
         oralTestEvaluator: values.oralTestEvaluator.trim() || null,
@@ -400,7 +409,10 @@ export function LearnerFormDialog({
                   )}
                 </div>
               </div>
-              <SelectField label="Statut d'admission" value={values.admissionStatus} options={ADMISSION_OPTIONS} onChange={(v) => set("admissionStatus", v)} />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <SelectField label="Statut d'admission" value={values.admissionStatus} options={ADMISSION_OPTIONS} onChange={(v) => set("admissionStatus", v)} />
+                <SelectField label="Groupe WhatsApp de la classe" value={values.whatsappGroupConsent} options={WHATSAPP_CONSENT_OPTIONS} onChange={(v) => set("whatsappGroupConsent", v)} />
+              </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Entretien oral le</Label>
