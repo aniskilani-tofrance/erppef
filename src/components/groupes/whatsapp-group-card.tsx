@@ -20,7 +20,7 @@ export function WhatsAppGroupCard({ url, qrDataUrl, roster, canWrite }: { url: s
       <CardContent className="space-y-4">
         {!url ? (
           <p className="text-sm text-muted-foreground">
-            Pas encore de groupe. Créez-le depuis le téléphone de l&apos;organisme (de préférence un groupe d&apos;annonces dans une Communauté : seuls vous et la formatrice écrivez, les numéros restent cachés), puis collez le lien d&apos;invitation
+            Pas encore de lien. Dans WhatsApp, ouvrez le groupe de cette classe (Communauté de l&apos;organisme) → Infos du groupe → « Inviter via un lien » → copier, puis collez-le
             {canWrite ? " via « Modifier » en haut de la page." : " (coordination)."}
           </p>
         ) : (

@@ -28,10 +28,10 @@ export const APP_UPDATES: AppUpdate[] = [
   {
     id: "2026-10-10-groupe-whatsapp",
     date: "2026-10-10",
-    title: "Un groupe WhatsApp par classe, sans exposer les numéros",
+    title: "Le groupe WhatsApp de chaque classe, relié à l'ERP",
     summary: "La fiche du groupe garde le lien d'invitation du groupe WhatsApp de la classe (QR code à montrer en cours, lien dans le message Planning), chaque apprenant dit s'il accepte d'y être ajouté, et « Prévenir le groupe » donne le message à coller dans le groupe, en français puis dans chaque langue.",
     items: [
-      { text: "Fiche du groupe → « Modifier » → « Groupe WhatsApp de la classe » : collez le lien d'invitation (chat.whatsapp.com/…). Créez le groupe depuis le téléphone de l'organisme, de préférence un groupe d'annonces de Communauté (seules vous et la formatrice écrivez, numéros cachés).", roles: TEAM },
+      { text: "Fiche du groupe → « Modifier » → « Groupe WhatsApp de la classe » : collez le lien d'invitation (chat.whatsapp.com/…). Le groupe de la classe est celui de la Communauté WhatsApp de l'organisme (Infos du groupe → « Inviter via un lien »). Dans un groupe de classe, les membres voient les numéros des autres : n'ajoutez que les personnes qui ont dit oui.", roles: TEAM },
       { text: "Carte « Groupe WhatsApp de la classe » sur la fiche du groupe : QR code à montrer au premier cours, lien à copier, et qui ajouter / qui a refusé / qui retirer (abandon, fin de parcours). Le message « Planning » envoyé aux inscrits contient le lien, sauf pour ceux qui ont refusé.", roles: TEAM },
       { text: "Fiche apprenant → « Parcours d'admission » → « Groupe WhatsApp de la classe » : accepte / refuse / pas encore demandé. La date de l'accord est gardée (RGPD).", roles: TEAM },
       { text: "« Prévenir le groupe » → « Copier pour le groupe » : un seul texte, le français puis chaque langue, à coller dans le groupe d'annonces. L'individuel (absence, place, convocation) reste en message privé tracé.", roles: TEAM },

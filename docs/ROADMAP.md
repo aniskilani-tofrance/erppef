@@ -76,8 +76,8 @@ Pistes non retenues pour l'instant : résumé hebdo automatique au financeur, le
 
 ## Lot 3 quinquies — Groupe WhatsApp par classe (livré le 10/10/2026)
 
-Décision Anis : un groupe WhatsApp par classe pour le collectif, l'individuel reste en message privé tracé. Forme recommandée : groupe
-d'annonces d'une Communauté créé depuis le téléphone de l'organisme (numéros cachés). ERP : `groups.whatsapp_group_url` (validé
+Décision Anis : un groupe WhatsApp par classe pour le collectif, l'individuel reste en message privé tracé. Les groupes existent déjà dans la Communauté
+WhatsApp de l'organisme (un par classe) ; dans un groupe de classe les membres voient les numéros des autres, d'où le consentement enregistré. ERP : `groups.whatsapp_group_url` (validé
 chat.whatsapp.com, `lib/groupes/whatsapp-group.ts`), carte fiche groupe (QR, lien, à ajouter / à retirer / refus / pas demandé),
 `learners.whatsapp_group_consent` (+ `_at` par trigger) dans le formulaire apprenant, variable `{lien_whatsapp}` du message Planning
 (omise si refus), « Copier pour le groupe » dans « Prévenir le groupe ». L'ERP n'écrit jamais dans un groupe (pas d'API WhatsApp pour les groupes).

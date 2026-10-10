@@ -125,7 +125,7 @@ export function GroupEditDialog({
             <Label>Groupe WhatsApp de la classe (lien d&apos;invitation)</Label>
             <Input value={whatsappUrl} onChange={(e) => setWhatsappUrl(e.target.value)} placeholder="https://chat.whatsapp.com/…" inputMode="url" />
             <p className="text-xs text-muted-foreground">
-              Créez le groupe depuis le téléphone de l&apos;organisme (de préférence un groupe d&apos;annonces d&apos;une Communauté : seuls vous et la formatrice écrivez, les numéros restent cachés), puis Infos du groupe → « Inviter via un lien ».
+              Groupe créé depuis le téléphone de l&apos;organisme (dans la Communauté), puis Infos du groupe → « Inviter via un lien ». Les membres d&apos;un groupe de classe voient les numéros des autres : n&apos;ajoutez que les personnes qui ont dit oui (fiche apprenant).
             </p>
           </div>
           <div className="space-y-2">
