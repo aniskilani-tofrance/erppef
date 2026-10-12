@@ -351,6 +351,18 @@ export const HELP_SECTIONS: HelpSection[] = [
         ],
       },
       {
+        title: "Mettre les numéros d'un groupe dans son téléphone (fichier de contacts .vcf)",
+        steps: [
+          "Fiche du groupe → carte « Contacts du groupe pour votre téléphone ». Visible par la direction, la coordination, les formatrices du groupe (animation ou co-animation) et le stagiaire rattaché au groupe.",
+          "« Tout le groupe » télécharge un fichier .vcf avec tous les inscrits qui ont un numéro exploitable. Chacun est enregistré « Prénom NOM · G-n » (tapez « G-5 » dans le répertoire pour retrouver la classe), au format international (+33…, +93…) que WhatsApp reconnaît, avec la société « ParlerEmploi Formation » et la référence A-… dans la note.",
+          "Sur le téléphone directement : « Ouvrir sur mon téléphone » affiche un QR code. Scannez-le avec l'appareil photo : iPhone → « Ajouter les contacts » ; Android → ouvrir avec Contacts → « Importer ». Le lien sert une seule fois et expire au bout de 15 minutes ; pas besoin d'être connecté à l'ERP sur le téléphone.",
+          "Le fichier est une copie : le téléphone ne revient jamais le relire. Quand de nouveaux apprenants s'inscrivent, un badge « n nouveaux » apparaît sur la carte : « Nouveaux depuis mon dernier import » n'ajoute qu'eux. Ne refaites pas « Tout le groupe » : l'iPhone créerait des doublons.",
+          "« À retirer de vos contacts » : les personnes que VOUS avez importées et qui ne sont plus inscrites (abandon, fin de parcours). Le fichier ne peut rien effacer : supprimez-les à la main.",
+          "Les inscrits sans numéro exploitable sont listés sous la carte : complétez leur fiche, ils arriveront avec les « nouveaux ».",
+          "Données personnelles : chaque import est enregistré (qui, quand, quels apprenants). Les numéros servent au cours ; à la fin du groupe, supprimez-les de votre téléphone.",
+        ],
+      },
+      {
         title: "Faire vivre le groupe (statut, rattrapages)",
         steps: [
           "Fiche du groupe → « Modifier » : renommez, changez le financeur, la capacité, les notes, et le statut (En attente, Ouvert, Complet, Terminé, Annulé).",

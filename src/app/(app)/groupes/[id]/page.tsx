@@ -53,10 +53,15 @@ import { freeSeats, matchSeatCandidates, type Slot } from "@/lib/groupes/free-se
 import { whatsappGroupRoster, type RosterMember } from "@/lib/groupes/whatsapp-group";
 import { WhatsAppGroupCard } from "@/components/groupes/whatsapp-group-card";
 import { GroupInternsCard, type InternOption } from "@/components/groupes/group-interns-card";
+import { GroupContactsCard } from "@/components/groupes/group-contacts-card";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { loadContactContext, selectionOf, userCanExportContacts } from "@/lib/contacts/load";
+import { internationalPhone } from "@/lib/contacts/vcard";
+import { formatPhone } from "@/lib/admission/phone";
 
 export default async function GroupePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { role, userId } = await requireSession();
+  const { role, userId, orgId } = await requireSession();
   const supabase = await createClient();
 
   const [{ data: group }, { data: sessions }, { data: hours }, { data: enrollments }, { data: learners }, { data: allFunders }, { data: attendanceRows }, { data: surveyRows }, templates, { data: profile }] =
@@ -329,6 +334,36 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
     }),
   );
 
+  // Contacts du groupe (.vcf) : seulement pour qui a le droit (équipe, formatrice du groupe, stagiaire rattaché)
+  const contactsAdmin = createAdminClient();
+  const contactsCard = (await userCanExportContacts(contactsAdmin, orgId, id, userId))
+    ? await (async () => {
+        const ctx = await loadContactContext(contactsAdmin, orgId, id, userId);
+        if (!ctx) return null;
+        const sel = selectionOf(ctx, "tout");
+        const { data: last } = await contactsAdmin
+          .from("group_contact_exports")
+          .select("downloaded_at")
+          .eq("org_id", orgId)
+          .eq("group_id", id)
+          .eq("user_id", userId)
+          .not("downloaded_at", "is", null)
+          .order("downloaded_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        return {
+          total: sel.toExport.length,
+          newCount: sel.newCount,
+          imported: ctx.alreadyImported.size > 0,
+          lastImportOn: last?.downloaded_at
+            ? new Date(last.downloaded_at as string).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Europe/Paris" })
+            : null,
+          noPhone: sel.noPhone.map((m) => `${m.firstName} ${m.lastName}`),
+          toRemove: sel.toRemove.map((m) => ({ name: `${m.firstName} ${m.lastName}`, phone: internationalPhone(m.phone) ? formatPhone(m.phone) : "—" })),
+        };
+      })()
+    : null;
+
   let surveyUrl: string | null = null;
   let surveyQr: string | null = null;
   if (group.survey_token) {
@@ -471,6 +506,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
       </Card>
 
       <WhatsAppGroupCard url={whatsappGroupUrl} qrDataUrl={whatsappQr} roster={whatsappRoster} canWrite={canWrite} />
+      {contactsCard && <GroupContactsCard groupId={id} {...contactsCard} />}
 
       {!isIntern && (
       <Card>

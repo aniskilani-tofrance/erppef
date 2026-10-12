@@ -26,6 +26,22 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-10-12-contacts-groupe-vcard",
+    date: "2026-10-12",
+    title: "Les numéros d'un groupe dans votre téléphone, en un geste",
+    summary: "La fiche du groupe propose un fichier de contacts (.vcf) avec tous les inscrits, à ouvrir sur le téléphone par QR code : plus besoin d'enregistrer les numéros un par un, et seuls les nouveaux inscrits s'ajoutent ensuite.",
+    items: [
+      { text: "Fiche du groupe → carte « Contacts du groupe pour votre téléphone » : « Tout le groupe », ou « Ouvrir sur mon téléphone » (QR code à scanner, valable une fois 15 minutes). Chaque contact est enregistré « Prénom NOM · G-n », au format international reconnu par WhatsApp.", roles: ["admin", "coordinator", "trainer", "stagiaire"] },
+      { text: "Nouveaux inscrits : badge « n nouveaux » sur la carte et bouton « Nouveaux depuis mon dernier import » (pas de doublons). Les départs sont listés dans « À retirer de vos contacts ».", roles: ["admin", "coordinator", "trainer", "stagiaire"] },
+      { text: "Formatrices : la carte apparaît sur les groupes que vous animez ou co-animez. À la fin du groupe, supprimez ces contacts de votre téléphone.", roles: ["trainer", "stagiaire"] },
+      { text: "Chaque import est enregistré (qui, quel groupe, quels apprenants) : vous savez sur quels téléphones les numéros sont partis.", roles: TEAM },
+    ],
+    training: [
+      { moduleId: "c5-vie-quotidienne", lessonId: "groupe-whatsapp", label: "Le groupe WhatsApp de la classe" },
+      { moduleId: "f3-reflexes", lessonId: "imprevus", label: "Les numéros de vos apprenants dans votre téléphone" },
+    ],
+  },
+  {
     id: "2026-10-12-sans-suite-liste-attente",
     date: "2026-10-12",
     title: "« Sans suite » et « Liste d'attente » : deux sorties bien distinctes",

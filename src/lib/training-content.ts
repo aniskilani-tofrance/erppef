@@ -233,6 +233,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
           "Vous serez absent(e) ? Prévenez le coordinateur au plus tôt : il enregistre l'absence et déplace ou réaffecte les séances.",
           "Changement de salle ou d'horaire : c'est aussi le coordinateur qui modifie le planning ; votre agenda Google se met à jour dans la nuit.",
           "Un doute sur un apprenant (absences répétées…) : signalez-le — l'ERP le détecte aussi (alerte à 3 absences de suite), mais votre œil humain reste irremplaçable.",
+          "Les numéros de vos apprenants dans votre téléphone : fiche du groupe → carte « Contacts du groupe » → « Ouvrir sur mon téléphone », scannez le QR code, puis « Ajouter les contacts » (iPhone) ou Contacts → Importer (Android). Chacun est enregistré « Prénom NOM · G-n ». Un nouvel inscrit ? Le bouton « Nouveaux depuis mon dernier import » n'ajoute que lui. Un départ apparaît dans « À retirer » : supprimez-le à la main. À la fin du groupe, effacez ces contacts.",
         ],
       },
       {
@@ -653,6 +654,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
           "Fiche apprenant → « Parcours d'admission » → « Groupe WhatsApp de la classe » : accepte / refuse / pas encore demandé. Posez la question à l'admission ou au premier cours ; la date de l'accord est conservée.",
           "La carte du groupe dit qui ajouter (avec le numéro), qui n'a pas répondu, qui a refusé, et qui retirer (abandon, fin de parcours). Ajouts et retraits se font depuis le téléphone : l'ERP ne peut pas écrire dans un groupe WhatsApp.",
           "« Prévenir le groupe » → « Copier pour le groupe » : le français puis chaque langue en un seul texte, à coller dans le groupe d'annonces. Gardez l'envoi individuel pour ceux qui n'y sont pas.",
+          "Pour ajouter quelqu'un au groupe, son numéro doit être dans les contacts du téléphone de l'organisme : carte « Contacts du groupe » → « Ouvrir sur mon téléphone » (QR code, usage unique, 15 min) importe tous les inscrits d'un coup, enregistrés « Prénom NOM · G-n ». Ensuite, « Nouveaux depuis mon dernier import » n'ajoute que les nouveaux inscrits (pas de doublons), et « À retirer » liste les départs.",
           "Règle : collectif dans le groupe (rappels, salle, consignes) ; individuel en privé et tracé (absence, place, convocation, test).",
         ],
         tip: "Le vrai point de vigilance : dans un groupe de classe, chacun voit le numéro des autres. L'accord enregistré sur la fiche est votre preuve.",

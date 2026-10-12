@@ -39,6 +39,8 @@ export async function proxy(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/enquete") ||
     // Test de positionnement : lien personnel à jeton.
     request.nextUrl.pathname.startsWith("/test") ||
+    // Contacts d'un groupe (.vcf) ouverts sur le téléphone : jeton à usage unique, 15 min.
+    request.nextUrl.pathname.startsWith("/vcf/") ||
     // Crons Vercel : protégés par CRON_SECRET dans la route elle-même.
     request.nextUrl.pathname.startsWith("/api/cron") ||
     // Webhook des leads restaurateurs (Brevo, Make/Meta, Calendly) : jeton d'organisation dans la route.
