@@ -3,8 +3,12 @@
 // (un « injoignable » qui répond redevient « contacté », mais un « convoqué »
 // qui ne répond pas à une relance reste « convoqué »). Seul « sans suite »
 // est une sortie explicite, et « inscrit » (dans un groupe) est définitif.
-// « Liste d'attente » = évalué(e), une place a été proposée mais refusée (horaire,
-// garde d'enfant…) ou aucune place compatible n'existe : on la reproposera.
+// « Liste d'attente » ≠ « Sans suite » :
+// - liste d'attente = la personne VEUT venir, mais la place proposée ne convenait pas
+//   (horaire, garde d'enfant…) ou aucun groupe compatible n'existe : on la reproposera ;
+// - sans suite = le dossier est CLOS (plus intéressé, déménagé, injoignable après
+//   relances…) : on ne relance plus, sauf si la personne revient d'elle-même.
+// Chacun porte un motif (ADMISSION_REASONS), noté dans le carnet de contact.
 
 export const ADMISSION_STATUSES = [
   { code: "nouveau", label: "Nouveau", rank: 0, hint: "Jamais contacté" },
@@ -12,9 +16,9 @@ export const ADMISSION_STATUSES = [
   { code: "contacte", label: "Contacté", rank: 2, hint: "Échange engagé" },
   { code: "convoque", label: "Convoqué", rank: 3, hint: "Convoqué à une réunion d'information" },
   { code: "evalue", label: "Évalué", rank: 4, hint: "Entretien oral fait" },
-  { code: "liste_attente", label: "Liste d'attente", rank: 5, hint: "Place refusée ou incompatible — à reproposer" },
+  { code: "liste_attente", label: "Liste d'attente", rank: 5, hint: "Veut venir, pas de place qui convient — à reproposer" },
   { code: "inscrit", label: "Inscrit", rank: 6, hint: "Inscrit dans un groupe" },
-  { code: "sans_suite", label: "Sans suite", rank: 7, hint: "Ne donne pas suite" },
+  { code: "sans_suite", label: "Sans suite", rank: 7, hint: "Dossier clos — on ne relance plus" },
 ] as const;
 
 export type AdmissionStatus = (typeof ADMISSION_STATUSES)[number]["code"];
@@ -80,10 +84,45 @@ export const CONTACT_OUTCOMES = [
   { code: "sans_reponse", label: "Sans réponse", status: "injoignable" },
   { code: "convoque", label: "Convoqué à une réunion", status: "convoque" },
   { code: "place_refusee", label: "Place refusée — liste d'attente", status: "liste_attente" },
-  { code: "refus", label: "Ne donne pas suite", status: "sans_suite" },
+  { code: "refus", label: "Ne donne pas suite — dossier clos", status: "sans_suite" },
   { code: "autre", label: "Autre", status: null },
 ] as const;
 export type ContactOutcome = (typeof CONTACT_OUTCOMES)[number]["code"];
+
+// Motifs de sortie du parcours : ce qui distingue une liste d'attente (on reproposera)
+// d'un « sans suite » (dossier clos). Obligatoire dans « Noter un contact » quand le
+// statut choisi est l'un des deux ; enregistré sur le contact (learner_contacts.reason).
+export const ADMISSION_REASONS = [
+  { code: "horaire_incompatible", label: "Horaires incompatibles", status: "liste_attente" },
+  { code: "garde_enfant", label: "Garde d'enfant", status: "liste_attente" },
+  { code: "groupe_complet", label: "Groupe complet", status: "liste_attente" },
+  { code: "pas_de_groupe_niveau", label: "Pas de groupe à son niveau", status: "liste_attente" },
+  { code: "indisponible_temporaire", label: "Indisponible pour l'instant (santé, voyage…)", status: "liste_attente" },
+  { code: "attente_autre", label: "Autre raison (voir la note)", status: "liste_attente" },
+  { code: "plus_interesse", label: "Ne souhaite plus suivre la formation", status: "sans_suite" },
+  { code: "injoignable_definitif", label: "Injoignable après plusieurs relances", status: "sans_suite" },
+  { code: "demenagement", label: "A déménagé, hors territoire", status: "sans_suite" },
+  { code: "emploi_ou_formation", label: "A trouvé un emploi ou une autre formation", status: "sans_suite" },
+  { code: "hors_public", label: "Ne correspond pas au public du cours", status: "sans_suite" },
+  { code: "sans_suite_autre", label: "Autre raison (voir la note)", status: "sans_suite" },
+] as const;
+export type AdmissionReason = (typeof ADMISSION_REASONS)[number]["code"];
+export const ADMISSION_REASON_CODES = ADMISSION_REASONS.map((r) => r.code) as [AdmissionReason, ...AdmissionReason[]];
+
+export function needsReason(status: string | null | undefined): status is "liste_attente" | "sans_suite" {
+  return status === "liste_attente" || status === "sans_suite";
+}
+export function reasonsFor(status: string | null | undefined) {
+  return ADMISSION_REASONS.filter((r) => r.status === status);
+}
+export function reasonLabel(code: string | null | undefined): string | null {
+  return ADMISSION_REASONS.find((r) => r.code === code)?.label ?? null;
+}
+// Un motif n'a de sens qu'avec son statut : un motif de liste d'attente sur un
+// « sans suite » (ou sur tout autre statut) est ignoré.
+export function reasonFits(reason: string | null | undefined, status: string | null | undefined): boolean {
+  return !!reason && ADMISSION_REASONS.some((r) => r.code === reason && r.status === status);
+}
 
 export function channelLabel(code: string | null | undefined): string {
   return CONTACT_CHANNELS.find((c) => c.code === code)?.label ?? (code ?? "—");

@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  ADMISSION_REASONS,
   ADMISSION_STATUSES,
+  needsReason,
   nextAdmissionStatus,
+  reasonFits,
+  reasonLabel,
+  reasonsFor,
   suggestedStatus,
 } from "@/lib/admission/status";
 
@@ -44,5 +49,38 @@ describe("statut d'admission", () => {
     const ranks = ADMISSION_STATUSES.map((s) => s.rank);
     expect(new Set(ranks).size).toBe(ranks.length);
     expect([...ranks].sort((a, b) => a - b)).toEqual(ranks);
+  });
+});
+
+describe("motifs : liste d'attente ≠ sans suite", () => {
+  it("seuls ces deux statuts demandent un motif", () => {
+    expect(needsReason("liste_attente")).toBe(true);
+    expect(needsReason("sans_suite")).toBe(true);
+    expect(needsReason("evalue")).toBe(false);
+    expect(needsReason(null)).toBe(false);
+  });
+
+  it("chaque statut a ses propres motifs, sans recouvrement", () => {
+    const attente = reasonsFor("liste_attente").map((r) => r.code);
+    const clos = reasonsFor("sans_suite").map((r) => r.code);
+    expect(attente).toContain("horaire_incompatible");
+    expect(clos).toContain("plus_interesse");
+    expect(attente.filter((c) => (clos as string[]).includes(c))).toEqual([]);
+    expect(attente.length + clos.length).toBe(ADMISSION_REASONS.length);
+  });
+
+  it("un motif n'est gardé qu'avec son statut", () => {
+    expect(reasonFits("garde_enfant", "liste_attente")).toBe(true);
+    expect(reasonFits("garde_enfant", "sans_suite")).toBe(false);
+    expect(reasonFits("demenagement", "sans_suite")).toBe(true);
+    expect(reasonFits("demenagement", "contacte")).toBe(false);
+    expect(reasonFits(null, "sans_suite")).toBe(false);
+    expect(reasonLabel("injoignable_definitif")).toBe("Injoignable après plusieurs relances");
+    expect(reasonLabel("inconnu")).toBeNull();
+  });
+
+  it("« Ne donne pas suite » mène à sans suite, « Place refusée » à la liste d'attente", () => {
+    expect(suggestedStatus("refus", "evalue")).toBe("sans_suite");
+    expect(suggestedStatus("place_refusee", "evalue")).toBe("liste_attente");
   });
 });

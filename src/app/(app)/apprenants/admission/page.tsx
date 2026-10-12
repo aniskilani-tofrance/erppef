@@ -23,7 +23,7 @@ import { loadTemplates } from "@/lib/admission/load-templates";
 import { messageForSituation, stageInfo, type Templates } from "@/lib/admission/templates";
 import { MessageTemplatesDialog } from "@/components/admission/message-templates-dialog";
 import { formatPhone } from "@/lib/admission/phone";
-import { ADMISSION_STATUSES, admissionBadgeClass } from "@/lib/admission/status";
+import { ADMISSION_STATUSES, admissionBadgeClass, reasonFits, reasonLabel } from "@/lib/admission/status";
 import { learnerRef } from "@/lib/refs";
 import { ProposePoeiButton } from "@/components/poei-candidates/candidate-controls";
 import { BriefButton } from "@/components/assistant/brief-button";
@@ -72,6 +72,7 @@ function LearnerRows({
   poeiByLearner,
   groupsOf,
   assistant,
+  showReason = false,
 }: {
   rows: LearnerRow[];
   empty: string;
@@ -82,6 +83,7 @@ function LearnerRows({
   poeiByLearner: Map<string, string>;
   groupsOf: Map<string, GroupRef[]>;
   assistant: boolean;
+  showReason?: boolean;
 }) {
   if (rows.length === 0) return <p className="py-4 text-sm text-muted-foreground">{empty}</p>;
   const lastContactAt = (id: string) => history.get(id)?.[0]?.contactedAt ?? null;
@@ -108,6 +110,15 @@ function LearnerRows({
               <span className="block font-mono text-[11px] font-normal text-muted-foreground">
                 {learnerRef(l.learner_no)}{l.level_assessed ? ` · ${l.level_assessed}` : ""}
               </span>
+              {showReason && (() => {
+                // Motif du dernier contact qui en porte un pour ce statut (liste d'attente / sans suite)
+                const entry = (history.get(l.id) ?? []).find((h) => reasonFits(h.reason, l.admission_status));
+                return (
+                  <span className="block text-xs font-normal text-muted-foreground">
+                    Motif : {entry ? reasonLabel(entry.reason) : <span className="italic">non renseigné</span>}
+                  </span>
+                );
+              })()}
             </TableCell>
             <TableCell className="text-sm text-muted-foreground">{formatPhone(l.phone)}</TableCell>
             <TableCell><AdmissionBadge status={l.admission_status} /></TableCell>
@@ -161,7 +172,7 @@ export default async function AdmissionPage() {
       .order("created_at", { ascending: true }),
     supabase
       .from("learner_contacts")
-      .select("id, learner_id, contacted_at, channel, outcome, note, profiles:created_by(full_name)")
+      .select("id, learner_id, contacted_at, channel, outcome, note, reason, profiles:created_by(full_name)")
       .order("contacted_at", { ascending: false })
       .limit(500),
     supabase
@@ -202,6 +213,7 @@ export default async function AdmissionPage() {
         channel: c.channel,
         outcome: c.outcome,
         note: c.note,
+        reason: c.reason,
         by: (c.profiles as unknown as { full_name: string | null } | null)?.full_name ?? null,
       });
       historyByLearner.set(c.learner_id, list);
@@ -232,6 +244,10 @@ export default async function AdmissionPage() {
   const waiting = (learners ?? [])
     .filter((l) => l.admission_status === "liste_attente")
     .sort((a, b) => (lastContactAt(a.id) ?? a.created_at).localeCompare(lastContactAt(b.id) ?? b.created_at));
+  // Sans suite : dossiers clos — on ne relance plus. Les plus récents d'abord (une erreur se rattrape vite).
+  const closed = (learners ?? [])
+    .filter((l) => l.admission_status === "sans_suite")
+    .sort((a, b) => (lastContactAt(b.id) ?? b.created_at).localeCompare(lastContactAt(a.id) ?? a.created_at));
 
   // D'où viennent les demandes : par famille de provenance (maison de quartier, contact
   // direct, prescripteur), puis le détail (quelle maison de quartier, quel canal) — total
@@ -466,13 +482,39 @@ export default async function AdmissionPage() {
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Liste d&apos;attente ({waiting.length})</CardTitle>
+          <CardTitle className="text-base">Liste d&apos;attente — à reproposer ({waiting.length})</CardTitle>
           <p className="text-xs text-muted-foreground">
-            Évalués qui ont refusé la place proposée (horaire, garde d&apos;enfant…) ou pour qui aucun groupe compatible n&apos;existe. Le motif est dans le carnet de contact. Dès qu&apos;une place se libère, inscrivez la personne depuis la fiche du groupe : elle passe « Inscrit » toute seule.
+            La personne <b>veut venir</b>, mais la place proposée ne convenait pas (horaire, garde d&apos;enfant…) ou aucun groupe compatible n&apos;existe. Dès qu&apos;une place se libère, inscrivez-la depuis la fiche du groupe : elle passe « Inscrit » toute seule. À ne pas confondre avec « Sans suite » plus bas.
           </p>
         </CardHeader>
         <CardContent>
-          <LearnerRows rows={waiting} senderFirstName={senderFirstName} history={historyByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} assistant={assistant} empty="Personne en liste d'attente." />
+          <LearnerRows rows={waiting} senderFirstName={senderFirstName} history={historyByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} assistant={assistant} showReason empty="Personne en liste d'attente." />
+        </CardContent>
+      </Card>
+
+      <Card className="border-dashed">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base text-muted-foreground">Sans suite — dossiers clos ({closed.length})</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            La personne <b>ne viendra pas</b> : plus intéressée, déménagée, injoignable après plusieurs relances, autre formation… On ne la relance plus et elle n&apos;apparaît plus dans les convocations. Si elle revient d&apos;elle-même, notez le contact : elle reprend le parcours.
+          </p>
+        </CardHeader>
+        <CardContent>
+          {closed.length === 0 ? (
+            <p className="py-4 text-sm text-muted-foreground">Aucun dossier clos.</p>
+          ) : (
+            <details>
+              <summary className="cursor-pointer text-sm text-muted-foreground">Afficher les {closed.length} dossiers clos</summary>
+              <div className="mt-2">
+                <LearnerRows rows={closed} senderFirstName={senderFirstName} history={historyByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} assistant={assistant} showReason empty="Aucun dossier clos." />
+                {closed.length > 80 && (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    80 plus récents affichés — <Link href="/apprenants?statut=sans_suite" className="underline">voir tous les dossiers clos</Link>.
+                  </p>
+                )}
+              </div>
+            </details>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -10,8 +10,12 @@ import {
   CONTACT_CHANNELS,
   CONTACT_OUTCOMES,
   channelLabel,
+  needsReason,
   outcomeLabel,
+  reasonLabel,
+  reasonsFor,
   suggestedStatus,
+  type AdmissionReason,
   type AdmissionStatus,
   type ContactChannel,
   type ContactOutcome,
@@ -32,6 +36,7 @@ export type ContactEntry = {
   channel: string;
   outcome: string;
   note: string | null;
+  reason?: string | null;
   by: string | null;
 };
 
@@ -56,23 +61,37 @@ export function ContactDialog({
   const [note, setNote] = useState("");
   const [status, setStatus] = useState<AdmissionStatus>(suggestedStatus("joint", currentStatus));
   const [statusTouched, setStatusTouched] = useState(false);
+  const [reason, setReason] = useState<AdmissionReason | "">("");
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
-  function changeOutcome(v: ContactOutcome) {
-    setOutcome(v);
-    if (!statusTouched) setStatus(suggestedStatus(v, currentStatus));
+  // Le motif dépend du statut : on le vide dès qu'on change de statut.
+  function changeStatus(v: AdmissionStatus) {
+    if (v !== status) setReason("");
+    setStatus(v);
   }
 
+  function changeOutcome(v: ContactOutcome) {
+    setOutcome(v);
+    if (!statusTouched) changeStatus(suggestedStatus(v, currentStatus));
+  }
+
+  const reasonMissing = needsReason(status) && !reason;
+
   function submit() {
+    if (reasonMissing) {
+      toast.error(status === "sans_suite" ? "Choisissez pourquoi le dossier est clos." : "Choisissez pourquoi la personne passe en liste d'attente.");
+      return;
+    }
     startTransition(async () => {
-      const result = await logContact({ learnerId, channel, outcome, note: note.trim() || null, status });
+      const result = await logContact({ learnerId, channel, outcome, note: note.trim() || null, status, reason: reason || null });
       if (!result.ok) {
         toast.error(result.error);
         return;
       }
       toast.success("Contact noté.");
       setNote("");
+      setReason("");
       setStatusTouched(false);
       setOpen(false);
       router.refresh();
@@ -108,6 +127,7 @@ export function ContactDialog({
                       {new Date(h.contactedAt).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Paris" })}
                     </span>{" "}
                     · {channelLabel(h.channel)} · {outcomeLabel(h.outcome)}
+                    {reasonLabel(h.reason) && <span className="font-medium"> · {reasonLabel(h.reason)}</span>}
                     {h.by && <span className="text-muted-foreground"> — {h.by}</span>}
                     {h.note && <span className="block text-xs text-muted-foreground">{h.note}</span>}
                   </li>
@@ -153,7 +173,7 @@ export function ContactDialog({
             <Select
               value={status}
               onValueChange={(v) => {
-                setStatus(v as AdmissionStatus);
+                changeStatus(v as AdmissionStatus);
                 setStatusTouched(true);
               }}
             >
@@ -168,9 +188,27 @@ export function ContactDialog({
               </SelectContent>
             </Select>
           </div>
+          {needsReason(status) && (
+            <div className="space-y-2 rounded-md border bg-muted/40 p-3">
+              <p className="text-xs text-muted-foreground">
+                {status === "liste_attente"
+                  ? "Liste d'attente : la personne veut venir, mais la place ne convient pas ou n'existe pas. Elle reste dans « À reproposer » et on la recontacte dès qu'une place se libère."
+                  : "Sans suite : le dossier est clos, on ne relance plus. Si la personne revient d'elle-même, notez le contact : elle reprend le parcours."}
+              </p>
+              <Label>{status === "liste_attente" ? "Pourquoi en liste d'attente ?" : "Pourquoi sans suite ?"}</Label>
+              <Select value={reason} onValueChange={(v) => setReason(v as AdmissionReason)}>
+                <SelectTrigger className="w-full" aria-invalid={reasonMissing}><SelectValue placeholder="Choisir un motif" /></SelectTrigger>
+                <SelectContent>
+                  {reasonsFor(status).map((r) => (
+                    <SelectItem key={r.code} value={r.code}>{r.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setOpen(false)} disabled={pending}>Annuler</Button>
-            <Button onClick={submit} disabled={pending}>{pending ? "Enregistrement…" : "Enregistrer"}</Button>
+            <Button onClick={submit} disabled={pending || reasonMissing}>{pending ? "Enregistrement…" : "Enregistrer"}</Button>
           </div>
         </div>
       </DialogContent>

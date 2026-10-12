@@ -9,8 +9,10 @@ import { translatePgError } from "@/lib/pg-errors";
 import { localToUtc } from "@/lib/dates";
 import { sendMail } from "@/lib/mailer";
 import {
+  ADMISSION_REASON_CODES,
   ADMISSION_STATUS_CODES,
   INVITATION_STATUS_CODES,
+  reasonFits,
   nextAdmissionStatus,
   type AdmissionStatus,
 } from "@/lib/admission/status";
@@ -64,6 +66,8 @@ const contactSchema = z.object({
   // Statut choisi dans le dialog (pré-rempli d'après le résultat, modifiable) ;
   // null = ne pas toucher au statut (ex. bouton WhatsApp : on avance juste à « contacté »).
   status: z.enum(ADMISSION_STATUS_CODES).nullable(),
+  // Motif de liste d'attente / sans suite (obligatoire dans le dialog, optionnel pour l'assistant).
+  reason: z.enum(ADMISSION_REASON_CODES).nullable().optional(),
 });
 
 export async function logContact(raw: z.infer<typeof contactSchema>): Promise<ActionResult> {
@@ -80,6 +84,7 @@ export async function logContact(raw: z.infer<typeof contactSchema>): Promise<Ac
     channel: d.channel,
     outcome: d.outcome,
     note: d.note?.trim() || null,
+    reason: reasonFits(d.reason, d.status) ? d.reason : null,
     created_by: userId,
   });
   if (error) return { ok: false, error: translatePgError(error) };

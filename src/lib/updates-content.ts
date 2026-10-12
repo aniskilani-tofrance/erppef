@@ -26,6 +26,18 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-10-12-sans-suite-liste-attente",
+    date: "2026-10-12",
+    title: "« Sans suite » et « Liste d'attente » : deux sorties bien distinctes",
+    summary: "L'onglet Admission a maintenant sa carte « Sans suite — dossiers clos », séparée de la liste d'attente, et chacune des deux demande un motif : on sait d'un coup d'œil qui reproposer et qui ne plus relancer.",
+    items: [
+      { text: "Liste d'attente = la personne VEUT venir, mais la place ne convient pas ou n'existe pas : on la reproposera. Sans suite = dossier CLOS (plus intéressée, déménagée, injoignable après plusieurs relances, autre formation, hors public) : on ne relance plus.", roles: TEAM },
+      { text: "« Noter un contact » : quand le statut devient « Liste d'attente » ou « Sans suite », un motif est obligatoire. Il s'affiche sous le nom dans les deux cartes de l'onglet Admission et dans le journal des contacts.", roles: TEAM },
+      { text: "Nouvelle carte grise « Sans suite — dossiers clos » en bas de l'onglet Admission, repliée, les plus récents d'abord. Une personne qui revient d'elle-même : notez le contact, elle reprend le parcours.", roles: TEAM },
+    ],
+    training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "L'admission : liste d'attente ou sans suite" }],
+  },
+  {
     id: "2026-10-12-role-stagiaire",
     date: "2026-10-12",
     title: "Un compte « Stagiaire » limité à ses groupes",
