@@ -1,4 +1,4 @@
-import { requireRole } from "@/lib/auth";
+import { requireGroupAccess } from "@/lib/stagiaires";
 import {
   buildCertificatePdf,
   certificateFileName,
@@ -11,7 +11,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string; learnerId: string }> },
 ) {
   const { id, learnerId } = await params;
-  const { orgId } = await requireRole(["admin", "coordinator"]);
+  const { orgId } = await requireGroupAccess(id, ["admin", "coordinator", "stagiaire"]);
 
   const data = await loadCertificateData(id, learnerId, orgId);
   if (!data) return new Response("Introuvable", { status: 404 });

@@ -22,7 +22,7 @@ export const HELP_SECTIONS: HelpSection[] = [
   {
     id: "demarrer",
     title: "Démarrer",
-    roles: [...ALL, "setter"],
+    roles: [...ALL, "setter", "stagiaire"],
     articles: [
       {
         title: "Se connecter",
@@ -140,6 +140,31 @@ export const HELP_SECTIONS: HelpSection[] = [
         steps: [
           "Prévenez votre coordinateur : il enregistre votre absence sur votre fiche, et le planning en tient compte.",
           "Séance à déplacer : c'est aussi le coordinateur qui la déplace dans le Planning (glisser-déposer).",
+        ],
+      },
+    ],
+  },
+  {
+    id: "stagiaire",
+    title: "Stagiaires : accès à un groupe",
+    roles: ["stagiaire", "admin", "coordinator"],
+    articles: [
+      {
+        title: "Ce que voit un stagiaire",
+        steps: [
+          "Uniquement les groupes auxquels la coordination l'a rattaché : leur fiche, leurs apprenants inscrits, leurs séances et leur planning.",
+          "L'émargement de ces séances : ouvrir la feuille, poser les statuts, clôturer avec sa signature, remplir le cahier de séance. La réouverture d'une feuille clôturée reste à la coordination.",
+          "Le kit de chaque séance : Planning → cliquer la séance → « Télécharger le kit (PDF) ».",
+          "Les documents administratifs du groupe : attestations d'entrée, certificats de réalisation, export d'assiduité (CSV), historique des feuilles d'émargement envoyées au financeur, PDF de chaque feuille.",
+          "Jamais : les autres groupes, les dossiers scannés (pièces d'identité, justificatifs), l'historique d'admission, les tests, les évaluations et attestations d'acquis, les formateurs, les leads.",
+        ],
+      },
+      {
+        title: "Rattacher un stagiaire à un groupe (coordination)",
+        steps: [
+          "Paramètres → Utilisateurs → « Inviter un utilisateur », rôle « Stagiaire — ses groupes uniquement ».",
+          "Fiche du groupe → carte « Stagiaires du groupe » → choisir le stagiaire → « Ajouter ». Un stagiaire peut suivre plusieurs groupes.",
+          "Pour couper l'accès à un groupe : la croix à côté de son nom. Fin de stage : « Retirer l'accès » dans Paramètres.",
         ],
       },
     ],

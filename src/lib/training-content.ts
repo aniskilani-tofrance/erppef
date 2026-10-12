@@ -93,6 +93,20 @@ export const TRAINING_MODULES: TrainingModule[] = [
           hrefLabel: "Le pas à pas par appareil (Aide)",
         },
       },
+      {
+        id: "stagiaire",
+        title: "Vous êtes stagiaire",
+        intro: "Un compte « Stagiaire » ne voit que les groupes auxquels la coordination l'a rattaché.",
+        steps: [
+          "Votre Dashboard affiche « Mes groupes » et les séances de la semaine, avec le lien « Émargement → » de chaque séance.",
+          "Fiche du groupe : apprenants inscrits, taux de présence, séances, planning à diffuser et documents administratifs (attestations d'entrée, certificats de réalisation, export d'assiduité, feuilles d'émargement envoyées au financeur).",
+          "Émargement : vous ouvrez la feuille, posez les statuts (présent, retard, absent), clôturez avec votre signature et remplissez le cahier de séance, comme une formatrice.",
+          "Kit de séance : dans le Planning, cliquez sur une séance de votre groupe → « Télécharger le kit (PDF) ».",
+          "Vous ne voyez pas les autres groupes, les dossiers scannés (pièces d'identité), les tests, les évaluations ni les formateurs : c'est voulu, ces données ne vous concernent pas.",
+        ],
+        tip: "Un groupe manque dans votre liste ? Demandez à la coordination de vous rattacher depuis la fiche de ce groupe.",
+        practice: { instruction: "Ouvrez votre Dashboard et repérez la prochaine séance de votre groupe.", href: "/dashboard" },
+      },
     ],
     quiz: [
       {
@@ -549,6 +563,20 @@ export const TRAINING_MODULES: TrainingModule[] = [
           hrefLabel: "Ouvrir le wizard",
         },
       },
+      {
+        id: "stagiaires",
+        title: "Donner accès à un stagiaire",
+        intro: "Le rôle « Stagiaire » ouvre un groupe précis, et seulement lui.",
+        steps: [
+          "Paramètres → Utilisateurs → « Inviter un utilisateur » : rôle « Stagiaire — ses groupes uniquement ». Il reçoit un email pour choisir son mot de passe.",
+          "Ouvrez la fiche du groupe → carte « Stagiaires du groupe » → choisissez-le → « Ajouter ». Répétez sur chaque groupe où il intervient.",
+          "Il voit alors la fiche du groupe, le planning, l'émargement (y compris la clôture et le cahier de séance), les kits de séance et les documents administratifs du groupe.",
+          "Jamais : les autres groupes, les dossiers scannés, l'historique d'admission, les tests, les évaluations, les formateurs, les leads.",
+          "Fin de stage : retirez-le du groupe (croix à côté de son nom) ou retirez son accès dans Paramètres.",
+        ],
+        tip: "Dans Paramètres, un badge orange « Aucun groupe rattaché » signale un stagiaire invité mais encore sans groupe.",
+        practice: { instruction: "Ouvrez la fiche d'un groupe et repérez la carte « Stagiaires du groupe ».", href: "/groupes" },
+      },
     ],
     quiz: [
       {
@@ -928,7 +956,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
 ];
 
 export const TRACKS = [
-  { id: "formateur", label: "Parcours Formateur", description: "Prise en main, émargement, bons réflexes — 30 minutes.", roles: ["trainer", "admin", "coordinator"] },
+  { id: "formateur", label: "Parcours Formateur", description: "Prise en main, émargement, bons réflexes — 30 minutes.", roles: ["trainer", "admin", "coordinator", "stagiaire"] },
   { id: "coordinateur", label: "Parcours Coordinateur", description: "Paramétrage, groupes, planning, qualité, bilans — 1 h 35 au total, à votre rythme.", roles: ["admin", "coordinator", "viewer"] },
   { id: "commercial", label: "Parcours Commercial (leads restaurateurs)", description: "Le mini-CRM : rappeler sous 24 h, qualifier, poser le RDV, relancer — 20 minutes.", roles: ["setter", "admin", "coordinator"] },
 ] as const;

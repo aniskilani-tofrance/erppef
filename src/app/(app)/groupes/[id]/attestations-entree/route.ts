@@ -1,4 +1,4 @@
-import { requireRole } from "@/lib/auth";
+import { requireGroupAccess } from "@/lib/stagiaires";
 import { createClient } from "@/lib/supabase/server";
 import { buildEntryAttestationsPdf, entryAttestationFileName, loadEntryAttestations } from "@/lib/attestations/entree";
 
@@ -6,7 +6,7 @@ import { buildEntryAttestationsPdf, entryAttestationFileName, loadEntryAttestati
 // moins une présence émargée (à imprimer et remettre en cours). ?apprenant=<id> → une seule.
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { orgId } = await requireRole(["admin", "coordinator", "trainer"]);
+  const { orgId } = await requireGroupAccess(id, ["admin", "coordinator", "trainer", "stagiaire"]);
   const learnerId = new URL(request.url).searchParams.get("apprenant") ?? undefined;
   const supabase = await createClient();
 

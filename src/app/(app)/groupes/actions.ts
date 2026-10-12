@@ -615,3 +615,43 @@ export async function sendEntryAttestations(groupId: string): Promise<EntryAttes
   if (withoutEmail.length) parts.push(`${withoutEmail.length} sans email, à remettre imprimée${withoutEmail.length > 1 ? "s" : ""}`);
   return { ok: true, message: parts.join(" · "), sent, archived, withoutEmail };
 }
+
+const internSchema = z.object({ groupId: z.string().uuid(), userId: z.string().uuid() });
+
+// Stagiaires du groupe : la coordination rattache un compte « stagiaire » au groupe. Il voit
+// alors la fiche, le planning, l'émargement, les kits et les documents de CE groupe seulement.
+export async function addGroupIntern(raw: z.infer<typeof internSchema>): Promise<SimpleResult> {
+  const parsed = internSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Données invalides" };
+  const { orgId, userId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+  const { data: membership } = await supabase
+    .from("memberships")
+    .select("role")
+    .eq("org_id", orgId)
+    .eq("user_id", parsed.data.userId)
+    .maybeSingle();
+  if (membership?.role !== "stagiaire") return { ok: false, error: "Ce compte n'a pas le rôle « Stagiaire » (Paramètres → Utilisateurs)." };
+  const { error } = await supabase
+    .from("group_interns")
+    .upsert({ org_id: orgId, group_id: parsed.data.groupId, user_id: parsed.data.userId, added_by: userId }, { onConflict: "group_id,user_id", ignoreDuplicates: true });
+  if (error) return { ok: false, error: translatePgError(error) };
+  revalidatePath(`/groupes/${parsed.data.groupId}`);
+  return { ok: true };
+}
+
+export async function removeGroupIntern(raw: z.infer<typeof internSchema>): Promise<SimpleResult> {
+  const parsed = internSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Données invalides" };
+  const { orgId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("group_interns")
+    .delete()
+    .eq("org_id", orgId)
+    .eq("group_id", parsed.data.groupId)
+    .eq("user_id", parsed.data.userId);
+  if (error) return { ok: false, error: translatePgError(error) };
+  revalidatePath(`/groupes/${parsed.data.groupId}`);
+  return { ok: true };
+}

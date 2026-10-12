@@ -26,6 +26,22 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-10-12-role-stagiaire",
+    date: "2026-10-12",
+    title: "Un compte « Stagiaire » limité à ses groupes",
+    summary: "Un stagiaire peut maintenant avoir son propre accès : il voit seulement les groupes auxquels la coordination le rattache, avec l'émargement, les kits de séance et les documents administratifs du groupe.",
+    items: [
+      { text: "Paramètres → Utilisateurs → « Inviter un utilisateur » : nouveau rôle « Stagiaire — ses groupes uniquement ». Un badge orange signale un stagiaire encore rattaché à aucun groupe.", roles: ["admin"] },
+      { text: "Fiche du groupe → carte « Stagiaires du groupe » : choisissez le stagiaire → « Ajouter ». Il voit alors la fiche du groupe, le planning, l'émargement (clôture et cahier compris), les kits de séance, les attestations d'entrée, les certificats de réalisation, l'export d'assiduité et les feuilles envoyées au financeur. La croix retire l'accès.", roles: TEAM },
+      { text: "Le stagiaire ne voit jamais les autres groupes, les dossiers scannés, l'historique d'admission, les tests, les évaluations ni les formateurs : la base elle-même le lui interdit, pas seulement l'écran.", roles: TEAM },
+      { text: "Votre Dashboard affiche vos groupes et les séances de la semaine, avec le lien « Émargement → ». Le kit de chaque séance se télécharge depuis le Planning.", roles: ["stagiaire"] },
+    ],
+    training: [
+      { moduleId: "c4-groupes", lessonId: "stagiaires", label: "Donner accès à un stagiaire" },
+      { moduleId: "f1-prise-en-main", lessonId: "stagiaire", label: "Vous êtes stagiaire" },
+    ],
+  },
+  {
     id: "2026-10-10-groupe-whatsapp",
     date: "2026-10-10",
     title: "Le groupe WhatsApp de chaque classe, relié à l'ERP",

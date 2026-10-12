@@ -10,7 +10,7 @@ import { FunderFormDialog } from "@/components/parametres/funder-form-dialog";
 import { ClosureManager } from "@/components/parametres/closure-manager";
 import { GcalSyncCard } from "@/components/parametres/gcal-sync-card";
 import { DeleteProgramButton } from "@/components/parametres/delete-program-button";
-import { UsersManager } from "@/components/parametres/users-manager";
+import { UsersManager, type Member } from "@/components/parametres/users-manager";
 import { SendUpdatesButton } from "@/components/parametres/updates-card";
 import { APP_UPDATES, formatUpdateDate } from "@/lib/updates-content";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -37,6 +37,11 @@ export default async function ParametresPage() {
         .order("starts_on"),
     ]);
 
+  // Stagiaires : nombre de groupes auxquels chacun est rattaché (fiche du groupe)
+  const { data: internLinks } = await supabase.from("group_interns").select("user_id");
+  const internGroupCount = new Map<string, number>();
+  for (const r of internLinks ?? []) internGroupCount.set(r.user_id, (internGroupCount.get(r.user_id) ?? 0) + 1);
+
   // Les emails et dates de connexion vivent dans auth.users (API admin, page admin).
   const { data: authUsers } = await createAdminClient().auth.admin.listUsers({ page: 1, perPage: 1000 });
   const authById = new Map(
@@ -48,9 +53,10 @@ export default async function ParametresPage() {
       membershipId: m.id,
       name: (m.profiles as unknown as { full_name: string } | null)?.full_name ?? "—",
       email: authById.get(m.user_id)?.email ?? null,
-      role: m.role as "admin" | "coordinator" | "trainer" | "viewer" | "setter",
+      role: m.role as Member["role"],
       isSelf: m.user_id === userId,
       trainerLinked: Boolean(m.trainer_id),
+      internGroups: m.role === "stagiaire" ? internGroupCount.get(m.user_id) ?? 0 : null,
       lastSignInAt: authById.get(m.user_id)?.lastSignInAt ?? null,
     }))
     .sort((a, b) => a.name.localeCompare(b.name, "fr"));

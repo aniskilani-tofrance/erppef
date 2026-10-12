@@ -52,6 +52,7 @@ import { FreeSeatsCard, type SeatCandidateRow } from "@/components/assistant/fre
 import { freeSeats, matchSeatCandidates, type Slot } from "@/lib/groupes/free-seats";
 import { whatsappGroupRoster, type RosterMember } from "@/lib/groupes/whatsapp-group";
 import { WhatsAppGroupCard } from "@/components/groupes/whatsapp-group-card";
+import { GroupInternsCard, type InternOption } from "@/components/groupes/group-interns-card";
 
 export default async function GroupePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -131,6 +132,9 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
     .sort((a, b) => a.name.localeCompare(b.name, "fr"));
 
   const canWrite = role === "admin" || role === "coordinator";
+  // Stagiaire : lecture de SON groupe + documents administratifs (la RLS ne lui montre que ses groupes)
+  const isIntern = role === "stagiaire";
+  const canAdminDocs = canWrite || isIntern;
   const assistant = aiConfigured();
   // Assistant : « Prévenir le groupe » (séances à venir, salles, formatrices) et places libérées
   const nowMs = new Date().getTime();
@@ -174,7 +178,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
     : [];
 
   // Envoi hebdomadaire des feuilles d'émargement au financeur : réglages (colonnes du groupe) + historique.
-  const { data: dispatchRows } = canWrite
+  const { data: dispatchRows } = canAdminDocs
     ? await supabase
         .from("attendance_dispatches")
         .select("id, sent_at, mode, status, recipients, cc, session_ids, missing_session_ids, period_from, period_to, error")
@@ -192,6 +196,21 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
       : Promise.resolve({ data: null }),
   ]);
   const coTrainer = coTrainerRow as { first_name: string; last_name: string | null; contract_type: string } | null;
+
+  // Stagiaires rattachés au groupe (coordination) : comptes au rôle « stagiaire » de l'organisme.
+  let internsOfGroup: InternOption[] = [];
+  let internCandidates: InternOption[] = [];
+  if (canWrite) {
+    const [{ data: internRows }, { data: internMembers }] = await Promise.all([
+      supabase.from("group_interns").select("user_id").eq("group_id", id),
+      supabase.from("memberships").select("user_id, profiles(full_name)").eq("role", "stagiaire"),
+    ]);
+    internCandidates = (internMembers ?? [])
+      .map((m) => ({ userId: m.user_id as string, name: (m.profiles as unknown as { full_name: string | null } | null)?.full_name?.trim() || "Stagiaire" }))
+      .sort((a, b) => a.name.localeCompare(b.name, "fr"));
+    const attached = new Set((internRows ?? []).map((r) => r.user_id as string));
+    internsOfGroup = internCandidates.filter((c) => attached.has(c.userId));
+  }
 
   // Jalons d'évaluation (mi-parcours / finale) : date, état, avancement des grilles.
   const { data: evaluationRows } = await supabase.from("evaluations").select("kind, co, po, ce, pe").eq("group_id", id);
@@ -453,6 +472,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
 
       <WhatsAppGroupCard url={whatsappGroupUrl} qrDataUrl={whatsappQr} roster={whatsappRoster} canWrite={canWrite} />
 
+      {!isIntern && (
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Évaluations de parcours</CardTitle>
@@ -471,6 +491,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
           <Link href={`/groupes/${id}/evaluations`} className="ml-auto text-sm font-medium hover:underline">Ouvrir les évaluations →</Link>
         </CardContent>
       </Card>
+      )}
 
       <Card>
         <CardHeader className="pb-2">
@@ -484,7 +505,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
         </CardContent>
       </Card>
 
-      {canWrite && (
+      {canAdminDocs && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Feuilles d&apos;émargement au financeur</CardTitle>
@@ -507,7 +528,9 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
         </Card>
       )}
 
-      <FreeSeatsCard groupId={id} free={seatsFree} candidates={seatCandidates} aiEnabled={assistant} />
+      {!isIntern && <FreeSeatsCard groupId={id} free={seatsFree} candidates={seatCandidates} aiEnabled={assistant} />}
+
+      {canWrite && <GroupInternsCard groupId={id} interns={internsOfGroup} candidates={internCandidates} />}
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
@@ -518,7 +541,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
               <Badge variant="destructive" className="ml-2">Capacité dépassée</Badge>
             )}
           </CardTitle>
-          {canWrite && attendanceStats.size > 0 && (
+          {canAdminDocs && attendanceStats.size > 0 && (
             <Link href={`/groupes/${id}/assiduite`} className="text-sm text-muted-foreground hover:underline">
               Export assiduité (CSV) →
             </Link>
@@ -547,6 +570,11 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
                       <Badge variant="destructive" className="ml-2">
                         {st.consecutiveAbsences} absences de suite
                       </Badge>
+                    )}
+                    {isIntern && st && st.attended > 0 && (
+                      <a href={`/groupes/${id}/certificat/${e.learnerId}`} className="ml-2 text-xs text-muted-foreground hover:underline">
+                        Certificat de réalisation (PDF)
+                      </a>
                     )}
                   </li>
                 );

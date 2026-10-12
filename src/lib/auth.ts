@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 // setter = commercial prestataire (leads restaurateurs) : accès minimal, jamais les apprenants.
-export type AppRole = "admin" | "coordinator" | "trainer" | "viewer" | "setter";
+// stagiaire = personne en stage dans l'organisme : uniquement les groupes auxquels la
+// coordination l'a rattachée (fiche, émargement, kits, documents du groupe).
+export type AppRole = "admin" | "coordinator" | "trainer" | "viewer" | "setter" | "stagiaire";
 
 export type SessionContext = {
   userId: string;

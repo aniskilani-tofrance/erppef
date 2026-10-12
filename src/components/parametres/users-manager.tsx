@@ -28,9 +28,10 @@ export type Member = {
   membershipId: string;
   name: string;
   email: string | null;
-  role: "admin" | "coordinator" | "trainer" | "viewer" | "setter";
+  role: "admin" | "coordinator" | "trainer" | "viewer" | "setter" | "stagiaire";
   isSelf: boolean;
   trainerLinked: boolean;
+  internGroups: number | null; // stagiaire : nombre de groupes rattachés (null pour les autres rôles)
   lastSignInAt: string | null; // null = jamais connecté
 };
 
@@ -40,6 +41,7 @@ const ROLES = [
   { value: "trainer", label: "Formateur" },
   { value: "viewer", label: "Lecture seule" },
   { value: "setter", label: "Commercial (setter) — leads restaurateurs uniquement" },
+  { value: "stagiaire", label: "Stagiaire — ses groupes uniquement" },
 ] as const;
 
 function lastSeen(iso: string): string {
@@ -88,6 +90,11 @@ export function UsersManager({ members }: { members: Member[] }) {
             </div>
             {!m.lastSignInAt && <Badge variant="outline">Jamais connecté</Badge>}
             {m.trainerLinked && <Badge variant="outline">Fiche formateur</Badge>}
+            {m.internGroups !== null && (
+              <Badge variant="outline" className={m.internGroups === 0 ? "border-amber-300 text-amber-800" : undefined}>
+                {m.internGroups === 0 ? "Aucun groupe rattaché" : `${m.internGroups} groupe${m.internGroups > 1 ? "s" : ""}`}
+              </Badge>
+            )}
             <div className="ml-auto flex items-center gap-1">
               <Select
                 value={m.role}
@@ -266,7 +273,8 @@ function InviteDialog() {
             </Select>
             <p className="text-xs text-muted-foreground">
               Pour un formateur, préférez la création de sa fiche (page Formateurs) : le compte
-              est invité automatiquement et lié à son planning.
+              est invité automatiquement et lié à son planning. Pour un stagiaire, rattachez-le
+              ensuite à ses groupes depuis la fiche de chaque groupe (carte « Stagiaires du groupe »).
             </p>
           </div>
           <div className="flex justify-end gap-2">

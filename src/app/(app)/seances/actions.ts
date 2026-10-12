@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
+import { assertSessionAccess } from "@/lib/stagiaires";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { driveConfigured, uploadSheetToDrive } from "@/lib/emargement/gdrive";
 import { buildAttendancePdf, loadAttendanceSheetData, sheetFileName } from "@/lib/emargement/pdf";
@@ -14,12 +15,17 @@ import { buildAttendancePdf, loadAttendanceSheetData, sheetFileName } from "@/li
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
-const ROLES = ["admin", "coordinator", "trainer"] as const;
+// Le stagiaire émarge aussi, mais seulement sur les séances des groupes auxquels la
+// coordination l'a rattaché (assertSessionAccess, le client service_role ignorant la RLS).
+const ROLES = ["admin", "coordinator", "trainer", "stagiaire"] as const;
+const OUT_OF_SCOPE = "Cette séance n'appartient pas à vos groupes.";
 
 export async function openAttendanceSheet(sessionId: string): Promise<ActionResult> {
   if (!z.string().uuid().safeParse(sessionId).success) return { ok: false, error: "Séance invalide" };
 
-  const { orgId } = await requireRole([...ROLES]);
+  const ctx = await requireRole([...ROLES]);
+  const { orgId } = ctx;
+  if (!(await assertSessionAccess(createAdminClient(), ctx, sessionId))) return { ok: false, error: OUT_OF_SCOPE };
   const supabase = createAdminClient();
 
   const { data: session } = await supabase
@@ -56,7 +62,9 @@ export async function setAttendanceStatus(raw: z.infer<typeof statusSchema>): Pr
   if (!parsed.success) return { ok: false, error: "Paramètres invalides" };
   const d = parsed.data;
 
-  const { orgId } = await requireRole([...ROLES]);
+  const ctx = await requireRole([...ROLES]);
+  const { orgId } = ctx;
+  if (!(await assertSessionAccess(createAdminClient(), ctx, d.sessionId))) return { ok: false, error: OUT_OF_SCOPE };
   const supabase = createAdminClient();
 
   const { data: session } = await supabase
@@ -103,7 +111,9 @@ export async function closeAttendanceSheet(raw: z.infer<typeof closeSchema>): Pr
   if (!parsed.success) return { ok: false, error: "Signature du formateur requise" };
   const d = parsed.data;
 
-  const { orgId } = await requireRole([...ROLES]);
+  const ctx = await requireRole([...ROLES]);
+  const { orgId } = ctx;
+  if (!(await assertSessionAccess(createAdminClient(), ctx, d.sessionId))) return { ok: false, error: OUT_OF_SCOPE };
   const supabase = createAdminClient();
 
   const { data: session } = await supabase
@@ -160,7 +170,9 @@ export type DriveResult = { ok: true; link: string | null } | { ok: false; error
 export async function depositSheetToDrive(sessionId: string): Promise<DriveResult> {
   if (!z.string().uuid().safeParse(sessionId).success) return { ok: false, error: "Séance invalide" };
 
-  const { orgId } = await requireRole([...ROLES]);
+  const ctx = await requireRole([...ROLES]);
+  const { orgId } = ctx;
+  if (!(await assertSessionAccess(createAdminClient(), ctx, sessionId))) return { ok: false, error: OUT_OF_SCOPE };
 
   if (!driveConfigured()) {
     return {
@@ -224,7 +236,9 @@ export async function saveSessionLog(raw: z.infer<typeof logSchema>): Promise<Ac
   if (!parsed.success) return { ok: false, error: "Texte trop long (2 000 caractères maximum par champ)" };
   const d = parsed.data;
 
-  const { orgId, userId, role } = await requireRole([...ROLES]);
+  const ctx = await requireRole([...ROLES]);
+  const { orgId, userId, role } = ctx;
+  if (!(await assertSessionAccess(createAdminClient(), ctx, d.sessionId))) return { ok: false, error: OUT_OF_SCOPE };
   const supabase = createAdminClient();
 
   const { data: session } = await supabase

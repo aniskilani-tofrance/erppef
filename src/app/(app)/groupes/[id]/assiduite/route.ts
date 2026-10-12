@@ -1,4 +1,4 @@
-import { requireRole } from "@/lib/auth";
+import { requireGroupAccess } from "@/lib/stagiaires";
 import { createClient } from "@/lib/supabase/server";
 import {
   computeLearnerStats,
@@ -10,7 +10,7 @@ import {
 // financeurs). Séparateur « ; » et BOM UTF-8 : ouverture directe dans Excel FR.
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  await requireRole(["admin", "coordinator"]);
+  await requireGroupAccess(id, ["admin", "coordinator", "stagiaire"]);
   const supabase = await createClient();
 
   const [{ data: group }, { data: enrollments }, { data: rows }] = await Promise.all([

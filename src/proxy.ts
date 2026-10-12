@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { stagiairePathAllowed } from "@/lib/stagiaire-paths";
 
 // Rafraîchit la session Supabase (cookies) et redirige les non-connectés vers /login.
 // La vraie protection (rôles, org) vit dans les layouts et les Server Actions (requireRole).
@@ -51,7 +52,31 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Stagiaire : seulement ses pages (groupes, planning, émargement, formation, aide).
+  // Les pages publiques à jeton (/emargement, /enquete, /test) restent hors de ce contrôle.
+  if (user && !isAuthRoute && request.method === "GET") {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (jwtRole(session?.access_token) === "stagiaire" && !stagiairePathAllowed(request.nextUrl.pathname)) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+  }
+
   return response;
+}
+
+function jwtRole(token: string | undefined): string | null {
+  if (!token) return null;
+  try {
+    const payload = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    return (JSON.parse(atob(payload)) as { app_role?: string }).app_role ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export const config = {

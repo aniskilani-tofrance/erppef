@@ -30,6 +30,7 @@ function fmtDate(day: string | null): string {
 export default async function GroupEvaluationsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { role, userId } = await requireSession();
+  if (role === "stagiaire") notFound(); // évaluations : pédagogie, réservée à l'équipe
   const supabase = await createClient();
   const data = await loadGroupEvaluations(supabase, id);
   if (!data) notFound();

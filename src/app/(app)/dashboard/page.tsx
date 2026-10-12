@@ -5,6 +5,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { OccupancyChart } from "@/components/dashboard/occupancy-chart";
 import { TrainerDashboard } from "@/components/dashboard/trainer-dashboard";
 import { ViewerDashboard } from "@/components/dashboard/viewer-dashboard";
+import { StagiaireDashboard } from "@/components/dashboard/stagiaire-dashboard";
 import { SetterDashboard } from "@/components/leads/setter-dashboard";
 import { weekStartOf } from "@/lib/dates";
 import { computeMilestones, milestoneState, type MilestoneSession } from "@/lib/evaluations/milestones";
@@ -48,6 +49,14 @@ export default async function DashboardPage() {
       <>
         <div className="mx-auto mb-4 max-w-3xl">{ticker}</div>
         <SetterDashboard userId={userId} />
+      </>
+    );
+  }
+  if (role === "stagiaire") {
+    return (
+      <>
+        <div className="mx-auto mb-4 max-w-3xl">{ticker}</div>
+        <StagiaireDashboard userId={userId} />
       </>
     );
   }

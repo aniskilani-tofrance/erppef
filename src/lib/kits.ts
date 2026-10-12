@@ -66,12 +66,15 @@ export function kitDownloadName(fileName: string): string {
 export type KitAccessInput = {
   role: string;
   myTrainerId: string | null; // fiche formateur liée au compte connecté
-  session: { trainerId: string | null; coTrainerId: string | null };
+  myGroupIds?: string[]; // stagiaire : groupes auxquels la coordination l'a rattaché
+  session: { trainerId: string | null; coTrainerId: string | null; groupId?: string | null };
 };
 
-/** Même règle que la policy SQL : coordination ou formateur (titulaire, remplaçant, co-animateur) de la séance. */
-export function canDownloadKit({ role, myTrainerId, session }: KitAccessInput): boolean {
+/** Même règle que les policies SQL : coordination, formateur (titulaire, remplaçant, co-animateur)
+ *  de la séance, ou stagiaire rattaché au groupe de la séance. */
+export function canDownloadKit({ role, myTrainerId, myGroupIds = [], session }: KitAccessInput): boolean {
   if (role === "admin" || role === "coordinator") return true;
+  if (role === "stagiaire") return Boolean(session.groupId) && myGroupIds.includes(session.groupId as string);
   if (role !== "trainer" || !myTrainerId) return false;
   return session.trainerId === myTrainerId || session.coTrainerId === myTrainerId;
 }

@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { requireRole, requireSession } from "@/lib/auth";
+import { internGroupIds } from "@/lib/stagiaires";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -28,15 +29,17 @@ const sessionIdSchema = z.string().uuid();
 async function loadContext(sessionId: string) {
   const { orgId, userId, role } = await requireSession();
   const supabase = await createClient();
-  const [{ data: session }, { data: membership }] = await Promise.all([
-    supabase.from("sessions").select("id, org_id, trainer_id, co_trainer_id").eq("id", sessionId).maybeSingle(),
+  const [{ data: session }, { data: membership }, myGroupIds] = await Promise.all([
+    supabase.from("sessions").select("id, org_id, group_id, trainer_id, co_trainer_id").eq("id", sessionId).maybeSingle(),
     supabase.from("memberships").select("trainer_id").eq("user_id", userId).maybeSingle(),
+    role === "stagiaire" ? internGroupIds(supabase, userId) : Promise.resolve([] as string[]),
   ]);
   if (!session || session.org_id !== orgId) return null;
   const allowed = canDownloadKit({
     role,
     myTrainerId: membership?.trainer_id ?? null,
-    session: { trainerId: session.trainer_id, coTrainerId: session.co_trainer_id },
+    myGroupIds,
+    session: { trainerId: session.trainer_id, coTrainerId: session.co_trainer_id, groupId: session.group_id },
   });
   return { orgId, userId, role, supabase, allowed };
 }

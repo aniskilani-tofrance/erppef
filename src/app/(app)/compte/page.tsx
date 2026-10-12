@@ -18,6 +18,7 @@ export default async function ComptePage() {
     trainer: "Formateur",
     viewer: "Lecture seule",
     setter: "Commercial (setter)",
+    stagiaire: "Stagiaire",
   }[role];
 
   return (

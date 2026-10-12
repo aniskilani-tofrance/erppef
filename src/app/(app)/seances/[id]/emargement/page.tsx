@@ -11,7 +11,7 @@ import { formatLogDay, loadSessionLogContext } from "@/lib/seances/cahier";
 
 export default async function EmargementSeancePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { role, userId, orgId } = await requireRole(["admin", "coordinator", "trainer"]);
+  const { role, userId, orgId } = await requireRole(["admin", "coordinator", "trainer", "stagiaire"]);
   const supabase = await createClient();
 
   const { data: session } = await supabase
@@ -36,7 +36,8 @@ export default async function EmargementSeancePage({ params }: { params: Promise
     loadSessionLogContext(supabase, { id: session.id, groupId: session.group_id, startsAt: session.starts_at }),
     supabase.from("memberships").select("trainer_id").eq("user_id", userId).eq("org_id", orgId).maybeSingle(),
   ]);
-  // Cahier : la coordination partout, une formatrice sur les séances qu'elle anime ou co-anime
+  // Cahier : la coordination partout, une formatrice sur les séances qu'elle anime ou co-anime,
+  // un stagiaire sur les séances de ses groupes (la RLS ne lui montre que celles-là)
   const myTrainerId = membership?.trainer_id ?? null;
   const canEditLog =
     role !== "trainer" || (myTrainerId !== null && [session.trainer_id, session.co_trainer_id].includes(myTrainerId));

@@ -31,9 +31,9 @@ import { GlobalSearch } from "@/components/shell/global-search";
 import type { AppRole } from "@/lib/auth";
 
 const NAV = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "coordinator", "trainer", "viewer", "setter"] },
-  { href: "/planning", label: "Planning", icon: CalendarDays, roles: ["admin", "coordinator", "trainer", "viewer"] },
-  { href: "/groupes", label: "Groupes", icon: UsersRound, roles: ["admin", "coordinator", "trainer", "viewer"] },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "coordinator", "trainer", "viewer", "setter", "stagiaire"] },
+  { href: "/planning", label: "Planning", icon: CalendarDays, roles: ["admin", "coordinator", "trainer", "viewer", "stagiaire"] },
+  { href: "/groupes", label: "Groupes", icon: UsersRound, roles: ["admin", "coordinator", "trainer", "viewer", "stagiaire"] },
   { href: "/apprenants", label: "Apprenants", icon: BookUser, roles: ["admin", "coordinator"] },
   { href: "/formateurs", label: "Formateurs", icon: Users, roles: ["admin", "coordinator"] },
   { href: "/conges", label: "Congés", icon: CalendarOff, roles: ["admin", "coordinator", "trainer"] },
@@ -42,7 +42,7 @@ const NAV = [
   { href: "/rapports", label: "Rapports", icon: FileBarChart, roles: ["admin", "coordinator"] },
   { href: "/leads", label: "Leads resto", icon: UtensilsCrossed, roles: ["admin", "coordinator", "setter"] },
   { href: "/candidats-poei", label: "Candidats POEI", icon: BriefcaseBusiness, roles: ["admin", "coordinator", "setter"] },
-  { href: "/formation", label: "Formation", icon: BookOpen, roles: ["admin", "coordinator", "trainer", "viewer", "setter"] },
+  { href: "/formation", label: "Formation", icon: BookOpen, roles: ["admin", "coordinator", "trainer", "viewer", "setter", "stagiaire"] },
   { href: "/evaluations", label: "Évaluations", icon: GraduationCap, roles: ["admin", "coordinator", "trainer"] },
   { href: "/finance", label: "Finance", icon: Wallet, roles: ["admin", "coordinator"], soon: true },
   { href: "/parametres", label: "Paramètres", icon: Settings, roles: ["admin"] },
@@ -153,5 +153,6 @@ function roleLabel(role: AppRole): string {
     trainer: "Formateur",
     viewer: "Lecture seule",
     setter: "Commercial (setter)",
+    stagiaire: "Stagiaire",
   }[role];
 }
