@@ -106,6 +106,7 @@ export function sourceFromText(v: string | null | undefined): string | null {
   const t = norm(v ?? "");
   if (!t) return null;
   if (/(meta|facebook|instagram|formulaire|agence|parlerresto)/.test(t)) return "formulaire_meta";
+  if (/prospection|froid/.test(t)) return "prospection";
   if (/site/.test(t)) return "site";
   if (/appel/.test(t)) return "appel_entrant";
   if (/recommand|bouche/.test(t)) return "recommandation";

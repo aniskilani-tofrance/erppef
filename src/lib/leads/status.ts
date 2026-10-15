@@ -106,6 +106,7 @@ export const LEAD_SOURCES = [
   { code: "appel_entrant", label: "Appel entrant" },
   { code: "recommandation", label: "Recommandation" },
   { code: "terrain", label: "Terrain / visite" },
+  { code: "prospection", label: "Prospection (appel à froid)" },
   { code: "autre", label: "Autre" },
 ] as const;
 export type LeadSource = (typeof LEAD_SOURCES)[number]["code"];
