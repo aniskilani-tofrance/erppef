@@ -78,6 +78,13 @@ export const CONTACT_CHANNELS = [
 ] as const;
 export type ContactChannel = (typeof CONTACT_CHANNELS)[number]["code"];
 
+// Note interne : une ligne du même journal, mais PAS un contact avec la personne
+// (pas de relance, pas de « dernier contact », pas de changement de statut).
+export const NOTE_CHANNEL = "note";
+export function isInternalNote(channel: string | null | undefined): boolean {
+  return channel === NOTE_CHANNEL;
+}
+
 export const CONTACT_OUTCOMES = [
   { code: "message_envoye", label: "Message envoyé (en attente de réponse)", status: "contacte" },
   { code: "joint", label: "Joint — échange fait", status: "contacte" },
@@ -125,6 +132,7 @@ export function reasonFits(reason: string | null | undefined, status: string | n
 }
 
 export function channelLabel(code: string | null | undefined): string {
+  if (isInternalNote(code)) return "Note interne";
   return CONTACT_CHANNELS.find((c) => c.code === code)?.label ?? (code ?? "—");
 }
 export function outcomeLabel(code: string | null | undefined): string {

@@ -293,7 +293,7 @@ export default async function DashboardPage() {
   const [{ data: fuLearners }, { data: fuContacts }, { data: fuNext }, { data: fuEnrolled }] = absentIds.length
     ? await Promise.all([
         supabase.from("learners").select("id, first_name, last_name, phone").in("id", absentIds),
-        supabase.from("learner_contacts").select("learner_id, contacted_at").in("learner_id", absentIds).gte("contacted_at", followupSince),
+        supabase.from("learner_contacts").select("learner_id, contacted_at").in("learner_id", absentIds).neq("channel", "note").gte("contacted_at", followupSince),
         supabase
           .from("sessions")
           .select("group_id, starts_at, rooms:room_id(name)")

@@ -14,6 +14,7 @@ import { groupsByLearner, type GroupRef } from "@/lib/admission/group-colors";
 import { loadActiveGroupRefs } from "@/lib/admission/load-groups";
 import { FAMILIES, FAMILY_ORDER, resolveProvenance } from "@/lib/admission/sources";
 import { ContactDialog, type ContactEntry } from "@/components/admission/contact-dialog";
+import { loadRecentContacts } from "@/lib/admission/load-recent-contacts";
 import { MeetingFormDialog } from "@/components/admission/meeting-form-dialog";
 import { LearnersTabs } from "@/components/apprenants/learners-tabs";
 import { WhatsAppButton } from "@/components/admission/whatsapp-button";
@@ -55,6 +56,7 @@ type LearnerRow = {
   contact_source?: string | null;
   contact_source_detail?: string | null;
   prescriber?: string | null;
+  notes?: string | null;
 };
 
 function fmtDay(iso: string | null): string {
@@ -67,6 +69,7 @@ function LearnerRows({
   empty,
   senderFirstName,
   history,
+  lastContact,
   templates,
   pendingTestUrl,
   poeiByLearner,
@@ -78,6 +81,7 @@ function LearnerRows({
   empty: string;
   senderFirstName: string | null;
   history: Map<string, ContactEntry[]>;
+  lastContact: Map<string, string>; // dernier vrai contact (les notes internes ne comptent pas)
   templates: Templates;
   pendingTestUrl: Map<string, string>;
   poeiByLearner: Map<string, string>;
@@ -86,7 +90,7 @@ function LearnerRows({
   showReason?: boolean;
 }) {
   if (rows.length === 0) return <p className="py-4 text-sm text-muted-foreground">{empty}</p>;
-  const lastContactAt = (id: string) => history.get(id)?.[0]?.contactedAt ?? null;
+  const lastContactAt = (id: string) => lastContact.get(id) ?? null;
   return (
     <Table>
       <TableHeader>
@@ -148,6 +152,7 @@ function LearnerRows({
                   learnerName={`${l.first_name} ${l.last_name}`}
                   currentStatus={l.admission_status}
                   history={history.get(l.id) ?? []}
+                  pinnedNote={l.notes}
                 />
                 {assistant && <BriefButton learnerId={l.id} learnerName={`${l.first_name} ${l.last_name}`} />}
                 <ProposePoeiButton learnerId={l.id} candidateId={poeiByLearner.get(l.id) ?? null} />
@@ -168,13 +173,9 @@ export default async function AdmissionPage() {
   const [{ data: learners }, { data: contacts }, { data: meetingRows }, { data: rooms }, { data: profile }, { data: pendingTests }, templates, h] = await Promise.all([
     supabase
       .from("learners")
-      .select("id, first_name, last_name, learner_no, phone, email, admission_status, level_assessed, created_at, contact_source, contact_source_detail, prescriber")
+      .select("id, first_name, last_name, learner_no, phone, email, admission_status, level_assessed, created_at, contact_source, contact_source_detail, prescriber, notes")
       .order("created_at", { ascending: true }),
-    supabase
-      .from("learner_contacts")
-      .select("id, learner_id, contacted_at, channel, outcome, note, reason, profiles:created_by(full_name)")
-      .order("contacted_at", { ascending: false })
-      .limit(500),
+    loadRecentContacts(supabase).then((data) => ({ data })),
     supabase
       .from("info_meetings")
       .select("id, title, starts_at, ends_at, location, capacity, rooms:room_id(name), info_meeting_invitations(status)")
@@ -202,9 +203,11 @@ export default async function AdmissionPage() {
   const pendingTestUrl = new Map<string, string>();
   for (const t of pendingTests ?? []) if (!pendingTestUrl.has(t.learner_id)) pendingTestUrl.set(t.learner_id, `${origin}/test/${t.token}`);
 
-  // Journal : 5 derniers contacts par apprenant + date du dernier
+  // Journal : 5 dernières lignes par apprenant + date du dernier VRAI contact (hors notes internes)
   const historyByLearner = new Map<string, ContactEntry[]>();
+  const lastContactByLearner = new Map<string, string>();
   for (const c of contacts ?? []) {
+    if (c.last_contact_at && !lastContactByLearner.has(c.learner_id)) lastContactByLearner.set(c.learner_id, c.last_contact_at);
     const list = historyByLearner.get(c.learner_id) ?? [];
     if (list.length < 5) {
       list.push({
@@ -214,12 +217,12 @@ export default async function AdmissionPage() {
         outcome: c.outcome,
         note: c.note,
         reason: c.reason,
-        by: (c.profiles as unknown as { full_name: string | null } | null)?.full_name ?? null,
+        by: c.by_name,
       });
       historyByLearner.set(c.learner_id, list);
     }
   }
-  const lastContactAt = (id: string) => historyByLearner.get(id)?.[0]?.contactedAt ?? null;
+  const lastContactAt = (id: string) => lastContactByLearner.get(id) ?? null;
 
   // Entonnoir
   const counts: Record<string, number> = {};
@@ -447,7 +450,7 @@ export default async function AdmissionPage() {
           </p>
         </CardHeader>
         <CardContent>
-          <LearnerRows rows={toContact} senderFirstName={senderFirstName} history={historyByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} assistant={assistant} empty="Personne à contacter : tous les nouveaux ont été joints. Les fiches déposées dans le Drive arrivent ici chaque nuit." />
+          <LearnerRows rows={toContact} senderFirstName={senderFirstName} history={historyByLearner} lastContact={lastContactByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} assistant={assistant} empty="Personne à contacter : tous les nouveaux ont été joints. Les fiches déposées dans le Drive arrivent ici chaque nuit." />
           {toContact.length > 80 && (
             <p className="mt-2 text-xs text-muted-foreground">
               80 premiers affichés — <Link href="/apprenants?statut=nouveau" className="underline">voir tous les nouveaux</Link>.
@@ -464,7 +467,7 @@ export default async function AdmissionPage() {
           </p>
         </CardHeader>
         <CardContent>
-          <LearnerRows rows={toInvite} senderFirstName={senderFirstName} history={historyByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} assistant={assistant} empty="Aucun contacté en attente de convocation." />
+          <LearnerRows rows={toInvite} senderFirstName={senderFirstName} history={historyByLearner} lastContact={lastContactByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} assistant={assistant} empty="Aucun contacté en attente de convocation." />
         </CardContent>
       </Card>
 
@@ -476,7 +479,7 @@ export default async function AdmissionPage() {
           </p>
         </CardHeader>
         <CardContent>
-          <LearnerRows rows={toEnroll} senderFirstName={senderFirstName} history={historyByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} assistant={assistant} empty="Personne en attente d'inscription." />
+          <LearnerRows rows={toEnroll} senderFirstName={senderFirstName} history={historyByLearner} lastContact={lastContactByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} assistant={assistant} empty="Personne en attente d'inscription." />
         </CardContent>
       </Card>
 
@@ -488,7 +491,7 @@ export default async function AdmissionPage() {
           </p>
         </CardHeader>
         <CardContent>
-          <LearnerRows rows={waiting} senderFirstName={senderFirstName} history={historyByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} assistant={assistant} showReason empty="Personne en liste d'attente." />
+          <LearnerRows rows={waiting} senderFirstName={senderFirstName} history={historyByLearner} lastContact={lastContactByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} assistant={assistant} showReason empty="Personne en liste d'attente." />
         </CardContent>
       </Card>
 
@@ -506,7 +509,7 @@ export default async function AdmissionPage() {
             <details>
               <summary className="cursor-pointer text-sm text-muted-foreground">Afficher les {closed.length} dossiers clos</summary>
               <div className="mt-2">
-                <LearnerRows rows={closed} senderFirstName={senderFirstName} history={historyByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} assistant={assistant} showReason empty="Aucun dossier clos." />
+                <LearnerRows rows={closed} senderFirstName={senderFirstName} history={historyByLearner} lastContact={lastContactByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} assistant={assistant} showReason empty="Aucun dossier clos." />
                 {closed.length > 80 && (
                   <p className="mt-2 text-xs text-muted-foreground">
                     80 plus récents affichés — <Link href="/apprenants?statut=sans_suite" className="underline">voir tous les dossiers clos</Link>.

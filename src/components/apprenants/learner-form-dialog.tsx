@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Plus, Pencil } from "lucide-react";
 import { PhotoUpload, initials } from "@/components/ui/photo-upload";
 import { LearnerDocuments } from "@/components/apprenants/learner-documents";
+import { LearnerJournal } from "@/components/apprenants/learner-journal";
 import { ADMISSION_STATUSES } from "@/lib/admission/status";
 import {
   ACTIVITIES as REF_ACTIVITIES,
@@ -513,9 +514,40 @@ export function LearnerFormDialog({
               </Select>
             </div>
           )}
-          <div className="space-y-2">
-            <Label>Notes</Label>
-            <Textarea value={values.notes} onChange={(e) => set("notes", e.target.value)} rows={2} />
+          {/* Notes et échanges : la note épinglée de la fiche + le journal d'admission (contacts,
+              notes internes, entretiens), le même que le carnet de l'onglet Admission. */}
+          <div className="rounded-md border p-3">
+            <p className="mb-3 text-sm font-medium">
+              Notes et échanges{" "}
+              <span className="font-normal text-muted-foreground">(partagés avec l&apos;admission)</span>
+            </p>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Note épinglée</Label>
+                <Textarea
+                  value={values.notes}
+                  onChange={(e) => set("notes", e.target.value)}
+                  rows={2}
+                  placeholder="Ce qu'il faut savoir avant tout échange : malentendante, ne lit pas, joindre via sa fille…"
+                />
+                <p className="text-xs text-muted-foreground">Toujours en tête, ici et dans le carnet « Noter un contact ». Enregistrée avec la fiche.</p>
+              </div>
+              {isEdit && initial?.id ? (
+                <LearnerJournal
+                  learnerId={initial.id}
+                  milestones={{
+                    entryInterviewOn: initial.entryInterviewOn || null,
+                    entryNeed: initial.entryNeed || null,
+                    oralTestOn: initial.oralTestOn || null,
+                    oralTestLevel: initial.oralTestLevel === "nd" ? null : initial.oralTestLevel || null,
+                    oralTestEvaluator: initial.oralTestEvaluator || null,
+                    oralTestComment: initial.oralTestComment || null,
+                  }}
+                />
+              ) : (
+                <p className="text-xs text-muted-foreground">Le journal (contacts, notes datées) s&apos;ouvre une fois la fiche enregistrée.</p>
+              )}
+            </div>
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setOpen(false)} disabled={pending}>

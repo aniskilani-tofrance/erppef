@@ -352,7 +352,7 @@ export async function learnerBrief(learnerId: string): Promise<BriefResult> {
     writtenTest: test ? `fait le ${fmt(test.completed_at ?? "")} : ${test.level ?? "?"}${test.score != null ? ` (${Math.round(Number(test.score))}/100)` : ""}` : null,
     oralTest: l.oral_test_on ? `le ${fmtDay(l.oral_test_on, { day: "2-digit", month: "2-digit" })}${l.oral_test_evaluator ? ` par ${l.oral_test_evaluator.split(/\s+/)[0]}` : ""} : ${l.oral_test_level ?? "non déterminé"}${l.oral_test_comment ? ` — ${l.oral_test_comment}` : ""}` : null,
     need: l.entry_need, goal: GOALS.find((g) => g.code === l.entry_goal)?.label ?? null,
-    contacts: (contacts ?? []).map((c) => `${fmt(c.contacted_at)} ${c.channel} · ${c.outcome}${c.note ? ` — ${c.note}` : ""}`),
+    contacts: (contacts ?? []).map((c) => (c.channel === "note" ? `${fmt(c.contacted_at)} note interne${c.note ? ` — ${c.note}` : ""}` : `${fmt(c.contacted_at)} ${c.channel} · ${c.outcome}${c.note ? ` — ${c.note}` : ""}`)),
     groups: (enrollments ?? []).map((e) => `${(e.groups as unknown as { name: string } | null)?.name ?? "?"} (${e.status})`),
     nextMeeting: meeting ? `${formatMeetingWhen({ startsAt: meeting.starts_at, endsAt: meeting.ends_at })} — convocation ${invitation!.status}` : null,
     now: new Date(),
