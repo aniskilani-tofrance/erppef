@@ -12,6 +12,7 @@ import {
   ADMISSION_REASON_CODES,
   ADMISSION_STATUS_CODES,
   INVITATION_STATUS_CODES,
+  NOTE_CHANNEL,
   reasonFits,
   nextAdmissionStatus,
   type AdmissionStatus,
@@ -24,6 +25,7 @@ import { LEVELS } from "@/lib/referentiels";
 import { aiConfigured } from "@/lib/ai/client";
 import { hasReminderCue } from "@/lib/ai/prompts";
 import { extractReminderFromNote } from "@/app/(app)/assistant/actions";
+import type { JournalContactRow } from "@/lib/admission/journal";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -109,6 +111,67 @@ export async function logContact(raw: z.infer<typeof contactSchema>): Promise<Ac
 
   revalidateAdmission();
   return { ok: true };
+}
+
+// ── Notes internes (fil « Notes et échanges » de la fiche) ───────────────────
+// Même journal que les contacts, canal « note » : datée, signée, visible côté admission
+// et côté fiche. Ne touche jamais au statut et ne compte pas comme un contact.
+const noteSchema = z.object({ learnerId: uuid, note: z.string().trim().min(1).max(2000) });
+
+export async function addLearnerNote(raw: z.infer<typeof noteSchema>): Promise<ActionResult> {
+  const parsed = noteSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Écrivez la note avant d'enregistrer." };
+  const d = parsed.data;
+
+  const { orgId, userId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+  const { error } = await supabase.from("learner_contacts").insert({
+    org_id: orgId,
+    learner_id: d.learnerId,
+    channel: NOTE_CHANNEL,
+    outcome: "autre",
+    note: d.note,
+    created_by: userId,
+  });
+  if (error) return { ok: false, error: translatePgError(error) };
+
+  // « Rappeler jeudi » marche aussi dans une note interne (même assistant que le carnet).
+  if (aiConfigured() && hasReminderCue(d.note)) {
+    after(() => extractReminderFromNote({ orgId, userId, learnerId: d.learnerId, note: d.note }).catch(() => undefined));
+  }
+
+  revalidateAdmission();
+  return { ok: true };
+}
+
+export type LearnerJournalResult = { ok: true; rows: JournalContactRow[] } | { ok: false; error: string };
+
+// Tout le journal d'UNE personne (pas seulement les 5 derniers des listes) : chargé à
+// l'ouverture de la fiche.
+export async function listLearnerJournal(learnerId: string): Promise<LearnerJournalResult> {
+  if (!uuid.safeParse(learnerId).success) return { ok: false, error: "Apprenant invalide" };
+  const { orgId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("learner_contacts")
+    .select("id, contacted_at, channel, outcome, note, reason, profiles:created_by(full_name)")
+    .eq("learner_id", learnerId)
+    .eq("org_id", orgId)
+    .order("contacted_at", { ascending: false })
+    .limit(300);
+  if (error) return { ok: false, error: translatePgError(error) };
+  return {
+    ok: true,
+    rows: (data ?? []).map((c) => ({
+      id: c.id,
+      contacted_at: c.contacted_at,
+      channel: c.channel,
+      outcome: c.outcome,
+      note: c.note,
+      reason: c.reason,
+      by_name: (c.profiles as unknown as { full_name: string | null } | null)?.full_name ?? null,
+    })),
+  };
 }
 
 export async function setAdmissionStatus(raw: { learnerId: string; status: AdmissionStatus }): Promise<ActionResult> {

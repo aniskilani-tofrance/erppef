@@ -4,12 +4,14 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { NotebookPen } from "lucide-react";
-import { logContact } from "@/app/(app)/apprenants/admission/actions";
+import { addLearnerNote, logContact } from "@/app/(app)/apprenants/admission/actions";
 import {
   ADMISSION_STATUSES,
   CONTACT_CHANNELS,
   CONTACT_OUTCOMES,
+  NOTE_CHANNEL,
   channelLabel,
+  isInternalNote,
   needsReason,
   outcomeLabel,
   reasonLabel,
@@ -42,21 +44,27 @@ export type ContactEntry = {
 
 // « Noter un contact » : un appel, un message, une réponse… Le journal est la trace
 // de la prise de contact (et la mémoire de l'équipe : qui a parlé à qui, quand).
+// Canal « Note interne » : une note datée sans contact (pas de résultat, pas de statut),
+// la même que celles du fil « Notes et échanges » de la fiche.
 export function ContactDialog({
   learnerId,
   learnerName,
   currentStatus,
   history,
+  pinnedNote,
   triggerLabel,
 }: {
   learnerId: string;
   learnerName: string;
   currentStatus: string | null;
   history: ContactEntry[];
+  // Note épinglée de la fiche apprenant (learners.notes), rappelée en tête du carnet.
+  pinnedNote?: string | null;
   triggerLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [channel, setChannel] = useState<ContactChannel>("whatsapp");
+  const [channel, setChannel] = useState<ContactChannel | typeof NOTE_CHANNEL>("whatsapp");
+  const internal = isInternalNote(channel);
   const [outcome, setOutcome] = useState<ContactOutcome>("joint");
   const [note, setNote] = useState("");
   const [status, setStatus] = useState<AdmissionStatus>(suggestedStatus("joint", currentStatus));
@@ -79,12 +87,26 @@ export function ContactDialog({
   const reasonMissing = needsReason(status) && !reason;
 
   function submit() {
+    if (internal) {
+      startTransition(async () => {
+        const result = await addLearnerNote({ learnerId, note });
+        if (!result.ok) {
+          toast.error(result.error);
+          return;
+        }
+        toast.success("Note ajoutée au journal.");
+        setNote("");
+        setOpen(false);
+        router.refresh();
+      });
+      return;
+    }
     if (reasonMissing) {
       toast.error(status === "sans_suite" ? "Choisissez pourquoi le dossier est clos." : "Choisissez pourquoi la personne passe en liste d'attente.");
       return;
     }
     startTransition(async () => {
-      const result = await logContact({ learnerId, channel, outcome, note: note.trim() || null, status, reason: reason || null });
+      const result = await logContact({ learnerId, channel: channel as ContactChannel, outcome, note: note.trim() || null, status, reason: reason || null });
       if (!result.ok) {
         toast.error(result.error);
         return;
@@ -117,16 +139,22 @@ export function ContactDialog({
           <DialogTitle>Contact — {learnerName}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
+          {pinnedNote?.trim() && (
+            <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm dark:border-amber-800 dark:bg-amber-950/30">
+              <p className="text-xs font-medium text-muted-foreground">Note épinglée de la fiche</p>
+              <p className="whitespace-pre-line">{pinnedNote.trim()}</p>
+            </div>
+          )}
           {history.length > 0 && (
             <div className="rounded-md border">
-              <p className="border-b px-3 py-1.5 text-xs font-medium text-muted-foreground">Derniers contacts</p>
+              <p className="border-b px-3 py-1.5 text-xs font-medium text-muted-foreground">Derniers échanges et notes</p>
               <ul className="max-h-40 overflow-y-auto px-3 py-2 text-sm">
                 {history.map((h) => (
                   <li key={h.id} className="py-1">
                     <span className="text-muted-foreground">
                       {new Date(h.contactedAt).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Paris" })}
                     </span>{" "}
-                    · {channelLabel(h.channel)} · {outcomeLabel(h.outcome)}
+                    · {channelLabel(h.channel)}{!isInternalNote(h.channel) && <> · {outcomeLabel(h.outcome)}</>}
                     {reasonLabel(h.reason) && <span className="font-medium"> · {reasonLabel(h.reason)}</span>}
                     {h.by && <span className="text-muted-foreground"> — {h.by}</span>}
                     {h.note && <span className="block text-xs text-muted-foreground">{h.note}</span>}
@@ -138,16 +166,17 @@ export function ContactDialog({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Canal</Label>
-              <Select value={channel} onValueChange={(v) => setChannel(v as ContactChannel)}>
+              <Select value={channel} onValueChange={(v) => setChannel(v as ContactChannel | typeof NOTE_CHANNEL)}>
                 <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {CONTACT_CHANNELS.map((c) => (
                     <SelectItem key={c.code} value={c.code}>{c.label}</SelectItem>
                   ))}
+                  <SelectItem value={NOTE_CHANNEL}>Note interne (pas un contact)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
+            {!internal && <div className="space-y-2">
               <Label>Résultat</Label>
               <Select value={outcome} onValueChange={(v) => changeOutcome(v as ContactOutcome)}>
                 <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
@@ -157,10 +186,10 @@ export function ContactDialog({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </div>}
           </div>
           <div className="space-y-2">
-            <Label>Note (optionnel)</Label>
+            <Label>{internal ? "Note" : "Note (optionnel)"}</Label>
             <Textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
@@ -168,6 +197,11 @@ export function ContactDialog({
               placeholder="Rappeler jeudi après 17h ; préfère les cours du matin ; a déjà un niveau A1…"
             />
           </div>
+          {internal ? (
+            <p className="text-xs text-muted-foreground">
+              Une note interne ne change pas le statut et ne compte pas comme un contact : la personne reste dans sa liste (à contacter, à relancer…).
+            </p>
+          ) : <>
           <div className="space-y-2">
             <Label>Statut d&apos;admission après ce contact</Label>
             <Select
@@ -206,9 +240,10 @@ export function ContactDialog({
               </Select>
             </div>
           )}
+          </>}
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setOpen(false)} disabled={pending}>Annuler</Button>
-            <Button onClick={submit} disabled={pending || reasonMissing}>{pending ? "Enregistrement…" : "Enregistrer"}</Button>
+            <Button onClick={submit} disabled={pending || (internal ? !note.trim() : reasonMissing)}>{pending ? "Enregistrement…" : "Enregistrer"}</Button>
           </div>
         </div>
       </DialogContent>

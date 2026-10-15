@@ -25,6 +25,7 @@ import { SourceFilter } from "@/components/admission/source-filter";
 import { matchesSourceFilter, resolveProvenance } from "@/lib/admission/sources";
 import { BulkInviteButton } from "@/components/admission/bulk-invite-button";
 import { ContactDialog, type ContactEntry } from "@/components/admission/contact-dialog";
+import { loadRecentContacts } from "@/lib/admission/load-recent-contacts";
 import { BriefButton } from "@/components/assistant/brief-button";
 import { aiConfigured } from "@/lib/ai/client";
 import { WhatsAppButton } from "@/components/admission/whatsapp-button";
@@ -69,12 +70,8 @@ export default async function ApprenantsPage({
       .order("created_at", { ascending: false }),
     // Prénom de la personne connectée : signe le message d'invitation au test
     supabase.from("profiles").select("full_name").eq("id", userId).single(),
-    // Journal des contacts (parcours d'admission) : les 5 derniers par apprenant
-    supabase
-      .from("learner_contacts")
-      .select("id, learner_id, contacted_at, channel, outcome, note, profiles:created_by(full_name)")
-      .order("contacted_at", { ascending: false })
-      .limit(500),
+    // Journal des contacts (parcours d'admission) : les 5 derniers de chaque apprenant (vue)
+    loadRecentContacts(supabase).then((data) => ({ data })),
     // Réunions d'information à venir : cible du bouton « Convoquer (n) »
     supabase
       .from("info_meetings")
@@ -115,7 +112,7 @@ export default async function ApprenantsPage({
         channel: c.channel,
         outcome: c.outcome,
         note: c.note,
-        by: (c.profiles as unknown as { full_name: string | null } | null)?.full_name ?? null,
+        by: c.by_name,
       });
       historyByLearner.set(c.learner_id, list);
     }
@@ -297,6 +294,7 @@ export default async function ApprenantsPage({
                         learnerName={`${l.first_name} ${l.last_name}`}
                         currentStatus={l.admission_status}
                         history={historyByLearner.get(l.id) ?? []}
+                        pinnedNote={l.notes}
                       />
                       {assistant && <BriefButton learnerId={l.id} learnerName={`${l.first_name} ${l.last_name}`} />}
                     </span>

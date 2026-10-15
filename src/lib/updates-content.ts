@@ -26,6 +26,19 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-10-15-notes-fiche-admission",
+    date: "2026-10-15",
+    title: "Les notes de la fiche et celles de l'admission, au même endroit",
+    summary: "La fiche apprenant montre maintenant tout le journal d'admission (contacts, notes, entretiens), et une note écrite d'un côté se lit de l'autre : plus d'information perdue entre l'accueil et le suivi.",
+    items: [
+      { text: "Fiche apprenant → bloc « Notes et échanges » : la note épinglée en tête, puis tout l'historique (contacts, notes internes, entretien d'entrée et entretien oral à leur date). « Ajouter la note » l'écrit dans le journal, datée et signée.", roles: TEAM },
+      { text: "Carnet « Noter un contact » : nouveau canal « Note interne (pas un contact) » pour garder une information sans changer le statut, et la note épinglée de la fiche rappelée en tête dans un encadré jaune.", roles: TEAM },
+      { text: "Une note interne ne compte jamais comme un contact : la personne reste « à contacter » ou « à relancer », et un absent reste dans « Absents à relancer » tant qu'il n'a pas été vraiment contacté.", roles: TEAM },
+      { text: "Les listes Apprenants et Admission affichent les cinq derniers échanges de chaque personne, même pour les dossiers anciens.", roles: TEAM },
+    ],
+    training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "L'admission : WhatsApp, réunion d'information, entretien oral" }],
+  },
+  {
     id: "2026-10-12-contacts-groupe-vcard",
     date: "2026-10-12",
     title: "Les numéros d'un groupe dans votre téléphone, en un geste",
