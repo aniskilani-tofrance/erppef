@@ -7,7 +7,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 import { literacyGate, submitTest } from "@/app/test/[token]/actions";
-import { nameDistractors } from "@/lib/placement/literacy-questions";
+import { nameDistractors } from "@/lib/placement/name-distractors";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";

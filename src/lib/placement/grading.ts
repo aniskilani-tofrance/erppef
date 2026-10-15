@@ -16,19 +16,39 @@ const ALL_QUESTIONS: Question[] = [...LITERACY_QUESTIONS, ...QUESTIONS];
 
 export const FREE_RESPONSE_TYPES = ["written", "oral", "reformulate"];
 
-// Champs à ne JAMAIS envoyer au client (réponses et explications).
-const SECRET_FIELDS = [
-  "correct", "explanation", "acceptedAnswers", "correctBlanks",
-  "correctSentence", "correctOrder", "criteria",
+// Champs à ne JAMAIS envoyer au client (réponses, attendus, explications).
+// Correctif du 16/10 (modèle ToFrance, itemsPublics) : l'ancienne liste laissait partir
+// la réponse attendue des textes à trous (blank_answer), des saisies chiffrées
+// (correctAnswer), la justification des vrai/faux, les réponses des formulaires,
+// la catégorie de chaque élément à classer et les paires toutes faites à relier.
+export const SECRET_FIELDS = [
+  "correct", "correctAnswer", "explanation", "acceptedAnswers", "correctBlanks",
+  "correctSentence", "correctOrder", "criteria", "justification", "blank_answer",
 ];
 
+/** Version PUBLIQUE d'un item, envoyée au navigateur : consigne, options, supports, sans corrigé. */
+export function publicQuestion(q: Question): Question {
+  const copy: Question = { ...q };
+  for (const f of SECRET_FIELDS) delete copy[f];
+  // Formulaire : on garde l'étiquette et la clé de chaque champ, pas la réponse attendue.
+  if (Array.isArray(q.formFields)) {
+    copy.formFields = q.formFields.map(({ label, key }: { label: string; key: string }) => ({ label, key }));
+  }
+  // À classer : le texte de chaque élément, pas sa catégorie.
+  if (q.type === "categorize" && Array.isArray(q.items)) {
+    copy.items = q.items.map(({ text }: { text: string }) => ({ text }));
+  }
+  // À relier : colonne A dans l'ordre, colonne B séparée et triée (aucun lien gauche → droite).
+  if (q.type === "match_pairs" && Array.isArray(q.pairs)) {
+    copy.pairs = q.pairs.map(({ left }: { left: string }) => ({ left }));
+    copy.rights = q.pairs.map(({ right }: { right: string }) => right).sort((a: string, b: string) => a.localeCompare(b, "fr"));
+  }
+  // email_response est un QCM dans les données : ses options restent, sa réponse non.
+  return copy;
+}
+
 export function publicQuestions(): Question[] {
-  return ALL_QUESTIONS.map((q) => {
-    const copy: Question = { ...q };
-    for (const f of SECRET_FIELDS) delete copy[f];
-    // email_response est un QCM dans les données : ses options restent, sa réponse non.
-    return copy;
-  });
+  return ALL_QUESTIONS.map(publicQuestion);
 }
 
 async function evaluateFreeAnswer(q: Question, answer: string): Promise<boolean> {

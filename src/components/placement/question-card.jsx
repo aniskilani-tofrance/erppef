@@ -15,7 +15,8 @@ function MatchPairs({ question, selectedAnswer, onSelect }) {
   const [matched, setMatched] = useState(selectedAnswer ? JSON.parse(selectedAnswer) : {});
   const [selectedLeft, setSelectedLeft] = useState(null);
 
-  const rights = question.pairs.map(p => p.right);
+  // Colonne B fournie à part par le serveur (les paires complètes restent côté serveur).
+  const rights = question.rights ?? [];
   const shuffled = useRef([...rights].sort(() => Math.random() - 0.5)).current;
 
   const handleLeft = (left) => setSelectedLeft(selectedLeft === left ? null : left);
