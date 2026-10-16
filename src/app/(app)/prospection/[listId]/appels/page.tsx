@@ -92,6 +92,8 @@ export default async function CallSessionPage({
         progress={position >= 0 ? `${position + 1} / ${remaining.length} aujourd'hui` : `${remaining.length} à appeler aujourd'hui`}
         skipHref={`/prospection/${listId}/appels?passes=${nextPasses}`}
         nextHref={`/prospection/${listId}/appels${passes.length ? `?passes=${passes.join(",")}` : ""}`}
+        owners={owners}
+        listName={list.name as string}
       />
     </div>
   );

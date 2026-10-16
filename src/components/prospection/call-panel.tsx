@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ExternalLink, MapPin, Phone, SkipForward } from "lucide-react";
-import { logProspectCall, updateProspectContact } from "@/app/(app)/prospection/actions";
+import { logProspectCall, qualifyProspect, updateProspectContact } from "@/app/(app)/prospection/actions";
+import type { LeadRow, Owner } from "@/lib/leads/queries";
+import { LeadFormDialog } from "@/components/leads/lead-form-dialog";
 import { formatPhone } from "@/lib/admission/phone";
 import { segmentLabel } from "@/lib/leads/status";
 import { telLink } from "@/lib/leads/templates";
@@ -42,7 +44,11 @@ export function CallPanel({
   progress,
   skipHref,
   nextHref,
+  owners,
+  listName,
 }: {
+  owners: Owner[];
+  listName: string;
   prospect: ProspectRow;
   calls: CallLine[];
   listId: string;
@@ -56,7 +62,7 @@ export function CallPanel({
   const [pending, startTransition] = useTransition();
   const [outcome, setOutcome] = useState<CallOutcome | null>(null);
   const [note, setNote] = useState("");
-  const [contactName, setContactName] = useState("");
+  const [qualifyOpen, setQualifyOpen] = useState(false);
   const [callbackOn, setCallbackOn] = useState(nextWorkingDay(today));
   const [phone, setPhone] = useState(p.phone ?? "");
   const tel = telLink(p.phone);
@@ -70,7 +76,6 @@ export function CallPanel({
         outcome: o,
         note: note || null,
         callbackOn: o === "rappeler" || o === "barrage" ? callbackOn : null,
-        contactName: contactName || null,
       });
       if (!r.ok) {
         toast.error(r.error);
@@ -88,8 +93,30 @@ export function CallPanel({
 
   function choose(o: CallOutcome) {
     if (o === "pas_de_reponse") return save(o);
+    if (o === "interesse") return setQualifyOpen(true);
     setOutcome(o);
   }
+
+  // « Intéressé » : la fiche de qualification s'ouvre, pré-remplie avec le restaurant ;
+  // l'enregistrer crée le lead et ouvre sa fiche.
+  const prefill: Partial<LeadRow> = {
+    company: p.company,
+    segment: p.segment,
+    source: "prospection",
+    campaign: listName,
+    phone: p.phone,
+    email: p.email,
+    city: p.city,
+    postal_code: p.postal_code,
+    positions_count: 1,
+    notes: [
+      `Prospection${p.opened_on ? ` : restaurant ouvert le ${frDate(p.opened_on)}` : ""}.`,
+      p.address ? `Adresse : ${p.address}` : null,
+      p.siret ? `SIRET : ${p.siret}` : null,
+      p.website ? `Site : ${p.website}` : null,
+      p.notes,
+    ].filter(Boolean).join("\n"),
+  };
 
   function savePhone() {
     startTransition(async () => {
@@ -204,27 +231,30 @@ export function CallPanel({
                 <Input id="prospect-callback" type="date" min={today} value={callbackOn} onChange={(e) => setCallbackOn(e.target.value)} />
               </div>
             )}
-            {outcome === "interesse" && (
-              <div className="space-y-1">
-                <Label htmlFor="prospect-contact">Nom du gérant ou du décideur</Label>
-                <Input id="prospect-contact" value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="Karim Benali" />
-              </div>
-            )}
             <div className="space-y-1">
               <Label htmlFor="prospect-note">
-                {outcome === "barrage" ? "Prénom du gérant, meilleur moment" : outcome === "interesse" ? "Ce qu'il cherche (postes, quand)" : "Note (facultatif)"}
+                {outcome === "barrage" ? "Prénom du gérant, meilleur moment" : "Note (facultatif)"}
               </Label>
               <Textarea id="prospect-note" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="ghost" onClick={() => setOutcome(null)} disabled={pending}>Retour</Button>
               <Button onClick={() => save(outcome)} disabled={pending}>
-                {pending ? "Enregistrement…" : outcome === "interesse" ? "Créer le lead" : "Enregistrer et suivant"}
+                {pending ? "Enregistrement…" : "Enregistrer et suivant"}
               </Button>
             </div>
           </CardContent>
         </Card>
       )}
+
+      <LeadFormDialog
+        owners={owners}
+        prefill={prefill}
+        title={`Qualification — ${p.company}`}
+        open={qualifyOpen}
+        onOpenChange={setQualifyOpen}
+        onCreate={(lead) => qualifyProspect({ prospectId: p.id, lead })}
+      />
 
       {calls.length > 0 && (
         <div className="rounded-md border bg-background px-4 py-2">

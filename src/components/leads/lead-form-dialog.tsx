@@ -4,7 +4,7 @@ import { useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus, Pencil } from "lucide-react";
-import { upsertLead, type LeadInput } from "@/app/(app)/leads/actions";
+import { upsertLead, type LeadInput, type LeadResult } from "@/app/(app)/leads/actions";
 import type { LeadRow, Owner } from "@/lib/leads/queries";
 import {
   CONTRACT_TYPES, HACCP_STATUSES, HIRING_HORIZONS, LEAD_OFFERS, LEAD_SCORES, LEAD_SEGMENTS, LEAD_SOURCES, contractEligible,
@@ -41,9 +41,32 @@ const CONTACT_ROLES = ["Gérant", "Franchisé", "Directeur de restaurant", "Mana
 
 // Fiche lead : création (« Nouveau lead ») ou modification (crayon). Les 7 questions de
 // qualification du script sont là, dans l'ordre de l'appel.
-export function LeadFormDialog({ lead, owners, trigger }: { lead?: LeadRow | null; owners: Owner[]; trigger?: ReactNode }) {
-  const [open, setOpen] = useState(false);
-  const [f, setF] = useState<Form>(() => fromLead(lead));
+// Depuis la prospection : `prefill` remplit la fiche avec le restaurant appelé, le dialogue
+// est ouvert par l'écran d'appel (`open`), et `onCreate` crée le lead côté prospection.
+export function LeadFormDialog({
+  lead,
+  owners,
+  trigger,
+  prefill,
+  title,
+  open: controlledOpen,
+  onOpenChange,
+  onCreate,
+}: {
+  lead?: LeadRow | null;
+  owners: Owner[];
+  trigger?: ReactNode;
+  prefill?: Partial<LeadRow>;
+  title?: string;
+  open?: boolean;
+  onOpenChange?: (o: boolean) => void;
+  onCreate?: (input: LeadInput) => Promise<LeadResult>;
+}) {
+  const [innerOpen, setInnerOpen] = useState(false);
+  const open = controlledOpen ?? innerOpen;
+  const setOpen = onOpenChange ?? setInnerOpen;
+  const initial = () => fromLead(lead ?? (prefill as LeadRow | undefined));
+  const [f, setF] = useState<Form>(initial);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setF((s) => ({ ...s, [k]: v }));
@@ -86,7 +109,7 @@ export function LeadFormDialog({ lead, owners, trigger }: { lead?: LeadRow | nul
       notes: f.notes || null,
     };
     startTransition(async () => {
-      const result = await upsertLead(input);
+      const result = !lead && onCreate ? await onCreate(input) : await upsertLead(input);
       if (!result.ok) {
         toast.error(result.error);
         return;
@@ -102,19 +125,21 @@ export function LeadFormDialog({ lead, owners, trigger }: { lead?: LeadRow | nul
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (o) setF(fromLead(lead)); }}>
-      <DialogTrigger asChild>
-        {trigger ?? (
-          lead ? (
-            <Button variant="outline" size="sm"><Pencil className="mr-2 h-3.5 w-3.5" />Modifier la fiche</Button>
-          ) : (
-            <Button size="sm"><Plus className="mr-2 h-4 w-4" />Nouveau lead</Button>
-          )
-        )}
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (o) setF(initial()); }}>
+      {controlledOpen === undefined && (
+        <DialogTrigger asChild>
+          {trigger ?? (
+            lead ? (
+              <Button variant="outline" size="sm"><Pencil className="mr-2 h-3.5 w-3.5" />Modifier la fiche</Button>
+            ) : (
+              <Button size="sm"><Plus className="mr-2 h-4 w-4" />Nouveau lead</Button>
+            )
+          )}
+        </DialogTrigger>
+      )}
       <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{lead ? `Fiche — ${lead.company}` : "Nouveau lead restaurateur"}</DialogTitle>
+          <DialogTitle>{title ?? (lead ? `Fiche — ${lead.company}` : "Nouveau lead restaurateur")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-5">
           <section className="space-y-3">
