@@ -7,6 +7,8 @@ import { createClient } from "@/lib/supabase/server";
 import { translatePgError } from "@/lib/pg-errors";
 import { todayParis } from "@/lib/leads/queries";
 import { CALL_OUTCOME_CODES, transitionFor } from "@/lib/prospection/status";
+import { upsertLead, type LeadInput, type LeadResult } from "@/app/(app)/leads/actions";
+import { qualifiedLeadStatus } from "@/lib/prospection/qualification";
 
 // Rôles autorisés : les mêmes que pour les leads (direction + setter).
 const ROLES = ["admin", "coordinator", "setter"] as const;
@@ -243,4 +245,58 @@ export async function deleteProspectList(raw: { listId: string }): Promise<Actio
   if (error) return { ok: false, error: translatePgError(error) };
   revalidatePath("/prospection");
   return { ok: true };
+}
+
+// ── « Intéressé » : la fiche de qualification remplie pendant l'appel crée le lead ──
+// Le lead naît avec la source « prospection » (aucun envoi automatique), le statut
+// « Qualifié » si le besoin est connu (postes, contrat, échéance), sinon « Contacté »,
+// et l'appel joint dans son journal. Le prospect passe « Intéressé » et pointe vers lui.
+export async function qualifyProspect(raw: { prospectId: string; lead: LeadInput }): Promise<LeadResult> {
+  const parsed = z.object({ prospectId: uuid }).safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Prospect invalide." };
+  const { orgId, userId } = await requireRole([...ROLES]);
+  const supabase = await createClient();
+  const { data: p } = await supabase.from("prospects").select("id, list_id, lead_id").eq("id", parsed.data.prospectId).maybeSingle();
+  if (!p) return { ok: false, error: "Prospect introuvable." };
+  if (p.lead_id) return { ok: true, id: p.lead_id as string };
+
+  const created = await upsertLead({ ...raw.lead, id: undefined, source: "prospection" });
+  if (!created.ok) return created;
+  const leadId = created.id;
+  const status = qualifiedLeadStatus(raw.lead);
+  const today = todayParis();
+  await supabase
+    .from("employer_leads")
+    .update({
+      status,
+      next_action: status === "qualifie" ? "Poser le RDV avec la direction" : "Finir la qualification (7 questions)",
+      next_action_on: today,
+    })
+    .eq("id", leadId);
+  await supabase.from("employer_lead_events").insert({
+    org_id: orgId,
+    lead_id: leadId,
+    kind: "appel",
+    outcome: "joint",
+    note: "Appel de prospection : intéressé, fiche de qualification remplie pendant l'appel.",
+    by_user_id: userId,
+  });
+
+  const { error: callError } = await supabase.from("prospect_calls").insert({
+    org_id: orgId,
+    prospect_id: p.id,
+    outcome: "interesse",
+    note: raw.lead.positions ? `Postes : ${raw.lead.positions}` : null,
+    by_user_id: userId,
+  });
+  if (callError) return { ok: false, error: translatePgError(callError) };
+  await supabase
+    .from("prospects")
+    .update({ status: "interesse", callback_on: null, lead_id: leadId, owner_user_id: userId })
+    .eq("id", p.id);
+
+  revalidatePath("/prospection");
+  revalidatePath(`/prospection/${p.list_id}`);
+  revalidatePath("/leads");
+  return { ok: true, id: leadId };
 }
