@@ -22,6 +22,7 @@ import {
   UtensilsCrossed,
   Wallet,
   Menu,
+  PhoneOutgoing,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -41,6 +42,7 @@ const NAV = [
   { href: "/qualite", label: "Qualité", icon: BadgeCheck, roles: ["admin", "coordinator"] },
   { href: "/rapports", label: "Rapports", icon: FileBarChart, roles: ["admin", "coordinator"] },
   { href: "/leads", label: "Leads resto", icon: UtensilsCrossed, roles: ["admin", "coordinator", "setter"] },
+  { href: "/prospection", label: "Prospection", icon: PhoneOutgoing, roles: ["admin", "coordinator", "setter"] },
   { href: "/candidats-poei", label: "Candidats POEI", icon: BriefcaseBusiness, roles: ["admin", "coordinator", "setter"] },
   { href: "/formation", label: "Formation", icon: BookOpen, roles: ["admin", "coordinator", "trainer", "viewer", "setter", "stagiaire"] },
   { href: "/evaluations", label: "Évaluations", icon: GraduationCap, roles: ["admin", "coordinator", "trainer"] },
