@@ -28,10 +28,19 @@ export function slotPeriod(time: string): Availability {
   return "soir";
 }
 
+// Demi-journée d'un créneau : la date et matin / après-midi (le soir compte avec l'après-midi).
+export function halfDayKey(slot: Pick<FreeSlot, "date" | "time">): string {
+  return `${slot.date}:${slot.time < "13:00" ? "am" : "pm"}`;
+}
+
 /**
- * Les 4 prochains créneaux libres dans les 7 jours. Si la personne a dit quand elle est
- * libre, ses moments passent d'abord ; on complète avec les autres s'il en manque.
- * Résultat trié par date.
+ * 4 créneaux libres dans les 7 jours, avec un vrai choix (si la personne ne peut pas le
+ * premier jour, il en reste un autre) :
+ *  1. ses moments de disponibilité d'abord, au plus 1 créneau par demi-journée ;
+ *  2. au moins 2 jours différents (un créneau d'un autre jour, même hors de ses moments) ;
+ *  3. on complète : ses moments jusqu'à 2 par demi-journée, puis les autres créneaux
+ *     (1, puis 2 par demi-journée).
+ * Résultat trié par date (ordre d'affichage).
  */
 export function pickPublicSlots(
   slots: FreeSlot[],
@@ -44,13 +53,36 @@ export function pickPublicSlots(
     .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
   const wanted = new Set(availability);
   const preferred = wanted.size ? inWindow.filter((s) => wanted.has(slotPeriod(s.time))) : inWindow;
-  const picked = preferred.slice(0, count);
-  if (picked.length < count) {
-    for (const s of inWindow) {
-      if (picked.length >= count) break;
-      if (!picked.includes(s)) picked.push(s);
+
+  const picked: FreeSlot[] = [];
+  const perHalfDay = new Map<string, number>();
+  const add = (s: FreeSlot) => {
+    picked.push(s);
+    perHalfDay.set(halfDayKey(s), (perHalfDay.get(halfDayKey(s)) ?? 0) + 1);
+  };
+  const fill = (list: FreeSlot[], cap: number) => {
+    for (const s of list) {
+      if (picked.length >= count) return;
+      if (!picked.includes(s) && (perHalfDay.get(halfDayKey(s)) ?? 0) < cap) add(s);
+    }
+  };
+
+  fill(preferred, 1);
+  // Au moins 2 jours différents, s'il existe un créneau un autre jour.
+  const pickedDays = new Set(picked.map((s) => s.date));
+  if (pickedDays.size === 1) {
+    const other = inWindow.find((s) => !pickedDays.has(s.date));
+    if (other) {
+      if (picked.length >= count) {
+        const last = picked.pop()!;
+        perHalfDay.set(halfDayKey(last), (perHalfDay.get(halfDayKey(last)) ?? 1) - 1);
+      }
+      add(other);
     }
   }
+  fill(preferred, 2);
+  fill(inWindow, 1);
+  fill(inWindow, 2);
   return picked.sort((a, b) => a.startsAt.localeCompare(b.startsAt));
 }
 

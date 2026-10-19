@@ -4,6 +4,7 @@ import { localToUtc } from "@/lib/dates";
 import {
   bookedSentence,
   googleCalendarTemplateUrl,
+  halfDayKey,
   pickPublicSlots,
   publicSlotLabel,
   slotPeriod,
@@ -55,51 +56,66 @@ describe("jeton de réservation", () => {
 });
 
 describe("créneaux montrés à la personne", () => {
-  const all = [
-    slot("2026-10-20", "10:00"),
-    slot("2026-10-20", "10:30"),
-    slot("2026-10-20", "11:00"),
-    slot("2026-10-20", "14:00"),
-    slot("2026-10-20", "14:30"),
-    slot("2026-10-22", "10:00"),
-    slot("2026-10-27", "10:00"), // dans 8 jours : hors fenêtre
-  ];
+  // Réglage par défaut : mardi 20 et jeudi 22 (10h-12h, 14h-16h), puis mardi 27 hors fenêtre.
+  const all = freeSlots(DEFAULT_SLOT_RULES, [], [], new Date(NOW));
+  const show = (xs: FreeSlot[]) => xs.map((s) => `${s.date.slice(8)} ${s.time}`);
 
-  it("les 4 prochains, dans les 7 jours, triés", () => {
-    const picked = pickPublicSlots([...all].reverse(), new Date(NOW));
-    expect(picked.map((s) => `${s.date} ${s.time}`)).toEqual([
-      "2026-10-20 10:00",
-      "2026-10-20 10:30",
-      "2026-10-20 11:00",
-      "2026-10-20 14:00",
+  it("sans préférence : 1 par demi-journée, sur 2 jours, triés", () => {
+    expect(show(pickPublicSlots([...all].reverse(), new Date(NOW)))).toEqual(["20 10:00", "20 14:00", "22 10:00", "22 14:00"]);
+  });
+
+  it("libre le matin : un matin par jour, puis complété jusqu'à 2 par matin", () => {
+    expect(show(pickPublicSlots(all, new Date(NOW), { availability: ["matin"] }))).toEqual([
+      "20 10:00",
+      "20 10:30",
+      "22 10:00",
+      "22 10:30",
     ]);
   });
 
-  it("les moments où la personne est libre passent d'abord, complétés au besoin", () => {
-    const pm = pickPublicSlots(all, new Date(NOW), { availability: ["apres_midi"] });
-    expect(pm.map((s) => s.time)).toEqual(["10:00", "10:30", "14:00", "14:30"]);
-    const soir = pickPublicSlots(all, new Date(NOW), { availability: ["soir"] });
-    expect(soir.map((s) => s.time)).toEqual(["10:00", "10:30", "11:00", "14:00"]);
+  it("libre l'après-midi : les après-midi des deux jours d'abord", () => {
+    expect(show(pickPublicSlots(all, new Date(NOW), { availability: ["apres_midi"] }))).toEqual([
+      "20 14:00",
+      "20 14:30",
+      "22 14:00",
+      "22 14:30",
+    ]);
   });
 
-  it("moins de 4 créneaux, ou aucun", () => {
-    expect(pickPublicSlots(all.slice(5), new Date(NOW))).toHaveLength(1);
+  it("jamais plus de 2 par demi-journée, au moins 2 jours", () => {
+    for (const availability of [[], ["matin"], ["apres_midi"], ["soir"], ["matin", "soir"]]) {
+      const picked = pickPublicSlots(all, new Date(NOW), { availability });
+      expect(picked).toHaveLength(4);
+      expect(new Set(picked.map((s) => s.date)).size).toBeGreaterThanOrEqual(2);
+      const perHalf = new Map<string, number>();
+      for (const s of picked) perHalf.set(halfDayKey(s), (perHalf.get(halfDayKey(s)) ?? 0) + 1);
+      expect(Math.max(...perHalf.values())).toBeLessThanOrEqual(2);
+      expect(picked.every((s) => Date.parse(s.startsAt) < NOW + 7 * 86_400_000)).toBe(true);
+    }
+  });
+
+  it("préférences sur un seul jour : on ajoute un créneau d'un autre jour", () => {
+    const few = [slot("2026-10-20", "18:00"), slot("2026-10-20", "18:30"), slot("2026-10-21", "10:00")];
+    expect(show(pickPublicSlots(few, new Date(NOW), { availability: ["soir"] }))).toEqual(["20 18:00", "20 18:30", "21 10:00"]);
+  });
+
+  it("un seul jour disponible : 2 par demi-journée au plus, quitte à en montrer moins de 4", () => {
+    const oneDay = ["10:00", "10:30", "11:00", "14:00"].map((t) => slot("2026-10-20", t));
+    expect(show(pickPublicSlots(oneDay, new Date(NOW)))).toEqual(["20 10:00", "20 10:30", "20 14:00"]);
     expect(pickPublicSlots([], new Date(NOW))).toEqual([]);
   });
 
-  it("avec le calcul réel des créneaux libres (mardi et jeudi par défaut)", () => {
-    const free = freeSlots(DEFAULT_SLOT_RULES, [], [], new Date(NOW));
-    const picked = pickPublicSlots(free, new Date(NOW));
-    expect(picked).toHaveLength(4);
-    expect(picked[0]).toMatchObject({ date: "2026-10-20", time: "10:00", minutes: 30 });
-    expect(picked.every((s) => Date.parse(s.startsAt) < NOW + 7 * 86_400_000)).toBe(true);
+  it("hors fenêtre de 7 jours : ignoré", () => {
+    expect(pickPublicSlots([slot("2026-10-27", "10:00")], new Date(NOW))).toEqual([]);
   });
 
-  it("moment de la journée", () => {
+  it("moment de la journée et demi-journée", () => {
     expect(slotPeriod("10:00")).toBe("matin");
     expect(slotPeriod("12:30")).toBe("matin");
     expect(slotPeriod("13:00")).toBe("apres_midi");
     expect(slotPeriod("18:00")).toBe("soir");
+    expect(halfDayKey({ date: "2026-10-20", time: "18:00" })).toBe("2026-10-20:pm");
+    expect(halfDayKey({ date: "2026-10-20", time: "09:00" })).toBe("2026-10-20:am");
   });
 });
 
