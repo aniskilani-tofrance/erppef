@@ -35,6 +35,7 @@ import {
   appointmentKindLabel,
   appointmentModeLabel,
   buildAppointmentConfirmation,
+  BOOKED_ONLINE_LABEL,
   dayLabel,
   timeOf,
 } from "@/lib/admission/appointments";
@@ -63,6 +64,7 @@ type AppointmentRow = {
   mode: string;
   location: string | null;
   notes: string | null;
+  booked_online?: boolean | null; // 0053 : réservé par la personne à la fin du formulaire
   gcal_event_id: string | null;
   gcal_error: string | null;
 };
@@ -260,6 +262,15 @@ function AppointmentsCard({
                             {appointmentModeLabel(a.mode)}
                             {a.kind !== "entretien" ? ` · ${appointmentKindLabel(a.kind)}` : ""}
                           </Badge>
+                          {a.booked_online && (
+                            <Badge
+                              variant="outline"
+                              className="border-sky-300 bg-sky-50 text-xs text-sky-800"
+                              title="La personne a choisi ce créneau elle-même, à la fin du formulaire d'inscription"
+                            >
+                              {BOOKED_ONLINE_LABEL}
+                            </Badge>
+                          )}
                           {synced ? (
                             <Badge variant="outline" className="border-emerald-300 bg-emerald-50 text-xs text-emerald-800" title="Événement présent dans l'agenda « Admissions PEF — Rendez-vous »">
                               dans Google Agenda
@@ -363,7 +374,8 @@ export default async function AdmissionPage() {
   // Rendez-vous d'admission prévus : ceux des 7 derniers jours sans résultat noté, puis à venir.
   const { data: appointmentRows } = await supabase
     .from("admission_appointments")
-    .select("id, learner_id, starts_at, ends_at, kind, mode, location, notes, gcal_event_id, gcal_error")
+    // « * » : booked_online (0053) est lu s'il existe, la page marche sans la migration.
+    .select("*")
     .eq("status", "prevu")
     .gte("starts_at", new Date(new Date().getTime() - 7 * 86_400_000).toISOString())
     .order("starts_at");

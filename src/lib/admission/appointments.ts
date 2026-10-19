@@ -88,12 +88,16 @@ export function dayLabel(iso: string): string {
   return new Date(iso).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", timeZone: TZ });
 }
 
+// Notes d'un RDV réservé par l'apprenant à la fin du formulaire d'inscription.
+export const BOOKED_ONLINE_NOTE = "Réservé par l'apprenant via le formulaire";
+export const BOOKED_ONLINE_LABEL = "réservé en ligne";
+
 // Durée en minutes entre deux instants ISO (arrondie).
 export function durationMinutes(startsAt: string, endsAt: string): number {
   return Math.round((Date.parse(endsAt) - Date.parse(startsAt)) / 60_000);
 }
 
-type NoteInput = { startsAt: string; mode: string | null | undefined; kind?: string | null };
+type NoteInput = { startsAt: string; mode: string | null | undefined; kind?: string | null; bookedOnline?: boolean };
 
 function kindSuffix(kind: string | null | undefined): string {
   return kind && kind !== "entretien" ? ` (${appointmentKindLabel(kind).toLowerCase()})` : "";
@@ -109,7 +113,9 @@ export function appointmentJournalNote(
   const mode = appointmentModeLabel(rdv.mode).toLowerCase();
   switch (event) {
     case "pose":
-      return `${label} posé le ${shortWhen(rdv.startsAt)} — ${mode}`;
+      return rdv.bookedOnline
+        ? `${label} réservé en ligne par la personne (formulaire) pour le ${shortWhen(rdv.startsAt)} — ${mode}`
+        : `${label} posé le ${shortWhen(rdv.startsAt)} — ${mode}`;
     case "deplace":
       return `${label} déplacé au ${shortWhen(rdv.startsAt)} — ${mode}${previousStartsAt ? ` (au lieu du ${shortWhen(previousStartsAt)})` : ""}`;
     case "annule":

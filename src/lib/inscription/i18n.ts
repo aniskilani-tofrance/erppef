@@ -76,6 +76,17 @@ export type SignupTexts = {
   doneTitle: string;
   doneText: string;
   doneWrite: string;
+  // Réservation d'un créneau sur l'écran de fin
+  chooseTitle: string;
+  addressLabel: string;
+  callMe: string;
+  booking: string;
+  booked: string; // « {day} » et « {time} »
+  keepMessage: string;
+  addToCalendar: string;
+  calendarTitle: string;
+  slotTaken: string;
+  bookingExpired: string;
   errors: Record<SignupErrorCode, string>;
   privacyTitle: string;
   privacyBack: string;
@@ -114,6 +125,16 @@ export const SIGNUP_TEXTS: Record<SignupLocale, SignupTexts> = {
     doneTitle: "Merci !",
     doneText: "Nous vous appelons sur WhatsApp.",
     doneWrite: "Écrire à ParlerEmploi",
+    chooseTitle: "Choisissez un rendez-vous",
+    addressLabel: "Adresse",
+    callMe: "Je préfère qu'on m'appelle",
+    booking: "Réservation…",
+    booked: "Rendez-vous le {day} à {time}",
+    keepMessage: "Gardez ce message.",
+    addToCalendar: "Ajouter à mon agenda",
+    calendarTitle: "Rendez-vous ParlerEmploi",
+    slotTaken: "Ce rendez-vous vient d'être pris. Choisissez-en un autre.",
+    bookingExpired: "Trop tard pour choisir ici. Nous vous appelons sur WhatsApp.",
     errors: {
       name: "Écrivez votre prénom et votre nom.",
       phone: "Ce numéro ne marche pas. Vérifiez.",
@@ -164,6 +185,16 @@ export const SIGNUP_TEXTS: Record<SignupLocale, SignupTexts> = {
     doneTitle: "Thank you!",
     doneText: "We will call you on WhatsApp.",
     doneWrite: "Write to ParlerEmploi",
+    chooseTitle: "Choose an appointment",
+    addressLabel: "Address",
+    callMe: "I prefer a phone call",
+    booking: "Booking…",
+    booked: "Appointment on {day} at {time}",
+    keepMessage: "Keep this message.",
+    addToCalendar: "Add to my calendar",
+    calendarTitle: "ParlerEmploi appointment",
+    slotTaken: "This time was just taken. Choose another one.",
+    bookingExpired: "Too late to choose here. We will call you on WhatsApp.",
     errors: {
       name: "Write your first name and last name.",
       phone: "This number does not work. Please check.",
@@ -214,6 +245,16 @@ export const SIGNUP_TEXTS: Record<SignupLocale, SignupTexts> = {
     doneTitle: "شكرًا!",
     doneText: "سنتصل بك على واتساب.",
     doneWrite: "راسل ParlerEmploi",
+    chooseTitle: "اختر موعدًا",
+    addressLabel: "العنوان",
+    callMe: "أفضّل أن تتصلوا بي",
+    booking: "جارٍ الحجز…",
+    booked: "موعدك يوم {day} الساعة {time}",
+    keepMessage: "احتفظ بهذه الرسالة.",
+    addToCalendar: "أضف إلى تقويمي",
+    calendarTitle: "موعد ParlerEmploi",
+    slotTaken: "هذا الموعد أُخذ للتو. اختر موعدًا آخر.",
+    bookingExpired: "فات وقت الاختيار هنا. سنتصل بك على واتساب.",
     errors: {
       name: "اكتب اسمك الأول واسم عائلتك.",
       phone: "هذا الرقم غير صحيح. تحقق منه.",

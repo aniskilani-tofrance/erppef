@@ -409,6 +409,8 @@ export const HELP_SECTIONS: HelpSection[] = [
           "Elle arrive dans « À contacter » (statut Nouveau) avec ses réponses dans le journal (« Inscription formulaire — langues : … ; français : … ; dispo : … ») et un test de positionnement prêt à envoyer. Écrivez-lui sur WhatsApp comme d'habitude.",
           "Déjà connue (même numéro) : pas de doublon, une ligne « Réinscription via formulaire » s'ajoute au journal ; un dossier « Sans suite » repasse en « Nouveau ».",
           "Le message se retouche dans « Messages » → « Lien d'inscription rapide ». Le consentement RGPD est daté sur la fiche ; la mention d'information est sur le formulaire (lien « En savoir plus »).",
+          "À la fin du formulaire, la personne choisit elle-même son rendez-vous : les 4 prochains créneaux libres des 7 jours (ses moments de disponibilité d'abord), en gros boutons dans sa langue, avec l'adresse. Un toucher pose un entretien sur site (durée du créneau) : carte « Rendez-vous d'admission à venir » avec la mention « réservé en ligne », agenda Google, journal, statut « Convoqué ». Elle peut l'ajouter à son agenda.",
+          "« Je préfère qu'on m'appelle » : une ligne au journal (« préfère être appelé(e) »), rien d'autre. Aucun créneau libre : l'écran dit « Nous vous appelons sur WhatsApp ». Un rendez-vous déjà prévu pour la personne lui est réaffiché, sans en poser un deuxième.",
         ],
       },
       {
@@ -429,6 +431,7 @@ export const HELP_SECTIONS: HelpSection[] = [
           "Dans le dialogue « RDV », en haut : les créneaux libres des 14 prochains jours, groupés par jour (« Mar. 21 oct. » puis 10h00, 10h30…). Un toucher remplit la date, l'heure et la durée ; il reste à choisir le type, le mode et à « Poser le RDV ».",
           "Ne sont proposés que les créneaux au moins 2 h à l'avance, hors jours fériés, fermetures de l'organisme, périodes bloquées et rendez-vous déjà prévus (un RDV annulé libère son créneau).",
           "Si quelqu'un a pris le créneau entre-temps, l'enregistrement le refuse avec un message clair et la liste se met à jour : touchez un autre créneau.",
+          "Deux rendez-vous prévus ne peuvent jamais se chevaucher, même avec « Autre horaire » (verrou en base) : « un autre rendez-vous d'admission est déjà prévu sur ce créneau ». Deux créneaux qui se suivent (10h00-10h30 puis 10h30-11h00) restent possibles.",
           "Besoin d'un horaire hors créneaux ? « Autre horaire » ouvre la saisie libre (date, heure, durée), comme avant.",
           "Régler les créneaux : Paramètres → « Créneaux d'admission ». Par défaut mardi et jeudi, 10h-12h et 14h-16h, 30 min. Ajoutez, modifiez ou suspendez une plage, changez la durée, puis « Enregistrer les plages ».",
           "Bloquer un moment (réunion, absence) : même carte, « Périodes bloquées » → du / au (optionnel), journée entière, matin ou après-midi, motif → « Bloquer ». La corbeille débloque.",

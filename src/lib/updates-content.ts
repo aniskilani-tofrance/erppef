@@ -26,6 +26,18 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-10-19-reservation-creneau-formulaire",
+    date: "2026-10-19",
+    title: "La personne choisit elle-même son rendez-vous à la fin du formulaire",
+    summary: "Après l'inscription rapide, l'écran de fin propose les 4 prochains créneaux libres : un toucher, et le rendez-vous est posé, dans l'ERP comme dans Google Agenda.",
+    items: [
+      { text: "Écran de fin du formulaire : « Choisissez un rendez-vous » avec 4 gros boutons (jour, date et heure dans sa langue), l'adresse, et « Je préfère qu'on m'appelle ». Sans créneau libre dans les 7 jours : « Nous vous appelons sur WhatsApp », comme avant.", roles: TEAM },
+      { text: "Le rendez-vous réservé arrive dans la carte « Rendez-vous d'admission à venir » avec la mention « réservé en ligne » (et dans l'événement Google), une ligne au journal, et la personne passe « Convoqué ». « Je préfère qu'on m'appelle » laisse seulement une ligne au journal.", roles: TEAM },
+      { text: "Deux rendez-vous prévus ne peuvent plus se chevaucher : si quelqu'un a pris l'horaire entre-temps, l'ERP (et le formulaire) le disent clairement.", roles: TEAM },
+    ],
+    training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "L'admission : WhatsApp, réunion d'information, entretien oral" }],
+  },
+  {
     id: "2026-10-19-inscription-rapide",
     date: "2026-10-19",
     title: "Un lien d'inscription rapide à envoyer sur WhatsApp",

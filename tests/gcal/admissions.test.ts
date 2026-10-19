@@ -22,6 +22,15 @@ const rdv: AppointmentForCalendar = {
   learner: { first_name: "Awa", last_name: "Diallo", learner_no: 42, phone: "0612345678" },
 };
 
+describe("agenda Google des rendez-vous d'admission — réservé en ligne", () => {
+  it("mention dans le titre et la description", () => {
+    const body = appointmentEventBody({ ...rdv, booked_online: true });
+    expect(body.summary).toBe("RDV admission · Awa Diallo (A-0042) · réservé en ligne");
+    expect(body.description).toMatch(/^Rendez-vous d'admission réservé en ligne par la personne/);
+    expect(appointmentEventBody(rdv).summary).toBe("RDV admission · Awa Diallo (A-0042)");
+  });
+});
+
 describe("agenda Google des rendez-vous d'admission — identifiants", () => {
   it("id d'événement = uuid sans tirets, marqueur d'agenda par organisme", () => {
     expect(appointmentEventId(rdv.id)).toBe("7c9e6679742540de944be07fc1f90ae7");

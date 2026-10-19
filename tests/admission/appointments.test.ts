@@ -25,6 +25,12 @@ describe("rendez-vous d'admission — canal du journal", () => {
 });
 
 describe("rendez-vous d'admission — notes du journal", () => {
+  it("pose en ligne (la personne a réservé à la fin du formulaire)", () => {
+    expect(appointmentJournalNote("pose", { startsAt: STARTS, mode: "sur_site", kind: "entretien", bookedOnline: true })).toBe(
+      "RDV d'admission réservé en ligne par la personne (formulaire) pour le 21/10 à 14h30 — sur site",
+    );
+  });
+
   it("pose : date et heure de Paris, mode", () => {
     expect(appointmentJournalNote("pose", { startsAt: STARTS, mode: "sur_site", kind: "entretien" })).toBe(
       "RDV d'admission posé le 21/10 à 14h30 — sur site",

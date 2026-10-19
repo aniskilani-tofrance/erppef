@@ -1,7 +1,7 @@
 // Chargement des créneaux d'admission libres d'un organisme (serveur uniquement).
 // Reçoit le client Supabase et l'organisation de façon explicite : utilisé par l'ERP
-// (client de l'utilisateur, sous RLS) et, plus tard, par le formulaire public
-// d'inscription (client admin, organisation connue côté serveur). Aucune route publique.
+// (client de l'utilisateur, sous RLS) et par le formulaire public
+// d'inscription (client admin, organisation connue côté serveur, via ses actions serveur).
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -99,7 +99,7 @@ export async function loadFreeSlots(
   return freeSlots(rules, blocks, appointments, now, { closedDates });
 }
 
-// Variante pour un appel hors session (futur formulaire public d'inscription) : client
+// Variante pour un appel hors session (formulaire public d'inscription, src/app/inscription) : client
 // admin, organisation passée explicitement par le code serveur, jamais par le visiteur.
 export async function loadFreeSlotsForOrg(orgId: string, now = new Date()): Promise<FreeSlot[]> {
   return loadFreeSlots(createAdminClient(), orgId, { now });

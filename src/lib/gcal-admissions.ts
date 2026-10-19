@@ -8,6 +8,7 @@ import {
   appointmentModeLabel,
   appointmentPlace,
   appointmentStatusLabel,
+  BOOKED_ONLINE_LABEL,
 } from "@/lib/admission/appointments";
 import {
   ADMISSIONS_TAG,
@@ -59,6 +60,7 @@ export type AppointmentForCalendar = {
   location: string | null;
   notes: string | null;
   status: string;
+  booked_online?: boolean | null; // réservé par l'apprenant (formulaire d'inscription, 0053)
   learner: { first_name: string; last_name: string | null; learner_no: number | null; phone: string | null } | null;
 };
 
@@ -85,10 +87,13 @@ export function learnerFicheUrl(a: AppointmentForCalendar): string {
 /** Corps d'événement Google attendu pour un rendez-vous d'admission. */
 export function appointmentEventBody(a: AppointmentForCalendar): calendar_v3.Schema$Event {
   const ref = a.learner?.learner_no != null ? ` (${learnerRef(a.learner.learner_no)})` : "";
-  const summary = `RDV admission · ${learnerName(a)}${ref}${a.kind === "test_oral" ? " · Test oral" : ""}`;
+  const online = a.booked_online === true;
+  const summary = `RDV admission · ${learnerName(a)}${ref}${a.kind === "test_oral" ? " · Test oral" : ""}${online ? ` · ${BOOKED_ONLINE_LABEL}` : ""}`;
   const phone = a.learner?.phone?.trim() ? formatPhone(a.learner.phone) : null;
   const description = [
-    "Rendez-vous d'admission posé dans l'ERP ParlerEmploi Formation.",
+    online
+      ? "Rendez-vous d'admission réservé en ligne par la personne (formulaire d'inscription ParlerEmploi Formation)."
+      : "Rendez-vous d'admission posé dans l'ERP ParlerEmploi Formation.",
     `Type : ${appointmentKindLabel(a.kind)}`,
     `Mode : ${appointmentModeLabel(a.mode)}`,
     phone ? `Téléphone : ${phone}` : "Téléphone : non renseigné",
@@ -126,13 +131,15 @@ type AppointmentRow = {
   location: string | null;
   notes: string | null;
   status: string;
+  booked_online?: boolean | null;
   gcal_event_id: string | null;
   gcal_error: string | null;
   learners: AppointmentForCalendar["learner"];
 };
 
-const ROW_SELECT =
-  "id, org_id, starts_at, ends_at, kind, mode, location, notes, status, gcal_event_id, gcal_error, learners(first_name, last_name, learner_no, phone)";
+// « * » plutôt qu'une liste : booked_online (0053) est lu s'il existe, sans casser la
+// synchronisation tant que la migration n'est pas appliquée.
+const ROW_SELECT = "*, learners(first_name, last_name, learner_no, phone)";
 
 function toCalendar(r: AppointmentRow): AppointmentForCalendar {
   return {
@@ -144,6 +151,7 @@ function toCalendar(r: AppointmentRow): AppointmentForCalendar {
     location: r.location,
     notes: r.notes,
     status: r.status,
+    booked_online: r.booked_online ?? false,
     learner: r.learners,
   };
 }

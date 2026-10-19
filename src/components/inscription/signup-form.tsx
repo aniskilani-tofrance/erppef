@@ -14,7 +14,7 @@ import {
   type SignupLocale,
 } from "@/lib/inscription/i18n";
 import { cn } from "@/lib/utils";
-import { SignupDone } from "@/components/inscription/signup-done";
+import { SignupBooking } from "@/components/inscription/signup-booking";
 import { SignupShell as Shell } from "@/components/inscription/signup-shell";
 
 // Formulaire d'inscription rapide, pour un public A1 sur téléphone : une question par
@@ -147,7 +147,7 @@ export function SignupForm({
 
   const shown = (s: Step) => !enhanced || step === s;
 
-  if (state.status === "done") return <SignupDone locale={lang} />;
+  if (state.status === "done") return <SignupBooking locale={lang} offer={state.booking ?? null} />;
 
   const switcher = (
     <nav aria-label="Langue / Language / اللغة" className="flex justify-center gap-2">
