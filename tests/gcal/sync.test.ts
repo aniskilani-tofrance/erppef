@@ -81,6 +81,13 @@ describe("agenda Google des formateurs — partages", () => {
     expect(wantedShares(null, [])).toEqual([]);
   });
 
+  it("agenda de la direction : coordinateurs en lecture, sans rétrograder un admin", () => {
+    expect(wantedShares(null, ["anis@parleremploi.fr"], ["Marie.Tregaro@parleremploi.fr", "anis@parleremploi.fr", null])).toEqual([
+      { email: "anis@parleremploi.fr", role: "writer" },
+      { email: "marie.tregaro@parleremploi.fr", role: "reader" },
+    ]);
+  });
+
   it("ajoute l'email actuel du formateur quand l'agenda a été partagé avec une ancienne adresse", () => {
     expect(missingShares(acl, wantedShares("Marie@parleremploi.fr", ["anis@parleremploi.fr"]))).toEqual([
       { email: "marie@parleremploi.fr", role: "reader" },
