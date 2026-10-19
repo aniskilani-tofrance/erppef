@@ -34,6 +34,7 @@ export const APP_UPDATES: AppUpdate[] = [
       { text: "Liste Apprenants → bouton « RDV » sur chaque ligne : même dialogue que dans l'onglet Admission. Pour un apprenant inscrit, le type « Diagnostic partagé ToFrance » est proposé d'office.", roles: TEAM },
       { text: "Un diagnostic ToFrance ne change jamais le statut d'admission (pas de passage à « Convoqué », pas de recul s'il est absent). Il arrive dans l'agenda « Admissions PEF — Rendez-vous » sous le titre « Diagnostic ToFrance · Prénom Nom ».", roles: TEAM },
       { text: "L'agenda « Cours PEF — Tous les formateurs » est désormais partagé en lecture avec les coordinateurs.", roles: TEAM },
+      { text: "Mon compte → « Mes agendas Google » : la liste des agendas de l'ERP partagés avec vous et un bouton « Ajouter à mon Google Agenda » (un agenda partagé n'apparaît pas tout seul).", roles: ALL },
     ],
     training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "L'admission : WhatsApp, réunion d'information, entretien oral" }],
   },
