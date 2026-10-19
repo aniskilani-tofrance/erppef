@@ -26,6 +26,18 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-10-19-inscription-rapide",
+    date: "2026-10-19",
+    title: "Un lien d'inscription rapide à envoyer sur WhatsApp",
+    summary: "Un formulaire très simple, pensé pour les débutants (A1), en français facile, anglais ou arabe : la personne s'inscrit seule sur son téléphone et arrive dans « À contacter ».",
+    items: [
+      { text: "Onglet Admission → « Lien d'inscription » : le lien, une provenance facultative (maison de quartier, partenaire…) et le message WhatsApp prêt à envoyer (« Ouvrir WhatsApp » ou « Copier »).", roles: TEAM },
+      { text: "Une question par écran, gros boutons : nom, numéro WhatsApp, langues parlées, français déclaré, disponibilités, ville. Les réponses sont dans le journal de la personne ; un test de positionnement est prêt à envoyer.", roles: TEAM },
+      { text: "Même numéro déjà connu : pas de doublon, juste une ligne « Réinscription via formulaire » dans le journal.", roles: TEAM },
+    ],
+    training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "L'admission : WhatsApp, réunion d'information, entretien oral" }],
+  },
+  {
     id: "2026-10-19-creneaux-admission",
     date: "2026-10-19",
     title: "Les créneaux d'admission libres, en un toucher",

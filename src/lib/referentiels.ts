@@ -94,6 +94,8 @@ export const CONTACT_SOURCES = [
   { code: "france_travail", label: "France Travail", aliases: ["pôle emploi", "pole emploi", "ft", "conseiller france travail"] },
   { code: "partenaire", label: "Orienté par un partenaire", aliases: ["partenaire", "association", "mairie", "ccas", "mission locale", "cip", "assistante sociale"] },
   { code: "affiche_flyer", label: "Affiche / flyer", aliases: ["affiche", "flyer", "tract", "prospectus"] },
+  // Lien d'inscription rapide (/inscription) envoyé sur WhatsApp : la personne s'inscrit seule.
+  { code: "formulaire_whatsapp", label: "Formulaire en ligne", aliases: ["formulaire en ligne", "inscription en ligne", "lien d'inscription", "formulaire whatsapp"] },
   { code: "autre", label: "Autre canal", aliases: ["autre"] },
 ] as const;
 

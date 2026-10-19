@@ -22,6 +22,7 @@ import { formatMeetingWhen } from "@/lib/admission/messages";
 import { loadTemplates } from "@/lib/admission/load-templates";
 import { messageForSituation, stageInfo, type Templates } from "@/lib/admission/templates";
 import { MessageTemplatesDialog } from "@/components/admission/message-templates-dialog";
+import { SignupLinkButton } from "@/components/admission/signup-link-button";
 import { formatPhone } from "@/lib/admission/phone";
 import { ADMISSION_STATUSES, admissionBadgeClass, reasonFits, reasonLabel } from "@/lib/admission/status";
 import { learnerRef } from "@/lib/refs";
@@ -453,6 +454,7 @@ export default async function AdmissionPage() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-semibold tracking-tight">Apprenants</h1>
         <div className="flex flex-wrap gap-2">
+          <SignupLinkButton template={templates.lien_inscription} />
           <MessageTemplatesDialog templates={templates} />
           <MeetingFormDialog rooms={rooms ?? []} />
         </div>
