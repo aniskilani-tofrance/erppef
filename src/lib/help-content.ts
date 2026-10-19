@@ -401,6 +401,17 @@ export const HELP_SECTIONS: HelpSection[] = [
         ],
       },
       {
+        title: "Envoyer le lien d'inscription rapide (WhatsApp)",
+        steps: [
+          "Onglet Admission → bouton « Lien d'inscription » (en haut). Facultatif : « Provenance » (ex. « MDQ Landy », « CCAS ») pour savoir d'où viennent les inscrits. « MDQ … » est rangé en Maison de quartier, France Travail / CCAS / mission locale en prescripteur, le reste en « Formulaire en ligne ».",
+          "« Ouvrir WhatsApp » : le message est déjà écrit (français facile, une ligne en anglais et en arabe), choisissez la personne ou le groupe. « Copier le message » pour le coller ailleurs (SMS, Messenger).",
+          "La personne remplit seule, sur son téléphone, une question par écran : prénom et nom, numéro WhatsApp, langues parlées, « Je parle français : pas du tout / un peu / bien » (indication, pas un niveau), disponibilités (matin, après-midi, soir), ville. Elle peut lire en français facile, en anglais ou en arabe.",
+          "Elle arrive dans « À contacter » (statut Nouveau) avec ses réponses dans le journal (« Inscription formulaire — langues : … ; français : … ; dispo : … ») et un test de positionnement prêt à envoyer. Écrivez-lui sur WhatsApp comme d'habitude.",
+          "Déjà connue (même numéro) : pas de doublon, une ligne « Réinscription via formulaire » s'ajoute au journal ; un dossier « Sans suite » repasse en « Nouveau ».",
+          "Le message se retouche dans « Messages » → « Lien d'inscription rapide ». Le consentement RGPD est daté sur la fiche ; la mention d'information est sur le formulaire (lien « En savoir plus »).",
+        ],
+      },
+      {
         title: "Constituer le dossier administratif (pièce d'identité, justificatif)",
         steps: [
           "Fiche apprenant (crayon dans la liste) → bloc « Dossier administratif » : trois emplacements, Pièce d'identité recto, Pièce d'identité verso (rien pour un passeport), Justificatif de domicile ; plus « Autres documents » (titre de séjour, attestation France Travail, RIB, diplôme…) avec un intitulé libre. Le compteur « 2 / 3 pièces » dit où en est le dossier.",

@@ -39,6 +39,9 @@ export async function proxy(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/enquete") ||
     // Test de positionnement : lien personnel à jeton.
     request.nextUrl.pathname.startsWith("/test") ||
+    // Inscription rapide (lien envoyé sur WhatsApp) : formulaire public, sans compte.
+    request.nextUrl.pathname === "/inscription" ||
+    request.nextUrl.pathname.startsWith("/inscription/") ||
     // Contacts d'un groupe (.vcf) ouverts sur le téléphone : jeton à usage unique, 15 min.
     request.nextUrl.pathname.startsWith("/vcf/") ||
     // Crons Vercel : protégés par CRON_SECRET dans la route elle-même.
@@ -55,7 +58,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // Stagiaire : seulement ses pages (groupes, planning, émargement, formation, aide).
-  // Les pages publiques à jeton (/emargement, /enquete, /test) restent hors de ce contrôle.
+  // Les pages publiques (/emargement, /enquete, /test, /inscription) restent hors de ce contrôle.
   if (user && !isAuthRoute && request.method === "GET") {
     const {
       data: { session },
