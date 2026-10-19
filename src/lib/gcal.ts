@@ -184,13 +184,16 @@ export function statusOf(e: unknown): number {
 
 // ───────────────────────── Accès aux données ─────────────────────────
 
-/** Emails de la direction : comptes ERP de rôle admin de l'organisme + GCAL_ADMIN_EMAIL. */
-export async function loadAdminEmails(orgId: string): Promise<string[]> {
+/**
+ * Emails de la direction : comptes ERP de rôle admin de l'organisme + GCAL_ADMIN_EMAIL.
+ * `roles` élargit la liste (ex. les coordinateurs pour l'agenda des admissions).
+ */
+export async function loadAdminEmails(orgId: string, roles: string[] = ["admin"]): Promise<string[]> {
   const supabase = createAdminClient();
   const emails = new Set<string>();
   const env = cleanEmail(process.env.GCAL_ADMIN_EMAIL);
   if (env) emails.add(env);
-  const { data: members } = await supabase.from("memberships").select("user_id").eq("org_id", orgId).eq("role", "admin");
+  const { data: members } = await supabase.from("memberships").select("user_id").eq("org_id", orgId).in("role", roles);
   for (const m of members ?? []) {
     const { data } = await supabase.auth.admin.getUserById(m.user_id);
     const email = cleanEmail(data.user?.email);
