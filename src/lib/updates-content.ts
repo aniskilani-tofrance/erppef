@@ -26,6 +26,18 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-10-19-creneaux-admission",
+    date: "2026-10-19",
+    title: "Les créneaux d'admission libres, en un toucher",
+    summary: "Le dialogue « RDV » propose maintenant les créneaux libres des 14 prochains jours : un toucher, et la date, l'heure et la durée sont remplies.",
+    items: [
+      { text: "En haut du dialogue « RDV » : les créneaux libres groupés par jour (« Mar. 21 oct. · 10h00 »), hors fériés, fermetures, périodes bloquées et rendez-vous déjà pris. « Autre horaire » garde la saisie libre.", roles: TEAM },
+      { text: "Si le créneau a été pris entre-temps, l'ERP le refuse avec un message clair et propose les créneaux à jour.", roles: TEAM },
+      { text: "Paramètres → « Créneaux d'admission » : les plages de la semaine (par défaut mardi et jeudi, 10h-12h et 14h-16h, 30 min), la durée d'un créneau, et les périodes à bloquer (journée, matin, après-midi).", roles: ["admin"] },
+    ],
+    training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "L'admission : WhatsApp, réunion d'information, entretien oral" }],
+  },
+  {
     id: "2026-10-19-rdv-admission",
     date: "2026-10-19",
     title: "Les rendez-vous d'admission dans votre Google Agenda",

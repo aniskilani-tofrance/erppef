@@ -413,6 +413,17 @@ export const HELP_SECTIONS: HelpSection[] = [
         ],
       },
       {
+        title: "Proposer un créneau d'admission libre (et régler les créneaux)",
+        steps: [
+          "Dans le dialogue « RDV », en haut : les créneaux libres des 14 prochains jours, groupés par jour (« Mar. 21 oct. » puis 10h00, 10h30…). Un toucher remplit la date, l'heure et la durée ; il reste à choisir le type, le mode et à « Poser le RDV ».",
+          "Ne sont proposés que les créneaux au moins 2 h à l'avance, hors jours fériés, fermetures de l'organisme, périodes bloquées et rendez-vous déjà prévus (un RDV annulé libère son créneau).",
+          "Si quelqu'un a pris le créneau entre-temps, l'enregistrement le refuse avec un message clair et la liste se met à jour : touchez un autre créneau.",
+          "Besoin d'un horaire hors créneaux ? « Autre horaire » ouvre la saisie libre (date, heure, durée), comme avant.",
+          "Régler les créneaux : Paramètres → « Créneaux d'admission ». Par défaut mardi et jeudi, 10h-12h et 14h-16h, 30 min. Ajoutez, modifiez ou suspendez une plage, changez la durée, puis « Enregistrer les plages ».",
+          "Bloquer un moment (réunion, absence) : même carte, « Périodes bloquées » → du / au (optionnel), journée entière, matin ou après-midi, motif → « Bloquer ». La corbeille débloque.",
+        ],
+      },
+      {
         title: "Constituer le dossier administratif (pièce d'identité, justificatif)",
         steps: [
           "Fiche apprenant (crayon dans la liste) → bloc « Dossier administratif » : trois emplacements, Pièce d'identité recto, Pièce d'identité verso (rien pour un passeport), Justificatif de domicile ; plus « Autres documents » (titre de séjour, attestation France Travail, RIB, diplôme…) avec un intitulé libre. Le compteur « 2 / 3 pièces » dit où en est le dossier.",

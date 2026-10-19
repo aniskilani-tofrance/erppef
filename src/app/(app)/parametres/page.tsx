@@ -16,6 +16,9 @@ import { APP_UPDATES, formatUpdateDate } from "@/lib/updates-content";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AI_MODEL, aiConfigured, estimateCostUsd } from "@/lib/ai/client";
 import { AiUsageCard, type AiUsageRow } from "@/components/parametres/ai-usage-card";
+import { AdmissionSlotsCard } from "@/components/parametres/admission-slots-card";
+import { DEFAULT_SLOT_RULES } from "@/lib/admission/slots";
+import { loadFreeSlots, loadSlotBlocks, loadSlotRules } from "@/lib/admission/slots-server";
 
 export default async function ParametresPage() {
   const { orgId, userId } = await requireRole(["admin"]);
@@ -81,6 +84,12 @@ export default async function ParametresPage() {
   }
   const aiUsageRows = [...aiByFeature.values()].sort((a, b) => b.calls - a.calls);
   const aiCostUsd = aiUsageRows.reduce((n, r) => n + estimateCostUsd(r), 0);
+
+  // Créneaux d'admission : plages, périodes bloquées, nombre de créneaux libres. Tables de
+  // la migration 0052 : tant qu'elle n'est pas appliquée, la carte affiche le réglage par défaut.
+  const slotSettings = await Promise.all([loadSlotRules(supabase, orgId), loadSlotBlocks(supabase, orgId), loadFreeSlots(supabase, orgId)])
+    .then(([rules, blocks, free]) => ({ ...rules, blocks, freeCount: free.length }))
+    .catch(() => ({ rules: DEFAULT_SLOT_RULES, isDefault: true, blocks: [], freeCount: 0 }));
 
   const groupCountByProgram = new Map<string, number>();
   for (const g of groupRefs ?? []) {
@@ -249,6 +258,14 @@ export default async function ParametresPage() {
       </Card>
 
       <GcalSyncCard />
+
+      <AdmissionSlotsCard
+        rules={slotSettings.rules.map((r) => ({ weekday: r.weekday, startTime: r.startTime, endTime: r.endTime, isActive: r.isActive !== false }))}
+        slotMinutes={slotSettings.rules[0]?.slotMinutes ?? DEFAULT_SLOT_RULES[0].slotMinutes}
+        isDefault={slotSettings.isDefault}
+        blocks={slotSettings.blocks}
+        freeCount={slotSettings.freeCount}
+      />
 
       <Card>
         <CardHeader>

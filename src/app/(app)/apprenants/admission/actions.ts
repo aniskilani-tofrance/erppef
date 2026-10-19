@@ -31,6 +31,8 @@ import {
   channelForMode,
 } from "@/lib/admission/appointments";
 import { pushAppointmentToGoogle } from "@/lib/gcal-admissions";
+import { isSlotFree, type FreeSlot } from "@/lib/admission/slots";
+import { loadFreeSlots } from "@/lib/admission/slots-server";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -494,6 +496,8 @@ const appointmentSchema = z.object({
   mode: z.enum(APPOINTMENT_MODE_CODES),
   location: z.string().max(300).nullable(),
   notes: z.string().max(2000).nullable(),
+  // Posé en touchant un créneau proposé : on revérifie qu'il est toujours libre.
+  fromSlot: z.boolean().optional(),
 });
 
 export type AppointmentResult = { ok: true; id: string } | { ok: false; error: string };
@@ -512,6 +516,22 @@ export async function upsertAdmissionAppointment(raw: z.infer<typeof appointment
 
   const startsAt = localToUtc(d.date, d.startTime);
   const endsAt = new Date(Date.parse(startsAt) + d.durationMinutes * 60_000).toISOString();
+
+  if (d.fromSlot) {
+    let slots: FreeSlot[];
+    try {
+      slots = await loadFreeSlots(supabase, orgId, { excludeAppointmentId: d.id ?? null });
+    } catch {
+      return { ok: false, error: "Impossible de vérifier le créneau : réessayez dans un instant." };
+    }
+    if (!isSlotFree(slots, startsAt, d.durationMinutes)) {
+      return {
+        ok: false,
+        error: "Ce créneau n'est plus libre (pris entre-temps, bloqué ou trop proche). Choisissez-en un autre, ou « Autre horaire ».",
+      };
+    }
+  }
+
   const row = {
     starts_at: startsAt,
     ends_at: endsAt,
@@ -607,4 +627,20 @@ export async function setAdmissionAppointmentStatus(raw: {
   pushLater(rdv.id);
   revalidateAdmission();
   return { ok: true };
+}
+
+// Prochains créneaux libres (dialogue RDV). excludeAppointmentId : le RDV qu'on déplace
+// ne bloque pas son propre créneau.
+export async function listAdmissionFreeSlots(raw?: {
+  excludeAppointmentId?: string | null;
+}): Promise<{ ok: true; slots: FreeSlot[] } | { ok: false; error: string }> {
+  const exclude = raw?.excludeAppointmentId ?? null;
+  if (exclude && !uuid.safeParse(exclude).success) return { ok: false, error: "Données invalides" };
+  const { orgId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+  try {
+    return { ok: true, slots: await loadFreeSlots(supabase, orgId, { excludeAppointmentId: exclude }) };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Créneaux indisponibles" };
+  }
 }
