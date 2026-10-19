@@ -7,6 +7,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { translatePgError } from "@/lib/pg-errors";
 import { gcalConfigured, listOrgCalendars, syncTrainerCalendars, type GcalSyncStats, type OrgCalendar } from "@/lib/gcal";
+import { syncAdmissionAppointments } from "@/lib/gcal-admissions";
+import { SANDBOX_SLUG } from "@/lib/production-orgs";
 import { inviteUser } from "@/lib/invitations";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -210,6 +212,18 @@ export async function syncGoogleCalendars(): Promise<GcalSyncResult> {
 
   try {
     const stats = await syncTrainerCalendars(orgId);
+    // Rendez-vous d'admission : jamais depuis le bac à sable (pas de vrais agendas).
+    const { data: org } = await createAdminClient().from("organizations").select("slug").eq("id", orgId).maybeSingle();
+    if (org && org.slug !== SANDBOX_SLUG) {
+      const rdv = await syncAdmissionAppointments(orgId);
+      stats.calendars += rdv.calendars;
+      stats.upserted += rdv.upserted;
+      stats.unchanged += rdv.unchanged;
+      stats.deleted += rdv.deleted;
+      stats.renamed += rdv.renamed;
+      stats.shared += rdv.shared;
+      stats.errors.push(...rdv.errors);
+    }
     return { ok: true, stats };
   } catch (e) {
     const message = e instanceof Error ? e.message : "erreur inconnue";

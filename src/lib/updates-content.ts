@@ -26,6 +26,19 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-10-19-rdv-admission",
+    date: "2026-10-19",
+    title: "Les rendez-vous d'admission dans votre Google Agenda",
+    summary: "Fini le cahier : un bouton « RDV » sur chaque ligne de l'onglet Admission pose un rendez-vous individuel (entretien, test oral…), qui arrive tout seul dans Google Agenda et laisse une trace dans le journal des contacts.",
+    items: [
+      { text: "Onglet Admission → bouton « RDV » sur la ligne de la personne : date, heure, durée (30 min par défaut), type (entretien, test oral, autre), mode (sur site, téléphone, visio), lieu (adresse de l'organisme pré-remplie) et notes. Si un RDV est déjà prévu, le même bouton (violet) permet de le déplacer ou de l'annuler.", roles: TEAM },
+      { text: "Le RDV apparaît dans l'agenda Google « Admissions PEF — Rendez-vous », partagé avec la direction, comme les agendas « Cours PEF ». Déplacé : l'événement suit ; annulé : il disparaît.", roles: TEAM },
+      { text: "Nouvelle carte « Rendez-vous d'admission à venir » en haut de l'onglet : aujourd'hui en premier, pastille « dans Google Agenda » ou « non synchronisé », bouton WhatsApp « Confirmer » (message simple, « Répondez OK »), puis Honoré / Absent / Déplacer / Annuler.", roles: TEAM },
+      { text: "Chaque étape est notée au journal des contacts (posé, déplacé, annulé, honoré, absent) et la personne passe « Convoqué » à la pose du RDV.", roles: TEAM },
+    ],
+    training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "L'admission : WhatsApp, réunion d'information, entretien oral" }],
+  },
+  {
     id: "2026-10-12-contacts-groupe-vcard",
     date: "2026-10-12",
     title: "Les numéros d'un groupe dans votre téléphone, en un geste",

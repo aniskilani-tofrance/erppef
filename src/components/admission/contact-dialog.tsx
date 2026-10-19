@@ -29,6 +29,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { appointmentKindLabel, appointmentModeLabel, dayLabel, timeOf } from "@/lib/admission/appointments";
 
 export type ContactEntry = {
   id: string;
@@ -48,12 +49,15 @@ export function ContactDialog({
   currentStatus,
   history,
   triggerLabel,
+  nextAppointment = null,
 }: {
   learnerId: string;
   learnerName: string;
   currentStatus: string | null;
   history: ContactEntry[];
   triggerLabel?: string;
+  // Prochain rendez-vous d'admission prévu (rappel en tête du journal)
+  nextAppointment?: { startsAt: string; kind: string; mode: string } | null;
 }) {
   const [open, setOpen] = useState(false);
   const [channel, setChannel] = useState<ContactChannel>("whatsapp");
@@ -117,6 +121,12 @@ export function ContactDialog({
           <DialogTitle>Contact — {learnerName}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
+          {nextAppointment && (
+            <p className="rounded-md border border-violet-200 bg-violet-50 px-3 py-2 text-sm text-violet-900">
+              Prochain RDV : <b>{dayLabel(nextAppointment.startsAt)} à {timeOf(nextAppointment.startsAt)}</b>
+              {" "}· {appointmentKindLabel(nextAppointment.kind)} · {appointmentModeLabel(nextAppointment.mode).toLowerCase()}
+            </p>
+          )}
           {history.length > 0 && (
             <div className="rounded-md border">
               <p className="border-b px-3 py-1.5 text-xs font-medium text-muted-foreground">Derniers contacts</p>

@@ -20,17 +20,19 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // exponentielle sur « Rate Limit Exceeded », et à chaque passe vérifie que l'agenda
 // porte le nom actuel et reste partagé avec les bonnes adresses.
 
-const TZ = "Europe/Paris";
+export const TZ = "Europe/Paris";
 const TRAINER_TAG = "erp-trainer:";
 const ORG_TAG = "erp-org:";
+// Agenda des rendez-vous d'admission (cf. src/lib/gcal-admissions.ts)
+export const ADMISSIONS_TAG = "erp-admissions:";
 const ORG_CALENDAR_NAME = "Cours PEF — Tous les formateurs";
-const WRITE_PAUSE_MS = 120; // souffle entre deux écritures (limite Google par minute)
+export const WRITE_PAUSE_MS = 120; // souffle entre deux écritures (limite Google par minute)
 
 export function gcalConfigured(): boolean {
   return Boolean(process.env.GDRIVE_SERVICE_ACCOUNT_EMAIL && process.env.GDRIVE_SERVICE_ACCOUNT_KEY);
 }
 
-function calendarClient() {
+export function calendarClient() {
   const auth = new google.auth.JWT({
     email: process.env.GDRIVE_SERVICE_ACCOUNT_EMAIL,
     key: process.env.GDRIVE_SERVICE_ACCOUNT_KEY!.replace(/\\n/g, "\n"),
@@ -154,7 +156,7 @@ export function isRetryable(e: unknown): boolean {
   return false;
 }
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** Rejoue `fn` avec attente exponentielle (1 s, 2 s, 4 s, 8 s) sur erreur rejouable. */
 export async function withRetry<T>(
@@ -175,7 +177,7 @@ export async function withRetry<T>(
   throw lastError;
 }
 
-function statusOf(e: unknown): number {
+export function statusOf(e: unknown): number {
   const err = (e ?? {}) as ErrorLike;
   return typeof err.status === "number" ? err.status : Number(err.code);
 }
@@ -253,7 +255,7 @@ export type GcalSyncStats = {
   errors: string[];
 };
 
-async function ensureCalendar(
+export async function ensureCalendar(
   cal: calendar_v3.Calendar,
   existingList: calendar_v3.Schema$CalendarListEntry[],
   spec: { tag: string; summary: string; shares: Share[]; label: string },
@@ -302,7 +304,7 @@ async function ensureCalendar(
   return calendarId;
 }
 
-async function listErpEvents(cal: calendar_v3.Calendar, calendarId: string, timeMin: string) {
+export async function listErpEvents(cal: calendar_v3.Calendar, calendarId: string, timeMin: string) {
   const items: calendar_v3.Schema$Event[] = [];
   let pageToken: string | undefined;
   do {
@@ -456,14 +458,14 @@ export async function syncTrainerCalendars(orgId: string): Promise<GcalSyncStats
 // ───────────────────────── Inventaire (page Paramètres) ─────────────────────────
 
 export type OrgCalendar = {
-  kind: "all" | "trainer";
+  kind: "all" | "trainer" | "admissions";
   title: string;
   calendarId: string;
   url: string;
   shares: { email: string; role: string }[];
 };
 
-/** Les agendas Google de l'organisme (consolidé + un par formateur) avec leurs partages. */
+/** Les agendas Google de l'organisme (consolidé, rendez-vous d'admission, un par formateur) avec leurs partages. */
 export async function listOrgCalendars(orgId: string): Promise<OrgCalendar[]> {
   const cal = calendarClient();
   const supabase = createAdminClient();
@@ -476,6 +478,7 @@ export async function listOrgCalendars(orgId: string): Promise<OrgCalendar[]> {
     const description = c.description ?? "";
     let kind: OrgCalendar["kind"] | null = null;
     if (description.includes(`${ORG_TAG}${orgId}`)) kind = "all";
+    else if (description.includes(`${ADMISSIONS_TAG}${orgId}`)) kind = "admissions";
     else {
       const match = description.match(/erp-trainer:([0-9a-f-]{36})/);
       if (match && trainerById.has(match[1])) kind = "trainer";
@@ -492,5 +495,6 @@ export async function listOrgCalendars(orgId: string): Promise<OrgCalendar[]> {
         .map((r) => ({ email: r.scope!.value!, role: r.role ?? "" })),
     });
   }
-  return result.sort((a, b) => (a.kind === b.kind ? a.title.localeCompare(b.title, "fr") : a.kind === "all" ? -1 : 1));
+  const order = { all: 0, admissions: 1, trainer: 2 } as const;
+  return result.sort((a, b) => (a.kind === b.kind ? a.title.localeCompare(b.title, "fr") : order[a.kind] - order[b.kind]));
 }

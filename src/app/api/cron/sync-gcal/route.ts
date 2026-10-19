@@ -1,11 +1,13 @@
 import { SANDBOX_SLUG } from "@/lib/production-orgs";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { gcalConfigured, syncTrainerCalendars } from "@/lib/gcal";
+import { syncAdmissionAppointments } from "@/lib/gcal-admissions";
 
 export const maxDuration = 300; // première passe ou rentrée : plusieurs centaines d'écritures Google, avec réessais
 
 // Cron Vercel (cf. vercel.json) : synchronise chaque nuit les agendas Google
-// des formateurs. Authentifié par le header Authorization: Bearer <CRON_SECRET>
+// des formateurs, puis l'agenda des rendez-vous d'admission (filet de sécurité de
+// l'écriture immédiate : RDV des 7 derniers jours et à venir). Authentifié par le header Authorization: Bearer <CRON_SECRET>
 // que Vercel ajoute automatiquement aux invocations de cron.
 export async function GET(request: Request) {
   const auth = request.headers.get("authorization");
@@ -22,7 +24,11 @@ export async function GET(request: Request) {
 
   const results = [];
   for (const org of orgs ?? []) {
-    results.push({ orgId: org.id, ...(await syncTrainerCalendars(org.id)) });
+    results.push({
+      orgId: org.id,
+      ...(await syncTrainerCalendars(org.id)),
+      admissions: await syncAdmissionAppointments(org.id),
+    });
   }
   return Response.json({ results });
 }
