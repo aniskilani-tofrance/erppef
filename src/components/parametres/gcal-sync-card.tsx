@@ -69,8 +69,10 @@ export function GcalSyncCard() {
           Tous les comptes ERP de rôle admin ont ces agendas en écriture. Les séances
           déplacées ou annulées sont mises à jour, seules celles qui ont changé sont réécrites,
           et un agenda est renommé ou repartagé si le nom, l&apos;email du formateur ou la liste
-          des admins a changé. Une synchronisation automatique tourne chaque nuit ; ce bouton
-          force une synchronisation immédiate.
+          des admins a changé. Les rendez-vous d&apos;admission vont dans l&apos;agenda
+          « Admissions PEF — Rendez-vous » (direction en écriture), dès qu&apos;ils sont posés.
+          Une synchronisation automatique tourne chaque nuit ; ce bouton force une
+          synchronisation immédiate.
         </p>
         <div className="flex flex-wrap items-center gap-3">
           <Button onClick={sync} disabled={pending}>
@@ -98,6 +100,9 @@ export function GcalSyncCard() {
                       {c.title}
                       {c.kind === "all" && (
                         <span className="ml-2 rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">direction</span>
+                      )}
+                      {c.kind === "admissions" && (
+                        <span className="ml-2 rounded bg-violet-100 px-1.5 py-0.5 text-xs font-medium text-violet-800">rendez-vous d&apos;admission</span>
                       )}
                     </p>
                     <p className="truncate text-xs text-muted-foreground">

@@ -401,6 +401,18 @@ export const HELP_SECTIONS: HelpSection[] = [
         ],
       },
       {
+        title: "Poser un rendez-vous d'admission (entretien, test oral)",
+        steps: [
+          "Onglet Admission → bouton « RDV » sur la ligne de la personne : date, heure, durée (30 min par défaut), type (entretien d'admission, test oral, autre), mode (sur site, téléphone, visio), lieu (« 1 place Martin Levasseur, Saint-Ouen » pré-rempli pour sur site) et notes. « Poser le RDV ».",
+          "Le rendez-vous part dans l'agenda Google « Admissions PEF — Rendez-vous » (titre « RDV admission · Prénom Nom (A-xxxx) », téléphone et lien vers la fiche dans la description). Cet agenda appartient à l'ERP et il est partagé en écriture avec la direction : il apparaît dans Google Agenda à côté des agendas « Cours PEF ». S'il n'apparaît pas, acceptez le partage reçu par email.",
+          "Dans le journal des contacts : « RDV d'admission posé le JJ/MM à HHhMM — mode », et le statut passe à « Convoqué » (jamais de recul).",
+          "La carte « Rendez-vous d'admission à venir » (en haut de l'onglet) les liste jour par jour, aujourd'hui en premier. « Confirmer » ouvre WhatsApp avec un message très simple (jour, heure, adresse, « Répondez OK »).",
+          "Après le rendez-vous : « Honoré » ou « Absent ». Absent → noté « sans réponse » au journal (le statut ne recule pas). Le niveau à l'oral se note toujours avec « Entretien oral ».",
+          "Changer l'heure : « Déplacer » (ou le bouton violet « RDV » de la ligne) ; l'événement Google suit. « Annuler » retire l'événement de l'agenda. Chaque changement est noté au journal.",
+          "Pastille « non synchronisé » : l'envoi vers Google prend quelques secondes, rechargez la page. Si elle reste, survolez-la pour lire l'erreur ; la synchronisation de nuit réessaie toute seule (et le bouton « Synchroniser maintenant » des Paramètres aussi).",
+        ],
+      },
+      {
         title: "Constituer le dossier administratif (pièce d'identité, justificatif)",
         steps: [
           "Fiche apprenant (crayon dans la liste) → bloc « Dossier administratif » : trois emplacements, Pièce d'identité recto, Pièce d'identité verso (rien pour un passeport), Justificatif de domicile ; plus « Autres documents » (titre de séjour, attestation France Travail, RIB, diplôme…) avec un intitulé libre. Le compteur « 2 / 3 pièces » dit où en est le dossier.",

@@ -24,6 +24,13 @@ import { LEVELS } from "@/lib/referentiels";
 import { aiConfigured } from "@/lib/ai/client";
 import { hasReminderCue } from "@/lib/ai/prompts";
 import { extractReminderFromNote } from "@/app/(app)/assistant/actions";
+import {
+  APPOINTMENT_KIND_CODES,
+  APPOINTMENT_MODE_CODES,
+  appointmentJournalNote,
+  channelForMode,
+} from "@/lib/admission/appointments";
+import { pushAppointmentToGoogle } from "@/lib/gcal-admissions";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -469,5 +476,135 @@ export async function recordOralTest(raw: z.infer<typeof oralSchema>): Promise<A
   await advanceStatus(supabase, [d.learnerId], "evalue");
 
   revalidateAdmission(d.meetingId ?? null);
+  return { ok: true };
+}
+
+// ── Rendez-vous d'admission individuels ──────────────────────────────────────
+// Un RDV (entretien, test oral…) avec une personne : trace dans le journal des contacts,
+// statut « convoqué » à la pose (jamais de recul), et événement dans l'agenda Google
+// « Admissions PEF — Rendez-vous », poussé après la réponse (after) pour ne pas la
+// ralentir. Un échec Google est noté sur le RDV (gcal_error) ; la passe nocturne réessaie.
+const appointmentSchema = z.object({
+  id: uuid.optional(),
+  learnerId: uuid,
+  date: day,
+  startTime: time,
+  durationMinutes: z.number().int().min(5).max(480),
+  kind: z.enum(APPOINTMENT_KIND_CODES),
+  mode: z.enum(APPOINTMENT_MODE_CODES),
+  location: z.string().max(300).nullable(),
+  notes: z.string().max(2000).nullable(),
+});
+
+export type AppointmentResult = { ok: true; id: string } | { ok: false; error: string };
+
+function pushLater(appointmentId: string) {
+  after(() => pushAppointmentToGoogle(appointmentId).catch(() => undefined));
+}
+
+export async function upsertAdmissionAppointment(raw: z.infer<typeof appointmentSchema>): Promise<AppointmentResult> {
+  const parsed = appointmentSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Données invalides (date, heure et durée obligatoires)" };
+  const d = parsed.data;
+
+  const { orgId, userId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+
+  const startsAt = localToUtc(d.date, d.startTime);
+  const endsAt = new Date(Date.parse(startsAt) + d.durationMinutes * 60_000).toISOString();
+  const row = {
+    starts_at: startsAt,
+    ends_at: endsAt,
+    kind: d.kind,
+    mode: d.mode,
+    location: d.location?.trim() || null,
+    notes: d.notes?.trim() || null,
+  };
+
+  let id: string;
+  let journal: { note: string } | null = null;
+  if (d.id) {
+    const { data: existing } = await supabase
+      .from("admission_appointments")
+      .select("id, learner_id, starts_at, status")
+      .eq("id", d.id)
+      .eq("org_id", orgId)
+      .maybeSingle();
+    if (!existing || existing.learner_id !== d.learnerId) return { ok: false, error: "Rendez-vous introuvable" };
+    if (existing.status !== "prevu") return { ok: false, error: "Ce rendez-vous n'est plus prévu : posez-en un nouveau." };
+    const { error } = await supabase.from("admission_appointments").update(row).eq("id", d.id).eq("org_id", orgId);
+    if (error) return { ok: false, error: translatePgError(error) };
+    id = d.id;
+    if (Date.parse(existing.starts_at) !== Date.parse(startsAt)) {
+      journal = { note: appointmentJournalNote("deplace", { startsAt, mode: d.mode, kind: d.kind }, existing.starts_at) };
+    }
+  } else {
+    const { data, error } = await supabase
+      .from("admission_appointments")
+      .insert({ ...row, org_id: orgId, learner_id: d.learnerId, created_by: userId })
+      .select("id")
+      .single();
+    if (error) return { ok: false, error: translatePgError(error) };
+    id = data.id;
+    journal = { note: appointmentJournalNote("pose", { startsAt, mode: d.mode, kind: d.kind }) };
+  }
+
+  if (journal) {
+    await supabase.from("learner_contacts").insert({
+      org_id: orgId,
+      learner_id: d.learnerId,
+      channel: channelForMode(d.mode),
+      outcome: "convoque",
+      note: journal.note,
+      created_by: userId,
+    });
+    await advanceStatus(supabase, [d.learnerId], "convoque");
+  }
+
+  pushLater(id);
+  revalidateAdmission();
+  return { ok: true, id };
+}
+
+// Résultat ou annulation d'un RDV : honoré, absent(e), annulé. Chaque changement laisse
+// une ligne au journal. Absent(e) → « injoignable » seulement si cela ne fait pas reculer
+// (en pratique : jamais pour un « convoqué ») ; honoré ne change pas le statut (le test
+// oral garde son propre dialogue). Annulé → l'événement Google est supprimé.
+export async function setAdmissionAppointmentStatus(raw: {
+  id: string;
+  status: "honore" | "absent" | "annule";
+}): Promise<ActionResult> {
+  const parsed = z.object({ id: uuid, status: z.enum(["honore", "absent", "annule"]) }).safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Données invalides" };
+  const d = parsed.data;
+
+  const { orgId, userId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+  const { data: rdv } = await supabase
+    .from("admission_appointments")
+    .select("id, learner_id, starts_at, kind, mode, status")
+    .eq("id", d.id)
+    .eq("org_id", orgId)
+    .maybeSingle();
+  if (!rdv) return { ok: false, error: "Rendez-vous introuvable" };
+  if (rdv.status === d.status) return { ok: true };
+  if (rdv.status === "annule") return { ok: false, error: "Ce rendez-vous est annulé : posez-en un nouveau." };
+
+  const { error } = await supabase.from("admission_appointments").update({ status: d.status }).eq("id", rdv.id).eq("org_id", orgId);
+  if (error) return { ok: false, error: translatePgError(error) };
+
+  const outcome = d.status === "honore" ? "joint" : d.status === "absent" ? "sans_reponse" : "autre";
+  await supabase.from("learner_contacts").insert({
+    org_id: orgId,
+    learner_id: rdv.learner_id,
+    channel: channelForMode(rdv.mode),
+    outcome,
+    note: appointmentJournalNote(d.status, { startsAt: rdv.starts_at, mode: rdv.mode, kind: rdv.kind }),
+    created_by: userId,
+  });
+  if (d.status === "absent") await advanceStatus(supabase, [rdv.learner_id], "injoignable");
+
+  pushLater(rdv.id);
+  revalidateAdmission();
   return { ok: true };
 }

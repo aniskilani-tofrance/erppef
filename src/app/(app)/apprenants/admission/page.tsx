@@ -28,6 +28,16 @@ import { learnerRef } from "@/lib/refs";
 import { ProposePoeiButton } from "@/components/poei-candidates/candidate-controls";
 import { BriefButton } from "@/components/assistant/brief-button";
 import { aiConfigured } from "@/lib/ai/client";
+import { AppointmentDialog, type AppointmentView } from "@/components/admission/appointment-dialog";
+import { AppointmentActions } from "@/components/admission/appointment-actions";
+import {
+  appointmentKindLabel,
+  appointmentModeLabel,
+  buildAppointmentConfirmation,
+  dayLabel,
+  timeOf,
+} from "@/lib/admission/appointments";
+import { nextDay, utcToLocalDate } from "@/lib/dates";
 
 // Parcours d'admission : qui contacter aujourd'hui (WhatsApp en un clic), les réunions
 // d'information à venir et où en est chacun (entonnoir).
@@ -41,6 +51,19 @@ type MeetingRow = {
   capacity: number | null;
   rooms: { name: string } | null;
   info_meeting_invitations: { status: string }[];
+};
+
+type AppointmentRow = {
+  id: string;
+  learner_id: string;
+  starts_at: string;
+  ends_at: string;
+  kind: string;
+  mode: string;
+  location: string | null;
+  notes: string | null;
+  gcal_event_id: string | null;
+  gcal_error: string | null;
 };
 
 type LearnerRow = {
@@ -72,6 +95,7 @@ function LearnerRows({
   poeiByLearner,
   groupsOf,
   assistant,
+  appointments,
   showReason = false,
 }: {
   rows: LearnerRow[];
@@ -83,6 +107,7 @@ function LearnerRows({
   poeiByLearner: Map<string, string>;
   groupsOf: Map<string, GroupRef[]>;
   assistant: boolean;
+  appointments: Map<string, AppointmentView>;
   showReason?: boolean;
 }) {
   if (rows.length === 0) return <p className="py-4 text-sm text-muted-foreground">{empty}</p>;
@@ -95,7 +120,7 @@ function LearnerRows({
           <TableHead>Téléphone</TableHead>
           <TableHead>Statut</TableHead>
           <TableHead className="hidden sm:table-cell">Dernier contact</TableHead>
-          <TableHead className="w-52">Actions</TableHead>
+          <TableHead className="w-64">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -143,11 +168,17 @@ function LearnerRows({
                     />
                   );
                 })()}
+                <AppointmentDialog
+                  learnerId={l.id}
+                  learnerName={`${l.first_name} ${l.last_name}`}
+                  appointment={appointments.get(l.id) ?? null}
+                />
                 <ContactDialog
                   learnerId={l.id}
                   learnerName={`${l.first_name} ${l.last_name}`}
                   currentStatus={l.admission_status}
                   history={history.get(l.id) ?? []}
+                  nextAppointment={appointments.get(l.id) ?? null}
                 />
                 {assistant && <BriefButton learnerId={l.id} learnerName={`${l.first_name} ${l.last_name}`} />}
                 <ProposePoeiButton learnerId={l.id} candidateId={poeiByLearner.get(l.id) ?? null} />
@@ -157,6 +188,113 @@ function LearnerRows({
         ))}
       </TableBody>
     </Table>
+  );
+}
+
+// Carte « Rendez-vous d'admission à venir » : aujourd'hui en premier, puis jour par jour,
+// et en bas ceux déjà passés dont le résultat n'est pas noté. Chaque ligne : heure, nom,
+// mode, état Google Agenda, confirmation WhatsApp, honoré / absent / déplacer / annuler.
+function AppointmentsCard({
+  appointments,
+  learnerById,
+}: {
+  appointments: AppointmentRow[];
+  learnerById: Map<string, LearnerRow>;
+}) {
+  const today = utcToLocalDate(new Date().toISOString());
+  const tomorrow = nextDay(today);
+  const days = new Map<string, AppointmentRow[]>();
+  const overdue: AppointmentRow[] = [];
+  for (const a of appointments) {
+    const d = utcToLocalDate(a.starts_at);
+    if (d < today) {
+      overdue.push(a);
+      continue;
+    }
+    days.set(d, [...(days.get(d) ?? []), a]);
+  }
+  const dayTitle = (d: string, sample: string) =>
+    d === today ? "Aujourd'hui" : d === tomorrow ? `Demain — ${dayLabel(sample)}` : dayLabel(sample);
+  const sections = [...days.entries()].map(([d, list]) => ({ key: d, title: dayTitle(d, list[0].starts_at), list }));
+  if (overdue.length) sections.push({ key: "overdue", title: "Passés — résultat à noter", list: overdue });
+  const upcomingCount = appointments.length - overdue.length;
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">Rendez-vous d&apos;admission à venir ({upcomingCount})</CardTitle>
+        <p className="text-xs text-muted-foreground">
+          Bouton « RDV » sur chaque ligne plus bas pour en poser un. Chaque rendez-vous arrive dans votre Google Agenda (agenda « Admissions PEF — Rendez-vous ») et laisse une trace dans le journal des contacts.
+        </p>
+      </CardHeader>
+      <CardContent>
+        {sections.length === 0 ? (
+          <p className="py-2 text-sm text-muted-foreground">Aucun rendez-vous prévu.</p>
+        ) : (
+          <div className="space-y-4">
+            {sections.map((s) => (
+              <div key={s.key}>
+                <p className={`mb-1 text-xs font-semibold uppercase tracking-wide ${s.key === "overdue" ? "text-amber-700" : s.key === today ? "text-violet-800" : "text-muted-foreground"}`}>
+                  {s.title}
+                </p>
+                <ul className="divide-y rounded-md border">
+                  {s.list.map((a) => {
+                    const l = learnerById.get(a.learner_id);
+                    if (!l) return null;
+                    const name = `${l.first_name} ${l.last_name}`;
+                    const synced = Boolean(a.gcal_event_id) && !a.gcal_error;
+                    const view: AppointmentView = {
+                      id: a.id, startsAt: a.starts_at, endsAt: a.ends_at, kind: a.kind, mode: a.mode, location: a.location, notes: a.notes,
+                    };
+                    return (
+                      <li key={a.id} className="space-y-2 px-3 py-2">
+                        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                          <span className="font-semibold tabular-nums">
+                            {s.key === "overdue" ? `${utcToLocalDate(a.starts_at).split("-").reverse().slice(0, 2).join("/")} ` : ""}
+                            {timeOf(a.starts_at)}
+                          </span>
+                          <span className="font-medium">{name}</span>
+                          <span className="font-mono text-[11px] text-muted-foreground">{learnerRef(l.learner_no)}</span>
+                          <Badge variant="outline" className="text-xs">
+                            {appointmentModeLabel(a.mode)}
+                            {a.kind !== "entretien" ? ` · ${appointmentKindLabel(a.kind)}` : ""}
+                          </Badge>
+                          {synced ? (
+                            <Badge variant="outline" className="border-emerald-300 bg-emerald-50 text-xs text-emerald-800" title="Événement présent dans l'agenda « Admissions PEF — Rendez-vous »">
+                              dans Google Agenda
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className="border-amber-300 bg-amber-50 text-xs text-amber-800"
+                              title={a.gcal_error ?? "En attente : l'envoi vers Google prend quelques secondes (rechargez la page). La passe de nuit réessaie."}
+                            >
+                              non synchronisé
+                            </Badge>
+                          )}
+                        </div>
+                        {a.notes && <p className="text-xs text-muted-foreground">{a.notes}</p>}
+                        <div className="flex flex-wrap items-center gap-1">
+                          <WhatsAppButton
+                            phone={l.phone}
+                            message={buildAppointmentConfirmation({ firstName: l.first_name, startsAt: a.starts_at, mode: a.mode, location: a.location })}
+                            trace={{ kind: "contact", learnerId: l.id, note: "WhatsApp — confirmation du RDV d'admission" }}
+                            label="Confirmer"
+                            title="WhatsApp — confirmation du rendez-vous (message simple, « Répondez OK »)"
+                            className="h-8"
+                          />
+                          <AppointmentActions appointment={view} learnerId={l.id} learnerName={name} />
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -220,6 +358,23 @@ export default async function AdmissionPage() {
     }
   }
   const lastContactAt = (id: string) => historyByLearner.get(id)?.[0]?.contactedAt ?? null;
+
+  // Rendez-vous d'admission prévus : ceux des 7 derniers jours sans résultat noté, puis à venir.
+  const { data: appointmentRows } = await supabase
+    .from("admission_appointments")
+    .select("id, learner_id, starts_at, ends_at, kind, mode, location, notes, gcal_event_id, gcal_error")
+    .eq("status", "prevu")
+    .gte("starts_at", new Date(new Date().getTime() - 7 * 86_400_000).toISOString())
+    .order("starts_at");
+  const appointmentList = (appointmentRows ?? []) as AppointmentRow[];
+  const appointmentByLearner = new Map<string, AppointmentView>();
+  for (const a of appointmentList) {
+    if (appointmentByLearner.has(a.learner_id)) continue;
+    appointmentByLearner.set(a.learner_id, {
+      id: a.id, startsAt: a.starts_at, endsAt: a.ends_at, kind: a.kind, mode: a.mode, location: a.location, notes: a.notes,
+    });
+  }
+  const learnerById = new Map((learners ?? []).map((l) => [l.id, l]));
 
   // Entonnoir
   const counts: Record<string, number> = {};
@@ -308,6 +463,8 @@ export default async function AdmissionPage() {
       <p className="text-sm text-muted-foreground">
         Prise de contact sur WhatsApp, réunions d&apos;information, entretien oral — jusqu&apos;à l&apos;inscription.
       </p>
+
+      <AppointmentsCard appointments={appointmentList} learnerById={learnerById} />
 
       <DotsLegend groups={groupRefs} />
 
@@ -447,7 +604,7 @@ export default async function AdmissionPage() {
           </p>
         </CardHeader>
         <CardContent>
-          <LearnerRows rows={toContact} senderFirstName={senderFirstName} history={historyByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} assistant={assistant} empty="Personne à contacter : tous les nouveaux ont été joints. Les fiches déposées dans le Drive arrivent ici chaque nuit." />
+          <LearnerRows rows={toContact} senderFirstName={senderFirstName} history={historyByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} assistant={assistant} appointments={appointmentByLearner} empty="Personne à contacter : tous les nouveaux ont été joints. Les fiches déposées dans le Drive arrivent ici chaque nuit." />
           {toContact.length > 80 && (
             <p className="mt-2 text-xs text-muted-foreground">
               80 premiers affichés — <Link href="/apprenants?statut=nouveau" className="underline">voir tous les nouveaux</Link>.
@@ -464,7 +621,7 @@ export default async function AdmissionPage() {
           </p>
         </CardHeader>
         <CardContent>
-          <LearnerRows rows={toInvite} senderFirstName={senderFirstName} history={historyByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} assistant={assistant} empty="Aucun contacté en attente de convocation." />
+          <LearnerRows rows={toInvite} senderFirstName={senderFirstName} history={historyByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} assistant={assistant} appointments={appointmentByLearner} empty="Aucun contacté en attente de convocation." />
         </CardContent>
       </Card>
 
@@ -476,7 +633,7 @@ export default async function AdmissionPage() {
           </p>
         </CardHeader>
         <CardContent>
-          <LearnerRows rows={toEnroll} senderFirstName={senderFirstName} history={historyByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} assistant={assistant} empty="Personne en attente d'inscription." />
+          <LearnerRows rows={toEnroll} senderFirstName={senderFirstName} history={historyByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} assistant={assistant} appointments={appointmentByLearner} empty="Personne en attente d'inscription." />
         </CardContent>
       </Card>
 
@@ -488,7 +645,7 @@ export default async function AdmissionPage() {
           </p>
         </CardHeader>
         <CardContent>
-          <LearnerRows rows={waiting} senderFirstName={senderFirstName} history={historyByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} assistant={assistant} showReason empty="Personne en liste d'attente." />
+          <LearnerRows rows={waiting} senderFirstName={senderFirstName} history={historyByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} assistant={assistant} appointments={appointmentByLearner} showReason empty="Personne en liste d'attente." />
         </CardContent>
       </Card>
 
@@ -506,7 +663,7 @@ export default async function AdmissionPage() {
             <details>
               <summary className="cursor-pointer text-sm text-muted-foreground">Afficher les {closed.length} dossiers clos</summary>
               <div className="mt-2">
-                <LearnerRows rows={closed} senderFirstName={senderFirstName} history={historyByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} assistant={assistant} showReason empty="Aucun dossier clos." />
+                <LearnerRows rows={closed} senderFirstName={senderFirstName} history={historyByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} assistant={assistant} appointments={appointmentByLearner} showReason empty="Aucun dossier clos." />
                 {closed.length > 80 && (
                   <p className="mt-2 text-xs text-muted-foreground">
                     80 plus récents affichés — <Link href="/apprenants?statut=sans_suite" className="underline">voir tous les dossiers clos</Link>.
