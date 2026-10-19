@@ -85,10 +85,13 @@ export function learnerFicheUrl(a: AppointmentForCalendar): string {
 /** Corps d'événement Google attendu pour un rendez-vous d'admission. */
 export function appointmentEventBody(a: AppointmentForCalendar): calendar_v3.Schema$Event {
   const ref = a.learner?.learner_no != null ? ` (${learnerRef(a.learner.learner_no)})` : "";
-  const summary = `RDV admission · ${learnerName(a)}${ref}${a.kind === "test_oral" ? " · Test oral" : ""}`;
+  const prefix = a.kind === "diagnostic_tofrance" ? "Diagnostic ToFrance" : "RDV admission";
+  const summary = `${prefix} · ${learnerName(a)}${ref}${a.kind === "test_oral" ? " · Test oral" : ""}`;
   const phone = a.learner?.phone?.trim() ? formatPhone(a.learner.phone) : null;
   const description = [
-    "Rendez-vous d'admission posé dans l'ERP ParlerEmploi Formation.",
+    a.kind === "diagnostic_tofrance"
+      ? "Diagnostic partagé avec ToFrance (tofrance.life), posé dans l'ERP ParlerEmploi Formation."
+      : "Rendez-vous d'admission posé dans l'ERP ParlerEmploi Formation.",
     `Type : ${appointmentKindLabel(a.kind)}`,
     `Mode : ${appointmentModeLabel(a.mode)}`,
     phone ? `Téléphone : ${phone}` : "Téléphone : non renseigné",

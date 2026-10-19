@@ -25,6 +25,7 @@ import { SourceFilter } from "@/components/admission/source-filter";
 import { matchesSourceFilter, resolveProvenance } from "@/lib/admission/sources";
 import { BulkInviteButton } from "@/components/admission/bulk-invite-button";
 import { ContactDialog, type ContactEntry } from "@/components/admission/contact-dialog";
+import { AppointmentDialog, type AppointmentView } from "@/components/admission/appointment-dialog";
 import { BriefButton } from "@/components/assistant/brief-button";
 import { aiConfigured } from "@/lib/ai/client";
 import { WhatsAppButton } from "@/components/admission/whatsapp-button";
@@ -119,6 +120,21 @@ export default async function ApprenantsPage({
       });
       historyByLearner.set(c.learner_id, list);
     }
+  }
+  // Rendez-vous prévus (admission ou diagnostic partagé ToFrance) : le bouton « RDV » de
+  // chaque ligne ouvre le prochain pour le déplacer, sinon en pose un nouveau.
+  const { data: appointmentRows } = await supabase
+    .from("admission_appointments")
+    .select("id, learner_id, starts_at, ends_at, kind, mode, location, notes")
+    .eq("status", "prevu")
+    .gte("starts_at", new Date(new Date().getTime() - 7 * 86_400_000).toISOString())
+    .order("starts_at");
+  const appointmentByLearner = new Map<string, AppointmentView>();
+  for (const a of appointmentRows ?? []) {
+    if (appointmentByLearner.has(a.learner_id)) continue;
+    appointmentByLearner.set(a.learner_id, {
+      id: a.id, startsAt: a.starts_at, endsAt: a.ends_at, kind: a.kind, mode: a.mode, location: a.location, notes: a.notes,
+    });
   }
   const meetingOptions = (upcomingMeetings ?? []).map((m) => ({
     id: m.id,
@@ -386,6 +402,12 @@ export default async function ApprenantsPage({
                         oralTestEvaluator: l.oral_test_evaluator ?? "",
                         oralTestComment: l.oral_test_comment ?? "",
                       }}
+                    />
+                    <AppointmentDialog
+                      learnerId={l.id}
+                      learnerName={`${l.first_name} ${l.last_name}`}
+                      appointment={appointmentByLearner.get(l.id) ?? null}
+                      defaultKind={l.admission_status === "inscrit" ? "diagnostic_tofrance" : "entretien"}
                     />
                     <DeleteLearnerButton
                       learnerId={l.id}
