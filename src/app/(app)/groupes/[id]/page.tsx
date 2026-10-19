@@ -82,7 +82,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
         .select("id, learner_id, status, left_on, learners(first_name, last_name, level_assessed, phone, email, whatsapp_group_consent)")
         .eq("group_id", id)
         .order("status"), // abandons et terminés restent visibles (badges + bilans)
-      supabase.from("learners").select("id, first_name, last_name, learner_no, level_assessed, first_language, city, district, qpv, gender, activity_status, education_level, prescriber, birth_date, contact_source, contact_source_detail, admission_status, phone").order("last_name"),
+      supabase.from("learners").select("id, first_name, last_name, learner_no, level_assessed, first_language, city, district, qpv, gender, activity_status, education_level, prescriber, birth_date, contact_source, contact_source_detail, admission_status, phone, created_at").order("last_name"),
       supabase.from("funders").select("id, name").eq("is_active", true).order("name"),
       supabase
         .from("attendances")
@@ -170,6 +170,8 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
   const seatCandidates: SeatCandidateRow[] = canWrite && seatsFree > 0 && group.status !== "termine" && group.status !== "annule"
     ? (learners ?? [])
         .filter((l) => seatCandidateIds.has(l.id))
+        // Ordre d'arrivée : le premier inscrit dans l'ERP se voit proposer la place en premier
+        .sort((a, b) => a.created_at.localeCompare(b.created_at))
         .map((l) => ({
           id: l.id,
           firstName: l.first_name,
