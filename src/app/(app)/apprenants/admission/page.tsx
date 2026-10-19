@@ -223,7 +223,7 @@ function AppointmentsCard({
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Rendez-vous d&apos;admission à venir ({upcomingCount})</CardTitle>
+        <CardTitle className="text-base">Rendez-vous à venir — admission et diagnostic ToFrance ({upcomingCount})</CardTitle>
         <p className="text-xs text-muted-foreground">
           Bouton « RDV » sur chaque ligne plus bas pour en poser un. Chaque rendez-vous arrive dans votre Google Agenda (agenda « Admissions PEF — Rendez-vous ») et laisse une trace dans le journal des contacts.
         </p>

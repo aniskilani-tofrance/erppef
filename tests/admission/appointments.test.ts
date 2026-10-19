@@ -6,6 +6,7 @@ import {
   channelForMode,
   DEFAULT_APPOINTMENT_ADDRESS,
   durationMinutes,
+  isAdmissionKind,
   shortWhen,
 } from "@/lib/admission/appointments";
 import { CONTACT_CHANNELS } from "@/lib/admission/status";
@@ -84,5 +85,16 @@ describe("rendez-vous d'admission — lieu et durée", () => {
 
   it("durée en minutes", () => {
     expect(durationMinutes(STARTS, "2026-10-21T13:00:00.000Z")).toBe(30);
+  });
+});
+
+describe("rendez-vous « Diagnostic partagé ToFrance »", () => {
+  it("hors parcours d'admission : journal dédié, aucun effet sur le statut", () => {
+    expect(isAdmissionKind("diagnostic_tofrance")).toBe(false);
+    expect(isAdmissionKind("entretien")).toBe(true);
+    expect(isAdmissionKind("test_oral")).toBe(true);
+    expect(appointmentJournalNote("pose", { startsAt: STARTS, mode: "visio", kind: "diagnostic_tofrance" })).toBe(
+      "RDV diagnostic partagé ToFrance posé le 21/10 à 14h30 — visio",
+    );
   });
 });
