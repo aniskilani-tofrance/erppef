@@ -7,6 +7,7 @@ import {
   isRetryable,
   missingShares,
   wantedShares,
+  calendarsSharedWith,
   withRetry,
   type SessionForCalendar,
 } from "@/lib/gcal";
@@ -140,5 +141,14 @@ describe("agenda Google des formateurs — réessais", () => {
     };
     await expect(withRetry(broken, 5, 1)).rejects.toMatchObject({ code: 404 });
     expect(hard).toBe(1);
+  });
+});
+
+describe("agendas partagés avec un compte (page Compte)", () => {
+  const cal = (title: string, emails: string[]) => ({ kind: "all" as const, title, calendarId: title, url: "", shares: emails.map((email) => ({ email, role: "reader" })) });
+  it("garde ceux qui partagent l'adresse, casse indifférente", () => {
+    const list = [cal("Tous", ["marie.tregaro@parleremploi.fr"]), cal("Autre", ["anis@parleremploi.fr"])];
+    expect(calendarsSharedWith(list, "Marie.Tregaro@ParlerEmploi.fr").map((c) => c.title)).toEqual(["Tous"]);
+    expect(calendarsSharedWith(list, null)).toEqual([]);
   });
 });

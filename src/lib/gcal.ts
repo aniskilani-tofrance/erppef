@@ -481,6 +481,13 @@ export type OrgCalendar = {
   shares: { email: string; role: string }[];
 };
 
+/** Parmi les agendas de l'organisme, ceux partagés avec cette adresse (casse indifférente). */
+export function calendarsSharedWith(calendars: OrgCalendar[], email: string | null | undefined): OrgCalendar[] {
+  const me = cleanEmail(email);
+  if (!me) return [];
+  return calendars.filter((c) => c.shares.some((s) => s.email.toLowerCase() === me));
+}
+
 /** Les agendas Google de l'organisme (consolidé, rendez-vous d'admission, un par formateur) avec leurs partages. */
 export async function listOrgCalendars(orgId: string): Promise<OrgCalendar[]> {
   const cal = calendarClient();
