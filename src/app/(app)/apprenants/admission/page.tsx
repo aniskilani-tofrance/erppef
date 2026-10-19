@@ -141,6 +141,7 @@ function LearnerRows({
                 return (
                   <span className="block text-xs font-normal text-muted-foreground">
                     Motif : {entry ? reasonLabel(entry.reason) : <span className="italic">non renseigné</span>}
+                    {l.admission_status === "liste_attente" && ` · arrivé le ${fmtDay(l.created_at)}`}
                   </span>
                 );
               })()}
@@ -395,10 +396,11 @@ export default async function AdmissionPage() {
     .sort((a, b) => (lastContactAt(a.id) ?? "").localeCompare(lastContactAt(b.id) ?? ""));
   // Évalués (entretien oral fait) mais pas encore inscrits dans un groupe
   const toEnroll = (learners ?? []).filter((l) => l.admission_status === "evalue");
-  // Liste d'attente : place refusée ou incompatible — les plus anciens contacts d'abord (à reproposer en premier)
+  // Liste d'attente : place refusée ou incompatible — par ordre d'arrivée (premier arrivé, premier
+  // reproposé). Un nouvel appel ne fait pas reculer la personne dans la file.
   const waiting = (learners ?? [])
     .filter((l) => l.admission_status === "liste_attente")
-    .sort((a, b) => (lastContactAt(a.id) ?? a.created_at).localeCompare(lastContactAt(b.id) ?? b.created_at));
+    .sort((a, b) => a.created_at.localeCompare(b.created_at));
   // Sans suite : dossiers clos — on ne relance plus. Les plus récents d'abord (une erreur se rattrape vite).
   const closed = (learners ?? [])
     .filter((l) => l.admission_status === "sans_suite")
@@ -641,7 +643,7 @@ export default async function AdmissionPage() {
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Liste d&apos;attente — à reproposer ({waiting.length})</CardTitle>
           <p className="text-xs text-muted-foreground">
-            La personne <b>veut venir</b>, mais la place proposée ne convenait pas (horaire, garde d&apos;enfant…) ou aucun groupe compatible n&apos;existe. Dès qu&apos;une place se libère, inscrivez-la depuis la fiche du groupe : elle passe « Inscrit » toute seule. À ne pas confondre avec « Sans suite » plus bas.
+            Classée par <b>ordre d&apos;arrivée</b>. La personne <b>veut venir</b>, mais la place proposée ne convenait pas (horaire, garde d&apos;enfant…) ou aucun groupe compatible n&apos;existe. Dès qu&apos;une place se libère, inscrivez-la depuis la fiche du groupe : elle passe « Inscrit » toute seule. À ne pas confondre avec « Sans suite » plus bas.
           </p>
         </CardHeader>
         <CardContent>
