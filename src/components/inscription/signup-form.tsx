@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { SignupBooking } from "@/components/inscription/signup-booking";
 import { SignupShell as Shell } from "@/components/inscription/signup-shell";
 import { postToHost } from "@/lib/inscription/embed";
+import { carriedEntries } from "@/lib/inscription/carry";
 
 // Formulaire d'inscription rapide, pour un public A1 sur téléphone : une question par
 // écran, gros boutons, pictogrammes, trois langues. Sans JavaScript, tous les écrans
@@ -202,6 +203,11 @@ export function SignupForm({
             <input type="text" name="website" tabIndex={-1} autoComplete="off" defaultValue="" />
           </label>
         </div>
+        {/* Un seul écran affiché à la fois : les réponses des autres partent en champs cachés. */}
+        {enhanced &&
+          carriedEntries(values, step).map(([name, value], i) => (
+            <input key={`${name}-${i}-${value}`} type="hidden" name={name} value={value} />
+          ))}
 
         {shown("intro") && (
           <section className="space-y-6 text-center">
