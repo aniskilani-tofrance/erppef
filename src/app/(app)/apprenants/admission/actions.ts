@@ -13,7 +13,6 @@ import {
   ADMISSION_STATUS_CODES,
   INVITATION_STATUS_CODES,
   reasonFits,
-  nextAdmissionStatus,
   type AdmissionStatus,
 } from "@/lib/admission/status";
 import { buildMeetingInvitationMessage, textToHtml } from "@/lib/admission/messages";
@@ -31,7 +30,13 @@ import {
   channelForMode,
   isAdmissionKind,
 } from "@/lib/admission/appointments";
-import { pushAppointmentToGoogle } from "@/lib/gcal-admissions";
+import {
+  advanceAdmissionStatus as advanceStatus,
+  createAdmissionAppointment,
+  pushAppointmentLater as pushLater,
+} from "@/lib/admission/appointments-server";
+import { isSlotFree, type FreeSlot } from "@/lib/admission/slots";
+import { loadFreeSlots } from "@/lib/admission/slots-server";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -44,25 +49,6 @@ function revalidateAdmission(meetingId?: string | null) {
   if (meetingId) revalidatePath(`/apprenants/reunions/${meetingId}`);
   revalidatePath("/apprenants");
   revalidatePath("/dashboard");
-}
-
-// Fait avancer le statut d'admission d'apprenants (jamais de recul, « inscrit » définitif).
-async function advanceStatus(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  learnerIds: string[],
-  candidate: AdmissionStatus,
-): Promise<void> {
-  if (!learnerIds.length) return;
-  const { data: rows } = await supabase.from("learners").select("id, admission_status").in("id", learnerIds);
-  const byTarget = new Map<AdmissionStatus, string[]>();
-  for (const r of rows ?? []) {
-    const next = nextAdmissionStatus(r.admission_status, candidate);
-    if (next === r.admission_status) continue;
-    byTarget.set(next, [...(byTarget.get(next) ?? []), r.id]);
-  }
-  for (const [status, ids] of byTarget) {
-    await supabase.from("learners").update({ admission_status: status }).in("id", ids);
-  }
 }
 
 // ── Journal des contacts ─────────────────────────────────────────────────────
@@ -495,13 +481,11 @@ const appointmentSchema = z.object({
   mode: z.enum(APPOINTMENT_MODE_CODES),
   location: z.string().max(300).nullable(),
   notes: z.string().max(2000).nullable(),
+  // Posé en touchant un créneau proposé : on revérifie qu'il est toujours libre.
+  fromSlot: z.boolean().optional(),
 });
 
 export type AppointmentResult = { ok: true; id: string } | { ok: false; error: string };
-
-function pushLater(appointmentId: string) {
-  after(() => pushAppointmentToGoogle(appointmentId).catch(() => undefined));
-}
 
 export async function upsertAdmissionAppointment(raw: z.infer<typeof appointmentSchema>): Promise<AppointmentResult> {
   const parsed = appointmentSchema.safeParse(raw);
@@ -513,58 +497,76 @@ export async function upsertAdmissionAppointment(raw: z.infer<typeof appointment
 
   const startsAt = localToUtc(d.date, d.startTime);
   const endsAt = new Date(Date.parse(startsAt) + d.durationMinutes * 60_000).toISOString();
-  const row = {
-    starts_at: startsAt,
-    ends_at: endsAt,
-    kind: d.kind,
-    mode: d.mode,
-    location: d.location?.trim() || null,
-    notes: d.notes?.trim() || null,
-  };
 
-  let id: string;
-  let journal: { note: string } | null = null;
-  if (d.id) {
-    const { data: existing } = await supabase
-      .from("admission_appointments")
-      .select("id, learner_id, starts_at, status")
-      .eq("id", d.id)
-      .eq("org_id", orgId)
-      .maybeSingle();
-    if (!existing || existing.learner_id !== d.learnerId) return { ok: false, error: "Rendez-vous introuvable" };
-    if (existing.status !== "prevu") return { ok: false, error: "Ce rendez-vous n'est plus prévu : posez-en un nouveau." };
-    const { error } = await supabase.from("admission_appointments").update(row).eq("id", d.id).eq("org_id", orgId);
-    if (error) return { ok: false, error: translatePgError(error) };
-    id = d.id;
-    if (Date.parse(existing.starts_at) !== Date.parse(startsAt)) {
-      journal = { note: appointmentJournalNote("deplace", { startsAt, mode: d.mode, kind: d.kind }, existing.starts_at) };
+  if (d.fromSlot) {
+    let slots: FreeSlot[];
+    try {
+      slots = await loadFreeSlots(supabase, orgId, { excludeAppointmentId: d.id ?? null });
+    } catch {
+      return { ok: false, error: "Impossible de vérifier le créneau : réessayez dans un instant." };
     }
-  } else {
-    const { data, error } = await supabase
-      .from("admission_appointments")
-      .insert({ ...row, org_id: orgId, learner_id: d.learnerId, created_by: userId })
-      .select("id")
-      .single();
-    if (error) return { ok: false, error: translatePgError(error) };
-    id = data.id;
-    journal = { note: appointmentJournalNote("pose", { startsAt, mode: d.mode, kind: d.kind }) };
+    if (!isSlotFree(slots, startsAt, d.durationMinutes)) {
+      return {
+        ok: false,
+        error: "Ce créneau n'est plus libre (pris entre-temps, bloqué ou trop proche). Choisissez-en un autre, ou « Autre horaire ».",
+      };
+    }
   }
 
-  if (journal) {
+  // Création : fonction commune avec la réservation en ligne (formulaire d'inscription).
+  if (!d.id) {
+    const created = await createAdmissionAppointment(supabase, {
+      orgId,
+      learnerId: d.learnerId,
+      startsAt,
+      endsAt,
+      kind: d.kind,
+      mode: d.mode,
+      location: d.location,
+      notes: d.notes,
+      createdBy: userId,
+    });
+    if (!created.ok) return { ok: false, error: translatePgError(created.error) };
+    revalidateAdmission();
+    return { ok: true, id: created.id };
+  }
+
+  // Déplacement / modification d'un RDV prévu.
+  const { data: existing } = await supabase
+    .from("admission_appointments")
+    .select("id, learner_id, starts_at, status")
+    .eq("id", d.id)
+    .eq("org_id", orgId)
+    .maybeSingle();
+  if (!existing || existing.learner_id !== d.learnerId) return { ok: false, error: "Rendez-vous introuvable" };
+  if (existing.status !== "prevu") return { ok: false, error: "Ce rendez-vous n'est plus prévu : posez-en un nouveau." };
+  const { error } = await supabase
+    .from("admission_appointments")
+    .update({
+      starts_at: startsAt,
+      ends_at: endsAt,
+      kind: d.kind,
+      mode: d.mode,
+      location: d.location?.trim() || null,
+      notes: d.notes?.trim() || null,
+    })
+    .eq("id", d.id)
+    .eq("org_id", orgId);
+  if (error) return { ok: false, error: translatePgError(error) };
+  if (Date.parse(existing.starts_at) !== Date.parse(startsAt)) {
     await supabase.from("learner_contacts").insert({
       org_id: orgId,
       learner_id: d.learnerId,
       channel: channelForMode(d.mode),
       outcome: isAdmissionKind(d.kind) ? "convoque" : "autre",
-      note: journal.note,
+      note: appointmentJournalNote("deplace", { startsAt, mode: d.mode, kind: d.kind }, existing.starts_at),
       created_by: userId,
     });
     if (isAdmissionKind(d.kind)) await advanceStatus(supabase, [d.learnerId], "convoque");
   }
-
-  pushLater(id);
+  pushLater(d.id);
   revalidateAdmission();
-  return { ok: true, id };
+  return { ok: true, id: d.id };
 }
 
 // Résultat ou annulation d'un RDV : honoré, absent(e), annulé. Chaque changement laisse
@@ -608,4 +610,20 @@ export async function setAdmissionAppointmentStatus(raw: {
   pushLater(rdv.id);
   revalidateAdmission();
   return { ok: true };
+}
+
+// Prochains créneaux libres (dialogue RDV). excludeAppointmentId : le RDV qu'on déplace
+// ne bloque pas son propre créneau.
+export async function listAdmissionFreeSlots(raw?: {
+  excludeAppointmentId?: string | null;
+}): Promise<{ ok: true; slots: FreeSlot[] } | { ok: false; error: string }> {
+  const exclude = raw?.excludeAppointmentId ?? null;
+  if (exclude && !uuid.safeParse(exclude).success) return { ok: false, error: "Données invalides" };
+  const { orgId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+  try {
+    return { ok: true, slots: await loadFreeSlots(supabase, orgId, { excludeAppointmentId: exclude }) };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Créneaux indisponibles" };
+  }
 }

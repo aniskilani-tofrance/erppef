@@ -401,6 +401,20 @@ export const HELP_SECTIONS: HelpSection[] = [
         ],
       },
       {
+        title: "Envoyer le lien d'inscription rapide (WhatsApp)",
+        steps: [
+          "Onglet Admission → bouton « Lien d'inscription » (en haut). Facultatif : « Provenance » (ex. « MDQ Landy », « CCAS ») pour savoir d'où viennent les inscrits. « MDQ … » est rangé en Maison de quartier, France Travail / CCAS / mission locale en prescripteur, le reste en « Formulaire en ligne ».",
+          "« Ouvrir WhatsApp » : le message est déjà écrit (français facile, une ligne en anglais et en arabe), choisissez la personne ou le groupe. « Copier le message » pour le coller ailleurs (SMS, Messenger).",
+          "La personne remplit seule, sur son téléphone, une question par écran : prénom et nom, numéro WhatsApp, langues parlées, « Je parle français : pas du tout / un peu / bien » (indication, pas un niveau), disponibilités (matin, après-midi, soir), ville. Elle peut lire en français facile, en anglais ou en arabe.",
+          "Elle arrive dans « À contacter » (statut Nouveau) avec ses réponses dans le journal (« Inscription formulaire — langues : … ; français : … ; dispo : … ») et un test de positionnement prêt à envoyer. Écrivez-lui sur WhatsApp comme d'habitude.",
+          "Déjà connue (même numéro) : pas de doublon, une ligne « Réinscription via formulaire » s'ajoute au journal ; un dossier « Sans suite » repasse en « Nouveau ».",
+          "Le message se retouche dans « Messages » → « Lien d'inscription rapide ». Le consentement RGPD est daté sur la fiche ; la mention d'information est sur le formulaire (lien « En savoir plus »).",
+          "À la fin du formulaire, la personne choisit elle-même son rendez-vous : 4 créneaux libres des 7 jours, sur au moins 2 jours différents et au plus 1 par demi-journée (2 si besoin pour arriver à 4), ses moments de disponibilité d'abord, en gros boutons dans sa langue, avec l'adresse. Un toucher pose un entretien sur site (durée du créneau) : carte « Rendez-vous d'admission à venir » avec la mention « réservé en ligne », agenda Google, journal, statut « Convoqué ». Elle peut l'ajouter à son agenda.",
+          "« Je préfère qu'on m'appelle » : une ligne au journal (« préfère être appelé(e) »), rien d'autre. Aucun créneau libre : l'écran dit « Nous vous appelons sur WhatsApp ». Un rendez-vous déjà prévu pour la personne lui est réaffiché, sans en poser un deuxième.",
+          "Le même formulaire est intégré au site parleremploiformation.pro (page Association) : les inscriptions du site arrivent ici avec la provenance « Formulaire en ligne · Site internet ». Pour l'ajouter sur une autre page du site, intégrez l'adresse /inscription?embed=1&src=… (src = la page, ex. « Site internet — FLE A1 ») : sans logo, la hauteur s'ajuste toute seule. Seuls le site et Lovable ont le droit de l'afficher.",
+        ],
+      },
+      {
         title: "Poser un rendez-vous d'admission (entretien, test oral)",
         steps: [
           "Onglet Admission → bouton « RDV » sur la ligne de la personne : date, heure, durée (30 min par défaut), type (entretien d'admission, test oral, autre), mode (sur site, téléphone, visio), lieu (« 1 place Martin Levasseur, Saint-Ouen » pré-rempli pour sur site) et notes. « Poser le RDV ».",
@@ -411,6 +425,18 @@ export const HELP_SECTIONS: HelpSection[] = [
           "Après le rendez-vous : « Honoré » ou « Absent ». Absent → noté « sans réponse » au journal (le statut ne recule pas). Le niveau à l'oral se note toujours avec « Entretien oral ».",
           "Changer l'heure : « Déplacer » (ou le bouton violet « RDV » de la ligne) ; l'événement Google suit. « Annuler » retire l'événement de l'agenda. Chaque changement est noté au journal.",
           "Pastille « non synchronisé » : l'envoi vers Google prend quelques secondes, rechargez la page. Si elle reste, survolez-la pour lire l'erreur ; la synchronisation de nuit réessaie toute seule (et le bouton « Synchroniser maintenant » des Paramètres aussi).",
+        ],
+      },
+      {
+        title: "Proposer un créneau d'admission libre (et régler les créneaux)",
+        steps: [
+          "Dans le dialogue « RDV », en haut : les créneaux libres des 14 prochains jours, groupés par jour (« Mar. 21 oct. » puis 10h00, 10h30…). Un toucher remplit la date, l'heure et la durée ; il reste à choisir le type, le mode et à « Poser le RDV ».",
+          "Ne sont proposés que les créneaux au moins 2 h à l'avance, hors jours fériés, fermetures de l'organisme, périodes bloquées et rendez-vous déjà prévus (un RDV annulé libère son créneau).",
+          "Si quelqu'un a pris le créneau entre-temps, l'enregistrement le refuse avec un message clair et la liste se met à jour : touchez un autre créneau.",
+          "Deux rendez-vous prévus ne peuvent jamais se chevaucher, même avec « Autre horaire » (verrou en base) : « un autre rendez-vous d'admission est déjà prévu sur ce créneau ». Deux créneaux qui se suivent (10h00-10h30 puis 10h30-11h00) restent possibles.",
+          "Besoin d'un horaire hors créneaux ? « Autre horaire » ouvre la saisie libre (date, heure, durée), comme avant.",
+          "Régler les créneaux : Paramètres → « Créneaux d'admission ». Par défaut mardi et jeudi, 10h-12h et 14h-16h, 30 min. Ajoutez, modifiez ou suspendez une plage, changez la durée, puis « Enregistrer les plages ».",
+          "Bloquer un moment (réunion, absence) : même carte, « Périodes bloquées » → du / au (optionnel), journée entière, matin ou après-midi, motif → « Bloquer ». La corbeille débloque.",
         ],
       },
       {

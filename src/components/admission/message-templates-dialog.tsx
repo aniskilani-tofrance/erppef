@@ -35,6 +35,7 @@ const VAR_HELP: Record<string, string> = {
   vacances: "mention vacances scolaires",
   niveau: "niveau évalué",
   lien_whatsapp: "lien d'invitation au groupe WhatsApp de la classe (fiche du groupe)",
+  lien_inscription: "lien du formulaire d'inscription rapide (avec la provenance choisie)",
 };
 
 const PREVIEW_VARS = {
@@ -44,6 +45,7 @@ const PREVIEW_VARS = {
   groupe: "PEF A1 — Groupe 1", date_debut: "jeudi 1er octobre 2026", date_fin: "mardi 8 juin 2027",
   horaires: "lundi 9h-12h · mardi 9h-12h · mardi 13h-16h", vacances: "Pas de cours pendant les vacances scolaires.", niveau: "A1",
   lien_whatsapp: "https://chat.whatsapp.com/exemple",
+  lien_inscription: "https://pef-erp.vercel.app/inscription?src=MDQ%20Landy",
 };
 
 // Retouche des messages, étape par étape : un texte par étape, variables entre accolades,

@@ -4,7 +4,7 @@
 // (enregistré dans organizations.settings.whatsapp_templates, sans redéploiement).
 //
 // Variables : {prenom} {expediteur} {signature} {organisme} {lien} {date} {lieu} {lien_whatsapp}
-// {groupe} {date_debut} {niveau}. Une ligne dont toutes les variables sont vides
+// {groupe} {date_debut} {niveau} {lien_inscription}. Une ligne dont toutes les variables sont vides
 // disparaît (ex. « 📍 {lieu} » sans lieu). Vouvoiement, phrases courtes : les
 // destinataires apprennent le français.
 
@@ -217,6 +217,19 @@ Si vous souhaitez reprendre, répondez simplement à ce message : nous vous trou
 Bonne continuation,
 {signature}`,
   },
+  {
+    code: "lien_inscription",
+    label: "Lien d'inscription rapide",
+    when: "Bouton « Lien d'inscription » (en-tête de l'onglet Admission) : à envoyer à quelqu'un qui veut des cours, ou dans un groupe WhatsApp. La personne s'inscrit seule et arrive dans « À contacter ».",
+    variables: ["lien_inscription"],
+    text: `Bonjour 👋
+Pour vous inscrire aux cours de français ParlerEmploi, cliquez ici :
+{lien_inscription}
+📱 C'est rapide (2 minutes).
+
+English: sign up for French classes here (2 minutes).
+العربية: للتسجيل في دروس اللغة الفرنسية، اضغط على الرابط (دقيقتان).`,
+  },
 ] as const;
 
 export type MessageStage = (typeof MESSAGE_STAGES)[number]["code"];
@@ -242,7 +255,7 @@ export function resolveTemplates(settings: unknown): Templates {
 }
 
 export type TemplateVars = Partial<Record<
-  "prenom" | "expediteur" | "signature" | "organisme" | "lien" | "date" | "lieu" | "acces" | "groupe" | "date_debut" | "date_fin" | "horaires" | "vacances" | "niveau" | "lien_whatsapp",
+  "prenom" | "expediteur" | "signature" | "organisme" | "lien" | "date" | "lieu" | "acces" | "groupe" | "date_debut" | "date_fin" | "horaires" | "vacances" | "niveau" | "lien_whatsapp" | "lien_inscription",
   string | null | undefined
 >>;
 

@@ -26,6 +26,53 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-10-21-inscription-site",
+    date: "2026-10-21",
+    title: "Le formulaire d'inscription est aussi sur le site internet",
+    summary: "Le même formulaire d'inscription rapide s'affiche directement dans le site parleremploiformation.pro : les inscriptions du site arrivent dans « À contacter », comme celles envoyées sur WhatsApp.",
+    items: [
+      { text: "Les personnes qui s'inscrivent depuis le site arrivent dans l'onglet Admission (statut Nouveau), avec la provenance « Formulaire en ligne · Site internet » : la carte « D'où viennent les demandes » montre ce que rapporte le site.", roles: TEAM },
+      { text: "Mêmes garanties que le lien WhatsApp : pas de doublon (même numéro), consentement daté, test de positionnement prêt, et choix d'un rendez-vous libre à la fin.", roles: TEAM },
+    ],
+    training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "L'admission : WhatsApp, réunion d'information, entretien oral" }],
+  },
+  {
+    id: "2026-10-19-reservation-creneau-formulaire",
+    date: "2026-10-19",
+    title: "La personne choisit elle-même son rendez-vous à la fin du formulaire",
+    summary: "Après l'inscription rapide, l'écran de fin propose 4 créneaux libres sur au moins 2 jours : un toucher, et le rendez-vous est posé, dans l'ERP comme dans Google Agenda.",
+    items: [
+      { text: "Écran de fin du formulaire : « Choisissez un rendez-vous » avec 4 gros boutons (jour, date et heure dans sa langue), répartis sur au moins 2 jours, l'adresse, et « Je préfère qu'on m'appelle ». Sans créneau libre dans les 7 jours : « Nous vous appelons sur WhatsApp », comme avant.", roles: TEAM },
+      { text: "Le rendez-vous réservé arrive dans la carte « Rendez-vous d'admission à venir » avec la mention « réservé en ligne » (et dans l'événement Google), une ligne au journal, et la personne passe « Convoqué ». « Je préfère qu'on m'appelle » laisse seulement une ligne au journal.", roles: TEAM },
+      { text: "Deux rendez-vous prévus ne peuvent plus se chevaucher : si quelqu'un a pris l'horaire entre-temps, l'ERP (et le formulaire) le disent clairement.", roles: TEAM },
+    ],
+    training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "L'admission : WhatsApp, réunion d'information, entretien oral" }],
+  },
+  {
+    id: "2026-10-19-inscription-rapide",
+    date: "2026-10-19",
+    title: "Un lien d'inscription rapide à envoyer sur WhatsApp",
+    summary: "Un formulaire très simple, pensé pour les débutants (A1), en français facile, anglais ou arabe : la personne s'inscrit seule sur son téléphone et arrive dans « À contacter ».",
+    items: [
+      { text: "Onglet Admission → « Lien d'inscription » : le lien, une provenance facultative (maison de quartier, partenaire…) et le message WhatsApp prêt à envoyer (« Ouvrir WhatsApp » ou « Copier »).", roles: TEAM },
+      { text: "Une question par écran, gros boutons : nom, numéro WhatsApp, langues parlées, français déclaré, disponibilités, ville. Les réponses sont dans le journal de la personne ; un test de positionnement est prêt à envoyer.", roles: TEAM },
+      { text: "Même numéro déjà connu : pas de doublon, juste une ligne « Réinscription via formulaire » dans le journal.", roles: TEAM },
+    ],
+    training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "L'admission : WhatsApp, réunion d'information, entretien oral" }],
+  },
+  {
+    id: "2026-10-19-creneaux-admission",
+    date: "2026-10-19",
+    title: "Les créneaux d'admission libres, en un toucher",
+    summary: "Le dialogue « RDV » propose maintenant les créneaux libres des 14 prochains jours : un toucher, et la date, l'heure et la durée sont remplies.",
+    items: [
+      { text: "En haut du dialogue « RDV » : les créneaux libres groupés par jour (« Mar. 21 oct. · 10h00 »), hors fériés, fermetures, périodes bloquées et rendez-vous déjà pris. « Autre horaire » garde la saisie libre.", roles: TEAM },
+      { text: "Si le créneau a été pris entre-temps, l'ERP le refuse avec un message clair et propose les créneaux à jour.", roles: TEAM },
+      { text: "Paramètres → « Créneaux d'admission » : les plages de la semaine (par défaut mardi et jeudi, 10h-12h et 14h-16h, 30 min), la durée d'un créneau, et les périodes à bloquer (journée, matin, après-midi).", roles: ["admin"] },
+    ],
+    training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "L'admission : WhatsApp, réunion d'information, entretien oral" }],
+  },
+  {
     id: "2026-10-19-rdv-diagnostic-tofrance",
     date: "2026-10-19",
     title: "Un rendez-vous avec n'importe quel apprenant, dont le diagnostic ToFrance",

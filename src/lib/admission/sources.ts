@@ -34,6 +34,7 @@ const FAMILY_OF_CHANNEL: Record<ContactSourceCode, SourceFamily> = {
   bouche_a_oreille: "direct",
   reseaux_sociaux: "direct",
   affiche_flyer: "direct",
+  formulaire_whatsapp: "direct",
   france_travail: "prescripteur",
   partenaire: "prescripteur",
   autre: "nc",
@@ -122,6 +123,23 @@ export function resolveProvenance(input: ProvenanceInput): Provenance {
     ? "Provenance non renseignée : complétez « Nous a contactés par » ou « Prescripteur » sur la fiche"
     : `Provenance : ${f.label} · ${text}`;
   return { ...base, text, title, color: f.color, hollow: f.hollow };
+}
+
+/**
+ * Provenance d'une inscription par le formulaire en ligne (/inscription?src=…) : le lien
+ * est distribué par une maison de quartier, un partenaire… et `src` le dit. On garde la
+ * FAMILLE qu'on reconnaît (« MDQ Landy » → Maison de quartier — Landy, comptée en BOP104)
+ * et, à défaut, le canal « Formulaire en ligne » avec `src` en précision.
+ */
+export function provenanceFromSignupSource(src: string | null | undefined): { contact_source: ContactSourceCode; contact_source_detail: string | null } {
+  const raw = clean(src);
+  if (raw) {
+    const p = fromPrescriber(raw);
+    if (p.channel && p.family !== "direct" && p.family !== "nc") {
+      return { contact_source: p.channel, contact_source_detail: p.detail ? `${p.detail} (formulaire en ligne)` : "Formulaire en ligne" };
+    }
+  }
+  return { contact_source: "formulaire_whatsapp", contact_source_detail: raw };
 }
 
 /** Valeur de filtre : « f:quartier » (famille) ou un code de canal ; « nc » = non renseigné. */

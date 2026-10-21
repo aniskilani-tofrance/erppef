@@ -10,6 +10,7 @@ import { gcalConfigured, listOrgCalendars, syncTrainerCalendars, type GcalSyncSt
 import { syncAdmissionAppointments } from "@/lib/gcal-admissions";
 import { SANDBOX_SLUG } from "@/lib/production-orgs";
 import { inviteUser } from "@/lib/invitations";
+import { BLOCK_PARTS, blockRanges, validateSlotRule, type BlockPart } from "@/lib/admission/slots";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -400,6 +401,104 @@ export async function deleteClosure(id: string): Promise<ActionResult> {
     .eq("org_id", orgId)
     .eq("kind", "fermeture_org");
 
+  if (error) return { ok: false, error: translatePgError(error) };
+  revalidatePath("/parametres");
+  return { ok: true };
+}
+
+// ── Créneaux d'admission ─────────────────────────────────────────────────────
+// Plages hebdomadaires où l'on reçoit en rendez-vous d'admission, et périodes bloquées.
+// Les créneaux libres proposés dans le dialogue « RDV » en découlent.
+const slotRulesSchema = z.object({
+  slotMinutes: z.number().int().min(5).max(240),
+  rules: z
+    .array(
+      z.object({
+        weekday: z.number().int().min(1).max(7),
+        startTime: z.string().regex(/^\d{2}:\d{2}$/),
+        endTime: z.string().regex(/^\d{2}:\d{2}$/),
+        isActive: z.boolean(),
+      }),
+    )
+    .max(40),
+});
+
+// Remplace toutes les plages de l'organisme (une durée commune à toutes les plages).
+export async function saveAdmissionSlotRules(raw: z.infer<typeof slotRulesSchema>): Promise<ActionResult> {
+  const parsed = slotRulesSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Données invalides" };
+  const d = parsed.data;
+  if (!d.rules.length) {
+    return { ok: false, error: "Gardez au moins une plage (désactivez-la, ou bloquez une période, pour suspendre les rendez-vous)." };
+  }
+  for (const r of d.rules) {
+    const problem = validateSlotRule({ ...r, slotMinutes: d.slotMinutes });
+    if (problem) return { ok: false, error: problem };
+  }
+
+  const { orgId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+  // Nouvelles plages d'abord, anciennes ensuite : un échec ne laisse jamais l'organisme sans réglage.
+  const { data: previous, error: readError } = await supabase.from("admission_slot_rules").select("id").eq("org_id", orgId);
+  if (readError) return { ok: false, error: translatePgError(readError) };
+  const { error } = await supabase.from("admission_slot_rules").insert(
+    d.rules.map((r) => ({
+      org_id: orgId,
+      weekday: r.weekday,
+      start_time: r.startTime,
+      end_time: r.endTime,
+      slot_minutes: d.slotMinutes,
+      is_active: r.isActive,
+    })),
+  );
+  if (error) return { ok: false, error: translatePgError(error) };
+  const oldIds = (previous ?? []).map((r) => r.id as string);
+  if (oldIds.length) {
+    const { error: delError } = await supabase.from("admission_slot_rules").delete().in("id", oldIds).eq("org_id", orgId);
+    if (delError) return { ok: false, error: translatePgError(delError) };
+  }
+  revalidatePath("/parametres");
+  revalidatePath("/apprenants/admission");
+  return { ok: true };
+}
+
+const slotBlockSchema = z.object({
+  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  part: z.enum(BLOCK_PARTS.map((p) => p.code) as [BlockPart, ...BlockPart[]]),
+  reason: z.string().max(200).nullable(),
+});
+
+// Bloque une demi-journée, une journée ou plusieurs jours (matin ou après-midi : un bloc par jour).
+export async function addAdmissionSlotBlock(raw: z.infer<typeof slotBlockSchema>): Promise<ActionResult> {
+  const parsed = slotBlockSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Données invalides" };
+  const d = parsed.data;
+  if (d.to < d.from) return { ok: false, error: "La date de fin doit être après la date de début" };
+  if (Date.parse(d.to) - Date.parse(d.from) > 92 * 86_400_000) return { ok: false, error: "Trois mois au plus à la fois" };
+
+  const { orgId, userId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+  const reason = d.reason?.trim() || null;
+  const { error } = await supabase.from("admission_slot_blocks").insert(
+    blockRanges(d.from, d.to, d.part).map((b) => ({
+      org_id: orgId,
+      starts_at: b.startsAt,
+      ends_at: b.endsAt,
+      reason,
+      created_by: userId,
+    })),
+  );
+  if (error) return { ok: false, error: translatePgError(error) };
+  revalidatePath("/parametres");
+  return { ok: true };
+}
+
+export async function deleteAdmissionSlotBlock(id: string): Promise<ActionResult> {
+  if (!z.string().uuid().safeParse(id).success) return { ok: false, error: "Identifiant invalide" };
+  const { orgId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+  const { error } = await supabase.from("admission_slot_blocks").delete().eq("id", id).eq("org_id", orgId);
   if (error) return { ok: false, error: translatePgError(error) };
   revalidatePath("/parametres");
   return { ok: true };
