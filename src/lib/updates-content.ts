@@ -32,19 +32,8 @@ export const APP_UPDATES: AppUpdate[] = [
     summary: "Le même formulaire d'inscription rapide s'affiche directement dans le site parleremploiformation.pro : les inscriptions du site arrivent dans « À contacter », comme celles envoyées sur WhatsApp.",
     items: [
       { text: "Les personnes qui s'inscrivent depuis le site arrivent dans l'onglet Admission (statut Nouveau), avec la provenance « Formulaire en ligne · Site internet » : la carte « D'où viennent les demandes » montre ce que rapporte le site.", roles: TEAM },
-      { text: "Mêmes garanties que le lien WhatsApp : pas de doublon (même numéro), consentement daté, test de positionnement prêt, et choix d'un rendez-vous libre à la fin.", roles: TEAM },
-    ],
-    training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "L'admission : WhatsApp, réunion d'information, entretien oral" }],
-  },
-  {
-    id: "2026-10-19-reservation-creneau-formulaire",
-    date: "2026-10-19",
-    title: "La personne choisit elle-même son rendez-vous à la fin du formulaire",
-    summary: "Après l'inscription rapide, l'écran de fin propose 4 créneaux libres sur au moins 2 jours : un toucher, et le rendez-vous est posé, dans l'ERP comme dans Google Agenda.",
-    items: [
-      { text: "Écran de fin du formulaire : « Choisissez un rendez-vous » avec 4 gros boutons (jour, date et heure dans sa langue), répartis sur au moins 2 jours, l'adresse, et « Je préfère qu'on m'appelle ». Sans créneau libre dans les 7 jours : « Nous vous appelons sur WhatsApp », comme avant.", roles: TEAM },
-      { text: "Le rendez-vous réservé arrive dans la carte « Rendez-vous d'admission à venir » avec la mention « réservé en ligne » (et dans l'événement Google), une ligne au journal, et la personne passe « Convoqué ». « Je préfère qu'on m'appelle » laisse seulement une ligne au journal.", roles: TEAM },
-      { text: "Deux rendez-vous prévus ne peuvent plus se chevaucher : si quelqu'un a pris l'horaire entre-temps, l'ERP (et le formulaire) le disent clairement.", roles: TEAM },
+      { text: "Mêmes garanties que le lien WhatsApp : pas de doublon (même numéro), consentement daté, test de positionnement prêt, et un écran de fin clair : « Nous vous contactons dès que possible », place pas encore assurée (pas de réservation en ligne ; le RDV se pose à la main si besoin).", roles: TEAM },
+      { text: "Adresse des rendez-vous d'admission : 14 rue Alexandre Bachelet, Saint-Ouen — pré-remplie dans le dialogue « RDV » (sur site), dans Google Agenda et dans le lien « Ajouter à mon agenda ».", roles: TEAM },
     ],
     training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "L'admission : WhatsApp, réunion d'information, entretien oral" }],
   },
@@ -68,6 +57,7 @@ export const APP_UPDATES: AppUpdate[] = [
     items: [
       { text: "En haut du dialogue « RDV » : les créneaux libres groupés par jour (« Mar. 21 oct. · 10h00 »), hors fériés, fermetures, périodes bloquées et rendez-vous déjà pris. « Autre horaire » garde la saisie libre.", roles: TEAM },
       { text: "Si le créneau a été pris entre-temps, l'ERP le refuse avec un message clair et propose les créneaux à jour.", roles: TEAM },
+      { text: "Deux rendez-vous prévus ne peuvent plus se chevaucher : si quelqu'un a pris l'horaire entre-temps, l'ERP le dit clairement.", roles: TEAM },
       { text: "Paramètres → « Créneaux d'admission » : les plages de la semaine (par défaut mardi et jeudi, 10h-12h et 14h-16h, 30 min), la durée d'un créneau, et les périodes à bloquer (journée, matin, après-midi).", roles: ["admin"] },
     ],
     training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "L'admission : WhatsApp, réunion d'information, entretien oral" }],

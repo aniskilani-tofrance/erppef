@@ -155,7 +155,7 @@ describe("« Ajouter à mon agenda » (lien Google Agenda)", () => {
     expect(url.origin + url.pathname).toBe("https://calendar.google.com/calendar/render");
     expect(url.searchParams.get("action")).toBe("TEMPLATE");
     expect(url.searchParams.get("dates")).toBe("20261020T080000Z/20261020T083000Z");
-    expect(url.searchParams.get("location")).toBe("1 place Martin Levasseur, Saint-Ouen");
+    expect(url.searchParams.get("location")).toBe("14 rue Alexandre Bachelet, Saint-Ouen");
     expect(url.searchParams.get("text")).toBe("Rendez-vous ParlerEmploi");
   });
 });

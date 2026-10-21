@@ -75,6 +75,7 @@ export type SignupTexts = {
   sending: string;
   doneTitle: string;
   doneText: string;
+  doneNotice: string;
   doneWrite: string;
   // Réservation d'un créneau sur l'écran de fin
   chooseTitle: string;
@@ -123,7 +124,8 @@ export const SIGNUP_TEXTS: Record<SignupLocale, SignupTexts> = {
     submit: "Envoyer",
     sending: "Envoi…",
     doneTitle: "Merci !",
-    doneText: "Nous vous appelons sur WhatsApp.",
+    doneText: "Nous vous contactons dès que possible.",
+    doneNotice: "Attention : votre place n'est pas encore assurée.",
     doneWrite: "Écrire à ParlerEmploi",
     chooseTitle: "Choisissez un rendez-vous",
     addressLabel: "Adresse",
@@ -183,7 +185,8 @@ export const SIGNUP_TEXTS: Record<SignupLocale, SignupTexts> = {
     submit: "Send",
     sending: "Sending…",
     doneTitle: "Thank you!",
-    doneText: "We will call you on WhatsApp.",
+    doneText: "We will contact you as soon as possible.",
+    doneNotice: "Please note: your place is not guaranteed yet.",
     doneWrite: "Write to ParlerEmploi",
     chooseTitle: "Choose an appointment",
     addressLabel: "Address",
@@ -243,7 +246,8 @@ export const SIGNUP_TEXTS: Record<SignupLocale, SignupTexts> = {
     submit: "إرسال",
     sending: "جارٍ الإرسال…",
     doneTitle: "شكرًا!",
-    doneText: "سنتصل بك على واتساب.",
+    doneText: "سنتواصل معك في أقرب وقت ممكن.",
+    doneNotice: "تنبيه: مكانك في الدورة غير مضمون بعد.",
     doneWrite: "راسل ParlerEmploi",
     chooseTitle: "اختر موعدًا",
     addressLabel: "العنوان",
