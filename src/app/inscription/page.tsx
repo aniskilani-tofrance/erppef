@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { SignupForm } from "@/components/inscription/signup-form";
 import { SIGNUP_TEXTS, toLocale } from "@/lib/inscription/i18n";
+import { isEmbedParam } from "@/lib/inscription/embed";
 import { sanitizeSrc } from "@/lib/inscription/link";
 import { signupOrgSlug } from "@/lib/inscription/org";
 import { freshStamp } from "@/lib/inscription/signup";
@@ -17,6 +18,7 @@ export const metadata: Metadata = {
 //   ?lang=en|ar   langue d'affichage (français facile par défaut)
 //   ?src=…        d'où vient le lien (maison de quartier…) → « précision » de la provenance
 //   ?o=<slug>     organisation (ParlerEmploi par défaut ; jamais le bac à sable)
+//   ?embed=1      intégré dans le site (iframe) : sans logo, hauteur transmise à la page
 export default async function InscriptionPage({
   searchParams,
 }: {
@@ -43,6 +45,7 @@ export default async function InscriptionPage({
       orgSlug={rawOrg?.trim() ? rawOrg.trim().toLowerCase() : null}
       src={sanitizeSrc(one("src"))}
       stamp={freshStamp()}
+      embed={isEmbedParam(one("embed"))}
     />
   );
 }

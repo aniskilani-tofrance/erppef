@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useActionState, useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { submitSignup, type SignupState, type SignupValues } from "@/app/inscription/actions";
 import {
   AVAILABILITIES,
@@ -16,6 +16,7 @@ import {
 import { cn } from "@/lib/utils";
 import { SignupBooking } from "@/components/inscription/signup-booking";
 import { SignupShell as Shell } from "@/components/inscription/signup-shell";
+import { postToHost } from "@/lib/inscription/embed";
 
 // Formulaire d'inscription rapide, pour un public A1 sur téléphone : une question par
 // écran, gros boutons, pictogrammes, trois langues. Sans JavaScript, tous les écrans
@@ -78,11 +79,14 @@ export function SignupForm({
   orgSlug,
   src,
   stamp,
+  embed = false,
 }: {
   locale: SignupLocale;
   orgSlug: string | null;
   src: string | null;
   stamp: string;
+  /** Formulaire dans l'iframe du site (/inscription?embed=1). */
+  embed?: boolean;
 }) {
   const [state, formAction, pending] = useActionState<SignupState, FormData>(submitSignup, { status: "idle" });
   const enhanced = useEnhanced();
@@ -101,6 +105,14 @@ export function SignupForm({
     }
   }
 
+  // Iframe du site : la page qui accueille le formulaire sait que l'inscription est faite,
+  // et remonte en haut du formulaire si besoin (l'écran de fin est plus court).
+  useEffect(() => {
+    if (!embed || state.status !== "done") return;
+    postToHost({ type: "pef-inscription:done" });
+    postToHost({ type: "pef-inscription:step" });
+  }, [embed, state.status]);
+
   const t = SIGNUP_TEXTS[lang];
   const meta = LOCALE_META[lang];
   const index = STEPS.indexOf(step);
@@ -116,7 +128,9 @@ export function SignupForm({
   function go(to: number) {
     setStep(STEPS[Math.max(0, Math.min(STEPS.length - 1, to))]);
     setError(null);
-    window.scrollTo({ top: 0 });
+    // Dans l'iframe du site, c'est la page parente qui remonte en haut du formulaire.
+    if (embed) postToHost({ type: "pef-inscription:step" });
+    else window.scrollTo({ top: 0 });
   }
   function next() {
     const e = stepError(step, values);
@@ -141,13 +155,14 @@ export function SignupForm({
     if (l !== "fr") p.set("lang", l);
     if (orgSlug) p.set("o", orgSlug);
     if (src) p.set("src", src);
+    if (embed) p.set("embed", "1");
     const q = p.toString();
     return q ? `?${q}` : "";
   };
 
   const shown = (s: Step) => !enhanced || step === s;
 
-  if (state.status === "done") return <SignupBooking locale={lang} offer={state.booking ?? null} />;
+  if (state.status === "done") return <SignupBooking locale={lang} offer={state.booking ?? null} embed={embed} />;
 
   const switcher = (
     <nav aria-label="Langue / Language / اللغة" className="flex justify-center gap-2">
@@ -174,7 +189,7 @@ export function SignupForm({
   );
 
   return (
-    <Shell meta={meta} switcher={switcher}>
+    <Shell meta={meta} switcher={switcher} embed={embed}>
       <form action={formAction} onSubmit={onSubmit} noValidate={enhanced} className="space-y-8">
         <input type="hidden" name="t" value={stamp} />
         <input type="hidden" name="lang" value={lang} />

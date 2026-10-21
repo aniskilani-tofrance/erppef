@@ -6,21 +6,24 @@ import { SignupShell } from "@/components/inscription/signup-shell";
 // et le contact ParlerEmploi. `title` et `text` remplacent le remerciement (text = null :
 // pas de phrase, ex. quand des créneaux sont proposés) ; `children` s'affiche entre le
 // remerciement et le contact (créneaux réservables, confirmation du rendez-vous).
+// `embed` : formulaire dans l'iframe du site → WhatsApp s'ouvre hors du cadre.
 export function SignupDone({
   locale,
   title,
   text,
+  embed = false,
   children,
 }: {
   locale: SignupLocale;
   title?: string;
   text?: string | null;
+  embed?: boolean;
   children?: ReactNode;
 }) {
   const t = SIGNUP_TEXTS[locale];
   const phrase = text === undefined ? t.doneText : text;
   return (
-    <SignupShell meta={LOCALE_META[locale]}>
+    <SignupShell meta={LOCALE_META[locale]} embed={embed}>
       <div className="flex flex-col items-center gap-4 py-8 text-center" role="status">
         <p className="text-7xl" aria-hidden>✅</p>
         <h1 className="text-3xl font-bold">{title ?? t.doneTitle}</h1>
@@ -32,6 +35,7 @@ export function SignupDone({
         </div>
         <a
           href={`https://wa.me/${SIGNUP_CONTACT.whatsapp}`}
+          {...(embed ? { target: "_blank", rel: "noopener noreferrer" } : {})}
           className="mt-2 inline-flex min-h-14 items-center gap-2 rounded-xl bg-[#14532d] px-6 text-lg font-semibold text-white"
         >
           💬 {t.doneWrite}

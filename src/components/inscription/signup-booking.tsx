@@ -12,6 +12,7 @@ import {
   type BookingOffer,
 } from "@/lib/inscription/booking";
 import { SignupDone } from "@/components/inscription/signup-done";
+import { postToHost } from "@/lib/inscription/embed";
 
 // Écran de fin avec réservation : ✅ « Merci ! » puis « 📅 Choisissez un rendez-vous »
 // (4 gros boutons), l'adresse et « 📞 Je préfère qu'on m'appelle ». Un toucher réserve ;
@@ -41,7 +42,15 @@ function Address({ locale }: { locale: SignupLocale }) {
   );
 }
 
-export function SignupBooking({ locale, offer }: { locale: SignupLocale; offer: BookingOffer | null }) {
+export function SignupBooking({
+  locale,
+  offer,
+  embed = false,
+}: {
+  locale: SignupLocale;
+  offer: BookingOffer | null;
+  embed?: boolean;
+}) {
   const t = SIGNUP_TEXTS[locale];
   const [phase, setPhase] = useState<Phase>(() => initialPhase(offer));
   const [chosen, setChosen] = useState<string | null>(null);
@@ -52,8 +61,13 @@ export function SignupBooking({ locale, offer }: { locale: SignupLocale; offer: 
     setChosen(slot.startsAt);
     startTransition(async () => {
       const r = await bookSignupSlot({ token: offer.token, startsAt: slot.startsAt }).catch(() => ({ status: "error" as const }));
-      if (r.status === "booked") setPhase({ kind: "booked", slot: r.slot });
-      else if (r.status === "taken") {
+      if (r.status === "booked") {
+        setPhase({ kind: "booked", slot: r.slot });
+        if (embed) {
+          postToHost({ type: "pef-inscription:booked" });
+          postToHost({ type: "pef-inscription:step" });
+        }
+      } else if (r.status === "taken") {
         setPhase(r.slots.length ? { kind: "choose", slots: r.slots, notice: t.slotTaken } : { kind: "call" });
       } else if (r.status === "expired") setPhase({ kind: "call", text: t.bookingExpired });
       else setPhase((p) => (p.kind === "choose" ? { ...p, notice: t.errors.server } : p));
@@ -69,7 +83,7 @@ export function SignupBooking({ locale, offer }: { locale: SignupLocale; offer: 
     });
   }
 
-  if (phase.kind === "call") return <SignupDone locale={locale} text={phase.text} />;
+  if (phase.kind === "call") return <SignupDone locale={locale} text={phase.text} embed={embed} />;
 
   if (phase.kind === "booked") {
     const s = phase.slot;
@@ -80,7 +94,7 @@ export function SignupBooking({ locale, offer }: { locale: SignupLocale; offer: 
       details: `${SIGNUP_CONTACT.name} — ${SIGNUP_CONTACT.phone}`,
     });
     return (
-      <SignupDone locale={locale} title={bookedSentence(s, t.booked, locale)} text={null}>
+      <SignupDone locale={locale} title={bookedSentence(s, t.booked, locale)} text={null} embed={embed}>
         <Address locale={locale} />
         <p className="text-xl font-semibold">📸 {t.keepMessage}</p>
         <a
@@ -96,7 +110,7 @@ export function SignupBooking({ locale, offer }: { locale: SignupLocale; offer: 
   }
 
   return (
-    <SignupDone locale={locale} text={null}>
+    <SignupDone locale={locale} text={null} embed={embed}>
       <section className="w-full space-y-3" aria-labelledby="choisir-rdv">
         <h2 id="choisir-rdv" className="text-2xl font-bold">
           <span aria-hidden>📅 </span>
