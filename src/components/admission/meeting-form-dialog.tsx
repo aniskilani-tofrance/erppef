@@ -159,7 +159,7 @@ export function MeetingFormDialog({
             <Input
               value={values.location}
               onChange={(e) => set("location", e.target.value)}
-              placeholder="1 place Martin Levasseur, Saint-Ouen — 1er étage"
+              placeholder="Salle 12 — 14 rue Alexandre Bachelet, Saint-Ouen"
             />
           </div>
           <div className="space-y-2">

@@ -33,6 +33,7 @@ export const APP_UPDATES: AppUpdate[] = [
     items: [
       { text: "Les personnes qui s'inscrivent depuis le site arrivent dans l'onglet Admission (statut Nouveau), avec la provenance « Formulaire en ligne · Site internet » : la carte « D'où viennent les demandes » montre ce que rapporte le site.", roles: TEAM },
       { text: "Mêmes garanties que le lien WhatsApp : pas de doublon (même numéro), consentement daté, test de positionnement prêt, et choix d'un rendez-vous libre à la fin.", roles: TEAM },
+      { text: "Adresse des rendez-vous d'admission : 14 rue Alexandre Bachelet, Saint-Ouen — pré-remplie dans le dialogue « RDV » (sur site) et affichée à la personne qui réserve en ligne.", roles: TEAM },
     ],
     training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "L'admission : WhatsApp, réunion d'information, entretien oral" }],
   },

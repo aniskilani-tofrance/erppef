@@ -417,7 +417,7 @@ export const HELP_SECTIONS: HelpSection[] = [
       {
         title: "Poser un rendez-vous d'admission (entretien, test oral)",
         steps: [
-          "Onglet Admission → bouton « RDV » sur la ligne de la personne : date, heure, durée (30 min par défaut), type (entretien d'admission, test oral, autre), mode (sur site, téléphone, visio), lieu (« 1 place Martin Levasseur, Saint-Ouen » pré-rempli pour sur site) et notes. « Poser le RDV ».",
+          "Onglet Admission → bouton « RDV » sur la ligne de la personne : date, heure, durée (30 min par défaut), type (entretien d'admission, test oral, autre), mode (sur site, téléphone, visio), lieu (« 14 rue Alexandre Bachelet, Saint-Ouen » pré-rempli pour sur site) et notes. « Poser le RDV ».",
           "Le rendez-vous part dans l'agenda Google « Admissions PEF — Rendez-vous » (titre « RDV admission · Prénom Nom (A-xxxx) », téléphone et lien vers la fiche dans la description). Cet agenda appartient à l'ERP et il est partagé en écriture avec la direction et les coordinateurs : il apparaît dans Google Agenda à côté des agendas « Cours PEF ». S'il n'apparaît pas, acceptez le partage reçu par email.",
           "Dans le journal des contacts : « RDV d'admission posé le JJ/MM à HHhMM — mode », et le statut passe à « Convoqué » (jamais de recul).",
           "La carte « Rendez-vous d'admission à venir » (en haut de l'onglet) les liste jour par jour, aujourd'hui en premier. « Confirmer » ouvre WhatsApp avec un message très simple (jour, heure, adresse, « Répondez OK »).",

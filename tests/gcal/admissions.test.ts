@@ -51,7 +51,7 @@ describe("agenda Google des rendez-vous d'admission — corps d'événement", ()
   it("titre, lieu par défaut, description (téléphone, mode, notes, fiche), horaires, marqueur", () => {
     const body = appointmentEventBody(rdv);
     expect(body.summary).toBe("RDV admission · Awa Diallo (A-0042)");
-    expect(body.location).toBe("1 place Martin Levasseur, Saint-Ouen");
+    expect(body.location).toBe("14 rue Alexandre Bachelet, Saint-Ouen");
     expect(body.description).toContain("Type : Entretien d'admission");
     expect(body.description).toContain("Mode : Sur site");
     expect(body.description).toContain("Téléphone : 06 12 34 56 78");

@@ -85,7 +85,7 @@ export function RoomFormDialog({ initial }: { initial?: RoomFormValues }) {
           </div>
           <div className="space-y-2">
             <Label>Adresse (reprise dans les plannings et les messages aux apprenants)</Label>
-            <Input value={values.address} onChange={(e) => setValues((v) => ({ ...v, address: e.target.value }))} placeholder="1 place Martin Levasseur, 93400 Saint-Ouen" />
+            <Input value={values.address} onChange={(e) => setValues((v) => ({ ...v, address: e.target.value }))} placeholder="14 rue Alexandre Bachelet, 93400 Saint-Ouen" />
           </div>
           <div className="space-y-2">
             <Label>Comment trouver la salle (accès, étage, transports)</Label>

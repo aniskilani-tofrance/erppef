@@ -5,7 +5,7 @@
 
 import type { ContactChannel } from "@/lib/admission/status";
 
-export const DEFAULT_APPOINTMENT_ADDRESS = "1 place Martin Levasseur, Saint-Ouen";
+export const DEFAULT_APPOINTMENT_ADDRESS = "14 rue Alexandre Bachelet, Saint-Ouen";
 export const DEFAULT_APPOINTMENT_MINUTES = 30;
 export const APPOINTMENT_DURATIONS = [15, 30, 45, 60, 90] as const;
 
