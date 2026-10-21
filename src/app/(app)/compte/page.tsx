@@ -2,6 +2,7 @@ import { requireSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PasswordChangeForm } from "@/components/compte/password-change-form";
+import { MyCalendarsCard } from "@/components/compte/my-calendars-card";
 
 export default async function ComptePage() {
   const { userId, role } = await requireSession();
@@ -41,6 +42,8 @@ export default async function ComptePage() {
           </div>
         </CardContent>
       </Card>
+
+      <MyCalendarsCard />
 
       <Card>
         <CardHeader>

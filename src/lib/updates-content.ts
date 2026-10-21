@@ -73,6 +73,19 @@ export const APP_UPDATES: AppUpdate[] = [
     training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "L'admission : WhatsApp, réunion d'information, entretien oral" }],
   },
   {
+    id: "2026-10-19-rdv-diagnostic-tofrance",
+    date: "2026-10-19",
+    title: "Un rendez-vous avec n'importe quel apprenant, dont le diagnostic ToFrance",
+    summary: "Le bouton « RDV » est aussi sur chaque ligne de la liste Apprenants, inscrits compris, avec un nouveau type « Diagnostic partagé ToFrance ».",
+    items: [
+      { text: "Liste Apprenants → bouton « RDV » sur chaque ligne : même dialogue que dans l'onglet Admission. Pour un apprenant inscrit, le type « Diagnostic partagé ToFrance » est proposé d'office.", roles: TEAM },
+      { text: "Un diagnostic ToFrance ne change jamais le statut d'admission (pas de passage à « Convoqué », pas de recul s'il est absent). Il arrive dans l'agenda « Admissions PEF — Rendez-vous » sous le titre « Diagnostic ToFrance · Prénom Nom ».", roles: TEAM },
+      { text: "L'agenda « Cours PEF — Tous les formateurs » est désormais partagé en lecture avec les coordinateurs.", roles: TEAM },
+      { text: "Mon compte → « Mes agendas Google » : la liste des agendas de l'ERP partagés avec vous et un bouton « Ajouter à mon Google Agenda » (un agenda partagé n'apparaît pas tout seul).", roles: ALL },
+    ],
+    training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "L'admission : WhatsApp, réunion d'information, entretien oral" }],
+  },
+  {
     id: "2026-10-19-rdv-admission",
     date: "2026-10-19",
     title: "Les rendez-vous d'admission dans votre Google Agenda",

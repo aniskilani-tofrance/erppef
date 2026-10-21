@@ -61,12 +61,12 @@ function todayInParis(): string {
   return utcToLocalDate(new Date().toISOString());
 }
 
-function blank(): FormValues {
+function blank(kind: AppointmentKind = "entretien"): FormValues {
   return {
     date: todayInParis(),
     startTime: "10:00",
     duration: String(DEFAULT_APPOINTMENT_MINUTES),
-    kind: "entretien",
+    kind,
     mode: "sur_site",
     location: DEFAULT_APPOINTMENT_ADDRESS,
     notes: "",
@@ -94,15 +94,18 @@ export function AppointmentDialog({
   learnerName,
   appointment = null,
   triggerLabel,
+  defaultKind = "entretien",
 }: {
   learnerId: string;
   learnerName: string;
   appointment?: AppointmentView | null;
   triggerLabel?: string;
+  // Type proposé pour un nouveau RDV (ex. diagnostic ToFrance pour un apprenant inscrit)
+  defaultKind?: AppointmentKind;
 }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<AppointmentView | null>(appointment);
-  const [values, setValues] = useState<FormValues>(appointment ? fromAppointment(appointment) : blank());
+  const [values, setValues] = useState<FormValues>(appointment ? fromAppointment(appointment) : blank(defaultKind));
   const [pending, startTransition] = useTransition();
   // Créneaux libres (null = en cours de chargement), créneau choisi, saisie libre ouverte.
   const [slots, setSlots] = useState<FreeSlot[] | null>(null);
@@ -134,7 +137,7 @@ export function AppointmentDialog({
     if (next) {
       // Toujours repartir de l'état réel (RDV prévu ou formulaire vierge).
       setEditing(appointment);
-      setValues(appointment ? fromAppointment(appointment) : blank());
+      setValues(appointment ? fromAppointment(appointment) : blank(defaultKind));
       setChosen(null);
       setShowOther(Boolean(appointment));
       void loadSlots(appointment?.id ?? null);
@@ -158,7 +161,7 @@ export function AppointmentDialog({
 
   function startAnother() {
     setEditing(null);
-    setValues(blank());
+    setValues(blank(defaultKind));
     setChosen(null);
     setShowOther(false);
     void loadSlots(null);
@@ -210,7 +213,7 @@ export function AppointmentDialog({
 
   const title = appointment
     ? `RDV prévu le ${dayLabel(appointment.startsAt)} à ${timeOf(appointment.startsAt)} — déplacer ou annuler`
-    : "Poser un rendez-vous d'admission";
+    : "Poser un rendez-vous";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

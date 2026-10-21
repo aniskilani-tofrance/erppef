@@ -111,8 +111,12 @@ function cleanEmail(e: string | null | undefined): string | null {
   return v && v.includes("@") ? v : null;
 }
 
-/** Partages attendus : formateur en lecture, direction (admins ERP + GCAL_ADMIN_EMAIL) en écriture. */
-export function wantedShares(trainerEmail: string | null | undefined, adminEmails: (string | null | undefined)[]): Share[] {
+/** Partages attendus : formateur (et `readerEmails`) en lecture, direction (admins ERP + GCAL_ADMIN_EMAIL) en écriture. */
+export function wantedShares(
+  trainerEmail: string | null | undefined,
+  adminEmails: (string | null | undefined)[],
+  readerEmails: (string | null | undefined)[] = [],
+): Share[] {
   const shares: Share[] = [];
   const seen = new Set<string>();
   for (const raw of adminEmails) {
@@ -121,8 +125,12 @@ export function wantedShares(trainerEmail: string | null | undefined, adminEmail
     seen.add(email);
     shares.push({ email, role: "writer" });
   }
-  const t = cleanEmail(trainerEmail);
-  if (t && !seen.has(t)) shares.push({ email: t, role: "reader" });
+  for (const raw of [trainerEmail, ...readerEmails]) {
+    const email = cleanEmail(raw);
+    if (!email || seen.has(email)) continue;
+    seen.add(email);
+    shares.push({ email, role: "reader" });
+  }
   return shares;
 }
 
@@ -184,13 +192,16 @@ export function statusOf(e: unknown): number {
 
 // ───────────────────────── Accès aux données ─────────────────────────
 
-/** Emails de la direction : comptes ERP de rôle admin de l'organisme + GCAL_ADMIN_EMAIL. */
-export async function loadAdminEmails(orgId: string): Promise<string[]> {
+/**
+ * Emails de la direction : comptes ERP de rôle admin de l'organisme + GCAL_ADMIN_EMAIL.
+ * `roles` élargit la liste (ex. les coordinateurs pour l'agenda des admissions).
+ */
+export async function loadAdminEmails(orgId: string, roles: string[] = ["admin"]): Promise<string[]> {
   const supabase = createAdminClient();
   const emails = new Set<string>();
   const env = cleanEmail(process.env.GCAL_ADMIN_EMAIL);
   if (env) emails.add(env);
-  const { data: members } = await supabase.from("memberships").select("user_id").eq("org_id", orgId).eq("role", "admin");
+  const { data: members } = await supabase.from("memberships").select("user_id").eq("org_id", orgId).in("role", roles);
   for (const m of members ?? []) {
     const { data } = await supabase.auth.admin.getUserById(m.user_id);
     const email = cleanEmail(data.user?.email);
@@ -387,7 +398,11 @@ export async function syncTrainerCalendars(orgId: string): Promise<GcalSyncStats
   const stats: GcalSyncStats = { calendars: 0, upserted: 0, unchanged: 0, deleted: 0, renamed: 0, shared: 0, errors: [] };
 
   const nowIso = new Date().toISOString();
-  const [rows, adminEmails] = await Promise.all([loadUpcomingSessions(orgId, nowIso), loadAdminEmails(orgId)]);
+  const [rows, adminEmails, coordinatorEmails] = await Promise.all([
+    loadUpcomingSessions(orgId, nowIso),
+    loadAdminEmails(orgId),
+    loadAdminEmails(orgId, ["coordinator"]),
+  ]);
 
   // Regroupe par formateur : une séance co-animée va dans l'agenda des deux personnes.
   const byTrainer = new Map<string, { trainer: TrainerRef; sessions: SessionForCalendar[] }>();
@@ -429,13 +444,14 @@ export async function syncTrainerCalendars(orgId: string): Promise<GcalSyncStats
   }
 
   // Agenda consolidé de la direction : toutes les séances (formatrice dans le titre,
-  // y compris celles encore sans formateur). Créé seulement s'il y a quelqu'un à qui le partager.
+  // y compris celles encore sans formateur). Admins en écriture, coordinateurs en lecture
+  // (la passe de nuit écraserait leurs retouches). Créé seulement s'il y a quelqu'un à qui le partager.
   if (adminEmails.length > 0) {
     try {
       const calendarId = await ensureCalendar(
         cal,
         existingCalendars,
-        { tag: `${ORG_TAG}${orgId}`, summary: ORG_CALENDAR_NAME, shares: wantedShares(null, adminEmails), label: ORG_CALENDAR_NAME },
+        { tag: `${ORG_TAG}${orgId}`, summary: ORG_CALENDAR_NAME, shares: wantedShares(null, adminEmails, coordinatorEmails), label: ORG_CALENDAR_NAME },
         stats,
       );
       stats.calendars += 1;
@@ -464,6 +480,13 @@ export type OrgCalendar = {
   url: string;
   shares: { email: string; role: string }[];
 };
+
+/** Parmi les agendas de l'organisme, ceux partagés avec cette adresse (casse indifférente). */
+export function calendarsSharedWith(calendars: OrgCalendar[], email: string | null | undefined): OrgCalendar[] {
+  const me = cleanEmail(email);
+  if (!me) return [];
+  return calendars.filter((c) => c.shares.some((s) => s.email.toLowerCase() === me));
+}
 
 /** Les agendas Google de l'organisme (consolidé, rendez-vous d'admission, un par formateur) avec leurs partages. */
 export async function listOrgCalendars(orgId: string): Promise<OrgCalendar[]> {

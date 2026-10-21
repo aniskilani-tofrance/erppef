@@ -14,6 +14,7 @@ const TZ = "Europe/Paris";
 export const APPOINTMENT_KINDS = [
   { code: "entretien", label: "Entretien d'admission" },
   { code: "test_oral", label: "Test oral" },
+  { code: "diagnostic_tofrance", label: "Diagnostic partagé ToFrance" },
   { code: "autre", label: "Autre" },
 ] as const;
 export type AppointmentKind = (typeof APPOINTMENT_KINDS)[number]["code"];
@@ -35,6 +36,12 @@ export const APPOINTMENT_STATUSES = [
 ] as const;
 export type AppointmentStatus = (typeof APPOINTMENT_STATUSES)[number]["code"];
 export const APPOINTMENT_STATUS_CODES = APPOINTMENT_STATUSES.map((s) => s.code) as [AppointmentStatus, ...AppointmentStatus[]];
+
+// RDV hors parcours d'admission (ouverts à tout apprenant, inscrit compris) : ils ne
+// font jamais avancer ni reculer le statut d'admission.
+export function isAdmissionKind(kind: string | null | undefined): boolean {
+  return kind !== "diagnostic_tofrance";
+}
 
 export function appointmentKindLabel(code: string | null | undefined): string {
   return APPOINTMENT_KINDS.find((k) => k.code === code)?.label ?? "Entretien d'admission";
@@ -103,13 +110,17 @@ function kindSuffix(kind: string | null | undefined): string {
   return kind && kind !== "entretien" ? ` (${appointmentKindLabel(kind).toLowerCase()})` : "";
 }
 
+function journalLabel(kind: string | null | undefined): string {
+  return isAdmissionKind(kind) ? `RDV d'admission${kindSuffix(kind)}` : "RDV diagnostic partagé ToFrance";
+}
+
 // Notes du journal des contacts, une par événement du rendez-vous.
 export function appointmentJournalNote(
   event: "pose" | "deplace" | "annule" | "honore" | "absent",
   rdv: NoteInput,
   previousStartsAt?: string | null,
 ): string {
-  const label = `RDV d'admission${kindSuffix(rdv.kind)}`;
+  const label = journalLabel(rdv.kind);
   const mode = appointmentModeLabel(rdv.mode).toLowerCase();
   switch (event) {
     case "pose":

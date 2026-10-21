@@ -64,6 +64,13 @@ describe("agenda Google des rendez-vous d'admission — corps d'événement", ()
     expect(body.extendedProperties).toEqual({ private: { erp: "pef", appointmentId: rdv.id } });
   });
 
+  it("diagnostic partagé ToFrance : titre et description dédiés", () => {
+    const body = appointmentEventBody({ ...rdv, kind: "diagnostic_tofrance" });
+    expect(body.summary).toBe("Diagnostic ToFrance · Awa Diallo (A-0042)");
+    expect(body.description).toContain("Diagnostic partagé avec ToFrance (tofrance.life)");
+    expect(body.description).toContain("Type : Diagnostic partagé ToFrance");
+  });
+
   it("test oral dans le titre, téléphone sans adresse, résultat dans la description", () => {
     const body = appointmentEventBody({ ...rdv, kind: "test_oral", mode: "telephone", status: "honore", notes: null });
     expect(body.summary).toBe("RDV admission · Awa Diallo (A-0042) · Test oral");

@@ -33,8 +33,8 @@ import {
 // participants (pas de délégation sur le domaine). Comme pour les cours, il possède donc
 // UN agenda dédié par organisme, « Admissions PEF — Rendez-vous » (marqueur
 // erp-admissions:<orgId> dans la description), partagé en écriture avec la direction
-// (comptes ERP admin + GCAL_ADMIN_EMAIL) : il apparaît dans Google Agenda à côté des
-// agendas « Cours PEF ».
+// et les coordinateurs (comptes ERP admin / coordinator + GCAL_ADMIN_EMAIL) : il apparaît
+// dans Google Agenda à côté des agendas « Cours PEF ».
 //
 // Idempotence : id d'événement = uuid du RDV sans tirets, marqueur
 // extendedProperties.private { erp: "pef", appointmentId }. Un RDV annulé (ou supprimé)
@@ -88,12 +88,15 @@ export function learnerFicheUrl(a: AppointmentForCalendar): string {
 export function appointmentEventBody(a: AppointmentForCalendar): calendar_v3.Schema$Event {
   const ref = a.learner?.learner_no != null ? ` (${learnerRef(a.learner.learner_no)})` : "";
   const online = a.booked_online === true;
-  const summary = `RDV admission · ${learnerName(a)}${ref}${a.kind === "test_oral" ? " · Test oral" : ""}${online ? ` · ${BOOKED_ONLINE_LABEL}` : ""}`;
+  const prefix = a.kind === "diagnostic_tofrance" ? "Diagnostic ToFrance" : "RDV admission";
+  const summary = `${prefix} · ${learnerName(a)}${ref}${a.kind === "test_oral" ? " · Test oral" : ""}${online ? ` · ${BOOKED_ONLINE_LABEL}` : ""}`;
   const phone = a.learner?.phone?.trim() ? formatPhone(a.learner.phone) : null;
   const description = [
-    online
-      ? "Rendez-vous d'admission réservé en ligne par la personne (formulaire d'inscription ParlerEmploi Formation)."
-      : "Rendez-vous d'admission posé dans l'ERP ParlerEmploi Formation.",
+    a.kind === "diagnostic_tofrance"
+      ? "Diagnostic partagé avec ToFrance (tofrance.life), posé dans l'ERP ParlerEmploi Formation."
+      : online
+        ? "Rendez-vous d'admission réservé en ligne par la personne (formulaire d'inscription ParlerEmploi Formation)."
+        : "Rendez-vous d'admission posé dans l'ERP ParlerEmploi Formation.",
     `Type : ${appointmentKindLabel(a.kind)}`,
     `Mode : ${appointmentModeLabel(a.mode)}`,
     phone ? `Téléphone : ${phone}` : "Téléphone : non renseigné",
@@ -178,7 +181,8 @@ function emptyStats(): GcalSyncStats {
 async function admissionsCalendarId(cal: calendar_v3.Calendar, orgId: string, stats: GcalSyncStats): Promise<string> {
   const [{ data: calList }, adminEmails] = await Promise.all([
     withRetry(() => cal.calendarList.list({ maxResults: 250 })),
-    loadAdminEmails(orgId),
+    // Coordinateurs inclus : ils posent et suivent les RDV dans l'ERP (RLS admin + coordinator).
+    loadAdminEmails(orgId, ["admin", "coordinator"]),
   ]);
   return ensureCalendar(
     cal,

@@ -28,6 +28,7 @@ import {
   APPOINTMENT_MODE_CODES,
   appointmentJournalNote,
   channelForMode,
+  isAdmissionKind,
 } from "@/lib/admission/appointments";
 import {
   advanceAdmissionStatus as advanceStatus,
@@ -557,11 +558,11 @@ export async function upsertAdmissionAppointment(raw: z.infer<typeof appointment
       org_id: orgId,
       learner_id: d.learnerId,
       channel: channelForMode(d.mode),
-      outcome: "convoque",
+      outcome: isAdmissionKind(d.kind) ? "convoque" : "autre",
       note: appointmentJournalNote("deplace", { startsAt, mode: d.mode, kind: d.kind }, existing.starts_at),
       created_by: userId,
     });
-    await advanceStatus(supabase, [d.learnerId], "convoque");
+    if (isAdmissionKind(d.kind)) await advanceStatus(supabase, [d.learnerId], "convoque");
   }
   pushLater(d.id);
   revalidateAdmission();
@@ -604,7 +605,7 @@ export async function setAdmissionAppointmentStatus(raw: {
     note: appointmentJournalNote(d.status, { startsAt: rdv.starts_at, mode: rdv.mode, kind: rdv.kind }),
     created_by: userId,
   });
-  if (d.status === "absent") await advanceStatus(supabase, [rdv.learner_id], "injoignable");
+  if (d.status === "absent" && isAdmissionKind(rdv.kind)) await advanceStatus(supabase, [rdv.learner_id], "injoignable");
 
   pushLater(rdv.id);
   revalidateAdmission();

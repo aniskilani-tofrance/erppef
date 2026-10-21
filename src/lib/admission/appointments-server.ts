@@ -2,7 +2,8 @@
 // « RDV », client de l'utilisateur sous RLS) et au formulaire public d'inscription
 // (l'apprenant réserve lui-même son créneau, client admin, organisation fixée par le
 // serveur). Même trace partout : ligne au journal des contacts, statut « convoqué »
-// (jamais de recul) et événement Google poussé après la réponse (after).
+// (jamais de recul ; jamais pour un diagnostic ToFrance) et événement Google poussé
+// après la réponse (after).
 //
 // Le verrou contre deux réservations simultanées est en base (0053,
 // admission_appointments_no_overlap) : l'erreur Postgres est renvoyée telle quelle,
@@ -11,7 +12,13 @@
 import { after } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { nextAdmissionStatus, type AdmissionStatus } from "@/lib/admission/status";
-import { appointmentJournalNote, channelForMode, type AppointmentKind, type AppointmentMode } from "@/lib/admission/appointments";
+import {
+  appointmentJournalNote,
+  channelForMode,
+  isAdmissionKind,
+  type AppointmentKind,
+  type AppointmentMode,
+} from "@/lib/admission/appointments";
 import { pushAppointmentToGoogle } from "@/lib/gcal-admissions";
 
 type PgError = { code?: string; message: string };
@@ -81,11 +88,12 @@ export async function createAdmissionAppointment(
     org_id: rdv.orgId,
     learner_id: rdv.learnerId,
     channel: channelForMode(rdv.mode),
-    outcome: "convoque",
+    // Un diagnostic ToFrance ne touche jamais au parcours d'admission.
+    outcome: isAdmissionKind(rdv.kind) ? "convoque" : "autre",
     note: appointmentJournalNote("pose", { startsAt: rdv.startsAt, mode: rdv.mode, kind: rdv.kind, bookedOnline: rdv.bookedOnline }),
     created_by: rdv.createdBy,
   });
-  await advanceAdmissionStatus(supabase, [rdv.learnerId], "convoque");
+  if (isAdmissionKind(rdv.kind)) await advanceAdmissionStatus(supabase, [rdv.learnerId], "convoque");
 
   pushAppointmentLater(data.id);
   return { ok: true, id: data.id };
