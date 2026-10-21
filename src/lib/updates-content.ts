@@ -26,6 +26,17 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-10-21-inscription-site-association",
+    date: "2026-10-21",
+    title: "Les inscriptions du site arrivent directement dans « À contacter »",
+    summary: "Le formulaire d'inscription aux cours de FLE de la page Association du site crée la fiche dans l'ERP, comme le lien WhatsApp.",
+    items: [
+      { text: "Une personne qui s'inscrit sur parleremploiformation.pro/association arrive dans Admission → « À contacter » (statut « nouveau »), avec ses langues, son français, ses disponibilités et sa ville, et une ligne « Inscription formulaire … lien : site » au journal.", roles: TEAM },
+      { text: "Provenance : « Site internet » (pastille verte, contact direct). Si le numéro est déjà connu, pas de doublon : une ligne « Réinscription » au journal de la fiche existante.", roles: TEAM },
+    ],
+    training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "L'admission : WhatsApp, réunion d'information, entretien oral" }],
+  },
+  {
     id: "2026-10-19-reservation-creneau-formulaire",
     date: "2026-10-19",
     title: "La personne choisit elle-même son rendez-vous à la fin du formulaire",

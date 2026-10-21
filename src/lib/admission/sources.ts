@@ -149,3 +149,14 @@ export function matchesSourceFilter(p: Provenance, filter: string | null | undef
   if (filter === "nc") return p.family === "nc" && !p.channel;
   return p.channel === filter;
 }
+
+/**
+ * Provenance d'une inscription arrivée par le formulaire du SITE (API /api/inscription) :
+ * même lecture de `src` que le lien WhatsApp (une famille reconnue, maison de quartier ou
+ * prescripteur, l'emporte), sinon le canal « Site web » avec `src` en précision.
+ */
+export function provenanceFromSiteSource(src: string | null | undefined): { contact_source: ContactSourceCode; contact_source_detail: string | null } {
+  const p = provenanceFromSignupSource(src);
+  if (p.contact_source !== "formulaire_whatsapp") return p;
+  return { contact_source: "site_web", contact_source_detail: clean(src) ?? "Formulaire du site" };
+}

@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveSignupOrg } from "@/lib/inscription/org";
 import { provenanceFromSignupSource } from "@/lib/admission/sources";
-import { toWhatsAppNumber } from "@/lib/admission/phone";
 import { sanitizeSrc } from "@/lib/inscription/link";
 import type { SignupErrorCode } from "@/lib/inscription/i18n";
 import { SANDBOX_SLUG } from "@/lib/production-orgs";
@@ -16,14 +15,8 @@ import type { FreeSlot } from "@/lib/admission/slots";
 import { utcToLocalDate, utcToLocalTime } from "@/lib/dates";
 import { BOOKING_ADDRESS, pickPublicSlots, type BookingOffer } from "@/lib/inscription/booking";
 import { issueBookingToken, verifyBookingToken } from "@/lib/inscription/booking-token";
-import {
-  buildSignupNote,
-  checkStamp,
-  firstLanguageOf,
-  parseSignup,
-  readSignupForm,
-  stampSecret,
-} from "@/lib/inscription/signup";
+import { checkStamp, parseSignup, readSignupForm, stampSecret } from "@/lib/inscription/signup";
+import { isMissingColumn, registerSignup } from "@/lib/inscription/register";
 
 // Inscription rapide PUBLIQUE (/inscription), sans compte : la personne remplit le
 // formulaire reçu sur WhatsApp et arrive dans l'onglet Admission (« À contacter »,
@@ -48,11 +41,6 @@ export type SignupState =
   | { status: "done"; booking?: BookingOffer | null }
   | { status: "error"; error: SignupErrorCode; values: SignupValues };
 
-// Au-delà, on suspend (robot ou lien diffusé par erreur) : 30 inscriptions en 10 minutes.
-const FLOOD_WINDOW_MS = 10 * 60_000;
-const FLOOD_MAX = 30;
-const NOTE_PREFIX = "Inscription formulaire";
-
 function valuesOf(fd: FormData): SignupValues {
   const str = (k: string) => {
     const v = fd.get(k);
@@ -69,11 +57,6 @@ function valuesOf(fd: FormData): SignupValues {
     consent: fd.get("consent") === "on",
   };
 }
-
-// Colonnes ajoutées par la migration 0051 : si elle n'est pas encore appliquée, on
-// enregistre quand même la fiche (la note du journal garde tout).
-const isMissingColumn = (e: { code?: string; message?: string } | null) =>
-  !!e && (e.code === "42703" || e.code === "PGRST204" || /column .* does not exist|schema cache/i.test(e.message ?? ""));
 
 export async function submitSignup(_prev: SignupState, fd: FormData): Promise<SignupState> {
   // Champ piège invisible rempli, ou formulaire envoyé sans être affiché / trop vite :
@@ -94,92 +77,10 @@ export async function submitSignup(_prev: SignupState, fd: FormData): Promise<Si
   if (!org) return { status: "error", error: "link", values: valuesOf(fd) };
 
   const src = sanitizeSrc(typeof fd.get("src") === "string" ? (fd.get("src") as string) : null);
-  const admin = createAdminClient();
-
-  // Afflux anormal : on n'écrit plus rien (l'équipe garde la main).
-  const since = new Date(Date.now() - FLOOD_WINDOW_MS).toISOString();
-  const { count } = await admin
-    .from("learner_contacts")
-    .select("id", { count: "exact", head: true })
-    .eq("org_id", org.id)
-    .gte("contacted_at", since)
-    .like("note", `${NOTE_PREFIX}%`);
-  if ((count ?? 0) >= FLOOD_MAX) {
-    console.warn(`[inscription] afflux suspendu (${count} en 10 min)`);
-    return { status: "error", error: "server", values: valuesOf(fd) };
-  }
-
-  // Même téléphone déjà connu dans l'organisme : pas de doublon, une ligne au journal.
-  const { data: known, error: knownError } = await admin
-    .from("learners")
-    .select("id, phone, admission_status, created_at")
-    .eq("org_id", org.id)
-    .not("phone", "is", null)
-    .order("created_at", { ascending: false });
-  if (knownError) return { status: "error", error: "server", values: valuesOf(fd) };
-  const existing = (known ?? []).find((l) => toWhatsAppNumber(l.phone as string) === d.phoneDigits);
-
-  if (existing) {
-    const { error } = await admin.from("learner_contacts").insert({
-      org_id: org.id,
-      learner_id: existing.id,
-      channel: "whatsapp",
-      outcome: "autre",
-      note: buildSignupNote(d, { reinscription: true, src }),
-    });
-    if (error) return { status: "error", error: "server", values: valuesOf(fd) };
-    // Dossier clos qui revient de lui-même : il reprend le parcours (« À contacter »).
-    if (existing.admission_status === "sans_suite") {
-      await admin.from("learners").update({ admission_status: "nouveau" }).eq("id", existing.id);
-    }
-    revalidatePath("/apprenants", "layout");
-    return { status: "done", booking: await offerBooking(org.id, existing.id, d.availability) };
-  }
-
-  const provenance = provenanceFromSignupSource(src);
-  const base = {
-    org_id: org.id,
-    first_name: d.firstName,
-    last_name: d.lastName,
-    phone: d.phone,
-    city: d.city,
-    first_language: firstLanguageOf(d.languages),
-    admission_status: "nouveau",
-    contact_source: provenance.contact_source,
-    contact_source_detail: provenance.contact_source_detail,
-  };
-  const declared = {
-    spoken_languages: d.languages,
-    french_self_level: d.french,
-    availability: d.availability,
-    data_consent_at: new Date().toISOString(),
-  };
-
-  let { data: created, error } = await admin.from("learners").insert({ ...base, ...declared }).select("id").single();
-  if (isMissingColumn(error)) {
-    console.warn("[inscription] migration 0051 absente : fiche créée sans les colonnes déclaratives");
-    ({ data: created, error } = await admin.from("learners").insert(base).select("id").single());
-  }
-  if (error || !created) {
-    console.error(`[inscription] création impossible : ${error?.message}`);
-    return { status: "error", error: "server", values: valuesOf(fd) };
-  }
-
-  await admin.from("learner_contacts").insert({
-    org_id: org.id,
-    learner_id: created.id,
-    channel: "whatsapp",
-    outcome: "autre",
-    note: buildSignupNote(d, { src }),
-  });
-  // Pas de niveau connu → test de positionnement prêt à envoyer (comme une fiche créée à la main).
-  await admin
-    .from("placement_tests")
-    .insert({ org_id: org.id, learner_id: created.id })
-    .then(() => undefined, () => undefined);
-
+  const result = await registerSignup(createAdminClient(), org.id, d, { src, provenance: provenanceFromSignupSource(src) });
+  if (!result.ok) return { status: "error", error: "server", values: valuesOf(fd) };
   revalidatePath("/apprenants", "layout");
-  return { status: "done", booking: await offerBooking(org.id, created.id, d.availability) };
+  return { status: "done", booking: await offerBooking(org.id, result.learnerId, d.availability) };
 }
 
 // ── Réservation d'un créneau par la personne elle-même (écran de fin) ────────

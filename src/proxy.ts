@@ -42,6 +42,8 @@ export async function proxy(request: NextRequest) {
     // Inscription rapide (lien envoyé sur WhatsApp) : formulaire public, sans compte.
     request.nextUrl.pathname === "/inscription" ||
     request.nextUrl.pathname.startsWith("/inscription/") ||
+    // API d'inscription du site (parleremploiformation.pro) : publique, CORS + anti-robot dans la route.
+    request.nextUrl.pathname === "/api/inscription" ||
     // Contacts d'un groupe (.vcf) ouverts sur le téléphone : jeton à usage unique, 15 min.
     request.nextUrl.pathname.startsWith("/vcf/") ||
     // Crons Vercel : protégés par CRON_SECRET dans la route elle-même.
