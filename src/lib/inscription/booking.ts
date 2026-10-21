@@ -8,6 +8,12 @@ import { DEFAULT_APPOINTMENT_ADDRESS } from "@/lib/admission/appointments";
 import type { FreeSlot } from "@/lib/admission/slots";
 import type { Availability, SignupLocale } from "@/lib/inscription/i18n";
 
+// Décision d'Anis (21/10/2026) : pas de réservation en ligne à la fin du formulaire.
+// L'écran de fin dit « Nous vous contactons dès que possible » et « votre place n'est
+// pas encore assurée » ; l'équipe pose le rendez-vous à la main si besoin (bouton
+// « RDV »). Le code de réservation reste prêt : passer à true pour le réactiver.
+export const PUBLIC_BOOKING_ENABLED = false;
+
 export const PUBLIC_SLOT_COUNT = 4;
 export const PUBLIC_SLOT_DAYS = 7;
 export const BOOKING_ADDRESS = DEFAULT_APPOINTMENT_ADDRESS;

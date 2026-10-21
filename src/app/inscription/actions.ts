@@ -14,7 +14,7 @@ import { createAdmissionAppointment } from "@/lib/admission/appointments-server"
 import { loadFreeSlotsForOrg } from "@/lib/admission/slots-server";
 import type { FreeSlot } from "@/lib/admission/slots";
 import { utcToLocalDate, utcToLocalTime } from "@/lib/dates";
-import { BOOKING_ADDRESS, pickPublicSlots, type BookingOffer } from "@/lib/inscription/booking";
+import { BOOKING_ADDRESS, PUBLIC_BOOKING_ENABLED, pickPublicSlots, type BookingOffer } from "@/lib/inscription/booking";
 import { issueBookingToken, verifyBookingToken } from "@/lib/inscription/booking-token";
 import {
   buildSignupNote,
@@ -227,6 +227,7 @@ async function publicSlots(orgId: string, availability: readonly string[]): Prom
 // Après une inscription réussie : jeton + 4 créneaux (ou le RDV déjà prévu). Jamais
 // bloquant : en cas de souci, l'écran dit simplement « Nous vous appelons ».
 async function offerBooking(orgId: string, learnerId: string, availability: readonly string[]): Promise<BookingOffer | null> {
+  if (!PUBLIC_BOOKING_ENABLED) return null; // écran de fin : « Nous vous contactons dès que possible »
   try {
     const token = issueBookingToken({ orgId, learnerId }, Date.now(), stampSecret());
     const existing = await upcomingAppointment(createAdminClient(), orgId, learnerId);
@@ -240,6 +241,7 @@ async function offerBooking(orgId: string, learnerId: string, availability: read
 
 // Personne visée par un jeton valide, dans un organisme réel (jamais le bac à sable).
 async function bookingTarget(token: unknown) {
+  if (!PUBLIC_BOOKING_ENABLED) return null; // réservation en ligne coupée : aucun jeton n'est accepté
   const claims = verifyBookingToken(token, Date.now(), stampSecret());
   if (!claims) return null;
   const admin = createAdminClient();

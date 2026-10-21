@@ -28,6 +28,12 @@ export function SignupDone({
         <p className="text-7xl" aria-hidden>✅</p>
         <h1 className="text-3xl font-bold">{title ?? t.doneTitle}</h1>
         {phrase && <p className="text-2xl">{phrase}</p>}
+        {text === undefined && (
+          <p className="rounded-xl bg-amber-100 px-4 py-3 text-xl font-semibold text-amber-950">
+            <span aria-hidden>⚠️ </span>
+            {t.doneNotice}
+          </p>
+        )}
         {children}
         <div className="mt-6 space-y-1 text-lg">
           <p className="font-semibold">{SIGNUP_CONTACT.name}</p>
