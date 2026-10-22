@@ -219,7 +219,7 @@ export function LeadFormDialog({
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="lead-positions">2. Postes qu&apos;il manque (cuisine / salle)</Label>
-                <Input id="lead-positions" value={f.positions} onChange={(e) => set("positions", e.target.value)} placeholder="commis de cuisine, plongeur" />
+                <Input id="lead-positions" value={f.positions} onChange={(e) => set("positions", e.target.value)} placeholder="serveur, commis de cuisine" />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="lead-count">Combien de personnes</Label>

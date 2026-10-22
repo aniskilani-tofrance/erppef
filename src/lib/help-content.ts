@@ -739,6 +739,7 @@ export const HELP_SECTIONS: HelpSection[] = [
           "Un lead resto rempli par une personne qui cherche du travail : sur sa fiche, « C'est un candidat ». La fiche candidat est créée (nom, téléphone, email, ville, poste indiqué) et le lead passe « Hors cible » avec la raison « Candidat POEI, pas un employeur ». Aucun e-mail automatique ne part.",
           "Un apprenant de l'association intéressé par la restauration (direction) : Apprenants → Admission → bouton « POEI » sur sa ligne. Déjà proposé ? Le bouton ouvre sa fiche candidat.",
           "Menu « Candidats POEI » : la liste, avec la qualification (x/10), le consentement et la prochaine action. Sur la fiche : appeler, WhatsApp (message de premier contact à relire), « Noter un contact », « Qualifier » (les 9 questions).",
+          "Question 4, poste visé : salle, cuisine ou polyvalent. Pas de POEI pour la plonge : un candidat qui ne veut que la plonge ne passe pas « Qualifié » pour une POEI.",
           "Consentement : l'association et ParlerEmploi sont deux structures. Tant qu'il n'est pas recueilli, on peut appeler et poser les questions, mais pas passer « Qualifié » ni présenter la personne à un restaurateur, et une fiche venue de l'association reste invisible du setter. « Retiré par la personne » classe la fiche « Sans suite ».",
           "« Présenté(e) chez » : rattache le candidat à un restaurateur (lead resto). La fiche du restaurateur affiche alors la carte « Candidats POEI présentés ».",
         ],
@@ -748,6 +749,7 @@ export const HELP_SECTIONS: HelpSection[] = [
         steps: [
           "Jamais « 100 % gratuit » ni « ça ne vous coûte rien » : dire « financé par France Travail, 0 € de reste à charge sur la formation ».",
           "Jamais « aucun engagement » : « vous ne vous engagez qu'à l'embauche en fin de parcours, si le candidat a le niveau ».",
+          "Jamais de POEI pour un poste de plonge : on propose la salle ou la cuisine.",
           "Jamais de promesse sur un montant AKTO, sur l'attestation HACCP réglementaire, sur les titres de séjour ou le travail non déclaré.",
           "Jamais de tarif ni de devis : c'est le rendez-vous de la direction. « Très bonne question — c'est exactement ce qu'on vous détaille en RDV, mardi 10h ou jeudi 15h ? »",
         ],

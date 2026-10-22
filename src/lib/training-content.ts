@@ -917,6 +917,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
           "La coordination propose aussi des apprenants de l'association : bouton « POEI » sur la page Admission. Leur fiche reste invisible du setter tant que la personne n'a pas donné son accord.",
           "Menu « Candidats POEI » : premier contact par WhatsApp (message prêt, à relire) ou par appel, puis « Noter un contact ». Messagerie ou rappel convenu : la fiche passe « À rappeler ».",
           "« Qualifier » : les 9 questions dans l'ordre de l'appel (France Travail, ressources, projet, poste visé, expérience, disponibilités, mobilité, autorisation de travail, contraintes).",
+          "Poste visé : salle, cuisine ou polyvalent. La POEI ne s'applique pas à la plonge : on ne qualifie ni ne présente personne pour un poste de plongeur.",
           "Question 10, le consentement : « Acceptez-vous que ParlerEmploi transmette vos coordonnées à un restaurateur pour la POEI ? ». Seulement si c'est oui : « Consentement recueilli ». Sans lui, impossible de passer « Qualifié » ou de présenter la personne.",
           "« Présenté(e) chez » : choisissez le restaurateur (lead resto). Le candidat passe « Positionné » et apparaît sur la fiche du restaurateur, carte « Candidats POEI présentés ».",
         ],

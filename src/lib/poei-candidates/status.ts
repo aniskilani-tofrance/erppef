@@ -135,7 +135,7 @@ export const QUALIFICATION_QUESTIONS = [
   { field: "ft_status", label: "1. France Travail", question: "Êtes-vous inscrit(e) à France Travail ? Depuis quand, avec quel identifiant ?" },
   { field: "income", label: "2. Ressources", question: "Touchez-vous l'ARE, le RSA, autre chose ?" },
   { field: "goal", label: "3. Projet", question: "Quel est votre projet (et pourquoi viser ce niveau de français) ?" },
-  { field: "target_job", label: "4. Restauration", question: "La restauration vous intéresse-t-elle ? Quel poste : salle, cuisine, polyvalent, plonge ?" },
+  { field: "target_job", label: "4. Restauration", question: "La restauration vous intéresse-t-elle ? Quel poste : salle, cuisine ou polyvalent ? (Pas de POEI pour la plonge.)" },
   { field: "experience", label: "5. Expérience", question: "Avez-vous déjà travaillé en restauration, en France ou ailleurs ?" },
   { field: "availability", label: "6. Disponibilités", question: "Horaires coupés, soirs, week-ends : c'est possible ?" },
   { field: "mobility", label: "7. Mobilité", question: "Jusqu'où pouvez-vous aller, et comment ?" },
