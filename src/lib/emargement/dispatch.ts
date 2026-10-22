@@ -18,7 +18,7 @@ import { productionOrgIds } from "@/lib/production-orgs";
 //  • le mode « test » envoie à une seule adresse (la vôtre) sans toucher au dernier envoi.
 
 const TZ = "Europe/Paris";
-const ORG = { name: "ParlerEmploi Formation", email: "contact@parleremploi.com", phone: "06 52 67 53 93" };
+const ORG = { name: "ParlerEmploi Formation", email: "contact@parleremploi.com", phone: "06 14 33 99 73" };
 
 export type DispatchMode = "auto" | "manuel" | "test";
 export type DispatchStatus = "envoye" | "reporte" | "rien" | "erreur";

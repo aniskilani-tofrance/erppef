@@ -18,7 +18,7 @@ const ORG_LEGAL = {
   name: "ParlerEmploi Formation",
   nda: "Déclaration d'activité n° 11931070593 (préfecture d'Île-de-France)",
   siret: "SIRET 924 182 546 00011",
-  phone: "06 52 67 53 93",
+  phone: "06 14 33 99 73",
 };
 
 const A4 = { width: 595.28, height: 841.89 };
