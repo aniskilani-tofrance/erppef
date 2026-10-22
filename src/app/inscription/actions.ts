@@ -43,7 +43,8 @@ export type SignupState =
   | { status: "idle" }
   // booking : créneaux à réserver sur l'écran de fin (absent pour un robot ignoré,
   // ou si les créneaux n'ont pas pu être chargés → « Nous vous appelons »).
-  | { status: "done"; booking?: BookingOffer | null }
+  // testUrl : lien personnel du test de niveau, proposé tout de suite sur l'écran de fin.
+  | { status: "done"; booking?: BookingOffer | null; testUrl?: string | null }
   | { status: "error"; error: SignupErrorCode; values: SignupValues };
 
 // Au-delà, on suspend (robot ou lien diffusé par erreur) : 30 inscriptions en 10 minutes.
@@ -109,7 +110,7 @@ export async function submitSignup(_prev: SignupState, fd: FormData): Promise<Si
   // Même téléphone déjà connu dans l'organisme : pas de doublon, une ligne au journal.
   const { data: known, error: knownError } = await admin
     .from("learners")
-    .select("id, phone, admission_status, created_at")
+    .select("id, phone, admission_status, level_assessed, created_at")
     .eq("org_id", org.id)
     .not("phone", "is", null)
     .order("created_at", { ascending: false });
@@ -130,7 +131,8 @@ export async function submitSignup(_prev: SignupState, fd: FormData): Promise<Si
       await admin.from("learners").update({ admission_status: "nouveau" }).eq("id", existing.id);
     }
     revalidatePath("/apprenants", "layout");
-    return { status: "done", booking: await offerBooking(org.id, existing.id, []) };
+    const testUrl = await signupTestUrl(admin, org.id, existing.id, Boolean(existing.level_assessed));
+    return { status: "done", booking: await offerBooking(org.id, existing.id, []), testUrl };
   }
 
   const provenance = provenanceFromSignupSource(src);
@@ -167,14 +169,48 @@ export async function submitSignup(_prev: SignupState, fd: FormData): Promise<Si
     outcome: "autre",
     note: buildSignupNote(d, { src }),
   });
-  // Pas de niveau connu → test de positionnement prêt à envoyer (comme une fiche créée à la main).
-  await admin
-    .from("placement_tests")
-    .insert({ org_id: org.id, learner_id: created.id })
-    .then(() => undefined, () => undefined);
+  // Pas de niveau connu → test de positionnement, proposé tout de suite sur l'écran de fin.
+  const testUrl = await signupTestUrl(admin, org.id, created.id, false);
 
   revalidatePath("/apprenants", "layout");
-  return { status: "done", booking: await offerBooking(org.id, created.id, []) };
+  return { status: "done", booking: await offerBooking(org.id, created.id, []), testUrl };
+}
+
+// Adresse publique de l'ERP : le lien du test part aussi dans un message WhatsApp.
+const PUBLIC_ERP_URL = "https://pef-erp.vercel.app";
+
+// Test de positionnement de la personne : celui qui l'attend déjà, sinon un nouveau si
+// son niveau n'est pas encore connu. Jamais bloquant : en cas de souci, pas de bouton
+// (l'équipe envoie le lien sur WhatsApp comme avant).
+async function signupTestUrl(
+  admin: ReturnType<typeof createAdminClient>,
+  orgId: string,
+  learnerId: string,
+  levelKnown: boolean,
+): Promise<string | null> {
+  try {
+    const { data: pending } = await admin
+      .from("placement_tests")
+      .select("token")
+      .eq("org_id", orgId)
+      .eq("learner_id", learnerId)
+      .eq("status", "en_attente")
+      .eq("purpose", "positionnement")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (pending?.token) return `${PUBLIC_ERP_URL}/test/${pending.token}`;
+    if (levelKnown) return null;
+    const { data: created } = await admin
+      .from("placement_tests")
+      .insert({ org_id: orgId, learner_id: learnerId })
+      .select("token")
+      .single();
+    return created?.token ? `${PUBLIC_ERP_URL}/test/${created.token}` : null;
+  } catch (e) {
+    console.warn(`[inscription] test de niveau indisponible : ${e instanceof Error ? e.message : e}`);
+    return null;
+  }
 }
 
 // ── Réservation d'un créneau par la personne elle-même (écran de fin) ────────

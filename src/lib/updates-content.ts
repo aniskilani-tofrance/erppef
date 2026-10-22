@@ -34,6 +34,7 @@ export const APP_UPDATES: AppUpdate[] = [
       { text: "Plus de question sur les langues parlées ni sur les disponibilités : à demander pendant le premier appel WhatsApp.", roles: TEAM },
       { text: "Ville : un toucher pour « Saint-Ouen (93400) » (ville et code postal remplis sur la fiche) ou « Autre ville », à écrire si la personne veut. Le journal dit « ville : Saint-Ouen (93400) » ou « ville : autre — … ».", roles: TEAM },
       { text: "Nouveau design aux couleurs ParlerEmploi (vert canard, vert vif), sur le site comme dans le lien WhatsApp.", roles: TEAM },
+      { text: "Test de niveau proposé tout de suite à la fin du formulaire (« Faire le test maintenant », 30 min) ou plus tard (« Garder le lien sur WhatsApp » : la personne écrit à l'association avec son lien). Relié à la fiche : le niveau arrive tout seul. Plus besoin d'envoyer le test à chaque nouvelle inscription.", roles: TEAM },
     ],
     training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "L'admission : WhatsApp, réunion d'information, entretien oral" }],
   },

@@ -85,6 +85,13 @@ export type SignupTexts = {
   doneText: string;
   doneNotice: string;
   doneWrite: string;
+  // Test de niveau proposé sur l'écran de fin
+  testTitle: string;
+  testText: string;
+  testCta: string;
+  testLater: string;
+  testKeep: string;
+  testKeepMessage: string; // « {lien} » : envoyé à l'association, le lien reste dans WhatsApp
   // Réservation d'un créneau sur l'écran de fin
   chooseTitle: string;
   addressLabel: string;
@@ -133,6 +140,12 @@ export const SIGNUP_TEXTS: Record<SignupLocale, SignupTexts> = {
     doneText: "Nous vous contactons dès que possible.",
     doneNotice: "Attention : votre place n'est pas encore assurée.",
     doneWrite: "Écrire à ParlerEmploi",
+    testTitle: "Votre test de niveau",
+    testText: "30 minutes. Mettez le son.",
+    testCta: "Faire le test maintenant",
+    testLater: "Pas prêt ? Faites le test plus tard. Gardez le lien dans WhatsApp :",
+    testKeep: "Garder le lien sur WhatsApp",
+    testKeepMessage: "Bonjour ParlerEmploi 👋 Je viens de m'inscrire aux cours de français. Je ferai mon test de niveau plus tard : {lien}",
     chooseTitle: "Choisissez un rendez-vous",
     addressLabel: "Adresse",
     callMe: "Je préfère qu'on m'appelle",
@@ -191,6 +204,12 @@ export const SIGNUP_TEXTS: Record<SignupLocale, SignupTexts> = {
     doneText: "We will contact you as soon as possible.",
     doneNotice: "Please note: your place is not guaranteed yet.",
     doneWrite: "Write to ParlerEmploi",
+    testTitle: "Your French level test",
+    testText: "30 minutes. Turn the sound on.",
+    testCta: "Take the test now",
+    testLater: "Not ready? Take the test later. Keep the link in WhatsApp:",
+    testKeep: "Keep the link on WhatsApp",
+    testKeepMessage: "Hello ParlerEmploi 👋 I just signed up for French classes. I will take my level test later: {lien}",
     chooseTitle: "Choose an appointment",
     addressLabel: "Address",
     callMe: "I prefer a phone call",
@@ -249,6 +268,12 @@ export const SIGNUP_TEXTS: Record<SignupLocale, SignupTexts> = {
     doneText: "سنتواصل معك في أقرب وقت ممكن.",
     doneNotice: "تنبيه: مكانك في الدورة غير مضمون بعد.",
     doneWrite: "راسل ParlerEmploi",
+    testTitle: "اختبار مستواك في الفرنسية",
+    testText: "30 دقيقة. شغّل الصوت.",
+    testCta: "ابدأ الاختبار الآن",
+    testLater: "لست مستعدًا؟ أجرِ الاختبار لاحقًا. احتفظ بالرابط في واتساب:",
+    testKeep: "احفظ الرابط على واتساب",
+    testKeepMessage: "مرحبًا ParlerEmploi 👋 سجّلت للتو في دروس اللغة الفرنسية. سأجري اختبار المستوى لاحقًا: {lien}",
     chooseTitle: "اختر موعدًا",
     addressLabel: "العنوان",
     callMe: "أفضّل أن تتصلوا بي",
