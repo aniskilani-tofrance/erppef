@@ -26,6 +26,17 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-10-22-poei-sans-plonge",
+    date: "2026-10-22",
+    title: "POEI restauration : la salle et la cuisine, pas la plonge",
+    summary: "La POEI ne s'applique pas aux postes de plonge : la fiche candidat et les exemples de l'ERP ne la proposent plus.",
+    items: [
+      { text: "Fiche candidat POEI, question 4 (poste visé) : salle, cuisine ou polyvalent. On ne qualifie ni ne présente personne pour un poste de plongeur.", roles: LEADS },
+      { text: "Fiche d'un restaurateur : l'exemple du champ « Postes » devient « serveur, commis de cuisine ». Jamais de POEI proposée pour la plonge à un restaurateur.", roles: LEADS },
+    ],
+    training: [{ moduleId: "m1-leads", lessonId: "candidats", label: "Candidats POEI : les personnes à placer" }],
+  },
+  {
     id: "2026-10-22-formulaire-inscription-simplifie",
     date: "2026-10-22",
     title: "Le formulaire d'inscription, plus court et plus clair",
