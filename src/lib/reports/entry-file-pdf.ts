@@ -33,7 +33,8 @@ export type EntryFileData = {
   entryNeed: string | null;
   entryInterviewOn: string | null;
   levelAssessed: string | null;
-  lastTest: { doneAt: string; level: string | null; score: number | null } | null;
+  // detail : test de positionnement version ToFrance (niveau par compétence, profil), sinon absent
+  lastTest: { doneAt: string; level: string | null; score: number | null; detail?: { competences: string; profil: string } | null } | null;
   // Parcours d'admission : réunion d'information suivie, entretien oral d'entrée
   infoMeetingOn?: string | null;
   oralTest?: { on: string; level: string | null; evaluator: string | null; comment: string | null } | null;
@@ -162,10 +163,14 @@ export async function buildEntryFilePdf(data: EntryFileData): Promise<Uint8Array
   if (data.lastTest) {
     field("Test de positionnement", `fait le ${fmtDate(data.lastTest.doneAt)}`);
     if (data.lastTest.level) {
-      field(
-        "Résultat du test",
-        `${data.lastTest.level}${data.lastTest.score != null ? ` (score ${data.lastTest.score})` : ""}`,
-      );
+      const detail = data.lastTest.detail;
+      const score = data.lastTest.score != null ? (detail ? ` (réussite ${data.lastTest.score} %)` : ` (score ${data.lastTest.score})`) : "";
+      field("Résultat du test", `${data.lastTest.level}${score}`);
+      if (detail) {
+        field("Par compétence", detail.competences);
+        field("Profil", detail.profil);
+        field("Fiabilité", "repérage à confirmer par un formateur");
+      }
     }
   } else {
     field("Test de positionnement", "non réalisé");
