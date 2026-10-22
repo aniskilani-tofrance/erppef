@@ -157,7 +157,7 @@ export function SignupForm({
 
   const shown = (s: Step) => !enhanced || step === s;
 
-  if (state.status === "done") return <SignupBooking locale={lang} offer={state.booking ?? null} embed={embed} />;
+  if (state.status === "done") return <SignupBooking locale={lang} offer={state.booking ?? null} testUrl={state.testUrl ?? null} embed={embed} />;
 
   const switcher = (
     <nav aria-label="Langue / Language / اللغة" className="mx-auto flex w-fit gap-1 rounded-full bg-[#E8F6F0] p-1">

@@ -45,10 +45,12 @@ function Address({ locale }: { locale: SignupLocale }) {
 export function SignupBooking({
   locale,
   offer,
+  testUrl = null,
   embed = false,
 }: {
   locale: SignupLocale;
   offer: BookingOffer | null;
+  testUrl?: string | null; // test de niveau à faire tout de suite (écran de fin sans créneau)
   embed?: boolean;
 }) {
   const t = SIGNUP_TEXTS[locale];
@@ -83,7 +85,7 @@ export function SignupBooking({
     });
   }
 
-  if (phase.kind === "call") return <SignupDone locale={locale} text={phase.text} embed={embed} />;
+  if (phase.kind === "call") return <SignupDone locale={locale} text={phase.text} testUrl={testUrl} embed={embed} />;
 
   if (phase.kind === "booked") {
     const s = phase.slot;
