@@ -33,6 +33,8 @@ export const APP_UPDATES: AppUpdate[] = [
     items: [
       { text: "Les personnes qui s'inscrivent depuis le site arrivent dans l'onglet Admission (statut Nouveau), avec la provenance « Formulaire en ligne · Site internet » : la carte « D'où viennent les demandes » montre ce que rapporte le site.", roles: TEAM },
       { text: "Mêmes garanties que le lien WhatsApp : pas de doublon (même numéro), consentement daté, test de positionnement prêt, et un écran de fin clair : « Nous vous contactons dès que possible », place pas encore assurée (pas de réservation en ligne ; le RDV se pose à la main si besoin).", roles: TEAM },
+      { text: "Onglet Admission → « À contacter » est classé par ordre d'inscription : la demande la plus ancienne en haut, avec « arrivé le … » sous le nom.", roles: TEAM },
+      { text: "Numéro de l'association partout (fin du formulaire, plannings PDF, e-mails d'émargement) : 06 14 33 99 73.", roles: TEAM },
       { text: "Adresse des rendez-vous d'admission : 14 rue Alexandre Bachelet, Saint-Ouen — pré-remplie dans le dialogue « RDV » (sur site), dans Google Agenda et dans le lien « Ajouter à mon agenda ».", roles: TEAM },
     ],
     training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "L'admission : WhatsApp, réunion d'information, entretien oral" }],

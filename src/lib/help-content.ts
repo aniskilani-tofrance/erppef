@@ -382,7 +382,7 @@ export const HELP_SECTIONS: HelpSection[] = [
       {
         title: "Prendre contact (WhatsApp d'abord)",
         steps: [
-          "Page Apprenants → onglet « Admission » → « À contacter » : les nouveaux (arrivés du Drive ou créés à la main) jamais contactés, puis les injoignables à relancer. Les plus anciens d'abord.",
+          "Page Apprenants → onglet « Admission » → « À contacter » : les nouveaux (arrivés du Drive ou créés à la main) jamais contactés et les injoignables à relancer, par ordre d'inscription : la demande la plus ancienne en haut (« arrivé le … » sous le nom).",
           "« Écrire » ouvre WhatsApp (application ou WhatsApp Web sur ordinateur) avec le message de premier contact déjà écrit et signé de votre prénom. Relisez, adaptez si besoin, appuyez sur Envoyer.",
           "Dès que WhatsApp s'ouvre, le contact est noté dans le journal et le statut passe à « Contacté » : la personne quitte la liste « À contacter ».",
           "Un appel, une réponse, un refus : icône carnet « Noter un contact » — canal, résultat, note, et le statut proposé (modifiable). Le journal garde qui a parlé à qui, et quand.",

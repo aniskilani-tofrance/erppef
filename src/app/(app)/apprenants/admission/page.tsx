@@ -100,6 +100,7 @@ function LearnerRows({
   assistant,
   appointments,
   showReason = false,
+  showArrival = false,
 }: {
   rows: LearnerRow[];
   empty: string;
@@ -112,6 +113,7 @@ function LearnerRows({
   assistant: boolean;
   appointments: Map<string, AppointmentView>;
   showReason?: boolean;
+  showArrival?: boolean; // « arrivé le … » sous le nom (liste classée par ordre d'inscription)
 }) {
   if (rows.length === 0) return <p className="py-4 text-sm text-muted-foreground">{empty}</p>;
   const lastContactAt = (id: string) => history.get(id)?.[0]?.contactedAt ?? null;
@@ -136,7 +138,7 @@ function LearnerRows({
                 {l.first_name} {l.last_name}
               </span>
               <span className="block font-mono text-[11px] font-normal text-muted-foreground">
-                {learnerRef(l.learner_no)}{l.level_assessed ? ` · ${l.level_assessed}` : ""}
+                {learnerRef(l.learner_no)}{l.level_assessed ? ` · ${l.level_assessed}` : ""}{showArrival ? ` · arrivé le ${fmtDay(l.created_at)}` : ""}
               </span>
               {showReason && (() => {
                 // Motif du dernier contact qui en porte un pour ce statut (liste d'attente / sans suite)
@@ -394,15 +396,11 @@ export default async function AdmissionPage() {
   const counts: Record<string, number> = {};
   for (const l of learners ?? []) counts[l.admission_status ?? "nouveau"] = (counts[l.admission_status ?? "nouveau"] ?? 0) + 1;
 
-  // À contacter : jamais contactés (les plus anciens d'abord), puis injoignables (relance la plus ancienne d'abord)
+  // À contacter : nouveaux et injoignables, par ordre d'inscription (demande la plus ancienne
+  // en haut) — demande d'Anis (22/10). Une relance ne fait pas reculer la personne.
   const toContact = (learners ?? [])
     .filter((l) => l.admission_status === "nouveau" || l.admission_status === "injoignable")
-    .sort((a, b) => {
-      if (a.admission_status !== b.admission_status) return a.admission_status === "nouveau" ? -1 : 1;
-      const la = lastContactAt(a.id) ?? a.created_at;
-      const lb = lastContactAt(b.id) ?? b.created_at;
-      return la.localeCompare(lb);
-    });
+    .sort((a, b) => a.created_at.localeCompare(b.created_at));
   // Contactés mais pas encore convoqués : le vivier de la prochaine réunion
   const toInvite = (learners ?? [])
     .filter((l) => l.admission_status === "contacte")
@@ -616,11 +614,11 @@ export default async function AdmissionPage() {
         <CardHeader className="pb-2">
           <CardTitle className="text-base">À contacter ({toContact.length})</CardTitle>
           <p className="text-xs text-muted-foreground">
-            Nouveaux (jamais contactés) puis injoignables à relancer. Le bouton ouvre WhatsApp avec le message de l&apos;étape : « Premier contact » ou « Relance ». Le statut passe à « Contacté » tout seul.
+            Par <b>ordre d&apos;inscription</b> : la demande la plus ancienne en haut (nouveaux et injoignables à relancer). Le bouton ouvre WhatsApp avec le message de l&apos;étape : « Premier contact » ou « Relance ». Le statut passe à « Contacté » tout seul.
           </p>
         </CardHeader>
         <CardContent>
-          <LearnerRows rows={toContact} senderFirstName={senderFirstName} history={historyByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} assistant={assistant} appointments={appointmentByLearner} empty="Personne à contacter : tous les nouveaux ont été joints. Les fiches déposées dans le Drive arrivent ici chaque nuit." />
+          <LearnerRows rows={toContact} showArrival senderFirstName={senderFirstName} history={historyByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} assistant={assistant} appointments={appointmentByLearner} empty="Personne à contacter : tous les nouveaux ont été joints. Les fiches déposées dans le Drive arrivent ici chaque nuit." />
           {toContact.length > 80 && (
             <p className="mt-2 text-xs text-muted-foreground">
               80 premiers affichés — <Link href="/apprenants?statut=nouveau" className="underline">voir tous les nouveaux</Link>.
