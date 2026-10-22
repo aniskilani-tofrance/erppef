@@ -286,10 +286,12 @@ export function stepLabel(t: SignupTexts, n: number, total: number): string {
   return t.step.replace("{n}", String(n)).replace("{total}", String(total));
 }
 
-// Contact affiché sur l'écran de fin (même numéro que les plannings PDF).
+// Contact affiché sur l'écran de fin.
 export const SIGNUP_CONTACT = {
   name: "ParlerEmploi Formation",
-  phone: "+33 6 52 67 53 93",
-  whatsapp: "33652675393",
+  // Numéro de l'association (cours de français), affiché à la fin du formulaire et
+  // ouvert par le bouton « Écrire à ParlerEmploi ».
+  phone: "+33 6 14 33 99 73",
+  whatsapp: "33614339973",
   email: PRIVACY_CONTACT,
 };

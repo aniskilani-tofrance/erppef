@@ -93,7 +93,7 @@ export function RoomFormDialog({ initial }: { initial?: RoomFormValues }) {
               value={values.accessNotes}
               onChange={(e) => setValues((v) => ({ ...v, accessNotes: e.target.value }))}
               rows={3}
-              placeholder={"Métro 13 Mairie de Saint-Ouen, sortie 2. Entrer par la cour, sonner « ParlerEmploi », 2e étage. En cas de problème : 06 52 67 53 93."}
+              placeholder={"Métro 13 Mairie de Saint-Ouen, sortie 2. Entrer par la cour, sonner « ParlerEmploi », 2e étage. En cas de problème : 06 14 33 99 73."}
             />
             <p className="text-xs text-muted-foreground">Repris dans les plannings PDF, le calendrier et les messages aux apprenants. Phrases courtes, un repère par phrase.</p>
           </div>
