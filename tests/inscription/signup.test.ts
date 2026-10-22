@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   buildSignupNote,
   checkStamp,
-  firstLanguageOf,
   issueStamp,
   normalizeSignupPhone,
   parseSignup,
@@ -15,10 +14,9 @@ const valid: SignupInput = {
   firstName: "  Fatima ",
   lastName: "Benali",
   phone: "+33 6 12 34 56 78",
-  languages: ["anglais", "arabe"],
   french: "un_peu",
-  availability: ["soir", "matin"],
-  city: " Saint-Ouen ",
+  cityChoice: "saint_ouen",
+  city: "",
   consent: "on",
 };
 
@@ -43,7 +41,7 @@ describe("inscription rapide — téléphone", () => {
 });
 
 describe("inscription rapide — validation", () => {
-  it("nettoie et remet les choix dans l'ordre du référentiel", () => {
+  it("Saint-Ouen : ville et code postal remplis sur la fiche", () => {
     const r = parseSignup(valid);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
@@ -52,46 +50,41 @@ describe("inscription rapide — validation", () => {
       lastName: "Benali",
       phone: "06 12 34 56 78",
       phoneDigits: "33612345678",
-      languages: ["arabe", "anglais"],
       french: "un_peu",
-      availability: ["matin", "soir"],
+      cityChoice: "saint_ouen",
       city: "Saint-Ouen",
+      postalCode: "93400",
     });
   });
 
-  it("la ville est facultative ; l'e-mail n'existe pas", () => {
-    const r = parseSignup({ ...valid, city: "   " });
-    expect(r.ok && r.data.city).toBeNull();
+  it("autre ville : la ville tapée, facultative, sans code postal", () => {
+    const r = parseSignup({ ...valid, cityChoice: "autre", city: " Aubervilliers " });
+    expect(r.ok && [r.data.city, r.data.postalCode]).toEqual(["Aubervilliers", null]);
+    const vide = parseSignup({ ...valid, cityChoice: "autre", city: "  " });
+    expect(vide.ok && [vide.data.city, vide.data.postalCode]).toEqual([null, null]);
   });
 
   it("renvoie la première erreur, dans l'ordre des écrans", () => {
     expect(parseSignup({ ...valid, lastName: " " })).toEqual({ ok: false, error: "name" });
     expect(parseSignup({ ...valid, phone: "+33" })).toEqual({ ok: false, error: "phone" });
-    expect(parseSignup({ ...valid, languages: [] })).toEqual({ ok: false, error: "languages" });
-    expect(parseSignup({ ...valid, languages: ["klingon"] })).toEqual({ ok: false, error: "languages" });
     expect(parseSignup({ ...valid, french: "" })).toEqual({ ok: false, error: "french" });
-    expect(parseSignup({ ...valid, availability: [] })).toEqual({ ok: false, error: "availability" });
+    expect(parseSignup({ ...valid, cityChoice: "" })).toEqual({ ok: false, error: "city" });
+    expect(parseSignup({ ...valid, cityChoice: "paris" })).toEqual({ ok: false, error: "city" });
     expect(parseSignup({ ...valid, consent: null })).toEqual({ ok: false, error: "consent" });
   });
 
-  it("lit un FormData (cases multiples)", () => {
+  it("lit un FormData", () => {
     const fd = new FormData();
     fd.set("firstName", "Ali");
     fd.set("lastName", "Haidari");
     fd.set("phone", "07 11 22 33 44");
-    fd.append("languages", "dari_pachto");
-    fd.append("languages", "autre");
     fd.set("french", "pas_du_tout");
-    fd.append("availability", "apres_midi");
+    fd.set("cityChoice", "autre");
+    fd.set("city", "Saint-Denis");
     fd.set("consent", "on");
     const r = parseSignup(readSignupForm(fd));
-    expect(r.ok && r.data.languages).toEqual(["dari_pachto", "autre"]);
     expect(r.ok && r.data.phone).toBe("07 11 22 33 44");
-  });
-
-  it("première langue de la fiche : la première langue choisie, jamais « Autre »", () => {
-    expect(firstLanguageOf(["autre", "tamoul"])).toBe("Tamoul");
-    expect(firstLanguageOf(["autre"])).toBeNull();
+    expect(r.ok && r.data.city).toBe("Saint-Denis");
   });
 });
 
@@ -100,10 +93,13 @@ describe("inscription rapide — note du journal", () => {
     const r = parseSignup(valid);
     if (!r.ok) throw new Error("invalide");
     expect(buildSignupNote(r.data, { src: "MDQ Landy" })).toBe(
-      "Inscription formulaire — langues : arabe, anglais ; français : un peu ; dispo : matin, soir ; ville : Saint-Ouen ; lien : MDQ Landy",
+      "Inscription formulaire — français : un peu ; ville : Saint-Ouen (93400) ; lien : MDQ Landy",
     );
-    expect(buildSignupNote({ ...r.data, city: null, availability: ["apres_midi"] }, { reinscription: true })).toBe(
-      "Réinscription via formulaire — langues : arabe, anglais ; français : un peu ; dispo : après-midi",
+    expect(buildSignupNote({ french: "bien", cityChoice: "autre", city: "Saint-Denis" }, { reinscription: true })).toBe(
+      "Réinscription via formulaire — français : bien ; ville : autre — Saint-Denis",
+    );
+    expect(buildSignupNote({ french: "pas_du_tout", cityChoice: "autre", city: null })).toBe(
+      "Inscription formulaire — français : pas du tout ; ville : autre (non précisée)",
     );
   });
 });

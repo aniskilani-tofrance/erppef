@@ -26,6 +26,18 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-10-22-formulaire-inscription-simplifie",
+    date: "2026-10-22",
+    title: "Le formulaire d'inscription, plus court et plus clair",
+    summary: "Cinq questions au lieu de sept, aux couleurs ParlerEmploi : nom, WhatsApp, niveau de français, ville (Saint-Ouen 93400 ou autre), consentement.",
+    items: [
+      { text: "Plus de question sur les langues parlées ni sur les disponibilités : à demander pendant le premier appel WhatsApp.", roles: TEAM },
+      { text: "Ville : un toucher pour « Saint-Ouen (93400) » (ville et code postal remplis sur la fiche) ou « Autre ville », à écrire si la personne veut. Le journal dit « ville : Saint-Ouen (93400) » ou « ville : autre — … ».", roles: TEAM },
+      { text: "Nouveau design aux couleurs ParlerEmploi (vert canard, vert vif), sur le site comme dans le lien WhatsApp.", roles: TEAM },
+    ],
+    training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "L'admission : WhatsApp, réunion d'information, entretien oral" }],
+  },
+  {
     id: "2026-10-21-inscription-site",
     date: "2026-10-21",
     title: "Le formulaire d'inscription est aussi sur le site internet",

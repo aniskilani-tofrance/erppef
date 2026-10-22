@@ -2,13 +2,12 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { formatPhone, toWhatsAppNumber } from "@/lib/admission/phone";
 import {
-  AVAILABILITIES,
+  CITY_CHOICES,
   FRENCH_LEVELS,
-  SIGNUP_LANGUAGES,
-  type Availability,
+  SAINT_OUEN,
+  type CityChoice,
   type FrenchLevel,
   type SignupErrorCode,
-  type SignupLanguage,
 } from "@/lib/inscription/i18n";
 
 // Inscription rapide (/inscription) : fonctions pures côté serveur — lecture du
@@ -38,12 +37,8 @@ const clean = (s: unknown) => (typeof s === "string" ? s.replace(/\s+/g, " ").tr
 const codes = <T extends readonly { code: string }[]>(list: T) => list.map((x) => x.code) as [T[number]["code"], ...T[number]["code"][]];
 
 const signupSchema = z.object({
-  firstName: z.string().min(1).max(60),
-  lastName: z.string().min(1).max(60),
-  phone: z.string().min(1).max(40),
-  languages: z.array(z.enum(codes(SIGNUP_LANGUAGES))).min(1).max(SIGNUP_LANGUAGES.length),
   french: z.enum(codes(FRENCH_LEVELS)),
-  availability: z.array(z.enum(codes(AVAILABILITIES))).min(1).max(AVAILABILITIES.length),
+  cityChoice: z.enum(codes(CITY_CHOICES)),
   city: z.string().max(80).nullable(),
   consent: z.literal(true),
 });
@@ -53,19 +48,18 @@ export type SignupData = {
   lastName: string;
   phone: string; // tel qu'enregistré
   phoneDigits: string; // forme WhatsApp, pour repérer les doublons
-  languages: SignupLanguage[];
   french: FrenchLevel;
-  availability: Availability[];
-  city: string | null;
+  cityChoice: CityChoice;
+  city: string | null; // « Saint-Ouen », la ville tapée, ou null (autre ville non précisée)
+  postalCode: string | null; // « 93400 » pour Saint-Ouen
 };
 
 export type SignupInput = {
   firstName?: unknown;
   lastName?: unknown;
   phone?: unknown;
-  languages?: unknown[];
   french?: unknown;
-  availability?: unknown[];
+  cityChoice?: unknown;
   city?: unknown;
   consent?: unknown;
 };
@@ -76,9 +70,8 @@ export function readSignupForm(fd: FormData): SignupInput {
     firstName: fd.get("firstName"),
     lastName: fd.get("lastName"),
     phone: fd.get("phone"),
-    languages: fd.getAll("languages"),
     french: fd.get("french"),
-    availability: fd.getAll("availability"),
+    cityChoice: fd.get("cityChoice"),
     city: fd.get("city"),
     consent: fd.get("consent"),
   };
@@ -91,35 +84,34 @@ export function parseSignup(input: SignupInput): { ok: true; data: SignupData } 
   if (!firstName || !lastName || firstName.length > 60 || lastName.length > 60) return { ok: false, error: "name" };
   const phone = normalizeSignupPhone(clean(input.phone));
   if (!phone) return { ok: false, error: "phone" };
-  const uniq = (xs: unknown[] | undefined) => [...new Set((xs ?? []).map(clean).filter(Boolean))];
   const parsed = signupSchema.safeParse({
-    firstName,
-    lastName,
-    phone: phone.stored,
-    languages: uniq(input.languages),
     french: clean(input.french),
-    availability: uniq(input.availability),
+    cityChoice: clean(input.cityChoice),
     city: clean(input.city) || null,
     consent: input.consent === true || input.consent === "on" || input.consent === "1",
   });
   if (!parsed.success) {
     const first = parsed.error.issues[0]?.path[0];
     const error: SignupErrorCode =
-      first === "languages" ? "languages"
-      : first === "french" ? "french"
-      : first === "availability" ? "availability"
-      : first === "consent" ? "consent"
-      : first === "city" ? "server"
-      : "name";
+      first === "french" ? "french"
+      : first === "cityChoice" || first === "city" ? "city"
+      : "consent";
     return { ok: false, error };
   }
   const d = parsed.data;
-  // Ordre du référentiel, pas l'ordre des clics
-  const languages = SIGNUP_LANGUAGES.map((l) => l.code).filter((c) => d.languages.includes(c));
-  const availability = AVAILABILITIES.map((a) => a.code).filter((c) => d.availability.includes(c));
+  const saintOuen = d.cityChoice === "saint_ouen";
   return {
     ok: true,
-    data: { firstName: d.firstName, lastName: d.lastName, phone: phone.stored, phoneDigits: phone.digits, languages, french: d.french, availability, city: d.city },
+    data: {
+      firstName,
+      lastName,
+      phone: phone.stored,
+      phoneDigits: phone.digits,
+      french: d.french,
+      cityChoice: d.cityChoice,
+      city: saintOuen ? SAINT_OUEN.city : d.city,
+      postalCode: saintOuen ? SAINT_OUEN.postalCode : null,
+    },
   };
 }
 
@@ -127,27 +119,16 @@ export function parseSignup(input: SignupInput): { ok: true; data: SignupData } 
 const fr = <T extends readonly { code: string; fr: string }[]>(list: T, code: string) =>
   list.find((x) => x.code === code)?.fr ?? code;
 
-export function languageLabels(codes: readonly string[]): string[] {
-  return codes.map((c) => fr(SIGNUP_LANGUAGES, c));
-}
-
-/** Première langue de la fiche (colonne first_language) : la première langue choisie, sauf « Autre ». */
-export function firstLanguageOf(codes: readonly string[]): string | null {
-  const c = codes.find((x) => x !== "autre");
-  return c ? fr(SIGNUP_LANGUAGES, c) : null;
-}
-
 /**
  * Note du journal d'admission (learner_contacts.note), lisible d'un coup d'œil :
- * « Inscription formulaire — langues : arabe, anglais ; français : un peu ; dispo : matin, soir ; ville : Saint-Ouen ; lien : MDQ Landy »
+ * « Inscription formulaire — français : un peu ; ville : Saint-Ouen (93400) ; lien : MDQ Landy »
  */
-export function buildSignupNote(d: Pick<SignupData, "languages" | "french" | "availability" | "city">, opts: { reinscription?: boolean; src?: string | null } = {}): string {
-  const parts = [
-    `langues : ${languageLabels(d.languages).join(", ").toLowerCase()}`,
-    `français : ${fr(FRENCH_LEVELS, d.french).toLowerCase()}`,
-    `dispo : ${d.availability.map((a) => fr(AVAILABILITIES, a)).map((s) => s.replace(/^(Le |L')/, "")).join(", ").toLowerCase()}`,
-  ];
-  if (d.city) parts.push(`ville : ${d.city}`);
+export function buildSignupNote(d: Pick<SignupData, "french" | "cityChoice" | "city">, opts: { reinscription?: boolean; src?: string | null } = {}): string {
+  const ville =
+    d.cityChoice === "saint_ouen" ? `${SAINT_OUEN.city} (${SAINT_OUEN.postalCode})`
+    : d.city ? `autre — ${d.city}`
+    : "autre (non précisée)";
+  const parts = [`français : ${fr(FRENCH_LEVELS, d.french).toLowerCase()}`, `ville : ${ville}`];
   if (opts.src) parts.push(`lien : ${opts.src}`);
   return `${opts.reinscription ? "Réinscription via formulaire" : "Inscription formulaire"} — ${parts.join(" ; ")}`;
 }

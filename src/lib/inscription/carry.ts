@@ -8,10 +8,11 @@ export function carriedEntries(values: SignupValues, shownStep: string): [string
   const out: [string, string][] = [];
   if (shownStep !== "name") out.push(["firstName", values.firstName], ["lastName", values.lastName]);
   if (shownStep !== "phone") out.push(["phone", values.phone]);
-  if (shownStep !== "languages") for (const code of values.languages) out.push(["languages", code]);
   if (shownStep !== "french" && values.french) out.push(["french", values.french]);
-  if (shownStep !== "availability") for (const code of values.availability) out.push(["availability", code]);
-  if (shownStep !== "city") out.push(["city", values.city]);
+  if (shownStep !== "city") {
+    if (values.cityChoice) out.push(["cityChoice", values.cityChoice]);
+    if (values.cityChoice === "autre" && values.city.trim()) out.push(["city", values.city]);
+  }
   if (shownStep !== "consent" && values.consent) out.push(["consent", "on"]);
   return out;
 }
