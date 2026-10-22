@@ -18,6 +18,7 @@ export const LOCALE_META: Record<SignupLocale, { label: string; htmlLang: string
 };
 
 // ── Choix proposés (codes stables, enregistrés en base) ─────────────────────
+// Plus demandées dans le formulaire (22/10/2026) ; gardées pour les fiches déjà remplies.
 export const SIGNUP_LANGUAGES = [
   { code: "arabe", emoji: "🗣️", fr: "Arabe", en: "Arabic", ar: "العربية" },
   { code: "anglais", emoji: "🗣️", fr: "Anglais", en: "English", ar: "الإنجليزية" },
@@ -37,6 +38,15 @@ export const FRENCH_LEVELS = [
 ] as const;
 export type FrenchLevel = (typeof FRENCH_LEVELS)[number]["code"];
 
+// Ville : Saint-Ouen (où ont lieu les cours) ou une autre ville, à préciser si on veut.
+export const CITY_CHOICES = [
+  { code: "saint_ouen", emoji: "📍", fr: "Saint-Ouen (93400)", en: "Saint-Ouen (93400)", ar: "سان-أوان (93400)" },
+  { code: "autre", emoji: "🏙️", fr: "Autre ville", en: "Another town", ar: "مدينة أخرى" },
+] as const;
+export type CityChoice = (typeof CITY_CHOICES)[number]["code"];
+export const SAINT_OUEN = { city: "Saint-Ouen", postalCode: "93400" } as const;
+
+// Plus demandés dans le formulaire (22/10/2026) ; gardés pour les fiches déjà remplies.
 export const AVAILABILITIES = [
   { code: "matin", emoji: "🌅", fr: "Le matin", en: "Morning", ar: "صباحًا" },
   { code: "apres_midi", emoji: "☀️", fr: "L'après-midi", en: "Afternoon", ar: "بعد الظهر" },
@@ -45,11 +55,12 @@ export const AVAILABILITIES = [
 export type Availability = (typeof AVAILABILITIES)[number]["code"];
 
 // Erreurs renvoyées par la validation : un code, traduit à l'affichage.
-export type SignupErrorCode = "name" | "phone" | "languages" | "french" | "availability" | "consent" | "server" | "link";
+export type SignupErrorCode = "name" | "phone" | "french" | "city" | "consent" | "server" | "link";
 
 export type SignupTexts = {
   title: string;
   intro: string;
+  introPoints: [string, string, string]; // ⏱️ 📱 💬
   start: string;
   next: string;
   back: string;
@@ -60,14 +71,11 @@ export type SignupTexts = {
   phoneQ: string;
   phoneLabel: string;
   phoneHint: string;
-  languagesQ: string;
   frenchQ: string;
   frenchHint: string;
-  availabilityQ: string;
-  severalChoices: string;
   cityQ: string;
-  cityLabel: string;
-  cityHint: string;
+  cityOtherLabel: string;
+  cityOtherHint: string;
   consentQ: string;
   consent: string;
   more: string;
@@ -100,6 +108,7 @@ export const SIGNUP_TEXTS: Record<SignupLocale, SignupTexts> = {
   fr: {
     title: "Cours de français",
     intro: "Inscription rapide : 2 minutes.",
+    introPoints: ["2 minutes", "Sur votre téléphone", "Nous vous contactons"],
     start: "Commencer",
     next: "Suivant",
     back: "Retour",
@@ -110,14 +119,11 @@ export const SIGNUP_TEXTS: Record<SignupLocale, SignupTexts> = {
     phoneQ: "Votre numéro WhatsApp ?",
     phoneLabel: "Numéro WhatsApp",
     phoneHint: "Exemple : +33 6 12 34 56 78. Autre pays : changez +33.",
-    languagesQ: "Vous parlez quelles langues ?",
     frenchQ: "Vous parlez français ?",
     frenchHint: "Pas de test ici. Juste pour savoir.",
-    availabilityQ: "Vous êtes libre quand ?",
-    severalChoices: "Plusieurs choix possibles.",
     cityQ: "Vous habitez où ?",
-    cityLabel: "Ville ou quartier",
-    cityHint: "Pas obligatoire.",
+    cityOtherLabel: "Quelle ville ?",
+    cityOtherHint: "Pas obligatoire.",
     consentQ: "Dernière étape",
     consent: "ParlerEmploi garde mes infos pour me contacter pour une formation.",
     more: "En savoir plus",
@@ -140,9 +146,8 @@ export const SIGNUP_TEXTS: Record<SignupLocale, SignupTexts> = {
     errors: {
       name: "Écrivez votre prénom et votre nom.",
       phone: "Ce numéro ne marche pas. Vérifiez.",
-      languages: "Choisissez au moins une langue.",
       french: "Choisissez une réponse.",
-      availability: "Choisissez au moins un moment.",
+      city: "Choisissez une réponse.",
       consent: "Cochez la case pour envoyer.",
       server: "Problème. Réessayez, s'il vous plaît.",
       link: "Ce lien ne marche pas. Demandez un nouveau lien.",
@@ -161,6 +166,7 @@ export const SIGNUP_TEXTS: Record<SignupLocale, SignupTexts> = {
   en: {
     title: "French classes",
     intro: "Quick sign-up: 2 minutes.",
+    introPoints: ["2 minutes", "On your phone", "We contact you"],
     start: "Start",
     next: "Next",
     back: "Back",
@@ -171,14 +177,11 @@ export const SIGNUP_TEXTS: Record<SignupLocale, SignupTexts> = {
     phoneQ: "Your WhatsApp number?",
     phoneLabel: "WhatsApp number",
     phoneHint: "Example: +33 6 12 34 56 78. Other country: change +33.",
-    languagesQ: "Which languages do you speak?",
     frenchQ: "Do you speak French?",
     frenchHint: "This is not a test. Just to know.",
-    availabilityQ: "When are you free?",
-    severalChoices: "You can choose several.",
     cityQ: "Where do you live?",
-    cityLabel: "Town or neighbourhood",
-    cityHint: "Optional.",
+    cityOtherLabel: "Which town?",
+    cityOtherHint: "Optional.",
     consentQ: "Last step",
     consent: "ParlerEmploi keeps my details to contact me about a course.",
     more: "Learn more",
@@ -201,9 +204,8 @@ export const SIGNUP_TEXTS: Record<SignupLocale, SignupTexts> = {
     errors: {
       name: "Write your first name and last name.",
       phone: "This number does not work. Please check.",
-      languages: "Choose at least one language.",
       french: "Choose one answer.",
-      availability: "Choose at least one time.",
+      city: "Choose one answer.",
       consent: "Tick the box to send.",
       server: "Problem. Please try again.",
       link: "This link does not work. Ask for a new link.",
@@ -222,6 +224,7 @@ export const SIGNUP_TEXTS: Record<SignupLocale, SignupTexts> = {
   ar: {
     title: "دروس اللغة الفرنسية",
     intro: "تسجيل سريع: دقيقتان.",
+    introPoints: ["دقيقتان", "من هاتفك", "سنتواصل معك"],
     start: "ابدأ",
     next: "التالي",
     back: "رجوع",
@@ -232,14 +235,11 @@ export const SIGNUP_TEXTS: Record<SignupLocale, SignupTexts> = {
     phoneQ: "ما رقم واتساب الخاص بك؟",
     phoneLabel: "رقم واتساب",
     phoneHint: "مثال: ‎+33 6 12 34 56 78. بلد آخر: غيّر ‎+33.",
-    languagesQ: "ما اللغات التي تتكلمها؟",
     frenchQ: "هل تتكلم الفرنسية؟",
     frenchHint: "هذا ليس امتحانًا. فقط للمعرفة.",
-    availabilityQ: "متى تكون متاحًا؟",
-    severalChoices: "يمكنك اختيار أكثر من جواب.",
     cityQ: "أين تسكن؟",
-    cityLabel: "المدينة أو الحي",
-    cityHint: "اختياري.",
+    cityOtherLabel: "ما اسم المدينة؟",
+    cityOtherHint: "اختياري.",
     consentQ: "الخطوة الأخيرة",
     consent: "تحتفظ ParlerEmploi بمعلوماتي للتواصل معي بخصوص دورة تدريبية.",
     more: "لمعرفة المزيد",
@@ -262,9 +262,8 @@ export const SIGNUP_TEXTS: Record<SignupLocale, SignupTexts> = {
     errors: {
       name: "اكتب اسمك الأول واسم عائلتك.",
       phone: "هذا الرقم غير صحيح. تحقق منه.",
-      languages: "اختر لغة واحدة على الأقل.",
       french: "اختر جوابًا واحدًا.",
-      availability: "اختر وقتًا واحدًا على الأقل.",
+      city: "اختر جوابًا واحدًا.",
       consent: "ضع علامة في المربع للإرسال.",
       server: "حدثت مشكلة. حاول مرة أخرى من فضلك.",
       link: "هذا الرابط لا يعمل. اطلب رابطًا جديدًا.",

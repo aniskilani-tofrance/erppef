@@ -19,7 +19,6 @@ import { issueBookingToken, verifyBookingToken } from "@/lib/inscription/booking
 import {
   buildSignupNote,
   checkStamp,
-  firstLanguageOf,
   parseSignup,
   readSignupForm,
   stampSecret,
@@ -34,9 +33,8 @@ export type SignupValues = {
   firstName: string;
   lastName: string;
   phone: string;
-  languages: string[];
   french: string;
-  availability: string[];
+  cityChoice: string;
   city: string;
   consent: boolean;
 };
@@ -62,9 +60,8 @@ function valuesOf(fd: FormData): SignupValues {
     firstName: str("firstName"),
     lastName: str("lastName"),
     phone: str("phone"),
-    languages: fd.getAll("languages").filter((v): v is string => typeof v === "string"),
     french: str("french"),
-    availability: fd.getAll("availability").filter((v): v is string => typeof v === "string"),
+    cityChoice: str("cityChoice"),
     city: str("city"),
     consent: fd.get("consent") === "on",
   };
@@ -133,7 +130,7 @@ export async function submitSignup(_prev: SignupState, fd: FormData): Promise<Si
       await admin.from("learners").update({ admission_status: "nouveau" }).eq("id", existing.id);
     }
     revalidatePath("/apprenants", "layout");
-    return { status: "done", booking: await offerBooking(org.id, existing.id, d.availability) };
+    return { status: "done", booking: await offerBooking(org.id, existing.id, []) };
   }
 
   const provenance = provenanceFromSignupSource(src);
@@ -143,15 +140,13 @@ export async function submitSignup(_prev: SignupState, fd: FormData): Promise<Si
     last_name: d.lastName,
     phone: d.phone,
     city: d.city,
-    first_language: firstLanguageOf(d.languages),
+    postal_code: d.postalCode,
     admission_status: "nouveau",
     contact_source: provenance.contact_source,
     contact_source_detail: provenance.contact_source_detail,
   };
   const declared = {
-    spoken_languages: d.languages,
     french_self_level: d.french,
-    availability: d.availability,
     data_consent_at: new Date().toISOString(),
   };
 
@@ -179,7 +174,7 @@ export async function submitSignup(_prev: SignupState, fd: FormData): Promise<Si
     .then(() => undefined, () => undefined);
 
   revalidatePath("/apprenants", "layout");
-  return { status: "done", booking: await offerBooking(org.id, created.id, d.availability) };
+  return { status: "done", booking: await offerBooking(org.id, created.id, []) };
 }
 
 // ── Réservation d'un créneau par la personne elle-même (écran de fin) ────────
