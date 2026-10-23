@@ -15,6 +15,7 @@ import {
 } from "@/lib/leads/brevo";
 import { dispatchTwilioLeadSms } from "@/lib/leads/twilio";
 import { alertSetterOfNewLead } from "@/lib/leads/setter-alert";
+import { dispatchMetaInboundLead, dispatchMetaStatusEvents, metaFbcFor, type LeadForMeta } from "@/lib/leads/meta-capi";
 import { SANDBOX_SLUG } from "@/lib/production-orgs";
 
 // Point d'entrée des leads : POST /api/leads/inbound?token=<jeton de l'organisation>
@@ -22,7 +23,8 @@ import { SANDBOX_SLUG } from "@/lib/production-orgs";
 // (Leads → Réglages) identifie l'organisation ; il n'y a pas de session utilisateur.
 // Doublon (même email ou même téléphone sous 30 jours) : on note l'événement, on ne
 // recrée pas la fiche. Chaque nouveau lead : fiche « Nouveau », attribuée au setter par
-// défaut, email de notification « à rappeler sous 24 h » et alerte SMS au setter.
+// défaut, email de notification « à rappeler sous 24 h », alerte SMS au setter et
+// signal « Lead » à l'API Conversions de Meta (si le restaurateur a consenti).
 
 export const dynamic = "force-dynamic";
 
@@ -207,12 +209,34 @@ async function handleLead(admin: Admin, org: Org, lead: InboundLead, ownerId: st
   // l'expose à réserver deux fois. L'invitation part en différé, par /api/cron/leads-sms,
   // et seulement pour ceux qui n'ont rien réservé — voir sendPendingLeadIntro.
 
-  // Alerte SMS au setter : après la réponse au formulaire, pour que Twilio ne retarde ni
-  // ne fasse jamais échouer la réception du lead. Jamais depuis le bac à sable.
+  // Consentement de recontact et identifiants publicitaires Meta (migration 0054). Écrits
+  // à part : si la migration manque, la fiche existe quand même, seul ce complément échoue.
+  const fbc = metaFbcFor(lead.tracking, Date.parse(data.received_at) || Date.now());
+  const attribution: Record<string, unknown> = {};
+  if (lead.recontactConsent !== null) attribution.recontact_consent = lead.recontactConsent;
+  if (fbc) attribution.meta_fbc = fbc;
+  if (lead.tracking.fbp) attribution.meta_fbp = lead.tracking.fbp;
+  if (Object.keys(attribution).length) {
+    const { error: attributionError } = await admin.from("employer_leads").update(attribution).eq("id", data.id).eq("org_id", org.id);
+    if (attributionError) console.error("[leads/inbound] consentement et suivi Meta non enregistrés", attributionError.message);
+  }
+
+  // Alerte SMS au setter et signal « Lead » à Meta : après la réponse au formulaire, pour
+  // que Twilio ou Meta ne retardent ni ne fassent jamais échouer la réception du lead.
+  // Jamais depuis le bac à sable.
   if (org.slug !== SANDBOX_SLUG) {
-    const created = data as LeadForBrevo;
+    const created = data as LeadForBrevo & LeadForMeta;
     after(async () => {
-      await alertSetterOfNewLead(admin, { orgId: org.id, lead: created, settings, leadUrl: `${BASE_URL}/leads/${created.id}` });
+      await Promise.allSettled([
+        alertSetterOfNewLead(admin, { orgId: org.id, lead: created, settings, leadUrl: `${BASE_URL}/leads/${created.id}` }),
+        dispatchMetaInboundLead(admin, {
+          orgId: org.id,
+          lead: { ...created, recontact_consent: lead.recontactConsent, meta_fbc: fbc, meta_fbp: lead.tracking.fbp },
+          consent: lead.recontactConsent,
+          tracking: lead.tracking,
+          fbc,
+        }),
+      ]);
     });
   }
 
@@ -415,6 +439,10 @@ async function handleCalendly(admin: Admin, org: Org, c: InboundCalendly, ownerI
       settings,
       code: "confirmation_rdv",
       automatic: true,
+    });
+    const rdvLead = leadForBrevo as LeadForBrevo & LeadForMeta;
+    after(async () => {
+      await dispatchMetaStatusEvents(admin, { orgId: org.id, lead: rdvLead, status: "rdv_pris" });
     });
   }
   await queueAppointmentReminders(admin, org.id, leadId, "rdv", c.startsAt, settings);

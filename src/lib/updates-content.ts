@@ -26,6 +26,18 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-10-23-meta-api-conversions",
+    date: "2026-10-23",
+    title: "Meta apprend quels restaurateurs se qualifient vraiment",
+    summary: "L'ERP signale à Meta les leads reçus, qualifiés et ceux qui prennent rendez-vous : la publicité peut chercher des restaurateurs qui avancent, pas seulement des formulaires remplis.",
+    items: [
+      { text: "Trois signaux partent tout seuls vers Meta (API Conversions) : « Lead » à la réception du formulaire, « Lead qualifié » quand la fiche passe « Qualifié » ou « RDV pris », « RDV pris » quand le rendez-vous est posé (bouton, statut ou Calendly de direction). Une seule fois chacun par fiche.", roles: LEADS },
+      { text: "Seulement pour les restaurateurs qui ont coché « J'accepte d'être recontacté » sur la landing. Rien pour une fiche saisie à la main, « Terrain » ou du bac à sable. Le journal de la fiche note « Signal … transmis à Meta ».", roles: LEADS },
+      { text: "Aucune donnée en clair : e-mail, téléphone, prénom, nom, ville et code postal partent hachés. Inactif tant que le jeton Meta n'est pas posé sur Vercel ; une panne de Meta ne bloque jamais l'ERP.", roles: TEAM },
+    ],
+    training: [{ moduleId: "m1-leads", lessonId: "messages", label: "SMS, WhatsApp, email : ce qui part tout seul et ce que vous envoyez" }],
+  },
+  {
     id: "2026-10-23-alerte-sms-setter",
     date: "2026-10-23",
     title: "Un SMS au setter à chaque nouveau lead restaurateur",

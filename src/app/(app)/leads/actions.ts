@@ -1,10 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { translatePgError } from "@/lib/pg-errors";
 import { localToUtc } from "@/lib/dates";
 import {
@@ -22,6 +24,7 @@ import {
 } from "@/lib/leads/brevo";
 import { dispatchTwilioLeadSms } from "@/lib/leads/twilio";
 import { loadLeadSettings } from "@/lib/leads/queries";
+import { dispatchMetaStatusEvents, metaEventsForStatus, type LeadForMeta } from "@/lib/leads/meta-capi";
 
 // Rôles autorisés sur les leads : la direction (admin, coordination) et le setter.
 const LEAD_ROLES = ["admin", "coordinator", "setter"] as const;
@@ -51,6 +54,16 @@ async function dispatchStatusEmail(
   if (!eventName || !lead) return;
   const settings = await loadLeadSettings(supabase, orgId);
   await dispatchBrevoLeadEvent(supabase, { orgId, lead, settings, eventName });
+}
+
+// Signaux « Lead qualifié » et « RDV pris » vers l'API Conversions de Meta : après la
+// réponse, avec le client service (requireRole a déjà vérifié l'organisation), sans
+// jamais retarder ni faire échouer l'action du conseiller.
+function signalMetaStatus(orgId: string, lead: unknown, status: string | null | undefined) {
+  if (!lead || metaEventsForStatus(status).length === 0) return;
+  after(async () => {
+    await dispatchMetaStatusEvents(createAdminClient(), { orgId, lead: lead as LeadForMeta, status });
+  });
 }
 
 async function dispatchCallOutcomeSms(
@@ -221,6 +234,7 @@ export async function logLeadEvent(raw: z.infer<typeof eventSchema>): Promise<Ac
       .single();
     if (e2) return { ok: false, error: translatePgError(e2) };
     if (d.status) await dispatchStatusEmail(supabase, orgId, updated as LeadForBrevo | null, d.status);
+    if (d.status) signalMetaStatus(orgId, updated, d.status);
     if (updated) await dispatchCallOutcomeSms(supabase, orgId, userId, updated as LeadForBrevo, d.outcome);
   } else if (d.kind === "appel") {
     const current = await supabase.from("employer_leads").select("*").eq("id", d.leadId).eq("org_id", orgId).maybeSingle();
@@ -298,6 +312,7 @@ export async function setLeadStatus(raw: { leadId: string; status: string; lostR
     note: `Statut → ${d.status}${d.lostReason ? ` (${d.lostReason})` : ""}`,
   });
   await dispatchStatusEmail(supabase, orgId, updated as LeadForBrevo | null, d.status);
+  signalMetaStatus(orgId, updated, d.status);
   if (d.status === "perdu" && /injoignable/i.test(d.lostReason ?? "") && updated) {
     const settings = await loadLeadSettings(supabase, orgId);
     await dispatchBrevoLeadEvent(supabase, {
@@ -427,6 +442,7 @@ export async function setLeadRdv(raw: z.infer<typeof rdvSchema>): Promise<Action
     note: `RDV posé le ${d.date.split("-").reverse().join("/")} à ${d.time} (${d.mode})`,
   });
   await dispatchStatusEmail(supabase, orgId, updated as LeadForBrevo | null, "rdv_pris");
+  signalMetaStatus(orgId, updated, "rdv_pris");
   const settings = await loadLeadSettings(supabase, orgId);
   await dispatchTwilioLeadSms(supabase, {
     orgId,
