@@ -21,13 +21,13 @@ const { PassationPositionnement } = await import("@/components/positionnement/pa
 const { consigneAffichee } = await import("@/lib/positionnement/consigne");
 const { CONSIGNES } = await import("@/lib/positionnement/client");
 const { item } = await import("@/lib/positionnement/module/index.ts");
-const { itemPourNavigateur } = await import("@/lib/positionnement/items-publics");
+const { itemPublic } = await import("@/lib/positionnement/module/index.ts");
 const { SIGNUP_CONTACT } = await import("@/lib/inscription/i18n");
 
 const decode = (s: string) => s.replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, "&");
 const html = (el: ReturnType<typeof createElement>) => decode(renderToStaticMarkup(el));
 const question = (id: number, langue = "fr") =>
-  html(createElement(QuestionPositionnement, { item: itemPourNavigateur(item(id)!), prenom: "Amina", langue, valeur: "", onChange: () => {} }));
+  html(createElement(QuestionPositionnement, { item: itemPublic(item(id)!), prenom: "Amina", langue, valeur: "", onChange: () => {} }));
 
 describe("écran de fin (décision d'Anis : aucun niveau)", () => {
   it("« Merci ! Votre test est enregistré. Nous vous contactons dès que possible. » + contact de l'association", () => {
@@ -84,7 +84,7 @@ describe("questions", () => {
 });
 
 describe("accueil", () => {
-  const etape = (commence: boolean) => ({ statut: "en_cours" as const, prenom: "Amina", items: [itemPourNavigateur(item(101)!)], bloc: "litteratie-declaratif", progression: 0, commence });
+  const etape = (commence: boolean) => ({ statut: "en_cours" as const, prenom: "Amina", items: [itemPublic(item(101)!)], bloc: "litteratie-declaratif", progression: 0, commence });
 
   it("test neuf : environ 30 minutes, micro annoncé, pas de case à cocher, lien d'information, « Commencer le test »", () => {
     const out = html(createElement(PassationPositionnement, { token: "t", etapeInitiale: etape(false), langue: "fr" }));

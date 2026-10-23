@@ -1,5 +1,6 @@
 // Parcours ADAPTATIF par compétence : chacun ne passe que les items utiles à son niveau.
-// Durée cible ≤ 20 minutes (estimation : `dureeEstimee`, vérifiée par les tests sur des profils A1→B2).
+// Durée cible : 30 minutes environ (décision du 23/10 ; avant : 20 minutes). Estimation :
+// `dureeEstimee`, vérifiée par les tests sur des profils A1, A2, B1, B2 et « lit mal, comprend l'oral ».
 //
 // Algorithme (documenté aussi dans decisions/2026-10-15-test-positionnement.md) :
 //
@@ -7,28 +8,38 @@
 //    - Déclaratif : 101 (école ?), 102 (en français ? — sauté si jamais scolarisé·e).
 //    - Raccourci : scolarisé·e « longtemps » → d'abord la lecture A1.1 (112, 113). 2/2 → sortie
 //      haute immédiate. Sinon, bloc complet.
-//    - Bloc complet : oral en images 103-105, lettres 106-108, nombre 109 → palier L0 (≥ 2/3 lettres),
-//      déchiffrage 110-111 → palier L1 (≥ 1/2), lecture 112-113 + nombre écrit 114 → palier L2 (2/2).
-//    - Arrêt à un palier : on ne fait pas lire quelqu'un qui n'est pas entré dans l'écrit. On propose
-//      seulement UNE tâche orale A1 (se présenter) : l'oral et l'écrit sont indépendants.
+//    - Bloc complet : oral en images 103-105, lettres 106-108, nombre 109 → porte L0 ; déchiffrage
+//      110-111 → porte L1 ; lecture 112-113 + nombre écrit 114 → porte L2. À chaque porte, UNE erreur
+//      est tolérée : L0 = 2/3, L1 = 1/2, L2 = 2/3 (porteLitteratie, correction.ts).
+//    - Seul L0 raté arrête le test (vrai non-lecteur) : on ne fait pas lire quelqu'un qui ne reconnaît
+//      pas les lettres. On propose seulement UNE tâche orale A1 (se présenter) : l'oral et l'écrit sont
+//      indépendants.
+//    - L1 ou L2 raté (décision du 23/10) : le palier est noté (routerLitteratie → rapport) et le test
+//      CONTINUE comme pour les autres, réception en A1. L1 raté : on ne passe pas les items de L2.
 // 2. RÉCEPTION (CO, puis CE, puis Langue), niveau par niveau :
-//    - Départ : CO en A1 (en A2 après une sortie haute rapide) ; CE au niveau atteint en CO ;
-//      Langue au plus bas des niveaux CO et CE.
-//    - À chaque niveau : 2 items. 2/2 → niveau acquis ; 0/2 → non acquis ; 1/2 → un 3e item tranche.
-//      (Langue, informative : 1 item par niveau.)
+//    - Départ : CO en A1 (en A2 après une sortie haute rapide) ; CE au niveau atteint en CO (en A1
+//      si un palier de littératie est noté) ; Langue au plus bas des niveaux CO et CE.
+//    - À chaque niveau : 3 items quand la banque en a 3 (décision du 23/10 ; avant : 2, + 1 pour
+//      départager). Acquis à 2/3 ; s'il n'y a que 2 items : 2/2 ; s'il n'y en a qu'1 : 1/1.
+//      Langue (informative, hors niveau global) : 1 item par niveau, pour tenir la durée.
 //    - Acquis → niveau suivant (jusqu'à B2). Non acquis au niveau de départ → on descend d'un niveau,
 //      jusqu'à trouver un niveau acquis ou échouer en A1. Les niveaux sous un niveau de départ acquis
 //      sont réputés acquis.
 //    - Niveau de la compétence = plus haut niveau acquis ; aucun → « A1 non atteint ».
-// 3. PRODUCTION (PO, puis PE), une tâche, deux au plus :
+// 3. PRODUCTION (PO, puis PE), une tâche par niveau essayé :
 //    - Départ au niveau de la compréhension correspondante (PO ← CO, PE ← CE ; A1 si non atteint).
-//    - Tâche réussie (grille) → niveau de départ. Échouée → une tâche un niveau plus bas.
-//      Deux échecs → deux niveaux sous le départ (estimé), ou « A1 non atteint ».
-//    - Le niveau de production est donc plafonné par la compréhension : c'est le cas général, et le
-//      formateur peut le relever en entretien.
+//    - Tâche réussie (grille) → on essaie le niveau AU-DESSUS, et ainsi de suite jusqu'à B2 ou au
+//      premier échec (décision du 23/10). La compétence vaut le plus haut niveau réussi : la
+//      compréhension ne plafonne plus la production.
+//    - Tâche de départ échouée → une tâche un niveau plus bas. Deux échecs → deux niveaux sous le
+//      départ (estimé), ou « A1 non atteint ».
+//
+// Passations commencées avec l'ancien parcours : tout est recalculé à partir des réponses déjà
+// données. Les réponses gardées servent ; les items qui manquent au nouveau parcours (3e item d'un
+// niveau, suite du test après L1 ou L2 raté) sont demandés à l'étape suivante.
 
 import { BANQUE, item, itemsDe } from "./banque.ts";
-import { porteLitteratie, routerLitteratie } from "./correction.ts";
+import { competencesLitteratie, porteLitteratie, routerLitteratie } from "./correction.ts";
 import type { Competence, Item, Niveau, NiveauResultat, Reponses } from "./types.ts";
 import { NIVEAUX } from "./types.ts";
 
@@ -48,7 +59,7 @@ export interface Trace {
   litteratie: {
     items: number[];
     raccourci: boolean;
-    /** Palier d'arrêt (Pré-alpha…) ; null = entrée dans l'écrit acquise. */
+    /** Palier noté (Pré-alpha…) ; null = entrée dans l'écrit acquise. Arrêt seulement si L0 est raté. */
     palier: ReturnType<typeof routerLitteratie>;
     arret: boolean;
   };
@@ -66,6 +77,22 @@ export interface Etape {
 
 class EnAttente {
   constructor(public ids: number[], public bloc: string) {}
+}
+
+/**
+ * À changer dès qu'une règle du parcours ou du niveau global change (la banque a sa propre version,
+ * VERSION_BANQUE) : enregistrée dans chaque rapport (`versionParcours`).
+ */
+export const VERSION_PARCOURS = "2026-10-23.1";
+
+/** Réception (CO, CE) : items passés par niveau quand la banque les a (décision du 23/10). */
+export const ITEMS_PAR_NIVEAU = 3;
+/** Langue : informative, 1 item par niveau pour tenir la durée cible. */
+export const ITEMS_PAR_NIVEAU_LANGUE = 1;
+
+/** Bonnes réponses pour qu'un niveau soit acquis : 2/3 (une erreur tolérée), 2/2, 1/1. */
+export function seuilAcquis(nbItems: number): number {
+  return nbItems >= 3 ? nbItems - 1 : nbItems;
 }
 
 const rang = (n: Niveau) => NIVEAUX.indexOf(n);
@@ -102,28 +129,16 @@ export function deroulerParcours(rep: Reponses, juge: Juge, prenom?: string): Et
     if (manquants.length) throw new EnAttente(manquants, bloc);
   };
 
-  const reception = (c: Competence, depart: Niveau, parNiveau: 1 | 2) => {
+  const reception = (c: Competence, depart: Niveau, parNiveau: number) => {
     const t: TraceCompetence = { competence: c, depart, niveaux: {}, niveau: "infra_A1" };
     trace.competences[c] = t;
     let n: Niveau = depart;
     let sens: "monte" | "descend" = "monte";
     for (;;) {
-      const dispo = itemsDe(c, n);
-      if (!dispo.length) break;
-      const premiers = dispo.slice(0, parNiveau).map((q) => q.id);
-      const res = demander(premiers, `${c}-${n}`);
-      let reussis = res.filter(Boolean).length;
-      const tn: TraceNiveau = { items: [...premiers], reussis, acquis: false };
-      if (parNiveau === 1) tn.acquis = reussis === 1;
-      else if (reussis === 2) tn.acquis = true;
-      else if (reussis === 1 && dispo[2]) {
-        tn.items.push(dispo[2].id);
-        t.niveaux[n] = tn;
-        const [r3] = demander([dispo[2].id], `${c}-${n}`);
-        if (r3) reussis += 1;
-        tn.reussis = reussis;
-        tn.acquis = r3;
-      }
+      const ids = itemsDe(c, n).slice(0, parNiveau).map((q) => q.id);
+      if (!ids.length) break;
+      const reussis = demander(ids, `${c}-${n}`).filter(Boolean).length;
+      const tn: TraceNiveau = { items: ids, reussis, acquis: reussis >= seuilAcquis(ids.length) };
       t.niveaux[n] = tn;
       if (tn.acquis) {
         if (sens === "monte" && rang(n) < 3) { n = NIVEAUX[rang(n) + 1]; continue; }
@@ -137,7 +152,8 @@ export function deroulerParcours(rep: Reponses, juge: Juge, prenom?: string): Et
     return t.niveau;
   };
 
-  const production = (c: "PO" | "PE", depart: Niveau, descente = true) => {
+  /** `seule` : une seule tâche, sans montée ni descente (arrêt au bloc littératie). */
+  const production = (c: "PO" | "PE", depart: Niveau, seule = false) => {
     const t: TraceCompetence = { competence: c, depart, niveaux: {}, niveau: "infra_A1" };
     trace.competences[c] = t;
     const essayer = (n: Niveau) => {
@@ -147,8 +163,19 @@ export function deroulerParcours(rep: Reponses, juge: Juge, prenom?: string): Et
       t.niveaux[n] = { items: [q.id], reussis: ok ? 1 : 0, acquis: ok };
       return ok;
     };
-    if (essayer(depart)) { t.niveau = depart; return; }
-    if (!descente || rang(depart) === 0) return;
+    if (essayer(depart)) {
+      // Réussite : on monte tant que la tâche du niveau au-dessus est réussie.
+      t.niveau = depart;
+      let n = depart;
+      while (!seule && rang(n) < 3) {
+        const haut = NIVEAUX[rang(n) + 1];
+        if (!essayer(haut)) break;
+        n = haut;
+        t.niveau = haut;
+      }
+      return;
+    }
+    if (seule || rang(depart) === 0) return;
     const bas = moinsUn(depart);
     if (essayer(bas)) { t.niveau = bas; return; }
     if (rang(bas) > 0) { t.niveau = moinsUn(bas); t.estime = true; }
@@ -161,28 +188,30 @@ export function deroulerParcours(rep: Reponses, juge: Juge, prenom?: string): Et
     if ((rep[101] ?? "").startsWith("🏫🎓")) {
       trace.litteratie.raccourci = true;
       demanderLitteratie([112, 113], "litteratie-lecture");
-      sortieHaute = porteLitteratie(BANQUE, rep, "L2", prenom) && rep[106] == null;
+      sortieHaute = competencesLitteratie(BANQUE, rep, prenom).lecture === 2 && rep[106] == null;
     }
     if (!sortieHaute) {
       demanderLitteratie([103, 104, 105, 106, 107, 108, 109], "litteratie-L0");
-      let ok = porteLitteratie(BANQUE, rep, "L0", prenom);
-      if (ok) { demanderLitteratie([110, 111], "litteratie-L1"); ok = porteLitteratie(BANQUE, rep, "L1", prenom); }
-      if (ok) { demanderLitteratie([112, 113, 114], "litteratie-L2"); ok = porteLitteratie(BANQUE, rep, "L2", prenom); }
-      trace.litteratie.palier = routerLitteratie(BANQUE, rep, prenom);
-      if (!ok) {
+      if (!porteLitteratie(BANQUE, rep, "L0", prenom)) {
+        // Vrai non-lecteur : arrêt, une seule tâche orale A1 (l'oral n'attend pas l'écrit).
+        trace.litteratie.palier = routerLitteratie(BANQUE, rep, prenom);
         trace.litteratie.arret = true;
-        // Arrêt : une seule tâche orale A1 (l'oral n'attend pas l'écrit).
-        production("PO", "A1", false);
+        production("PO", "A1", true);
         trace.termine = true;
         return { items: [], bloc: "fin", trace };
       }
+      demanderLitteratie([110, 111], "litteratie-L1");
+      if (porteLitteratie(BANQUE, rep, "L1", prenom)) demanderLitteratie([112, 113, 114], "litteratie-L2");
+      // L1 ou L2 raté : le palier est noté, le test continue (départ en A1).
+      trace.litteratie.palier = routerLitteratie(BANQUE, rep, prenom);
     }
 
     // ── 2. Réception ──
-    const co = reception("CO", sortieHaute ? "A2" : "A1", 2);
-    const ce = reception("CE", niveauDe(co), 2);
+    const co = reception("CO", sortieHaute ? "A2" : "A1", ITEMS_PAR_NIVEAU);
+    // Palier de littératie noté (L1 ou L2 raté) : la lecture commence en A1, pas au niveau de la CO.
+    const ce = reception("CE", trace.litteratie.palier ? "A1" : niveauDe(co), ITEMS_PAR_NIVEAU);
     const plusBas = rang(niveauDe(co)) <= rang(niveauDe(ce)) ? niveauDe(co) : niveauDe(ce);
-    reception("LANGUE", plusBas, 1);
+    reception("LANGUE", plusBas, ITEMS_PAR_NIVEAU_LANGUE);
 
     // ── 3. Production ──
     production("PO", niveauDe(co));
@@ -198,7 +227,10 @@ export function deroulerParcours(rep: Reponses, juge: Juge, prenom?: string): Et
 
 // ══════════════════════ Durée estimée ══════════════════════
 
-/** Durée de réponse estimée (secondes) : sert à vérifier la cible de 20 minutes. */
+/** Durée cible du test (secondes) : 30 minutes environ (décision du 23/10). */
+export const DUREE_CIBLE = 30 * 60;
+
+/** Durée de réponse estimée (secondes) : sert à vérifier la cible de 30 minutes. */
 export function dureeEstimee(q: Item): number {
   if (q.competence === "LITTERATIE") return 12;
   if (q.type === "oral") return (q.dureeMax ?? 60) + 30; // consigne + enregistrement + relecture

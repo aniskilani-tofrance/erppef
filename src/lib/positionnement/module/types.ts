@@ -125,14 +125,37 @@ export interface ResultatLitteratie {
   itemsPasses: number;
 }
 
+/**
+ * Règle qui donne le niveau global (voir profil.ts) :
+ * - « 3_sur_4 » : plus haut niveau atteint dans au moins 3 des 4 compétences ;
+ * - « litteratie » : arrêt au bloc « lire et écrire » (L0 raté) → palier de lecture ;
+ * - « palier_litteratie_oral » (23/10) : L1 ou L2 raté, test continué, lecture A1 non atteinte →
+ *   palier de lecture + niveau à l'oral ;
+ * - « fragile » : moins de 3 compétences évaluées ; « aucune » : pas de niveau.
+ */
+export type RegleGlobal = "3_sur_4" | "litteratie" | "palier_litteratie_oral" | "fragile" | "aucune";
+
 export interface Rapport {
+  /** Version de la banque d'items (VERSION_BANQUE). */
   version: string;
+  /** Version des règles du parcours (VERSION_PARCOURS, depuis le 23/10 ; absente avant). */
+  versionParcours?: string;
   date: string;
   dureeSecondes: number;
   competences: Record<Competence4, ResultatCompetence>;
   langue: ResultatCompetence;
   litteratie: ResultatLitteratie;
-  global: { niveau: NiveauResultat | ResultatLitteratie["palier"]; regle: string; explication: string };
+  global: {
+    niveau: NiveauResultat | ResultatLitteratie["palier"];
+    regle: RegleGlobal | string;
+    explication: string;
+    /**
+     * Niveau à l'oral, présent quand le global est un palier de lecture (règles « litteratie » et
+     * « palier_litteratie_oral ») : le plus bas de CO et PO mesurés (voir `niveauOral`, profil.ts).
+     * Affichage : `libelleGlobal` → « Alpha avancé · oral B1 ».
+     */
+    niveauOral?: NiveauResultat;
+  };
   profil: { type: ProfilType; libelle: string };
   recommandations: string[];
   a_confirmer: boolean;

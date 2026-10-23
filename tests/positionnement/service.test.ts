@@ -2,7 +2,7 @@
 // migration, reprise après fermeture de la page, clôture (niveau sur la fiche, score), repli
 // sans IA (Mistral 429), verrou contre les envois en double. Sans réseau ni base.
 import { describe, expect, it } from "vitest";
-import { item, type AppelIA } from "@/lib/positionnement/module/index.ts";
+import { dureeParcours, item, VERSION_PARCOURS, type AppelIA } from "@/lib/positionnement/module/index.ts";
 import { lireEtat } from "@/lib/positionnement/etat";
 import { ouvrirTest, repondreTest, terminerTest, type Dependances, type EtapeTest } from "@/lib/positionnement/service";
 import { depotMemoire, ligneTest, type LigneTest } from "./depot-memoire";
@@ -109,6 +109,62 @@ describe("répondre et reprendre", () => {
     const depotFige: Dependances = { ...d, depot: { ...d.depot, testParJeton: async () => lecture } };
     await repondreTest(depotFige, TOKEN, reponses);
     expect(lireEtat(lignes[0].answers)!.tour).toBe(tourApres);
+  });
+});
+
+describe("nouveau parcours (23/10) : durée, progression, reprise", () => {
+  const h = (r: number) => ({ CO: r, CE: r, PO: r, PE: r, LANGUE: r });
+  const PROFILS: [string, Personne][] = [
+    ["A1", { niveaux: h(1), scolarisation: "un_peu" }],
+    ["A2", { niveaux: h(2), scolarisation: "longtemps" }],
+    ["B1", { niveaux: h(3), scolarisation: "longtemps" }],
+    ["B2", { niveaux: h(4), scolarisation: "longtemps" }],
+    ["lit mal, parle B1", { niveaux: { CO: 3, PO: 3, CE: 0, PE: 0, LANGUE: 1 }, scolarisation: "un_peu", lecture: "mots", fautes: [111] }],
+    ["B1, bloc « lire et écrire » complet", { niveaux: h(3), scolarisation: "un_peu" }],
+  ];
+
+  it.each(PROFILS)("%s : 36 minutes au plus (accord d'Anis), progression qui avance sans dépasser 95 avant la fin", async (_nom, p) => {
+    const { d, lignes } = monter();
+    let e = (await ouvrirTest(d, TOKEN)) as EtapeTest;
+    const progressions: number[] = [];
+    while (e.statut === "en_cours") {
+      progressions.push(e.progression);
+      const r = await repondreTest(d, TOKEN, Object.fromEntries(e.items.map((q) => [String(q.id), repondre(p, item(q.id)!)])), { secondes: 30 });
+      if (!r.ok) throw new Error(r.error);
+      e = r.etape;
+    }
+    expect(lignes[0].status).toBe("fait");
+    for (let i = 1; i < progressions.length; i++) expect(progressions[i]).toBeGreaterThanOrEqual(progressions[i - 1]);
+    expect(Math.max(...progressions)).toBeLessThanOrEqual(95);
+    const administres = Object.keys(lireEtat(lignes[0].answers)!.reponses).map(Number);
+    expect(dureeParcours(administres)).toBeLessThanOrEqual(36 * 60);
+    expect(lireEtat(lignes[0].answers)!.rapport?.versionParcours).toBe(VERSION_PARCOURS);
+  });
+
+  it("reprise au milieu du test (page fermée) : même résultat qu'une passation d'une traite", async () => {
+    const p: Personne = { niveaux: { CO: 3, PO: 2, CE: 2, PE: 1, LANGUE: 2 }, scolarisation: "un_peu" };
+    const traite = monter();
+    await passer(traite.d, p);
+
+    const coupe = monter();
+    await passer(coupe.d, p, 4); // 4 blocs, puis la personne ferme la page
+    expect(coupe.lignes[0].status).toBe("en_attente");
+    const reprise = (await ouvrirTest(coupe.d, TOKEN)) as EnCours;
+    expect(reprise.commence).toBe(true);
+    expect(reprise.items.length).toBeGreaterThan(0);
+    await passer(coupe.d, p);
+    expect(coupe.lignes[0].status).toBe("fait");
+    expect(coupe.lignes[0].level).toBe(traite.lignes[0].level);
+    expect(lireEtat(coupe.lignes[0].answers)!.rapport?.global).toEqual(lireEtat(traite.lignes[0].answers)!.rapport?.global);
+  });
+
+  it("lecture pas acquise : la fiche reçoit le palier seul, le rapport garde le niveau à l'oral", async () => {
+    const { d, lignes, apprenants } = monter();
+    await passer(d, { niveaux: { CO: 3, PO: 3, CE: 0, PE: 0, LANGUE: 1 }, scolarisation: "un_peu", lecture: "mots", fautes: [111] });
+    expect(lignes[0].level).toBe("Alpha avancé");
+    expect(apprenants["apprenant-1"].level_assessed).toBe("Alpha avancé");
+    expect(lireEtat(lignes[0].answers)!.rapport?.global).toMatchObject({ regle: "palier_litteratie_oral", niveauOral: "B1" });
+    expect(typeof lignes[0].score).toBe("number");
   });
 });
 

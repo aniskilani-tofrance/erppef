@@ -10,14 +10,13 @@
 // des questions : rien ici ne dépend du nombre d'items par niveau ni de l'ordre du parcours.
 
 import {
-  avancer, dureeParcours, item, terminer as terminerModule, VERSION_BANQUE,
+  avancer, DUREE_CIBLE, dureeParcours, item, itemsPublics, terminer as terminerModule, VERSION_BANQUE,
   type AppelIA, type Reponses,
 } from "./module/index.ts";
 import {
   DUREE_MAX, etatInitial, langueValide, lireEtat, masquerPrenom, secondesBornees,
   type EtatPositionnement,
 } from "./etat";
-import { itemsPourNavigateur } from "./items-publics";
 import { niveauErp, scoreSur100 } from "./niveaux";
 import type { EtapeTest, ResultatTest } from "./etape";
 
@@ -61,8 +60,6 @@ export interface Dependances {
 
 export type { EtapeTest, ResultatTest };
 
-/** Durée annoncée du test (environ 30 minutes) : base de la barre de progression, estimée. */
-const DUREE_CIBLE_S = 30 * 60;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const LIEN_INVALIDE = "Lien de test invalide.";
 
@@ -84,9 +81,11 @@ function etapePublique(t: TestPositionnement, rep: Reponses, etape: { items: num
   return {
     statut: "en_cours",
     prenom: t.prenom,
-    items: itemsPourNavigateur(etape.items.map((id) => item(id)!)),
+    // Version publique du module : sans bonne réponse (« à relier » : deux colonnes séparées).
+    items: itemsPublics(etape.items.map((id) => item(id)!)),
     bloc: etape.bloc,
-    progression: etape.items.length ? Math.min(95, Math.round((dureeParcours(faits) / DUREE_CIBLE_S) * 100)) : 100,
+    // Estimation : temps des questions déjà répondues / durée cible du module (30 minutes).
+    progression: etape.items.length ? Math.min(95, Math.round((dureeParcours(faits) / DUREE_CIBLE) * 100)) : 100,
     commence: Object.keys(rep).length > 0,
   };
 }

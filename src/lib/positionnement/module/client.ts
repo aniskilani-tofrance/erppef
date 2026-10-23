@@ -5,5 +5,7 @@ export * from "./types.ts";
 export * from "./consignes.ts";
 export * from "./tts.ts";
 export * from "./descripteurs.ts";
-export { LIBELLES_PROFIL, MENTION, libelleNiveau } from "./libelles.ts";
+export { LIBELLES_PROFIL, MENTION, libelleGlobal, libelleNiveau } from "./libelles.ts";
 export * from "./prenom.ts";
+// Piste « lecture d'abord » d'un rapport au global « palier de lecture + oral » (23/10).
+export { litteratieAConsolider } from "./recommandations.ts";

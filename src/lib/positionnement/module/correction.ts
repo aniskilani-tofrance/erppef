@@ -92,7 +92,11 @@ export function corrigerLitteratie(q: Item, reponse: string | undefined, prenom?
 }
 
 export interface CompetencesLitteratie {
-  oral: number; l0: number; chiffres: number; l1: number; l2: number;
+  oral: number; l0: number; chiffres: number; l1: number;
+  /** Lecture A1.1 : 112 (un mot) + 113 (une phrase), sur 2. Sert au raccourci. */
+  lecture: number;
+  /** Palier L2 : lecture + 114 (nombre entendu, écrit en chiffres), sur 3 (décision du 23/10). */
+  l2: number;
   scolJamais: boolean; scolFaible: boolean; scolLongtemps: boolean; langueScolFr: boolean;
 }
 
@@ -107,7 +111,8 @@ export function competencesLitteratie(items: Item[], rep: Reponses, prenom?: str
     l0: ok(106) + ok(107) + ok(108),
     chiffres: ok(109),
     l1: ok(110) + ok(111),
-    l2: ok(112) + ok(113),
+    lecture: ok(112) + ok(113),
+    l2: ok(112) + ok(113) + ok(114),
     scolJamais: scol.startsWith("🏫❌"),
     scolFaible: scol.startsWith("🏫❌") || scol.startsWith("🏫 Oui, un peu"),
     scolLongtemps: scol.startsWith("🏫🎓"),
@@ -123,7 +128,7 @@ export function routerLitteratie(items: Item[], rep: Reponses, prenom?: string):
   "Pré-alpha" | "Alpha" | "Alpha avancé" | "Post-alpha (A1.1 en cours)" | "Illettrisme probable" | null {
   const s = competencesLitteratie(items, rep, prenom);
   // Sortie haute rapide (raccourci du 15/10) : lecture A1.1 réussie d'emblée.
-  if (s.l2 === 2 && rep[106] == null) return null;
+  if (s.lecture === 2 && rep[106] == null) return null;
   const oralOk = s.oral >= 2;
   if (s.l0 < 2) {
     if (!oralOk) return "Pré-alpha";
@@ -131,15 +136,21 @@ export function routerLitteratie(items: Item[], rep: Reponses, prenom?: string):
     return "Alpha";
   }
   if (s.l1 === 0) return "Alpha";
-  if (s.l1 === 1 && s.l2 <= 1) return "Alpha avancé";
-  if (s.l1 === 2 && s.l2 <= 1) return "Post-alpha (A1.1 en cours)";
+  if (s.l1 === 1 && s.l2 < 2) return "Alpha avancé";
+  if (s.l1 === 2 && s.l2 < 2) return "Post-alpha (A1.1 en cours)";
   return null;
 }
 
-/** Paliers d'arrêt anticipé (L0 après 109, L1 après 111, L2 après 113). */
+/**
+ * Portes des paliers (décision du 23/10) : à chaque palier, UNE erreur est tolérée.
+ *   - L0 (lettres 106, 107, 108) : 2 bonnes réponses sur 3. Raté = vrai non-lecteur : le test s'arrête.
+ *   - L1 (mots 110, 111) : 1 bonne réponse sur 2. Raté : palier noté, le test continue.
+ *   - L2 (lecture 112, 113 + nombre écrit 114) : 2 bonnes réponses sur 3 (avant le 23/10 : 112 et 113
+ *     justes, 114 non compté). Raté : palier noté, le test continue.
+ */
 export function porteLitteratie(items: Item[], rep: Reponses, palier: "L0" | "L1" | "L2", prenom?: string): boolean {
   const s = competencesLitteratie(items, rep, prenom);
   if (palier === "L0") return s.l0 >= 2;
-  if (palier === "L1") return s.l1 > 0;
-  return s.l2 === 2;
+  if (palier === "L1") return s.l1 >= 1;
+  return s.l2 >= 2;
 }

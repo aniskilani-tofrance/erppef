@@ -1,6 +1,6 @@
 // Test de positionnement côté NAVIGATEUR : uniquement le point d'entrée « client » du module
 // partagé (types, consignes traduites, audio, libellés) — aucune bonne réponse. Les questions
-// arrivent du serveur, déjà épurées (items-publics.ts).
+// arrivent du serveur, déjà épurées (itemPublic du module, publics.ts).
 export * from "./module/client.ts";
 import manifeste from "./audios.json";
 

@@ -5,9 +5,8 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { BANQUE, textesParles, ttsHash, VERSION_BANQUE } from "@/lib/positionnement/module/index.ts";
+import { BANQUE, itemsPublics, textesParles, ttsHash, VERSION_BANQUE } from "@/lib/positionnement/module/index.ts";
 import * as client from "@/lib/positionnement/client";
-import { itemsPourNavigateur } from "@/lib/positionnement/items-publics";
 
 const RACINE = path.resolve(__dirname, "../..");
 const MODULE = path.join(RACINE, "src/lib/positionnement/module");
@@ -76,28 +75,30 @@ describe("rien de secret côté navigateur", () => {
     fichiers.push(path.join(RACINE, "src/lib/positionnement/audio.ts"), path.join(RACINE, "src/lib/positionnement/consigne.ts"));
     for (const f of fichiers) {
       const src = readFileSync(f, "utf8");
-      expect(src, f).not.toMatch(/positionnement\/module(\/index)?["/]|module\/(banque|correction|moteur|parcours)|positionnement\/(service|depot-supabase|ia|niveaux|etat|items-publics)"/);
+      expect(src, f).not.toMatch(/positionnement\/module(\/index)?["/]|module\/(banque|correction|moteur|parcours)|positionnement\/(service|depot-supabase|ia|niveaux|etat)"/);
       expect(src, f).not.toMatch(/placement\/(questions|literacy-questions|grading)/);
     }
   });
 
   it("aucune bonne réponse dans les items envoyés, à aucun niveau d'imbrication", () => {
-    const pub = JSON.stringify(itemsPourNavigateur(BANQUE));
+    const pub = JSON.stringify(itemsPublics(BANQUE));
     for (const cle of ['"correct"', '"acceptedAnswers"', '"correctBlanks"', '"correctSentence"', '"correctOrder"', '"justification"', '"explanation"', '"criteria"', '"answer"', '"blank_answer"', '"correctAnswer"']) {
       expect(pub.includes(cle), cle).toBe(false);
     }
     // À classer : le texte de chaque élément, jamais sa catégorie (la thématique de l'item reste).
-    for (const q of itemsPourNavigateur(BANQUE).filter((x) => x.type === "categorize")) {
+    for (const q of itemsPublics(BANQUE).filter((x) => x.type === "categorize")) {
       for (const it of q.items as object[]) expect(Object.keys(it)).toEqual(["text"]);
     }
   });
 
-  it("à relier : colonne A seule, colonne B à part et triée (règle ERP du 16/10, le module garde les paires)", () => {
-    for (const q of itemsPourNavigateur(BANQUE).filter((x) => x.type === "match_pairs")) {
+  it("à relier : deux colonnes séparées, aucune paire toute faite (gauches dans l'ordre, droites triées)", () => {
+    for (const q of itemsPublics(BANQUE).filter((x) => x.type === "match_pairs")) {
       const source = BANQUE.find((x) => x.id === q.id)!;
-      for (const p of q.pairs as object[]) expect(Object.keys(p)).toEqual(["left"]);
-      const droites = q.rights as string[];
-      expect([...droites].sort()).toEqual((source.pairs as { right: string }[]).map((p) => p.right).sort());
+      const paires = source.pairs as { left: string; right: string }[];
+      expect(q.pairs).toBeUndefined();
+      expect(q.gauches).toEqual(paires.map((p) => p.left));
+      const droites = q.droites as string[];
+      expect([...droites].sort()).toEqual(paires.map((p) => p.right).sort());
       expect(droites).toEqual([...droites].sort((a, b) => a.localeCompare(b, "fr")));
     }
   });

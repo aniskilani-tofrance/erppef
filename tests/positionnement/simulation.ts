@@ -1,5 +1,5 @@
-// Simulation de passations (reprise des tests ToFrance, src/lib/__tests__/positionnement.simulation.ts) :
-// une personne « au niveau X » réussit les items de niveau ≤ X et échoue au-dessus, compétence par compétence.
+// Simulation de passations (reprise des tests ToFrance, src/lib/__tests__/positionnement.simulation.ts,
+// version du 23/10) : une personne « au niveau X » réussit les items de niveau ≤ X et échoue au-dessus.
 import {
   BANQUE, item, avancer, terminer, type AppelIA, type Evaluations, type Item, type Reponses,
 } from "@/lib/positionnement/module/index.ts";
@@ -40,21 +40,31 @@ export interface Personne {
   scolarisation?: "longtemps" | "un_peu" | "jamais";
   /** Lit (bloc littératie réussi). */
   lit?: boolean;
+  /**
+   * Jusqu'où la personne lit dans le bloc littératie (prime sur `lit`) : « lettres » = réussit L0
+   * (106-109) et rate la suite ; « mots » = réussit aussi L1 (110-111) et rate L2 (112-114).
+   */
+  lecture?: "lettres" | "mots";
   /** Comprend l'oral de base (images). */
   oral?: boolean;
+  /** Items ratés exprès (une erreur d'inattention, par exemple). */
+  fautes?: number[];
 }
+
+const LU_JUSQUA = { lettres: 109, mots: 111 };
 
 export function repondre(p: Personne, q: Item): string {
   if (q.competence === "LITTERATIE") {
     if (q.id === 101) return { longtemps: "🏫🎓 Oui, longtemps", un_peu: "🏫 Oui, un peu", jamais: "🏫❌ Non, jamais" }[p.scolarisation ?? "longtemps"];
     if (q.id === 102) return "🌍 Non";
     const oral = [103, 104, 105].includes(q.id);
-    const ok = oral ? p.oral !== false : p.lit !== false;
+    const lit = p.lecture ? q.id <= LU_JUSQUA[p.lecture] : p.lit !== false;
+    const ok = (oral ? p.oral !== false : lit) && !p.fautes?.includes(q.id);
     if (q.dynamicName) return ok ? "AMINA" : "AMIAN";
     return ok ? bonneReponse(q) : mauvaiseReponse(q);
   }
   const n = p.niveaux[q.competence as "CO"] ?? 0;
-  return RANGS[q.level] <= n ? bonneReponse(q) : mauvaiseReponse(q);
+  return RANGS[q.level] <= n && !p.fautes?.includes(q.id) ? bonneReponse(q) : mauvaiseReponse(q);
 }
 
 /** Passation complète : répond à chaque étape proposée par le serveur, puis termine. */

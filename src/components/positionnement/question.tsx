@@ -426,11 +426,14 @@ function VraiFaux({ valeur, onChange }: { valeur: string; onChange: (v: string) 
   );
 }
 
-/** À relier : colonne A dans l'ordre, colonne B reçue à part et triée (aucune paire toute faite). */
+/**
+ * À relier : le module envoie les deux colonnes séparées (`gauches` dans l'ordre de la banque,
+ * `droites` triées) : aucune paire toute faite. Réponse : { gauche: droite }.
+ */
 function Paires({ q, valeur, onChange }: { q: Item; valeur: string; onChange: (v: string) => void }) {
   const a = q as Any;
-  const gauches = (a.pairs as { left: string }[]).map((p) => p.left);
-  const droites = (a.rights as string[] | undefined) ?? [];
+  const gauches = (a.gauches as string[] | undefined) ?? [];
+  const droites = (a.droites as string[] | undefined) ?? [];
   const v = lireJson<Record<string, string>>(valeur, {});
   return (
     <div className="space-y-4">

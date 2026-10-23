@@ -19,3 +19,12 @@ export function libelleNiveau(n: string): string {
   return n;
 }
 
+/**
+ * Niveau global affiché : un niveau CECRL (« B1 »), ou un palier de lecture suivi du niveau à
+ * l'oral quand il est connu (« Alpha avancé · oral B1 »).
+ */
+export function libelleGlobal(g: { niveau: string; niveauOral?: string | null }): string {
+  const n = libelleNiveau(String(g.niveau));
+  return g.niveauOral ? `${n} · oral ${libelleNiveau(g.niveauOral)}` : n;
+}
+

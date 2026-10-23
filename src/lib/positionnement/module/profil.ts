@@ -7,7 +7,15 @@
 //   une seule plus faible ne le tire pas vers le bas : elles apparaissent dans le PROFIL.
 //   - 3 compétences évaluées : le plus bas des trois. Moins de 3 : pas de niveau global CECRL
 //     (on donne le palier de littératie s'il y en a un, sinon le plus bas des niveaux connus, « fragile »).
-//   - Arrêt au bloc littératie : le global est le palier de littératie (Alpha, Post-alpha…).
+//   - Arrêt au bloc littératie (L0 raté) : le global est le palier de littératie (Alpha, Post-alpha…),
+//     avec le niveau à l'oral mesuré par la tâche orale (règle « litteratie »).
+//   - L1 ou L2 raté, test continué, compréhension écrite A1 non atteinte (décision du 23/10) : le
+//     global n'est PAS calculé par la règle 3 sur 4 ; il vaut le palier de lecture, avec le niveau
+//     à l'oral (règle « palier_litteratie_oral », affichage « Alpha avancé · oral B1 »). Si la
+//     compréhension écrite est réussie, ses réponses priment : règle 3 sur 4, palier dans le rapport.
+// NIVEAU À L'ORAL (`niveauOral`) : le plus bas de CO et PO quand les deux sont mesurés (prudence, comme
+//   la règle 3 sur 4 : une compétence plus forte ne tire pas le niveau vers le haut) ; un seul mesuré
+//   → celui-là (arrêt L0 : la tâche orale seule) ; aucun → absent.
 // PROFIL : « oral > écrit » quand la moyenne CO+PO dépasse d'au moins un niveau la moyenne CE+PE
 //   (profil fréquent chez les personnes arrivées récemment ou peu scolarisées), et inversement.
 
@@ -18,11 +26,12 @@ import type {
   Rapport, ResultatCompetence, ResultatLitteratie,
 } from "./types.ts";
 import { COMPETENCES_4, NIVEAUX } from "./types.ts";
-import { recommandations } from "./recommandations.ts";
+import { lectureNonAcquise, recommandations } from "./recommandations.ts";
 import { VERSION_BANQUE } from "./banque.ts";
+import { VERSION_PARCOURS } from "./parcours.ts";
 import { LIBELLES_PROFIL, MENTION } from "./libelles.ts";
 
-export { LIBELLES_PROFIL, MENTION, libelleNiveau } from "./libelles.ts";
+export { LIBELLES_PROFIL, MENTION, libelleGlobal, libelleNiveau } from "./libelles.ts";
 
 const RANG: Record<string, number> = { infra_A1: 0, A1: 1, A2: 2, B1: 3, B2: 4 };
 const DE_RANG: NiveauResultat[] = ["infra_A1", "A1", "A2", "B1", "B2"];
@@ -46,6 +55,13 @@ export function niveauGlobal(niveaux: Record<Competence4, NiveauResultat>): Nive
   if (connus.length < 3) return null;
   connus.sort((a, b) => b - a);
   return DE_RANG[connus[2]];
+}
+
+/** Niveau à l'oral (voir l'en-tête) : le plus bas de CO et PO mesurés ; undefined si aucun. */
+export function niveauOral(co: NiveauResultat, po: NiveauResultat): NiveauResultat | undefined {
+  const mesures = [co, po].filter((n) => n !== "non_evalue");
+  if (!mesures.length) return undefined;
+  return mesures.reduce((a, b) => (RANG[b] < RANG[a] ? b : a));
 }
 
 export function profilType(niveaux: Record<Competence4, NiveauResultat>, litteratieArret = false): ProfilType {
@@ -125,10 +141,21 @@ export function construireRapport(e: EntreeRapport): Rapport {
   if (e.interfaceAbandon) {
     global = { niveau: "non_evalue", regle: "aucune", explication: "Le test n'a pas pu être passé seul : à évaluer avec un accompagnant." };
   } else if (lit.arret) {
+    const oral = niveauOral(niveaux.CO, niveaux.PO);
     global = {
       niveau: litteratie.palier,
       regle: "litteratie",
-      explication: "Le test s'est arrêté au bloc « lire et écrire » : le niveau indiqué est le palier d'entrée dans l'écrit.",
+      explication: "Le test s'est arrêté au bloc « lire et écrire » : le niveau indiqué est le palier d'entrée dans l'écrit"
+        + (oral ? ", avec le niveau à l'oral." : "."),
+      ...(oral ? { niveauOral: oral } : {}),
+    };
+  } else if (lit.palier && lectureNonAcquise(lit.palier, niveaux.CE)) {
+    const oral = niveauOral(niveaux.CO, niveaux.PO);
+    global = {
+      niveau: lit.palier,
+      regle: "palier_litteratie_oral",
+      explication: "La lecture n'est pas encore acquise : le niveau indiqué est le palier de lecture, avec le niveau à l'oral.",
+      ...(oral ? { niveauOral: oral } : {}),
     };
   } else {
     const g = niveauGlobal(niveaux);
@@ -145,6 +172,7 @@ export function construireRapport(e: EntreeRapport): Rapport {
   const type = e.interfaceAbandon ? "non_determine" : profilType(niveaux, lit.arret);
   const rapport: Rapport = {
     version: VERSION_BANQUE,
+    versionParcours: VERSION_PARCOURS,
     date: e.date ?? new Date().toISOString(),
     dureeSecondes: e.dureeSecondes,
     competences,

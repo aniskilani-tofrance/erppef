@@ -1,7 +1,7 @@
 // Recommandations NEUTRES : des TYPES de parcours, jamais un organisme, un centre ou une marque
 // (charte de neutralité). Le choix d'un lieu se fait avec la conseillère.
 
-import type { Rapport } from "./types.ts";
+import type { NiveauResultat, Rapport } from "./types.ts";
 
 const R = {
   alpha: "Alphabétisation : apprendre à lire et à écrire en français, en petit groupe, à son rythme.",
@@ -17,6 +17,27 @@ const R = {
   accompagnant: "Passer le test avec un formateur pour confirmer les résultats de l'oral et de l'écrit.",
 };
 
+/**
+ * Lecture non acquise sans arrêt du test (décision du 23/10) : palier L1 ou L2 raté ET compréhension
+ * écrite A1 non atteinte. Si la personne a réussi la compréhension écrite, ses réponses de lecture
+ * priment sur le bloc « lire et écrire » (le palier reste dans le rapport, pour le formateur).
+ * Sert à choisir la règle du niveau global (profil.ts). Renvoie la piste de lecture, ou null.
+ */
+export function lectureNonAcquise(palier: string, ce: NiveauResultat): "alpha" | "post_alpha" | null {
+  if (!["Alpha", "Alpha avancé", "Post-alpha (A1.1 en cours)"].includes(palier)) return null;
+  if (!["infra_A1", "non_evalue"].includes(ce)) return null;
+  return palier === "Post-alpha (A1.1 en cours)" ? "post_alpha" : "alpha";
+}
+
+/**
+ * Piste « lecture d'abord » d'un rapport dont le global est un palier de lecture sans arrêt du test
+ * (règle « palier_litteratie_oral »). Renvoie la piste à mettre en premier, ou null.
+ */
+export function litteratieAConsolider(r: Rapport): "alpha" | "post_alpha" | null {
+  if (r.global.regle !== "palier_litteratie_oral") return null;
+  return r.litteratie.palier === "Post-alpha (A1.1 en cours)" ? "post_alpha" : "alpha";
+}
+
 export function recommandations(r: Rapport): string[] {
   const out: string[] = [];
   const p = r.litteratie.palier;
@@ -24,6 +45,15 @@ export function recommandations(r: Rapport): string[] {
     if (p === "Illettrisme probable") out.push(R.savoirsBase);
     else if (p === "Post-alpha (A1.1 en cours)") out.push(R.postAlpha);
     else out.push(R.alpha);
+    out.push(R.accompagnant);
+    return out;
+  }
+  const lecture = litteratieAConsolider(r);
+  if (lecture) {
+    // Palier de lecture + oral (23/10) : la lecture d'abord ; un cours débutant si l'oral est faible.
+    out.push(lecture === "post_alpha" ? R.postAlpha : R.alpha);
+    const oral = r.global.niveauOral;
+    if (!oral || ["infra_A1", "A1", "non_evalue"].includes(oral)) out.push(R.fleDebutant);
     out.push(R.accompagnant);
     return out;
   }
