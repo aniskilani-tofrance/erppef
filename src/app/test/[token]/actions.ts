@@ -2,16 +2,20 @@
 
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { gradeTest, literacyGateDecision, publicQuestions } from "@/lib/placement/grading";
+import { literacyGateDecision } from "@/lib/placement/grading";
 import { evaluationQuestions, gradeEvaluationTest } from "@/lib/evaluations/questions";
 
-// Test de positionnement PUBLIC : le token est le secret (pattern émargement).
+// Tests PUBLICS par lien personnel : le token est le secret (pattern émargement).
 // Les questions partent au client SANS les réponses ; la correction est serveur.
+// Depuis le 23/10/2026, le test de POSITIONNEMENT passe par la version ToFrance
+// (positionnement-actions.ts). Ici : les tests de mi-parcours et finale (ancien lecteur).
 
 export type TestInfo = {
   learnerFirstName: string;
   status: "en_attente" | "fait";
   level: string | null;
+  // « positionnement » (nouveau lecteur) ou « mi_parcours » / « finale » (ancien lecteur)
+  purpose: string;
   /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   questions: any[];
 };
@@ -41,7 +45,9 @@ export async function fetchTest(token: string): Promise<TestInfo | null> {
     learnerFirstName: (test.learners as unknown as { first_name: string } | null)?.first_name ?? "",
     status: test.status as TestInfo["status"],
     level: test.level,
-    questions: test.status === "en_attente" ? (isEvaluationTest(test) ? evaluationQuestions(test.target_level) : publicQuestions()) : [],
+    purpose: test.purpose ?? "positionnement",
+    // Le positionnement charge ses questions une à une (parcours adaptatif) : rien ici.
+    questions: test.status === "en_attente" && isEvaluationTest(test) ? evaluationQuestions(test.target_level) : [],
   };
 }
 
@@ -90,17 +96,16 @@ export async function submitTest(raw: z.infer<typeof submitSchema>): Promise<Sub
   const test = await findTest(d.token);
   if (!test) return { ok: false, error: "Lien de test invalide." };
   if (test.status === "fait") return { ok: false, error: "Ce test a déjà été passé." };
+  // Positionnement : nouvelle version (une page restée ouverte avant la mise à jour ne
+  // doit pas ranger un résultat de l'ancienne notation).
+  if (!isEvaluationTest(test)) return { ok: false, error: "Le test a changé : rechargez la page." };
 
   const byId: Record<number, string> = {};
   for (const [k, v] of Object.entries(d.answers)) byId[Number(k)] = v;
 
-  const firstName = (test.learners as unknown as { first_name: string } | null)?.first_name;
-  const evaluation = isEvaluationTest(test);
   const result = d.interfaceAbort
     ? { score: 0, level: "À évaluer avec un accompagnant", answers: [] }
-    : evaluation
-      ? await gradeEvaluationTest(byId, test.target_level)
-      : await gradeTest(byId, { firstName });
+    : await gradeEvaluationTest(byId, test.target_level);
   const supabase = createAdminClient();
 
   const { error } = await supabase
@@ -117,41 +122,32 @@ export async function submitTest(raw: z.infer<typeof submitSchema>): Promise<Sub
     .eq("status", "en_attente");
   if (error) return { ok: false, error: "Enregistrement impossible, réessayez." };
 
-  if (evaluation) {
-    // Mi-parcours / finale : le niveau d'entrée de la fiche ne bouge pas ; le résultat est
-    // rattaché à la grille d'évaluation du jalon (proposition de niveau, si rien de saisi).
-    if (test.group_id && !d.interfaceAbort) {
-      const { data: existing } = await supabase
+  // Mi-parcours / finale : le niveau d'entrée de la fiche ne bouge pas ; le résultat est
+  // rattaché à la grille d'évaluation du jalon (proposition de niveau, si rien de saisi).
+  if (test.group_id && !d.interfaceAbort) {
+    const { data: existing } = await supabase
+      .from("evaluations")
+      .select("id, level_reached")
+      .eq("group_id", test.group_id)
+      .eq("learner_id", test.learner_id)
+      .eq("kind", test.purpose)
+      .maybeSingle();
+    if (existing) {
+      await supabase
         .from("evaluations")
-        .select("id, level_reached")
-        .eq("group_id", test.group_id)
-        .eq("learner_id", test.learner_id)
-        .eq("kind", test.purpose)
-        .maybeSingle();
-      if (existing) {
-        await supabase
-          .from("evaluations")
-          .update({ test_id: test.id, level_reached: existing.level_reached ?? result.level, updated_at: new Date().toISOString() })
-          .eq("id", existing.id);
-      } else {
-        await supabase.from("evaluations").insert({
-          org_id: test.org_id,
-          group_id: test.group_id,
-          learner_id: test.learner_id,
-          kind: test.purpose,
-          test_id: test.id,
-          level_reached: result.level,
-        });
-      }
+        .update({ test_id: test.id, level_reached: existing.level_reached ?? result.level, updated_at: new Date().toISOString() })
+        .eq("id", existing.id);
+    } else {
+      await supabase.from("evaluations").insert({
+        org_id: test.org_id,
+        group_id: test.group_id,
+        learner_id: test.learner_id,
+        kind: test.purpose,
+        test_id: test.id,
+        level_reached: result.level,
+      });
     }
-    return { ok: true, score: result.score, level: result.level };
   }
-
-  // Le niveau attribué remplit la fiche apprenant (modifiable ensuite par l'équipe).
-  await supabase
-    .from("learners")
-    .update({ level_assessed: result.level })
-    .eq("id", test.learner_id);
 
   return { ok: true, score: result.score, level: result.level };
 }

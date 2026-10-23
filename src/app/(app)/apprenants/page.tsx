@@ -12,6 +12,8 @@ import { learnerRef } from "@/lib/refs";
 import { LearnerImportDialog } from "@/components/apprenants/learner-import-dialog";
 import { DriveSyncButton } from "@/components/apprenants/drive-sync-button";
 import { PlacementTestCell, type PlacementInfo } from "@/components/apprenants/placement-test-cell";
+import { PositionnementDetail } from "@/components/apprenants/positionnement-detail";
+import { synthesePositionnement } from "@/lib/positionnement/synthese";
 import { DeleteLearnerButton } from "@/components/apprenants/delete-learner-button";
 import { LearnersTabs } from "@/components/apprenants/learners-tabs";
 import { AdmissionBadge } from "@/components/admission/admission-badge";
@@ -64,9 +66,10 @@ export default async function ApprenantsPage({
       .select("learner_id, status, sessions!inner(starts_at, attendance_closed_at)")
       .not("sessions.attendance_closed_at", "is", null),
     // Tolérant tant que la migration placement_tests n'est pas appliquée (data null)
+    // rapport / abandon : détail du test version ToFrance (null pour les anciens tests)
     supabase
       .from("placement_tests")
-      .select("learner_id, status, token, level, score, created_at")
+      .select("learner_id, status, token, level, score, created_at, completed_at, rapport:answers->rapport, abandon:answers->interface_abandon")
       .order("created_at", { ascending: false }),
     // Prénom de la personne connectée : signe le message d'invitation au test
     supabase.from("profiles").select("full_name").eq("id", userId).single(),
@@ -167,6 +170,19 @@ export default async function ApprenantsPage({
         token: t.token,
         level: t.level,
         score: t.score === null ? null : Number(t.score),
+        synthese: t.status === "fait" ? synthesePositionnement({ rapport: t.rapport, interface_abandon: t.abandon }) : null,
+        completedAt: t.completed_at ?? null,
+      });
+    }
+  }
+  // Dernier test de positionnement version ToFrance terminé : détail affiché sur la fiche.
+  const positionnementByLearner = new Map<string, NonNullable<PlacementInfo>>();
+  for (const t of placementRows ?? []) {
+    if (t.status !== "fait" || positionnementByLearner.has(t.learner_id)) continue;
+    const synthese = synthesePositionnement({ rapport: t.rapport, interface_abandon: t.abandon });
+    if (synthese) {
+      positionnementByLearner.set(t.learner_id, {
+        status: "fait", token: t.token, level: t.level, score: t.score === null ? null : Number(t.score), synthese, completedAt: t.completed_at ?? null,
       });
     }
   }
@@ -367,6 +383,10 @@ export default async function ApprenantsPage({
                     <LearnerFormDialog
                       sourceDetails={sourceDetails}
                       badges={<LearnerDots learner={l} groups={groupDotsByLearner.get(l.id) ?? []} withLabels />}
+                      positionnement={(() => {
+                        const p = positionnementByLearner.get(l.id);
+                        return p?.synthese ? <PositionnementDetail synthese={p.synthese} level={p.level} completedAt={p.completedAt} /> : null;
+                      })()}
                       initial={{
                         id: l.id,
                         photoUrl: l.photo_url ?? null,

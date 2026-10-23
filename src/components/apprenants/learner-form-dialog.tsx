@@ -156,6 +156,7 @@ export function LearnerFormDialog({
   triggerLabel = "Nouvel apprenant",
   sourceDetails = [],
   badges,
+  positionnement = null,
 }: {
   initial?: LearnerFormValues;
   // Groupes proposés pour l'inscription directe à la création (flux « créer et inscrire »).
@@ -166,6 +167,8 @@ export function LearnerFormDialog({
   sourceDetails?: string[];
   // Pastilles provenance + groupe (rendues par la page), affichées sous le titre de la fiche.
   badges?: ReactNode;
+  // Détail du dernier test de positionnement (niveau par compétence, profil), rendu par la page.
+  positionnement?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [values, setValues] = useState<LearnerFormValues>(initial ?? EMPTY);
@@ -390,6 +393,7 @@ export function LearnerFormDialog({
               <span className="font-normal text-muted-foreground">(contact → réunion → entretien oral → inscription)</span>
             </p>
             <div className="space-y-4">
+              {positionnement && <div className="rounded-md bg-muted/40 p-3">{positionnement}</div>}
               <div className="grid gap-4 sm:grid-cols-2">
                 <SelectField label="Nous a contactés par" value={values.contactSource} options={SOURCE_OPTIONS} onChange={(v) => set("contactSource", v)} />
                 <div className="space-y-2">

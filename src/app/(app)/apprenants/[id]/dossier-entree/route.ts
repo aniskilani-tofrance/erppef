@@ -1,6 +1,7 @@
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { buildEntryFilePdf, entryFileName } from "@/lib/reports/entry-file-pdf";
+import { resumeCompetences, synthesePositionnement } from "@/lib/positionnement/synthese";
 
 // Dossier d'entrée PDF d'un apprenant (Qualiopi ind. 4).
 export async function GET(
@@ -21,7 +22,7 @@ export async function GET(
       .single(),
     supabase
       .from("placement_tests")
-      .select("status, level, score, completed_at, created_at")
+      .select("status, level, score, completed_at, created_at, rapport:answers->rapport, abandon:answers->interface_abandon")
       .eq("learner_id", id)
       .eq("status", "fait")
       .order("created_at", { ascending: false })
@@ -70,6 +71,10 @@ export async function GET(
           doneAt: test.completed_at ?? test.created_at,
           level: test.level,
           score: test.score === null ? null : Number(test.score),
+          detail: (() => {
+            const s = synthesePositionnement({ rapport: test.rapport, interface_abandon: test.abandon });
+            return s && !s.abandon ? { global: s.global, competences: resumeCompetences(s), profil: s.profil } : null;
+          })(),
         }
       : null,
   });
