@@ -9,7 +9,7 @@ export const LANGUES_INTERFACE = ["fr", "en", "ar"] as const;
 type LangueInterface = (typeof LANGUES_INTERFACE)[number];
 
 export type CleTexte =
-  | "bonjour" | "intro" | "son" | "seul" | "micro" | "accord" | "commencer" | "reprendre"
+  | "bonjour" | "intro" | "son" | "seul" | "micro" | "infos" | "commencer" | "reprendre"
   | "suivant" | "passer" | "titre" | "instant" | "oralEcrit" | "reponse"
   | "microIntro" | "microParler" | "microArreter" | "microEncore" | "microEcoute" | "microTexte"
   | "microEcrire" | "microRefuse" | "microRien"
@@ -30,11 +30,12 @@ export const TEXTES: Record<CleTexte, Record<LangueInterface, string>> = {
     en: "For some questions, you speak to the phone.",
     ar: "في بعض الأسئلة، تتحدث إلى الهاتف.",
   },
-  // Même case que l'ancien test (texte inchangé), traduite pour qui ne lit pas encore le français.
-  accord: {
-    fr: "J'accepte que mes réponses soient enregistrées par ParlerEmploi Formation pour établir mon niveau de français.",
-    en: "I agree that ParlerEmploi Formation saves my answers to find my French level.",
-    ar: "أوافق على أن تحفظ ParlerEmploi Formation إجاباتي لتحديد مستواي في اللغة الفرنسية.",
+  // Plus de case à cocher (décision d'Anis, 23/10 : le consentement est donné à l'inscription) :
+  // un lien vers l'information RGPD, qui dit aussi ce que devient la voix au micro.
+  infos: {
+    fr: "Vos informations et le micro : en savoir plus",
+    en: "Your information and the microphone: learn more",
+    ar: "معلوماتك والميكروفون: لمعرفة المزيد",
   },
   commencer: { fr: "Commencer le test", en: "Start the test", ar: "ابدأ الاختبار" },
   reprendre: { fr: "Continuer le test", en: "Continue the test", ar: "تابع الاختبار" },

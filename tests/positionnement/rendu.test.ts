@@ -86,19 +86,25 @@ describe("questions", () => {
 describe("accueil", () => {
   const etape = (commence: boolean) => ({ statut: "en_cours" as const, prenom: "Amina", items: [itemPourNavigateur(item(101)!)], bloc: "litteratie-declaratif", progression: 0, commence });
 
-  it("test neuf : environ 30 minutes, micro annoncé, case de l'ancien test, « Commencer le test »", () => {
+  it("test neuf : environ 30 minutes, micro annoncé, pas de case à cocher, lien d'information, « Commencer le test »", () => {
     const out = html(createElement(PassationPositionnement, { token: "t", etapeInitiale: etape(false), langue: "fr" }));
     expect(out).toContain("Bonjour Amina 👋");
     expect(out).toContain("environ 30 minutes");
     expect(out).toContain("vous parlez au téléphone");
-    expect(out).toContain('type="checkbox"');
+    // Décision du 23/10 : le consentement est donné à l'inscription, plus de case ici.
+    expect(out).not.toContain('type="checkbox"');
+    expect(out).toContain('href="/inscription/confidentialite"');
+    expect(out).toContain("Vos informations et le micro");
     expect(out).toContain("Commencer le test");
+    // Attribut disabled (la classe « disabled:opacity-… » du bouton ne compte pas).
+    expect(out).not.toMatch(/<button[^>]*\sdisabled=""/);
   });
 
-  it("reprise : « Continuer le test », sans redemander la case", () => {
+  it("reprise : « Continuer le test » ; lien d'information dans la langue du formulaire", () => {
     const out = html(createElement(PassationPositionnement, { token: "t", etapeInitiale: etape(true), langue: "en" }));
     expect(out).toContain("Continuer le test");
     expect(out).toContain("Continue the test");
     expect(out).not.toContain('type="checkbox"');
+    expect(out).toContain('href="/inscription/confidentialite?lang=en"');
   });
 });

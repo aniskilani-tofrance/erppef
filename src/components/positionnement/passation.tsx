@@ -4,8 +4,9 @@
 // Téléphone d'abord, public A1. Le serveur décide des questions (parcours adaptatif) et corrige ;
 // ici on affiche une question à la fois et on envoie les réponses à la fin de chaque petit bloc.
 // Chaque bloc envoyé est rangé : la personne peut fermer la page et reprendre plus tard.
-// Aucun consentement en plus de celui de l'ancien test (même case, même texte). Réponses orales
-// au micro du téléphone (reconnaissance vocale du navigateur), repli à l'écrit.
+// Pas de case à cocher : le consentement est donné à l'inscription ; un lien mène à l'information
+// RGPD (réponses gardées, voix changée en texte par le téléphone). Réponses orales au micro du
+// téléphone (reconnaissance vocale du navigateur), repli à l'écrit.
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { repondrePositionnement, terminerPositionnement } from "@/app/test/[token]/positionnement-actions";
@@ -30,8 +31,6 @@ export function PassationPositionnement({ token, etapeInitiale, langue }: { toke
   const [bloc, setBloc] = useState<Record<number, string>>({});
   const [erreur, setErreur] = useState<string | null>(null);
   const [reste, setReste] = useState<number | null>(null);
-  // Case de l'ancien test, cochée d'office quand la personne reprend un test commencé.
-  const [accord, setAccord] = useState(etapeInitiale.commence);
   const debutBloc = useRef<number>(0);
   const relancer = useRef<(() => void) | null>(null);
 
@@ -165,22 +164,19 @@ export function PassationPositionnement({ token, etapeInitiale, langue }: { toke
               </li>
             ))}
           </ul>
-          {!etape.commence && (
-            <label className="flex cursor-pointer items-start gap-4 rounded-2xl border-2 border-zinc-200 bg-white p-4 text-base transition-colors has-[:checked]:border-[#00504E] has-[:checked]:bg-[#E8F6F0] has-[:focus-visible]:ring-4 has-[:focus-visible]:ring-[#32CF8A]/40">
-              <input type="checkbox" checked={accord} onChange={(e) => setAccord(e.target.checked)} className="peer sr-only" />
-              <span
-                aria-hidden
-                className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg border-2 border-zinc-300 bg-white text-base font-bold text-transparent peer-checked:border-[#00504E] peer-checked:bg-[#00504E] peer-checked:text-white"
-              >
-                ✓
-              </span>
-              <Bilingue cle="accord" langue={langue} className="gap-1" />
-            </label>
-          )}
-          <button type="button" className={primaryClass} disabled={!accord} onClick={commencer}>
+          <button type="button" className={primaryClass} onClick={commencer}>
             <Bilingue cle={etape.commence ? "reprendre" : "commencer"} langue={langue} className="items-center" />
             <ArrowRight className="h-6 w-6 shrink-0" aria-hidden />
           </button>
+          <a
+            href={`/inscription/confidentialite${langue === "en" || langue === "ar" ? `?lang=${langue}` : ""}`}
+            target="_blank"
+            rel="noopener"
+            className="block text-base font-medium text-[#00504E] underline underline-offset-4"
+          >
+            <span aria-hidden>ℹ️ </span>
+            <Bilingue cle="infos" langue={langue} className="inline-flex gap-1" />
+          </a>
         </div>
       </main>
     );
