@@ -648,6 +648,7 @@ export const HELP_SECTIONS: HelpSection[] = [
         title: "Rappeler un nouveau lead sous 24 h",
         steps: [
           "Menu « Leads resto » (ou votre Dashboard si vous êtes commercial) : la carte « À rappeler sous 24 h » liste les leads jamais contactés, le plus ancien en premier ; en rouge au-delà de 24 h.",
+          "Alerte SMS : à chaque formulaire reçu, le setter reçoit dans la minute un SMS au « Téléphone du setter » des Réglages — « Nouveau lead POEI : restaurant (ville), contact téléphone. Rappelle sous 15 min. » avec le lien de la fiche. Il ne part qu'une fois par lead, jamais au restaurateur, et pas pour une fiche saisie à la main, une fiche « Terrain » ni un doublon. Le journal de la fiche note « Alerte SMS envoyée au setter ».",
           "Regardez d'abord l'horloge du service en haut : vert = c'est l'heure d'appeler (9h30-11h30, 14h30-17h30) ; orange ou gris = emails, SMS et préparation des fiches, pas d'appel.",
           "Ouvrez la fiche, bouton « Appeler » : le téléphone compose le numéro et la fenêtre « Noter » s'ouvre pour enregistrer le résultat dès que vous raccrochez.",
           "Appelez toujours depuis le numéro renseigné dans Réglages → « Téléphone du setter » : c'est celui que les messages annoncent au restaurateur (« enregistrez ce numéro »). Un appel depuis un autre numéro arrive en inconnu et n'est pas décroché.",
@@ -717,7 +718,7 @@ export const HELP_SECTIONS: HelpSection[] = [
         steps: [
           "« Importer » : collez les lignes du Google Sheet de suivi (avec la ligne d'en-têtes) ou une liste simple « Entreprise ; Contact ; Téléphone ; Email ; Ville CP ; Postes ; Nb ; Notes » — un aperçu s'affiche avant l'import.",
           "« Exporter CSV » : les 24 colonnes du Sheet de suivi dans le même ordre, puis les colonnes propres à l'ERP (référence, offre, heures, décideur, HACCP, RDV). Ouvrable dans Excel ou Google Sheets.",
-          "« Réglages » (direction) : la date du prochain groupe restauration (l'argument d'urgence des scripts), le lien Calendly de qualification, le lien Calendly de direction, les deux créneaux types, le nom de la personne qui tient le RDV, le téléphone du setter (affiché au restaurateur quand un appel est annoncé, saisi comme « 07 59 11 90 97 »), et l'interrupteur des envois automatiques. Ils alimentent tous les modèles.",
+          "« Réglages » (direction) : la date du prochain groupe restauration (l'argument d'urgence des scripts), le lien Calendly de qualification, le lien Calendly de direction, les deux créneaux types, le nom de la personne qui tient le RDV, le téléphone du setter (affiché au restaurateur quand un appel est annoncé, saisi comme « 07 59 11 90 97 », et qui reçoit l'alerte SMS de chaque nouveau lead), l'alerte SMS au setter (activée par défaut, indépendante des envois au prospect) et l'interrupteur des envois automatiques. Ils alimentent tous les modèles.",
           "Paramètres → Utilisateurs → « Inviter » avec le rôle « Commercial (setter) » : la personne ne voit que les leads, la Formation et l'Aide.",
         ],
       },

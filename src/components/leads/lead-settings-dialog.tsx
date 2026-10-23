@@ -47,6 +47,7 @@ export function LeadSettingsDialog({ settings, owners }: { settings: LeadSetting
         defaultOwnerUserId: f.defaultOwnerUserId,
         setterPhone: f.setterPhone,
         automations: f.automations === "on" ? "on" : "off",
+        setterSmsAlert: f.setterSmsAlert === "off" ? "off" : "on",
         inboundTokenAction: tokenAction,
       });
       if (!r.ok) {
@@ -132,7 +133,20 @@ export function LeadSettingsDialog({ settings, owners }: { settings: LeadSetting
             <div className="space-y-1.5">
               <Label htmlFor="ls-setter-phone">Téléphone du setter (annoncé au restaurateur : « enregistrez ce numéro »)</Label>
               <Input id="ls-setter-phone" value={f.setterPhone} onChange={(e) => set("setterPhone", e.target.value)} placeholder="07 59 11 90 97" inputMode="tel" />
-              <p className="text-xs text-muted-foreground">Le numéro depuis lequel le setter appelle. Il n'apparaît que dans les messages qui annoncent un appel (invitation, confirmation de créneau, rappels, appel manqué). Vide : les messages n'en parlent pas.</p>
+              <p className="text-xs text-muted-foreground">Le numéro depuis lequel le setter appelle. Il n&apos;apparaît que dans les messages qui annoncent un appel (invitation, confirmation de créneau, rappels, appel manqué). Vide : les messages n&apos;en parlent pas. C&apos;est aussi le numéro qui reçoit l&apos;alerte SMS ci-dessous.</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="ls-setter-alert">Alerte SMS au setter à chaque nouveau lead</Label>
+              <Select value={f.setterSmsAlert === "off" ? "off" : "on"} onValueChange={(v) => set("setterSmsAlert", v)}>
+                <SelectTrigger id="ls-setter-alert"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="on">Activée — un SMS au téléphone du setter dans la minute</SelectItem>
+                  <SelectItem value="off">Désactivée — seulement l&apos;e-mail de notification</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                « Nouveau lead POEI : restaurant (ville), contact téléphone. Rappelle sous 15 min. » avec le lien de la fiche. Message interne : il ne part jamais au restaurateur et ne dépend pas des envois automatiques au prospect. Rien pour les fiches saisies à la main ni pour un doublon.
+              </p>
             </div>
             <div className="space-y-1.5">
               <Label>Adresse du webhook (à coller dans Brevo, Make ou Calendly)</Label>

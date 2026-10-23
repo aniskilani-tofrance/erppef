@@ -35,6 +35,10 @@ export type LeadSettings = {
   // déclenchés à la main par un conseiller partent. À n'activer qu'après avoir
   // purgé les leads de test et vérifié les expéditeurs Brevo et Twilio.
   automations: string; // "on" | "off"
+  // Alerte SMS au setter (au téléphone ci-dessus) à chaque nouveau lead reçu par le
+  // webhook. Message interne : il ne part jamais au prospect et ne dépend donc pas de
+  // l'interrupteur des envois automatiques. Activée par défaut.
+  setterSmsAlert: string; // "on" | "off"
 };
 
 export const DEFAULT_LEAD_SETTINGS: LeadSettings = {
@@ -49,6 +53,7 @@ export const DEFAULT_LEAD_SETTINGS: LeadSettings = {
   defaultOwnerUserId: "",
   setterPhone: "",
   automations: "off",
+  setterSmsAlert: "on",
 };
 
 /** « 0759119097 », « +33 7 59 11 90 97 » ou « 33759119097 » → « 07 59 11 90 97 » ; sinon tel que saisi. */
@@ -84,6 +89,8 @@ export function resolveLeadSettings(settings: unknown): LeadSettings {
   }
   // Tout ce qui n'est pas explicitement « on » laisse les automatismes à l'arrêt.
   out.automations = out.automations === "on" ? "on" : "off";
+  // L'alerte au setter, elle, ne s'éteint que sur un « off » explicite.
+  out.setterSmsAlert = out.setterSmsAlert === "off" ? "off" : "on";
   return out;
 }
 

@@ -26,6 +26,18 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-10-23-alerte-sms-setter",
+    date: "2026-10-23",
+    title: "Un SMS au setter à chaque nouveau lead restaurateur",
+    summary: "Dès qu'un restaurateur laisse ses coordonnées, le setter reçoit un SMS sur son téléphone avec le restaurant, le contact, le numéro et le lien de la fiche : rappeler sous 15 minutes.",
+    items: [
+      { text: "Le SMS arrive dans la minute : « Nouveau lead POEI : restaurant (ville), contact téléphone. Rappelle sous 15 min. » suivi du lien de la fiche. L'e-mail de notification continue de partir.", roles: LEADS },
+      { text: "Il part au « Téléphone du setter » des Réglages, jamais au restaurateur, une seule fois par lead. Rien pour une fiche saisie à la main, une fiche « Terrain » ni un doublon. Le journal de la fiche note « Alerte SMS envoyée au setter ».", roles: LEADS },
+      { text: "Leads → Réglages → « Alerte SMS au setter à chaque nouveau lead » : activée par défaut, indépendante de l'interrupteur des envois automatiques au prospect.", roles: TEAM },
+    ],
+    training: [{ moduleId: "m1-leads", lessonId: "journee", label: "Ma journée de setter" }],
+  },
+  {
     id: "2026-10-22-poei-sans-plonge",
     date: "2026-10-22",
     title: "POEI restauration : la salle et la cuisine, pas la plonge",

@@ -587,6 +587,8 @@ const settingsSchema = z.object({
   setterPhone: z.string().trim().max(30).regex(/^[+0-9 .-]*$/).default(""),
   // Emails Brevo et SMS Twilio partant sans intervention humaine : à l'arrêt par défaut.
   automations: z.enum(["off", "on"]).default("off"),
+  // Alerte SMS au setter à chaque nouveau lead (message interne) : active par défaut.
+  setterSmsAlert: z.enum(["off", "on"]).default("on"),
   // Jeton du webhook : "keep" = inchangé, "regenerate" = nouveau, "disable" = fermé
   inboundTokenAction: z.enum(["keep", "regenerate", "disable"]).default("keep"),
 });
