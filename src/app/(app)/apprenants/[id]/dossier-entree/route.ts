@@ -73,7 +73,7 @@ export async function GET(
           score: test.score === null ? null : Number(test.score),
           detail: (() => {
             const s = synthesePositionnement({ rapport: test.rapport, interface_abandon: test.abandon });
-            return s && !s.abandon ? { competences: resumeCompetences(s), profil: s.profil } : null;
+            return s && !s.abandon ? { global: s.global, competences: resumeCompetences(s), profil: s.profil } : null;
           })(),
         }
       : null,

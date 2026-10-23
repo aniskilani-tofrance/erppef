@@ -17,6 +17,11 @@
 // | non_evalue (abandon, aucune réponse)      | À évaluer avec un accompagnant   |
 // Règle « fragile » (moins de 3 compétences) : le module donne déjà le plus bas des niveaux
 // connus ; il suit la même table.
+// Règles « litteratie » (arrêt au palier L0) et « palier_litteratie_oral » (L1 ou L2 raté, test
+// continué, lecture A1 non atteinte) : le global est un PALIER de lecture, avec le niveau à
+// l'oral à côté (global.niveauOral). La fiche reçoit le palier SEUL (valeur de LEVELS, décision
+// d'Anis du 23/10) ; le libellé complet « Alpha avancé · oral B1 » (libelleGlobal du module) est
+// dans le détail, la synthèse et le dossier d'entrée PDF (synthese.ts).
 
 import type { LEVELS } from "@/lib/referentiels";
 

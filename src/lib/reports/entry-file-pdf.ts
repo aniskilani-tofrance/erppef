@@ -34,7 +34,7 @@ export type EntryFileData = {
   entryInterviewOn: string | null;
   levelAssessed: string | null;
   // detail : test de positionnement version ToFrance (niveau par compétence, profil), sinon absent
-  lastTest: { doneAt: string; level: string | null; score: number | null; detail?: { competences: string; profil: string } | null } | null;
+  lastTest: { doneAt: string; level: string | null; score: number | null; detail?: { global: string; competences: string; profil: string } | null } | null;
   // Parcours d'admission : réunion d'information suivie, entretien oral d'entrée
   infoMeetingOn?: string | null;
   oralTest?: { on: string; level: string | null; evaluator: string | null; comment: string | null } | null;
@@ -165,7 +165,8 @@ export async function buildEntryFilePdf(data: EntryFileData): Promise<Uint8Array
     if (data.lastTest.level) {
       const detail = data.lastTest.detail;
       const score = data.lastTest.score != null ? (detail ? ` (réussite ${data.lastTest.score} %)` : ` (score ${data.lastTest.score})`) : "";
-      field("Résultat du test", `${data.lastTest.level}${score}`);
+      // Version ToFrance : libellé commun du module (« Alpha avancé · oral B1 »).
+      field("Résultat du test", `${detail?.global ?? data.lastTest.level}${score}`);
       if (detail) {
         field("Par compétence", detail.competences);
         field("Profil", detail.profil);

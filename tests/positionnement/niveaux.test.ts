@@ -46,6 +46,46 @@ describe("correspondance des niveaux", () => {
   });
 });
 
+describe("lecture pas acquise : palier de lecture + niveau à l'oral (décision d'Anis du 23/10)", () => {
+  it("règle palier_litteratie_oral : la fiche reçoit le palier SEUL, le détail montre « Alpha avancé · oral B1 »", async () => {
+    // Parle B1, lit mal (L1 à 1/2, L2 raté) : le test continue, la lecture A1 n'est pas atteinte.
+    const { bilan } = await passer({ niveaux: { CO: 3, PO: 3, CE: 0, PE: 0, LANGUE: 1 }, scolarisation: "un_peu", lecture: "mots", fautes: [111] });
+    const g = bilan.rapport.global;
+    expect(g).toMatchObject({ niveau: "Alpha avancé", regle: "palier_litteratie_oral", niveauOral: "B1" });
+    expect(niveauErp(g)).toBe("Alpha avancé");
+    expect(LEVELS).toContain(niveauErp(g));
+    const s = synthesePositionnement({ rapport: bilan.rapport })!;
+    expect(s.global).toBe("Alpha avancé · oral B1");
+    expect(s.oral).toBe("B1");
+    expect(s.regle).toBe("palier_litteratie_oral");
+  });
+
+  it("chaque palier possible de cette règle donne une valeur de LEVELS", () => {
+    for (const palier of ["Alpha", "Alpha avancé", "Post-alpha (A1.1 en cours)"]) {
+      expect(niveauErp({ niveau: palier })).toBe(palier);
+      expect(LEVELS).toContain(niveauErp({ niveau: palier }));
+    }
+  });
+
+  it("règle litteratie (arrêt au palier L0) : palier sur la fiche, « palier · oral » dans le détail s'il existe", async () => {
+    const { bilan } = await passer({ niveaux: { PO: 1 }, scolarisation: "jamais", lit: false, oral: true });
+    const g = bilan.rapport.global;
+    expect(g).toMatchObject({ niveau: "Alpha", regle: "litteratie", niveauOral: "A1" });
+    expect(niveauErp(g)).toBe("Alpha");
+    expect(synthesePositionnement({ rapport: bilan.rapport })!.global).toBe("Alpha · oral A1");
+    // Sans tâche orale mesurée (rapport ancien ou partiel) : le palier seul.
+    expect(synthesePositionnement({ rapport: { ...bilan.rapport, global: { niveau: "Alpha", regle: "litteratie", explication: "" } } })!.global).toBe("Alpha");
+  });
+
+  it("règle 3 sur 4 : inchangée (niveau CECRL, pas de niveau à l'oral à côté)", async () => {
+    const { bilan } = await passer({ niveaux: { CO: 2, CE: 2, PO: 2, PE: 2, LANGUE: 2 }, scolarisation: "longtemps" });
+    expect(bilan.rapport.global).toMatchObject({ niveau: "A2", regle: "3_sur_4" });
+    expect(bilan.rapport.global.niveauOral).toBeUndefined();
+    expect(niveauErp(bilan.rapport.global)).toBe("A2");
+    expect(synthesePositionnement({ rapport: bilan.rapport })!.global).toBe("A2");
+  });
+});
+
 describe("score sur 100", () => {
   it("part pondérée des questions réussies parmi celles posées", () => {
     expect(scoreSur100([{ correct: true, poids: 1 }, { correct: false, poids: 1 }, { correct: true, poids: 0.5 }], { regle: "3_sur_4" })).toBe(60);

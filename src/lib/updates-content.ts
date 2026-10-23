@@ -36,6 +36,7 @@ export const APP_UPDATES: AppUpdate[] = [
       { text: "Consignes dans la langue de la personne (10 langues). Le lien donné à la fin du formulaire d'inscription s'ouvre dans la langue du formulaire (anglais, arabe). Les questions restent en français.", roles: TEAM },
       { text: "À la fin, la personne voit seulement « Merci ! Votre test est enregistré. Nous vous contactons dès que possible. » et le numéro de l'association. Elle ne voit aucun niveau.", roles: TEAM },
       { text: "Pour vous : le « Niveau évalué » se remplit tout seul. Le bouton « Détail » (colonne Test de positionnement) donne le niveau par compétence, le palier « lire et écrire » et le profil (par ex. oral plus avancé que l'écrit). Même détail sur la fiche (Parcours d'admission) et dans le dossier d'entrée PDF. Toujours à confirmer par un formateur.", roles: TEAM },
+      { text: "Lecture pas encore acquise : le test continue quand même (il ne s'arrête que si la personne ne reconnaît pas les lettres). Le niveau devient l'étape de lecture avec le niveau à l'oral, par exemple « Alpha avancé · oral B1 » dans le détail ; la fiche reçoit « Alpha avancé ».", roles: TEAM },
       { text: "La personne peut s'arrêter et reprendre plus tard avec le même lien. Les tests de mi-parcours et de fin de formation ne changent pas.", roles: TEAM },
     ],
     training: [{ moduleId: "c3-equipe", lessonId: "positionnement", label: "Le test de positionnement" }],

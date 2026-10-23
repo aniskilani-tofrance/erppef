@@ -2,6 +2,12 @@
 // niveau par compétence, profil, palier « lire et écrire », mention « à confirmer ». Construit
 // à partir de placement_tests.answers.rapport ; null pour les anciens tests (autre format) :
 // leur affichage ne change pas. Pur : client et serveur.
+//
+// Niveau global affiché = libellé commun du module (`libelleGlobal`) : un niveau CECRL (« B1 »),
+// ou un palier de lecture suivi du niveau à l'oral (« Alpha avancé · oral B1 », règles
+// « litteratie » et « palier_litteratie_oral »). La fiche (level_assessed) garde le palier seul.
+
+import { libelleGlobal } from "./module/client.ts";
 
 export type CodeCompetence = "CO" | "CE" | "PO" | "PE" | "LANGUE";
 
@@ -15,9 +21,12 @@ export interface LigneCompetence {
 }
 
 export interface SynthesePositionnement {
+  /** Libellé commun du module : « B1 », « Alpha avancé · oral B1 »… */
   global: string;
+  /** Niveau à l'oral quand le global est un palier de lecture (sinon null). */
+  oral: string | null;
   explication: string;
-  /** Règle du module : 3_sur_4, litteratie, fragile, aucune. */
+  /** Règle du module : 3_sur_4, litteratie, palier_litteratie_oral, fragile, aucune. */
   regle: string;
   competences: LigneCompetence[];
   litteratie: { palier: string; scolarisation: string | null };
@@ -88,7 +97,8 @@ export function synthesePositionnement(answersOuRapport: unknown): SynthesePosit
   const palier = str(lit?.palier) ?? "non_evalue";
   const profil = obj(r.profil);
   return {
-    global: libelleNiveauTest(global.niveau),
+    global: libelleGlobal({ niveau: str(global.niveau) ?? "non_evalue", niveauOral: str(global.niveauOral) }),
+    oral: str(global.niveauOral) ? libelleNiveauTest(global.niveauOral) : null,
     explication: str(global.explication) ?? "",
     regle: str(global.regle) ?? "",
     competences: [

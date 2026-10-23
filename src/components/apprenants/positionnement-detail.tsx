@@ -22,9 +22,11 @@ export function PositionnementDetail({
   return (
     <div className={cn("space-y-2 text-sm", className)}>
       <p className="font-medium">
-        Test de positionnement{date ? ` du ${date}` : ""} : <span className="font-semibold">{level ?? s.global}</span>
-        {level && level !== s.global && <span className="font-normal text-muted-foreground"> (résultat du test : {s.global})</span>}
+        Test de positionnement{date ? ` du ${date}` : ""} : <span className="font-semibold">{s.global}</span>
       </p>
+      {level && level !== s.global && (
+        <p className="text-xs text-muted-foreground">Rangé sur la fiche (Niveau évalué) : {level}</p>
+      )}
       {s.abandon ? (
         <p className="text-muted-foreground">
           Arrêté à l&apos;entraînement (toucher l&apos;écran) : ce n&apos;est pas un niveau de français. Refaire le test avec un accompagnant.
