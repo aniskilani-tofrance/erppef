@@ -172,10 +172,10 @@ export function PassationPositionnement({ token, etapeInitiale, langue }: { toke
             href={`/inscription/confidentialite${langue === "en" || langue === "ar" ? `?lang=${langue}` : ""}`}
             target="_blank"
             rel="noopener"
-            className="block text-base font-medium text-[#00504E] underline underline-offset-4"
+            className="flex items-start gap-2 text-base font-medium text-[#00504E]"
           >
-            <span aria-hidden>ℹ️ </span>
-            <Bilingue cle="infos" langue={langue} className="inline-flex gap-1" />
+            <span aria-hidden>ℹ️</span>
+            <Bilingue cle="infos" langue={langue} className="gap-1 underline underline-offset-4" />
           </a>
         </div>
       </main>
