@@ -21,7 +21,7 @@ import { LeadQuickActions } from "@/components/leads/lead-quick-actions";
 import { LeadRdvDialog, RdvOutcomeButtons } from "@/components/leads/lead-rdv-dialog";
 import { ClaimLeadButton, DeleteLeadButton, LeadStatusSelect, NextActionEditor, OwnerSelect } from "@/components/leads/lead-status-controls";
 import { LeadJournal, type LigneJournal } from "@/components/leads/lead-journal";
-import { decrireMessage } from "@/lib/leads/journal";
+import { decrireMessage, noteLisible } from "@/lib/leads/journal";
 import type { LeadForBrevo } from "@/lib/leads/brevo";
 import { ConvertLeadButton } from "@/components/poei-candidates/candidate-controls";
 import { candidateDisplayName, candidateRef, candidateStatusLabel } from "@/lib/poei-candidates/status";
@@ -94,7 +94,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
       genre: e.kind,
       genreLabel: eventKindLabel(e.kind),
       resultatLabel: e.outcome ? eventOutcomeLabel(e.outcome) : null,
-      note: e.note,
+      note: noteLisible(e.note),
       message: message ? { ...message, quand: message.quand ? fmtDateTime(message.quand) : null } : null,
     };
   });

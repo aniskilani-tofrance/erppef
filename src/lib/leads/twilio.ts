@@ -58,12 +58,34 @@ export async function dispatchTwilioLeadSms(
   if (prior?.[0]) return { sent: false, reason: "already_sent" };
 
   const body = renderSms(params.code, leadVars(params.lead, params.settings, "Un conseiller ParlerEmploi"));
+  const delivery = await sendTwilioSms({ to: phoneDigits, body, label: params.code });
+  if (!delivery.ok) return { sent: false, reason: "delivery_failed" };
+
+  const { error } = await supabase.from("employer_lead_events").insert({
+    org_id: params.orgId,
+    lead_id: params.lead.id,
+    kind: "sms",
+    outcome: "envoye",
+    by_user_id: params.byUserId ?? null,
+    note: `${marker} SMS envoyé via Twilio${delivery.sid ? ` (${delivery.sid})` : ""}.`,
+  });
+  if (error) console.error(`[twilio] ${params.code} journalisation impossible`, error.message);
+  return { sent: true, sid: delivery.sid };
+}
+
+/**
+ * Envoi brut d'un SMS par le service de messagerie Twilio. Ne lève jamais : une panne
+ * réseau ou un refus de Twilio est écrit dans les journaux et renvoyé comme un échec.
+ * `to` : numéro international sans « + » (33612345678).
+ */
+export async function sendTwilioSms(params: { to: string; body: string; label: string }): Promise<{ ok: true; sid: string | null } | { ok: false }> {
+  if (!twilioConfigured()) return { ok: false };
   const accountSid = process.env.TWILIO_ACCOUNT_SID!.trim();
   const authToken = process.env.TWILIO_AUTH_TOKEN!.trim();
   const serviceSid = process.env.TWILIO_MESSAGING_SERVICE_SID!.trim();
   const form = new URLSearchParams({
-    To: `+${phoneDigits}`,
-    Body: body,
+    To: `+${params.to}`,
+    Body: params.body,
     MessagingServiceSid: serviceSid,
   });
 
@@ -79,22 +101,12 @@ export async function dispatchTwilioLeadSms(
     });
     const result = (await response.json().catch(() => ({}))) as { sid?: string; message?: string; code?: number };
     if (!response.ok) {
-      console.error(`[twilio] ${params.code} delivery failed: ${response.status}`, result);
-      return { sent: false, reason: "delivery_failed" };
+      console.error(`[twilio] ${params.label} delivery failed: ${response.status}`, result);
+      return { ok: false };
     }
-
-    const { error } = await supabase.from("employer_lead_events").insert({
-      org_id: params.orgId,
-      lead_id: params.lead.id,
-      kind: "sms",
-      outcome: "envoye",
-      by_user_id: params.byUserId ?? null,
-      note: `${marker} SMS envoyé via Twilio${result.sid ? ` (${result.sid})` : ""}.`,
-    });
-    if (error) console.error(`[twilio] ${params.code} journalisation impossible`, error.message);
-    return { sent: true, sid: result.sid ?? null };
+    return { ok: true, sid: result.sid ?? null };
   } catch (error) {
-    console.error(`[twilio] ${params.code} delivery failed`, error);
-    return { sent: false, reason: "delivery_failed" };
+    console.error(`[twilio] ${params.label} delivery failed`, error);
+    return { ok: false };
   }
 }

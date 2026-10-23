@@ -36,6 +36,17 @@ const TITRE_SMS = new Map(SMS_TEMPLATES.map((t) => [t.code as string, t.label.re
 const MARQUE = /^\[(brevo|twilio):([a-z0-9_]+)\]\s*(.*)$/i;
 const PROGRAMME_LE = /programmé via Brevo pour (\S+)/i;
 
+// Marques des envois internes (alerte SMS au setter, signaux à l'API Conversions de
+// Meta) : elles servent à ne pas envoyer deux fois, mais aucun message n'est parti au
+// restaurateur. On les retire de la note affichée ; la phrase qui suit se lit telle quelle.
+const MARQUE_INTERNE = /^\[(twilio:alerte_setter|meta:[a-z]+)\]\s*/i;
+
+/** Note telle qu'affichée dans le journal, sans marque technique d'envoi interne. */
+export function noteLisible(note: string | null | undefined): string | null {
+  if (!note) return note ?? null;
+  return note.replace(MARQUE_INTERNE, "");
+}
+
 /** Rien à décoder : la note est une note d'équipe ordinaire. */
 export function estMessageAutomatique(note: string | null | undefined): boolean {
   return MARQUE.test((note ?? "").trim());
