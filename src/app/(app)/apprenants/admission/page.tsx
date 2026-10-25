@@ -23,6 +23,7 @@ import { loadTemplates } from "@/lib/admission/load-templates";
 import { messageForSituation, stageInfo, type Templates } from "@/lib/admission/templates";
 import { MessageTemplatesDialog } from "@/components/admission/message-templates-dialog";
 import { SignupLinkButton } from "@/components/admission/signup-link-button";
+import { BulkTestButton } from "@/components/admission/bulk-test-button";
 import { formatPhone } from "@/lib/admission/phone";
 import { ADMISSION_STATUSES, admissionBadgeClass, reasonFits, reasonLabel } from "@/lib/admission/status";
 import { learnerRef } from "@/lib/refs";
@@ -467,6 +468,7 @@ export default async function AdmissionPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Apprenants</h1>
         <div className="flex flex-wrap gap-2">
           <SignupLinkButton template={templates.lien_inscription} />
+          <BulkTestButton template={templates.test_positionnement} senderFirstName={senderFirstName} />
           <MessageTemplatesDialog templates={templates} />
           <MeetingFormDialog rooms={rooms ?? []} />
         </div>
