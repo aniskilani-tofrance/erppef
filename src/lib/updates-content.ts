@@ -26,6 +26,18 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-10-26-envoi-groupe-test",
+    date: "2026-10-26",
+    title: "Envoyer le test de niveau à toutes les nouvelles demandes, à la suite",
+    summary: "Onglet Admission → « Envoyer le test » : tous les « À contacter » et « Contacté » sans test fait reçoivent leur lien, un toucher par personne sur WhatsApp.",
+    items: [
+      { text: "Le bouton prépare la liste (ordre d'arrivée) et crée les liens de test manquants. Sont exclus : test déjà fait, niveau déjà connu. Sans numéro WhatsApp : affiché, non cochable.", roles: TEAM },
+      { text: "« Envoyer au suivant » ouvre WhatsApp avec le message « Invitation au test de niveau » et le lien personnel : appuyez sur Envoyer, revenez, passez au suivant. Chaque envoi est noté au journal et la personne passe « Contacté ».", roles: TEAM },
+      { text: "Une personne déjà invitée depuis moins de 14 jours est signalée et décochée, pour ne pas envoyer deux fois.", roles: TEAM },
+    ],
+    training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "L'admission : WhatsApp, réunion d'information, entretien oral" }],
+  },
+  {
     id: "2026-10-23-meta-api-conversions",
     date: "2026-10-23",
     title: "Meta apprend quels restaurateurs se qualifient vraiment",
