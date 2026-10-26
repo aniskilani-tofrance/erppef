@@ -38,6 +38,8 @@ export const APP_UPDATES: AppUpdate[] = [
       { text: "Heure de convocation propre à chaque personne : une horloge sur sa ligne, ou « Espacer les heures » (première heure + minutes par personne) pour échelonner le test oral. Elle part dans le message WhatsApp, l'email et le rappel de la veille.", roles: TEAM },
       { text: "Plusieurs dates ou heures sur le même lien : « Ajouter un créneau » sur la page de la réunion. La page du lien demande « Quel jour ? » et inscrit la personne au créneau choisi (chacun a ses places maximum).", roles: TEAM },
       { text: "Test de niveau dans la convocation et le rappel : pour chaque convoqué qui ne l'a pas fait, SON lien personnel est ajouté, créé pour sa fiche (le résultat remplit le niveau de la bonne personne). « Préparer les tests de niveau » pour les convoqués d'avant ; l'écran de confirmation du lien le propose aussi.", roles: TEAM },
+      { text: "Sur chaque ligne de la réunion, à côté de « test de niveau : à faire », un bouton « Copier le lien » copie le lien personnel de la personne : pratique pour celles convoquées avant aujourd'hui, dont le message ne contenait pas encore le lien.", roles: TEAM },
+      { text: "Inscription par le lien : sur l'écran de fin, le test de niveau arrive en premier, juste sous « Vous êtes inscrit(e) ! », avant la date, le lieu et l'agenda.", roles: TEAM },
       { text: "Le modèle de message « Lien d'inscription à une réunion d'information » se retouche dans « Messages » ; les modèles « Convocation » et « Rappel » gagnent la ligne {test_avant}. Migration 0056 à appliquer avant d'ouvrir un lien.", roles: TEAM },
     ],
     training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "L'admission : WhatsApp, réunion d'information, entretien oral" }],

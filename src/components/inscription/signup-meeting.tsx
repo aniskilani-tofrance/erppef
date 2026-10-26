@@ -92,6 +92,14 @@ export function SignupMeetingDone({
   });
   return (
     <SignupDone locale={locale} title={outcome === "already" ? m.alreadyTitle : m.doneTitle} text={null} embed={embed}>
+      {/* Le test de niveau d'abord, juste sous « Vous êtes inscrit(e) ! » : c'est la seule chose à faire
+          tout de suite ; la carte de la réunion et l'agenda suivent. */}
+      {testUrl && (
+        <>
+          <p className="text-xl font-semibold">📝 {m.testBefore}</p>
+          <SignupTestCard locale={locale} testUrl={testUrl} embed={embed} />
+        </>
+      )}
       <div className="w-full">
         <MeetingCard meeting={{ ...meeting, state: "closed" }} locale={locale} />
       </div>
@@ -104,12 +112,6 @@ export function SignupMeetingDone({
       >
         🗓️ {t.addToCalendar}
       </a>
-      {testUrl && (
-        <>
-          <p className="text-xl font-semibold">📝 {m.testBefore}</p>
-          <SignupTestCard locale={locale} testUrl={testUrl} embed={embed} />
-        </>
-      )}
       <p className="text-lg text-zinc-700">{m.cannotCome}</p>
     </SignupDone>
   );

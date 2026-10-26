@@ -149,6 +149,19 @@ describe("test de niveau dans la convocation : le bon lien pour la bonne personn
   });
 });
 
+describe("bouton « Copier le lien » d'une ligne", () => {
+  it("annonce le lien personnel de la personne de la ligne", async () => {
+    const { createElement } = await import("react");
+    const { renderToStaticMarkup } = await import("react-dom/server");
+    const { CopyTestLinkButton } = await import("@/components/admission/copy-test-link-button");
+    const out = renderToStaticMarkup(createElement(CopyTestLinkButton, { url: `${PUBLIC_ERP_URL}/test/abc`, learnerName: "Fatima Diallo" }))
+      .replace(/&#x27;/g, "'");
+    expect(out).toContain("Copier le lien");
+    expect(out).toContain('title="Copier le lien personnel du test de niveau de Fatima Diallo"');
+    expect(out).toContain('type="button"');
+  });
+});
+
 describe("messages avec le test de niveau", () => {
   const URL = `${PUBLIC_ERP_URL}/test/3f2a9c1d-0000-4000-8000-000000000001`;
   const base = { learnerFirstName: "Fatima", senderFirstName: "Marie", meeting: MEETING };

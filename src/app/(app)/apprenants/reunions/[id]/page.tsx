@@ -19,6 +19,7 @@ import { MeetingSignupCard } from "@/components/admission/meeting-signup-card";
 import { ConvocationTimeButton } from "@/components/admission/convocation-time-button";
 import { MeetingSlotsCard } from "@/components/admission/meeting-slots-card";
 import { PrepareTestsButton } from "@/components/admission/prepare-tests-button";
+import { CopyTestLinkButton } from "@/components/admission/copy-test-link-button";
 import { loadConvocationTests } from "@/lib/placement/convocation-test-server";
 import { SpaceConvocationsDialog } from "@/components/admission/space-convocations-dialog";
 import { whenForInvitation } from "@/lib/admission/convocation";
@@ -288,11 +289,14 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
                   <TableCell>
                     <Badge variant="outline" className={invitationBadgeClass(inv.status)}>{invitationLabel(inv.status)}</Badge>
                     {inv.signed_up_online && <span className="block text-xs text-muted-foreground">inscrit(e) par le lien</span>}
-                    <span
-                      className={testState === "à préparer" ? "block text-xs text-amber-700" : "block text-xs text-muted-foreground"}
-                      title={testState === "fait" ? "Niveau déjà connu ou test fait : aucun lien dans la convocation" : testState === "à faire" ? "Son lien personnel est dans la convocation et le rappel" : "« Préparer les tests de niveau » crée son lien"}
-                    >
-                      📝 test de niveau : {testState}
+                    <span className="flex flex-wrap items-center gap-x-1">
+                      <span
+                        className={testState === "à préparer" ? "text-xs text-amber-700" : "text-xs text-muted-foreground"}
+                        title={testState === "fait" ? "Niveau déjà connu ou test fait : aucun lien dans la convocation" : testState === "à faire" ? "Son lien personnel est dans la convocation et le rappel" : "« Préparer les tests de niveau » crée son lien"}
+                      >
+                        📝 test de niveau : {testState}
+                      </span>
+                      {testUrl && <CopyTestLinkButton url={testUrl} learnerName={name} />}
                     </span>
                     <ConvocationTimeButton
                       invitationId={inv.id}
