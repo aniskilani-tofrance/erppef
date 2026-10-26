@@ -20,6 +20,7 @@ import { dispatchGroupAttendance, parseEmails } from "@/lib/emargement/dispatch"
 import { createAdminClient } from "@/lib/supabase/admin";
 import { documentStoragePath } from "@/lib/dossier/documents";
 import { ENTRY_CONTACT_MARK, buildEntryAttestationsPdf, entryAttestationFileName, loadEntryAttestations } from "@/lib/attestations/entree";
+import { withoutTrainerChangeTraces } from "@/lib/groupes/changer-formateur";
 
 // Envoie le planning (message + PDF apprenants en pièce jointe) à chaque inscrit qui a un email.
 export async function emailGroupPlanning(groupId: string): Promise<{ ok: true; message: string } | { ok: false; error: string }> {
@@ -430,7 +431,8 @@ export async function duplicateGroup(raw: z.infer<typeof duplicateSchema>): Prom
         capacity: group.capacity,
         status: "en_attente",
         weekly_pattern: pattern,
-        notes: group.notes,
+        // L'historique des changements de formateur reste sur l'ancien groupe
+        notes: withoutTrainerChangeTraces(group.notes),
         skip_school_holidays: group.skip_school_holidays,
       },
       sessions: recurrence.sessions.map((s) => ({
