@@ -26,6 +26,23 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-10-26-reunion-inscription-lien",
+    date: "2026-10-26",
+    title: "Réunion d'information : inscription par un lien, avec un nombre maximum de places",
+    summary: "Créez une réunion avec ses places maximum : un lien à envoyer sur WhatsApp, et chaque personne s'inscrit seule en 2 minutes, jusqu'à la dernière place.",
+    items: [
+      { text: "« Nouvelle réunion » (ou « Modifier ») : « Places maximum (apprenants) », « Inscription en ligne par lien » et « Test oral individuel inclus ». Le nombre maximum de places est obligatoire pour ouvrir le lien.", roles: TEAM },
+      { text: "Page de la réunion → carte « Inscription par lien » : état (Ouverte, Complète, Fermée), places prises, lien à copier et message WhatsApp prêt avec la date, le lieu et le test oral. « Fermer l'inscription » arrête le lien ; il se ferme aussi tout seul au début de la réunion.", roles: TEAM },
+      { text: "La personne remplit le formulaire court (français facile, anglais ou arabe) et est inscrite d'office : « Confirmée » dans les convoqués (« inscrit(e) par le lien »), statut « Convoqué », une ligne au journal. Elle voit la date, le lieu, le test oral annoncé et peut l'ajouter à son agenda.", roles: TEAM },
+      { text: "Réunion complète : la page dit « Complet » mais garde le numéro, et la fiche arrive dans « À contacter » avec la note « à prévenir pour la prochaine réunion ». La dernière place ne peut jamais être prise par deux personnes à la fois.", roles: TEAM },
+      { text: "Heure de convocation propre à chaque personne : une horloge sur sa ligne, ou « Espacer les heures » (première heure + minutes par personne) pour échelonner le test oral. Elle part dans le message WhatsApp, l'email et le rappel de la veille.", roles: TEAM },
+      { text: "Plusieurs dates ou heures sur le même lien : « Ajouter un créneau » sur la page de la réunion. La page du lien demande « Quel jour ? » et inscrit la personne au créneau choisi (chacun a ses places maximum).", roles: TEAM },
+      { text: "Test de niveau dans la convocation et le rappel : pour chaque convoqué qui ne l'a pas fait, SON lien personnel est ajouté, créé pour sa fiche (le résultat remplit le niveau de la bonne personne). « Préparer les tests de niveau » pour les convoqués d'avant ; l'écran de confirmation du lien le propose aussi.", roles: TEAM },
+      { text: "Le modèle de message « Lien d'inscription à une réunion d'information » se retouche dans « Messages » ; les modèles « Convocation » et « Rappel » gagnent la ligne {test_avant}. Migration 0056 à appliquer avant d'ouvrir un lien.", roles: TEAM },
+    ],
+    training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "L'admission : WhatsApp, réunion d'information, entretien oral" }],
+  },
+  {
     id: "2026-10-26-changer-formateur",
     date: "2026-10-26",
     title: "Changer le formateur d'un groupe en un clic",

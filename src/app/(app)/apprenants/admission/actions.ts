@@ -6,7 +6,10 @@ import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { translatePgError } from "@/lib/pg-errors";
-import { localToUtc } from "@/lib/dates";
+import { randomBytes } from "node:crypto";
+import { ensureConvocationTests } from "@/lib/placement/convocation-test-server";
+import { localToUtc, utcToLocalDate, utcToLocalTime } from "@/lib/dates";
+import { clockLabel, parseClock, spreadTimes, orderForSpacing, whenForInvitation, MAX_STEP_MINUTES, MIN_STEP_MINUTES } from "@/lib/admission/convocation";
 import { sendMail } from "@/lib/mailer";
 import {
   ADMISSION_REASON_CODES,
@@ -132,15 +135,22 @@ const meetingSchema = z.object({
   location: z.string().nullable(),
   capacity: z.number().int().positive().nullable(),
   notes: z.string().nullable(),
+  // Inscription en ligne par lien (page publique /inscription/reunion/<jeton>) : le nombre
+  // maximum d'apprenants est alors obligatoire (aussi imposé en base par la migration 0056).
+  signupOpen: z.boolean().default(false),
+  oralTestIncluded: z.boolean().default(true),
 });
 
 export type MeetingResult = { ok: true; id: string } | { ok: false; error: string };
+
+const SIGNUP_NEEDS_CAPACITY = "Indiquez le nombre maximum de places pour ouvrir l'inscription par lien.";
 
 export async function upsertInfoMeeting(raw: z.infer<typeof meetingSchema>): Promise<MeetingResult> {
   const parsed = meetingSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "Données invalides (titre, date et heure obligatoires)" };
   const d = parsed.data;
   if (d.endTime && d.endTime <= d.startTime) return { ok: false, error: "L'heure de fin doit être après l'heure de début." };
+  if (d.signupOpen && !d.capacity) return { ok: false, error: SIGNUP_NEEDS_CAPACITY };
 
   const { orgId } = await requireRole(["admin", "coordinator"]);
   const supabase = await createClient();
@@ -154,6 +164,8 @@ export async function upsertInfoMeeting(raw: z.infer<typeof meetingSchema>): Pro
     location: d.location?.trim() || null,
     capacity: d.capacity,
     notes: d.notes?.trim() || null,
+    signup_open: d.signupOpen,
+    oral_test_included: d.oralTestIncluded,
   };
 
   if (d.id) {
@@ -166,6 +178,38 @@ export async function upsertInfoMeeting(raw: z.infer<typeof meetingSchema>): Pro
   if (error) return { ok: false, error: translatePgError(error) };
   revalidateAdmission(data.id);
   return { ok: true, id: data.id };
+}
+
+// Ouvre ou ferme l'inscription par lien d'une réunion (bouton de la carte « Inscription par lien »).
+// Ouvrir exige un nombre maximum de places et une réunion qui n'a pas encore commencé.
+export async function setMeetingSignupOpen(raw: { meetingId: string; open: boolean }): Promise<ActionResult> {
+  const parsed = z.object({ meetingId: uuid, open: z.boolean() }).safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Réunion invalide" };
+  const d = parsed.data;
+
+  const { orgId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+
+  if (d.open) {
+    const { data: meeting } = await supabase
+      .from("info_meetings")
+      .select("capacity, starts_at")
+      .eq("id", d.meetingId)
+      .eq("org_id", orgId)
+      .single();
+    if (!meeting) return { ok: false, error: "Réunion introuvable" };
+    if (!meeting.capacity) return { ok: false, error: SIGNUP_NEEDS_CAPACITY.replace("pour ouvrir", "(« Modifier ») pour ouvrir") };
+    if (new Date(meeting.starts_at).getTime() <= new Date().getTime()) return { ok: false, error: "La réunion a déjà commencé." };
+  }
+
+  const { error } = await supabase
+    .from("info_meetings")
+    .update({ signup_open: d.open })
+    .eq("id", d.meetingId)
+    .eq("org_id", orgId);
+  if (error) return { ok: false, error: translatePgError(error) };
+  revalidateAdmission(d.meetingId);
+  return { ok: true };
 }
 
 export async function deleteInfoMeeting(id: string): Promise<ActionResult> {
@@ -208,9 +252,30 @@ export async function inviteToMeeting(raw: { meetingId: string; learnerIds: stri
     if (error) return { ok: false, error: translatePgError(error) };
   }
   await advanceStatus(supabase, d.learnerIds, "convoque");
+  // Test de niveau : chaque convoqué qui ne l'a pas fait reçoit SON lien (un test par apprenant,
+  // rattaché à sa fiche), ajouté ensuite à la convocation et au rappel.
+  await ensureConvocationTests(supabase, orgId, d.learnerIds);
 
   revalidateAdmission(d.meetingId);
   return { ok: true, invited: fresh.length };
+}
+
+// Prépare les tests de niveau des personnes déjà convoquées qui n'ont pas encore leur lien (convoquées
+// avant cette fonction, ou lien non créé). Les messages de la page de la réunion les contiennent ensuite.
+export async function prepareMeetingTests(meetingId: string): Promise<ActionResult & { created?: number }> {
+  if (!uuid.safeParse(meetingId).success) return { ok: false, error: "Réunion invalide" };
+  const { orgId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+
+  const { data } = await supabase
+    .from("info_meeting_invitations")
+    .select("learner_id")
+    .eq("meeting_id", meetingId)
+    .eq("org_id", orgId)
+    .not("status", "in", "(excusee,absente)");
+  const { created } = await ensureConvocationTests(supabase, orgId, (data ?? []).map((r) => r.learner_id as string));
+  revalidateAdmission(meetingId);
+  return { ok: true, created };
 }
 
 type InvitationRow = {
@@ -218,6 +283,7 @@ type InvitationRow = {
   meeting_id: string;
   learner_id: string;
   status: string;
+  convocation_at: string | null; // heure propre à la personne (null = celle de la réunion)
   learners: { first_name: string; last_name: string; email: string | null } | null;
   info_meetings: { starts_at: string; ends_at: string | null; location: string | null; rooms: { name: string; address: string | null; access_notes: string | null } | null } | null;
 };
@@ -229,7 +295,7 @@ async function loadInvitation(
 ): Promise<InvitationRow | null> {
   const { data } = await supabase
     .from("info_meeting_invitations")
-    .select("id, meeting_id, learner_id, status, learners(first_name, last_name, email), info_meetings(starts_at, ends_at, location, rooms:room_id(name, address, access_notes))")
+    .select("id, meeting_id, learner_id, status, convocation_at, learners(first_name, last_name, email), info_meetings(starts_at, ends_at, location, rooms:room_id(name, address, access_notes))")
     .eq("id", invitationId)
     .eq("org_id", orgId)
     .single();
@@ -262,7 +328,7 @@ export async function markInvitationSent(raw: {
     learner_id: inv.learner_id,
     channel: d.channel,
     outcome: "convoque",
-    note: `Convocation à la réunion d'information${inv.info_meetings ? ` du ${new Date(inv.info_meetings.starts_at).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" })}` : ""}`,
+    note: `Convocation à la réunion d'information${inv.info_meetings ? ` du ${new Date(inv.info_meetings.starts_at).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" })}` : ""}${inv.convocation_at ? ` (convoqué(e) à ${clockLabel(inv.convocation_at)})` : ""}`,
     created_by: userId,
   });
   await advanceStatus(supabase, [inv.learner_id], "convoque");
@@ -281,13 +347,18 @@ async function sendOneInvitationEmail(
   userId: string,
   inv: InvitationRow,
   senderFirstName: string | null,
+  testUrl: string | null, // lien du test de niveau de CETTE personne (null : déjà fait)
 ): Promise<ActionResult> {
   if (!inv.learners?.email) return { ok: false, error: "Cet apprenant n'a pas d'adresse email." };
   if (!inv.info_meetings) return { ok: false, error: "Réunion introuvable" };
   const text = buildMeetingInvitationMessage({
     learnerFirstName: inv.learners.first_name,
     senderFirstName,
-    meeting: { startsAt: inv.info_meetings.starts_at, endsAt: inv.info_meetings.ends_at, place: meetingPlace(inv.info_meetings), access: inv.info_meetings.rooms?.access_notes ?? null },
+    testUrl,
+    meeting: whenForInvitation(
+      { startsAt: inv.info_meetings.starts_at, endsAt: inv.info_meetings.ends_at, place: meetingPlace(inv.info_meetings), access: inv.info_meetings.rooms?.access_notes ?? null },
+      inv.convocation_at,
+    ),
     templates: await loadTemplates(supabase, orgId),
   });
   const sent = await sendMail({
@@ -323,7 +394,9 @@ export async function sendInvitationEmail(invitationId: string): Promise<ActionR
   const supabase = await createClient();
   const inv = await loadInvitation(supabase, orgId, invitationId);
   if (!inv) return { ok: false, error: "Convocation introuvable" };
-  const result = await sendOneInvitationEmail(supabase, orgId, userId, inv, await senderName(supabase, userId));
+  // Le test de niveau part avec la convocation : lien créé pour CETTE personne si elle n'en a pas.
+  const { urls } = await ensureConvocationTests(supabase, orgId, [inv.learner_id]);
+  const result = await sendOneInvitationEmail(supabase, orgId, userId, inv, await senderName(supabase, userId), urls.get(inv.learner_id) ?? null);
   if (result.ok) revalidateAdmission(inv.meeting_id);
   return result;
 }
@@ -339,12 +412,13 @@ export async function sendPendingInvitationEmails(meetingId: string): Promise<Bu
 
   const { data } = await supabase
     .from("info_meeting_invitations")
-    .select("id, meeting_id, learner_id, status, learners(first_name, last_name, email), info_meetings(starts_at, ends_at, location, rooms:room_id(name, address, access_notes))")
+    .select("id, meeting_id, learner_id, status, convocation_at, learners(first_name, last_name, email), info_meetings(starts_at, ends_at, location, rooms:room_id(name, address, access_notes))")
     .eq("meeting_id", meetingId)
     .eq("org_id", orgId)
     .eq("status", "a_envoyer");
   const rows = (data as unknown as InvitationRow[] | null) ?? [];
   const sender = await senderName(supabase, userId);
+  const { urls } = await ensureConvocationTests(supabase, orgId, rows.filter((r) => r.learners?.email).map((r) => r.learner_id));
 
   let sent = 0;
   let skipped = 0;
@@ -353,7 +427,7 @@ export async function sendPendingInvitationEmails(meetingId: string): Promise<Bu
       skipped += 1;
       continue;
     }
-    const r = await sendOneInvitationEmail(supabase, orgId, userId, inv, sender);
+    const r = await sendOneInvitationEmail(supabase, orgId, userId, inv, sender, urls.get(inv.learner_id) ?? null);
     if (r.ok) sent += 1;
     else skipped += 1;
   }
@@ -387,6 +461,160 @@ export async function removeInvitation(invitationId: string): Promise<ActionResu
   if (error) return { ok: false, error: translatePgError(error) };
   revalidateAdmission(inv.meeting_id);
   return { ok: true };
+}
+
+// ── Heure de convocation de chaque personne ──────────────────────────────────
+// La réunion a une date et une heure ; chaque convoqué peut avoir SA heure d'arrivée, le même
+// jour (test oral échelonné). null = l'heure de la réunion. Elle part dans les messages
+// WhatsApp, les emails et le rappel de la veille. Une autre DATE = un autre créneau (addMeetingSlot).
+export async function setInvitationConvocation(raw: { invitationId: string; time: string | null }): Promise<ActionResult> {
+  const parsed = z.object({ invitationId: uuid, time: time.nullable() }).safeParse(raw);
+  if (!parsed.success || (parsed.data.time !== null && parseClock(parsed.data.time) === null)) return { ok: false, error: "Heure invalide" };
+  const d = parsed.data;
+
+  const { orgId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+  const inv = await loadInvitation(supabase, orgId, d.invitationId);
+  if (!inv?.info_meetings) return { ok: false, error: "Convocation introuvable" };
+
+  // Même heure que la réunion : on revient à « l'heure de la réunion » (et sa fin s'affiche à nouveau).
+  const sameAsMeeting = d.time !== null && d.time === utcToLocalTime(inv.info_meetings.starts_at);
+  const convocationAt = d.time && !sameAsMeeting ? localToUtc(utcToLocalDate(inv.info_meetings.starts_at), d.time) : null;
+  const { error } = await supabase.from("info_meeting_invitations").update({ convocation_at: convocationAt }).eq("id", inv.id);
+  if (error) return { ok: false, error: translatePgError(error) };
+  revalidateAdmission(inv.meeting_id);
+  return { ok: true };
+}
+
+export type SpaceResult =
+  | { ok: true; count: number; first: string; last: string; afterEnd: boolean }
+  | { ok: false; error: string };
+
+// Espace les heures de convocation des personnes à venir (à envoyer, envoyée, confirmée) :
+// la première à `firstTime`, puis une toutes les `minutes` minutes, par ordre d'inscription
+// ou par nom. Les présents, absents et excusés sont laissés de côté.
+export async function spaceMeetingConvocations(raw: {
+  meetingId: string;
+  firstTime: string;
+  minutes: number;
+  order: "inscription" | "alphabetique";
+}): Promise<SpaceResult> {
+  const parsed = z
+    .object({ meetingId: uuid, firstTime: time, minutes: z.number().int().min(MIN_STEP_MINUTES).max(MAX_STEP_MINUTES), order: z.enum(["inscription", "alphabetique"]) })
+    .safeParse(raw);
+  if (!parsed.success) return { ok: false, error: `Heure de départ et durée (${MIN_STEP_MINUTES} à ${MAX_STEP_MINUTES} minutes) obligatoires.` };
+  const d = parsed.data;
+
+  const { orgId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+
+  const { data: meeting } = await supabase.from("info_meetings").select("id, starts_at, ends_at").eq("id", d.meetingId).eq("org_id", orgId).single();
+  if (!meeting) return { ok: false, error: "Réunion introuvable" };
+  const { data: rows } = await supabase
+    .from("info_meeting_invitations")
+    .select("id, created_at, learners(first_name, last_name)")
+    .eq("meeting_id", d.meetingId)
+    .eq("org_id", orgId)
+    .in("status", ["a_envoyer", "envoyee", "confirmee"]);
+  const people = ((rows ?? []) as unknown as { id: string; created_at: string; learners: { first_name: string; last_name: string } | null }[]).map((r) => ({
+    id: r.id,
+    createdAt: r.created_at,
+    firstName: r.learners?.first_name ?? "",
+    lastName: r.learners?.last_name ?? "",
+  }));
+  if (people.length === 0) return { ok: false, error: "Aucun convoqué à placer (les présents, absents et excusés sont laissés de côté)." };
+
+  const spread = spreadTimes(d.firstTime, d.minutes, people.length);
+  if (!spread.ok) return spread;
+
+  const meetingDay = utcToLocalDate(meeting.starts_at);
+  const ordered = orderForSpacing(people, d.order);
+  for (const [i, p] of ordered.entries()) {
+    const { error } = await supabase
+      .from("info_meeting_invitations")
+      .update({ convocation_at: localToUtc(meetingDay, spread.times[i]) })
+      .eq("id", p.id);
+    if (error) return { ok: false, error: translatePgError(error) };
+  }
+
+  const last = spread.times[spread.times.length - 1];
+  const afterEnd = Boolean(meeting.ends_at) && last >= utcToLocalTime(meeting.ends_at as string);
+  revalidateAdmission(d.meetingId);
+  return { ok: true, count: people.length, first: spread.times[0], last, afterEnd };
+}
+
+// Tout le monde revient à l'heure de la réunion.
+export async function clearMeetingConvocations(meetingId: string): Promise<ActionResult> {
+  if (!uuid.safeParse(meetingId).success) return { ok: false, error: "Réunion invalide" };
+  const { orgId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("info_meeting_invitations")
+    .update({ convocation_at: null })
+    .eq("meeting_id", meetingId)
+    .eq("org_id", orgId);
+  if (error) return { ok: false, error: translatePgError(error) };
+  revalidateAdmission(meetingId);
+  return { ok: true };
+}
+
+// ── Plusieurs créneaux sur un même lien ──────────────────────────────────────
+// Chaque créneau est une réunion à part entière (date, heure, places maximum, convoqués, présence).
+// Les créneaux d'un même lien partagent `series_token` : la page publique de ce lien propose
+// leurs jours et heures, la personne choisit. Le créneau ajouté reprend le titre, la salle, le
+// lieu, le test oral et l'état d'ouverture de la réunion d'où on le crée.
+const slotSchema = z.object({
+  meetingId: uuid,
+  date: day,
+  startTime: time,
+  endTime: time.nullable(),
+  capacity: z.number().int().positive(),
+});
+
+export async function addMeetingSlot(raw: z.infer<typeof slotSchema>): Promise<MeetingResult> {
+  const parsed = slotSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Date, heure de début et nombre maximum de places obligatoires." };
+  const d = parsed.data;
+  if (d.endTime && d.endTime <= d.startTime) return { ok: false, error: "L'heure de fin doit être après l'heure de début." };
+
+  const { orgId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+
+  const { data: source } = await supabase
+    .from("info_meetings")
+    .select("id, title, room_id, location, notes, oral_test_included, signup_open, series_token")
+    .eq("id", d.meetingId)
+    .eq("org_id", orgId)
+    .single();
+  if (!source) return { ok: false, error: "Réunion introuvable" };
+
+  // Premier créneau ajouté : la réunion d'origine et le nouveau créneau partagent un jeton commun.
+  const seriesToken: string = source.series_token ?? randomBytes(16).toString("hex");
+  if (!source.series_token) {
+    const { error } = await supabase.from("info_meetings").update({ series_token: seriesToken }).eq("id", source.id).eq("org_id", orgId);
+    if (error) return { ok: false, error: translatePgError(error) };
+  }
+
+  const { data, error } = await supabase
+    .from("info_meetings")
+    .insert({
+      org_id: orgId,
+      title: source.title,
+      starts_at: localToUtc(d.date, d.startTime),
+      ends_at: d.endTime ? localToUtc(d.date, d.endTime) : null,
+      room_id: source.room_id,
+      location: source.location,
+      capacity: d.capacity,
+      notes: source.notes,
+      oral_test_included: source.oral_test_included,
+      signup_open: source.signup_open,
+      series_token: seriesToken,
+    })
+    .select("id")
+    .single();
+  if (error) return { ok: false, error: translatePgError(error) };
+  revalidateAdmission(source.id);
+  return { ok: true, id: data.id };
 }
 
 // ── Modèles de messages ──────────────────────────────────────────────────────

@@ -1,0 +1,185 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Copy, ExternalLink, Link2, MessageCircle } from "lucide-react";
+import { setMeetingSignupOpen } from "@/app/(app)/apprenants/admission/actions";
+import { ORG_NAME, renderTemplate } from "@/lib/admission/templates";
+import { whatsappShareUrl } from "@/lib/inscription/link";
+import { buildMeetingSignupUrl, oralTestSentence, placesLeft, placesSummary } from "@/lib/inscription/meeting";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
+// Carte « Inscription par lien » de la page d'une réunion : état, places prises sur le nombre
+// maximum, lien public à copier, message WhatsApp prêt (modèle « Lien d'inscription à une
+// réunion d'information »), ouverture et fermeture en un clic. Les inscrits arrivent dans la
+// liste des convoqués, déjà « confirmés ».
+
+const FALLBACK_ORIGIN = "https://pef-erp.vercel.app";
+
+export function MeetingSignupCard({
+  meetingId,
+  token,
+  template,
+  signupOpen,
+  capacity,
+  taken,
+  onlineCount,
+  started,
+  whenText,
+  place,
+  oralTest,
+}: {
+  meetingId: string;
+  token: string;
+  template: string;
+  signupOpen: boolean;
+  capacity: number | null;
+  taken: number; // convoqués qui occupent une place (hors excusés et absents)
+  onlineCount: number; // dont inscrits par le lien
+  started: boolean; // la réunion a déjà commencé
+  whenText: string;
+  place: string | null;
+  oralTest: boolean;
+}) {
+  const [src, setSrc] = useState("");
+  const [pending, startTransition] = useTransition();
+  const router = useRouter();
+
+  const origin = typeof window !== "undefined" ? window.location.origin : FALLBACK_ORIGIN;
+  const link = buildMeetingSignupUrl(origin, token, src);
+  const message = renderTemplate(template, {
+    organisme: ORG_NAME,
+    date: whenText,
+    lieu: place,
+    test_oral: oralTestSentence(oralTest),
+    lien_inscription: link,
+  });
+
+  const left = placesLeft(capacity, taken);
+  const full = left === 0;
+  const state = started
+    ? { label: "Réunion passée", className: "border-gray-300 bg-gray-100 text-gray-600" }
+    : !signupOpen
+      ? { label: "Fermée", className: "border-gray-300 bg-gray-100 text-gray-600" }
+      : full
+        ? { label: "Complète", className: "border-orange-300 bg-orange-50 text-orange-800" }
+        : { label: "Ouverte", className: "border-emerald-300 bg-emerald-50 text-emerald-800" };
+
+  async function copy(text: string, what: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(`${what} copié`);
+    } catch {
+      toast.error("Copie impossible : sélectionnez le texte à la main.");
+    }
+  }
+
+  function toggle() {
+    startTransition(async () => {
+      const result = await setMeetingSignupOpen({ meetingId, open: !signupOpen });
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(signupOpen ? "Inscription par lien fermée." : "Inscription par lien ouverte.");
+      router.refresh();
+    });
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Link2 className="h-4 w-4" />
+            Inscription par lien
+            <Badge variant="outline" className={state.className}>{state.label}</Badge>
+          </CardTitle>
+          {!started && (
+            <Button size="sm" variant={signupOpen ? "outline" : "default"} onClick={toggle} disabled={pending}>
+              {signupOpen ? "Fermer l'inscription" : "Ouvrir l'inscription"}
+            </Button>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          La personne remplit le formulaire court (2 minutes) et est inscrite d&apos;office, dans la limite des places : elle apparaît ci-dessous comme confirmée, le statut d&apos;admission passe à « convoqué ».
+          {oralTest ? " Le test oral individuel lui est annoncé." : ""}
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
+            <span className="font-medium">
+              {capacity ? placesSummary(capacity, taken) : `${taken} inscrit${taken > 1 ? "s" : ""} · pas de maximum`}
+            </span>
+            <span className="text-xs text-muted-foreground">dont {onlineCount} par le lien</span>
+          </div>
+          {capacity ? (
+            <div className="h-2 overflow-hidden rounded-full bg-muted" aria-hidden>
+              <div
+                className={full ? "h-full rounded-full bg-orange-500" : "h-full rounded-full bg-emerald-600"}
+                style={{ width: `${Math.min(100, Math.round((taken / capacity) * 100))}%` }}
+              />
+            </div>
+          ) : (
+            <p className="text-xs text-destructive">Aucun maximum de places : « Modifier » pour le fixer (obligatoire pour ouvrir le lien).</p>
+          )}
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="meeting-signup-src">Provenance (facultatif)</Label>
+          <Input
+            id="meeting-signup-src"
+            value={src}
+            onChange={(e) => setSrc(e.target.value)}
+            placeholder="MDQ Landy, CCAS, Mission locale…"
+            maxLength={80}
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="meeting-signup-link">Lien</Label>
+          <div className="flex gap-2">
+            <Input id="meeting-signup-link" value={link} readOnly onFocus={(e) => e.currentTarget.select()} className="font-mono text-xs" />
+            <Button type="button" variant="outline" size="sm" onClick={() => copy(link, "Lien")} aria-label="Copier le lien">
+              <Copy className="h-4 w-4" />
+            </Button>
+            <Button type="button" variant="outline" size="sm" asChild aria-label="Ouvrir la page d'inscription">
+              <a href={link} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </Button>
+          </div>
+          {!signupOpen && !started && (
+            <p className="text-xs text-muted-foreground">Inscription fermée : le lien affiche « Inscription fermée » tant que vous ne l&apos;ouvrez pas.</p>
+          )}
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Message WhatsApp</Label>
+          <pre className="max-h-56 overflow-auto whitespace-pre-wrap rounded-md border bg-muted/40 p-3 font-sans text-sm">{message}</pre>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => copy(message, "Message")}>
+              <Copy className="mr-1 h-4 w-4" />
+              Copier le message
+            </Button>
+            <Button type="button" size="sm" asChild className="bg-emerald-700 text-white hover:bg-emerald-800">
+              <a href={whatsappShareUrl(message)} target="_blank" rel="noopener noreferrer">
+                <MessageCircle className="mr-1 h-4 w-4" />
+                Ouvrir WhatsApp
+              </a>
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            WhatsApp s&apos;ouvre avec le message : choisissez la personne ou le groupe. Texte modifiable dans « Messages » (étape « Lien d&apos;inscription à une réunion d&apos;information »).
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}

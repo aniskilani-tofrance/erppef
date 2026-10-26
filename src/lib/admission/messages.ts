@@ -3,6 +3,7 @@
 // étape, retouchable par la coordination) ; ce fichier ne fait que remplir les modèles.
 
 import { baseVars, buildStageMessage, DEFAULT_TEMPLATES, type Templates } from "@/lib/admission/templates";
+import { testBeforeSentence } from "@/lib/placement/convocation-test";
 
 export type MeetingWhen = {
   startsAt: string; // ISO UTC
@@ -39,27 +40,44 @@ export function buildFirstContactMessage({
 }
 
 // Convocation à une réunion d'information (avec le petit entretien oral)
+// testUrl : lien PERSONNEL du test de niveau de cette personne (null si elle l'a déjà fait) ; la
+// phrase {test_avant} l'ajoute. Un modèle retouché sans {test_avant} reçoit la phrase à la fin :
+// la personne n'est jamais convoquée sans son lien.
+function withTest(text: string, template: string, testUrl: string | null | undefined): string {
+  const sentence = testBeforeSentence(testUrl);
+  return sentence && !template.includes("{test_avant}") ? `${text}\n\n${sentence}` : text;
+}
+
 export function buildMeetingInvitationMessage({
   learnerFirstName,
   senderFirstName,
   meeting,
   withOralTest = true,
+  testUrl = null,
   templates = DEFAULT_TEMPLATES,
 }: {
   learnerFirstName: string | null | undefined;
   senderFirstName: string | null | undefined;
   meeting: MeetingWhen;
   withOralTest?: boolean;
+  testUrl?: string | null;
   templates?: Templates;
 }): string {
   const tpl = withOralTest
     ? templates
     : { ...templates, convocation: templates.convocation.replace(/^Nous faisons aussi un petit entretien oral.*\n?/m, "") };
-  return buildStageMessage(
+  const text = buildStageMessage(
     "convocation",
-    { ...baseVars(learnerFirstName, senderFirstName), date: formatMeetingWhen(meeting), lieu: meeting.place ?? null, acces: meeting.access ?? null },
+    {
+      ...baseVars(learnerFirstName, senderFirstName),
+      date: formatMeetingWhen(meeting),
+      lieu: meeting.place ?? null,
+      acces: meeting.access ?? null,
+      test_avant: testBeforeSentence(testUrl),
+    },
     tpl,
   );
+  return withTest(text, tpl.convocation, testUrl);
 }
 
 // Rappel la veille de la réunion
@@ -67,18 +85,27 @@ export function buildMeetingReminderMessage({
   learnerFirstName,
   senderFirstName,
   meeting,
+  testUrl = null,
   templates = DEFAULT_TEMPLATES,
 }: {
   learnerFirstName: string | null | undefined;
   senderFirstName: string | null | undefined;
   meeting: MeetingWhen;
+  testUrl?: string | null; // test de niveau pas encore fait : on rappelle le lien
   templates?: Templates;
 }): string {
-  return buildStageMessage(
+  const text = buildStageMessage(
     "rappel_reunion",
-    { ...baseVars(learnerFirstName, senderFirstName), date: formatMeetingWhen(meeting), lieu: meeting.place ?? null, acces: meeting.access ?? null },
+    {
+      ...baseVars(learnerFirstName, senderFirstName),
+      date: formatMeetingWhen(meeting),
+      lieu: meeting.place ?? null,
+      acces: meeting.access ?? null,
+      test_avant: testBeforeSentence(testUrl),
+    },
     templates,
   );
+  return withTest(text, templates.rappel_reunion, testUrl);
 }
 
 // Absent(e) à la réunion : proposer une autre date

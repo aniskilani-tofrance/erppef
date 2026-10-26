@@ -4,7 +4,7 @@
 // (enregistré dans organizations.settings.whatsapp_templates, sans redéploiement).
 //
 // Variables : {prenom} {expediteur} {signature} {organisme} {lien} {date} {lieu} {lien_whatsapp}
-// {groupe} {date_debut} {niveau} {lien_inscription}. Une ligne dont toutes les variables sont vides
+// {groupe} {date_debut} {niveau} {lien_inscription} {test_oral} {test_avant}. Une ligne dont toutes les variables sont vides
 // disparaît (ex. « 📍 {lieu} » sans lieu). Vouvoiement, phrases courtes : les
 // destinataires apprennent le français.
 
@@ -83,8 +83,8 @@ Je vous envoie la date très bientôt. Avez-vous des jours ou des heures impossi
   {
     code: "convocation",
     label: "Convocation à la réunion d'information",
-    when: "Depuis la page de la réunion, bouton « Convoquer » : date, heure et lieu sont remplis automatiquement.",
-    variables: ["prenom", "expediteur", "signature", "organisme", "date", "lieu", "acces"],
+    when: "Depuis la page de la réunion, bouton « Convoquer » : date, heure et lieu sont remplis automatiquement. Pour les personnes qui n'ont pas encore fait le test de niveau, leur lien personnel est ajouté.",
+    variables: ["prenom", "expediteur", "signature", "organisme", "date", "lieu", "acces", "test_avant"],
     text: `Bonjour {prenom},
 
 Je suis {expediteur} de {organisme}.
@@ -97,6 +97,8 @@ Vous êtes invité(e) à une réunion d'information sur les cours de français :
 Nous vous expliquons le programme, les horaires et le fonctionnement des cours.
 Nous faisons aussi un petit entretien oral en français avec vous. Ce n'est pas un examen : c'est pour vous placer dans le bon groupe.
 
+{test_avant}
+
 Merci de répondre à ce message pour confirmer votre présence : OUI ou NON.
 
 À bientôt,
@@ -105,13 +107,15 @@ Merci de répondre à ce message pour confirmer votre présence : OUI ou NON.
   {
     code: "rappel_reunion",
     label: "Rappel la veille de la réunion",
-    when: "Bouton « Rappel » sur la page de la réunion, et email automatique la veille pour ceux qui ont une adresse.",
-    variables: ["prenom", "signature", "organisme", "date", "lieu", "acces"],
+    when: "Bouton « Rappel » sur la page de la réunion, et email automatique la veille pour ceux qui ont une adresse. Le lien du test de niveau est rappelé tant qu'il n'est pas fait.",
+    variables: ["prenom", "signature", "organisme", "date", "lieu", "acces", "test_avant"],
     text: `Bonjour {prenom},
 
 Petit rappel : la réunion d'information de {organisme} a lieu {date}.
 📍 {lieu}
 🧭 {acces}
+
+{test_avant}
 
 Nous vous attendons. Si vous ne pouvez pas venir, merci de nous prévenir en répondant à ce message.
 
@@ -230,6 +234,24 @@ Pour vous inscrire aux cours de français ParlerEmploi, cliquez ici :
 English: sign up for French classes here (2 minutes).
 العربية: للتسجيل في دروس اللغة الفرنسية، اضغط على الرابط (دقيقتان).`,
   },
+  {
+    code: "lien_reunion",
+    label: "Lien d'inscription à une réunion d'information",
+    when: "Page d'une réunion, carte « Inscription par lien » : à envoyer dans un groupe WhatsApp ou à une personne. La date, le lieu et le test oral sont remplis automatiquement ; la personne s'inscrit seule, dans la limite des places.",
+    variables: ["organisme", "date", "lieu", "test_oral", "lien_inscription"],
+    text: `Bonjour 👋
+{organisme} vous invite à une réunion d'information sur les cours de français.
+
+📅 {date}
+📍 {lieu}
+{test_oral}
+
+Les places sont limitées. Pour vous inscrire (2 minutes) :
+{lien_inscription}
+
+English: information meeting about French classes. Places are limited. Sign up here (2 minutes).
+العربية: اجتماع إعلامي حول دروس اللغة الفرنسية. الأماكن محدودة. للتسجيل اضغط على الرابط (دقيقتان).`,
+  },
 ] as const;
 
 export type MessageStage = (typeof MESSAGE_STAGES)[number]["code"];
@@ -255,7 +277,7 @@ export function resolveTemplates(settings: unknown): Templates {
 }
 
 export type TemplateVars = Partial<Record<
-  "prenom" | "expediteur" | "signature" | "organisme" | "lien" | "date" | "lieu" | "acces" | "groupe" | "date_debut" | "date_fin" | "horaires" | "vacances" | "niveau" | "lien_whatsapp" | "lien_inscription",
+  "prenom" | "expediteur" | "signature" | "organisme" | "lien" | "date" | "lieu" | "acces" | "groupe" | "date_debut" | "date_fin" | "horaires" | "vacances" | "niveau" | "lien_whatsapp" | "lien_inscription" | "test_oral" | "test_avant",
   string | null | undefined
 >>;
 
