@@ -237,12 +237,13 @@ English: sign up for French classes here (2 minutes).
   {
     code: "lien_reunion",
     label: "Lien d'inscription à une réunion d'information",
-    when: "Page d'une réunion, carte « Inscription par lien » : à envoyer dans un groupe WhatsApp ou à une personne. La date, le lieu et le test oral sont remplis automatiquement ; la personne s'inscrit seule, dans la limite des places.",
-    variables: ["organisme", "date", "lieu", "test_oral", "lien_inscription"],
+    when: "Page d'une réunion, carte « Inscription par lien » : à envoyer dans un groupe WhatsApp ou à une personne. Les dates (toutes les sessions proposées par le lien, « Au choix »), l'heure de passage, le lieu et le test oral sont remplis automatiquement ; la personne s'inscrit seule, dans la limite des places.",
+    variables: ["organisme", "date", "heure_passage", "lieu", "test_oral", "lien_inscription"],
     text: `Bonjour 👋
 {organisme} vous invite à une réunion d'information sur les cours de français.
 
 📅 {date}
+{heure_passage}
 📍 {lieu}
 {test_oral}
 
@@ -277,7 +278,7 @@ export function resolveTemplates(settings: unknown): Templates {
 }
 
 export type TemplateVars = Partial<Record<
-  "prenom" | "expediteur" | "signature" | "organisme" | "lien" | "date" | "lieu" | "acces" | "groupe" | "date_debut" | "date_fin" | "horaires" | "vacances" | "niveau" | "lien_whatsapp" | "lien_inscription" | "test_oral" | "test_avant",
+  "prenom" | "expediteur" | "signature" | "organisme" | "lien" | "date" | "lieu" | "acces" | "groupe" | "date_debut" | "date_fin" | "horaires" | "vacances" | "niveau" | "lien_whatsapp" | "lien_inscription" | "test_oral" | "test_avant" | "heure_passage",
   string | null | undefined
 >>;
 

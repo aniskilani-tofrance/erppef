@@ -20,7 +20,7 @@ import { ConvocationTimeButton } from "@/components/admission/convocation-time-b
 import { MeetingSlotsCard } from "@/components/admission/meeting-slots-card";
 import { PrepareTestsButton } from "@/components/admission/prepare-tests-button";
 import { CopyTestLinkButton } from "@/components/admission/copy-test-link-button";
-import { SEATED_STATUSES, slotOfferState } from "@/lib/inscription/meeting";
+import { choiceDatesText, SEATED_STATUSES, slotOfferState, staggerSentence } from "@/lib/inscription/meeting";
 import { loadConvocationTests } from "@/lib/placement/convocation-test-server";
 import { SpaceConvocationsDialog } from "@/components/admission/space-convocations-dialog";
 import { staggerSummary, whenForInvitation } from "@/lib/admission/convocation";
@@ -30,6 +30,7 @@ import {
   buildMeetingInvitationMessage,
   buildMeetingReminderMessage,
   buildMissedMeetingMessage,
+  formatMeetingPlace,
   formatMeetingWhen,
 } from "@/lib/admission/messages";
 import { loadTemplates } from "@/lib/admission/load-templates";
@@ -113,7 +114,7 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
   const senderFirstName = profile?.full_name?.trim().split(/\s+/)[0] ?? null;
   const meetingRoom = meeting.rooms as unknown as { name: string; address: string | null; access_notes: string | null } | null;
   const roomName = meetingRoom?.name ?? null;
-  const place = roomName ? `${roomName}${meeting.location ? ` — ${meeting.location}` : meetingRoom?.address ? ` — ${meetingRoom.address}` : ""}` : meeting.location;
+  const place = formatMeetingPlace(roomName, meeting.location, meetingRoom?.address);
   const when = { startsAt: meeting.starts_at as string, endsAt: meeting.ends_at as string | null, place, access: meetingRoom?.access_notes ?? null };
   const upcoming = new Date(meeting.starts_at).getTime() >= new Date().getTime() - 6 * 3600_000;
   const meetingDay = utcToLocalDate(meeting.starts_at);
@@ -158,6 +159,12 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
     state: slotOfferState(s),
     current: s.id === meeting.id,
   }));
+  // Dates du message du lien : toutes les sessions que le lien propose (« Au choix »), sinon toutes
+  // celles à venir (lien encore fermé), sinon cette réunion.
+  const offeredSlots = slotRows.filter((s) => s.state === "propose");
+  const linkDatesText =
+    choiceDatesText((offeredSlots.length ? offeredSlots : slotRows.filter((s) => s.state !== "passe")).map((s) => s.whenText)) ||
+    formatMeetingWhen(when);
   const started = new Date(meeting.starts_at).getTime() <= new Date().getTime();
 
   const candidates: Candidate[] = (learners ?? [])
@@ -260,7 +267,8 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
         waiting={waiting}
         onlineCount={onlineCount}
         started={started}
-        whenText={formatMeetingWhen(when)}
+        whenText={linkDatesText}
+        staggerText={staggerSentence(meeting.stagger_minutes)}
         place={place}
         oralTest={meeting.oral_test_included ?? true}
         slotCount={slotRows.length}

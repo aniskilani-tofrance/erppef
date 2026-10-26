@@ -18,7 +18,7 @@ import {
   reasonFits,
   type AdmissionStatus,
 } from "@/lib/admission/status";
-import { buildMeetingInvitationMessage, textToHtml } from "@/lib/admission/messages";
+import { buildMeetingInvitationMessage, formatMeetingPlace, textToHtml } from "@/lib/admission/messages";
 import { loadTemplates } from "@/lib/admission/load-templates";
 import { DEFAULT_TEMPLATES, MESSAGE_STAGES, type Templates } from "@/lib/admission/templates";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -355,7 +355,7 @@ export async function markInvitationSent(raw: {
 }
 
 function meetingPlace(m: NonNullable<InvitationRow["info_meetings"]>): string | null {
-  return m.rooms?.name ? `${m.rooms.name}${m.location ? ` — ${m.location}` : m.rooms.address ? ` — ${m.rooms.address}` : ""}` : m.location;
+  return formatMeetingPlace(m.rooms?.name, m.location, m.rooms?.address);
 }
 
 async function sendOneInvitationEmail(

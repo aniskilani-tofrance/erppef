@@ -36,6 +36,7 @@ export function MeetingSignupCard({
   oralTest,
   slotCount = 1,
   proposedCount = 0,
+  staggerText = null,
 }: {
   meetingId: string;
   token: string;
@@ -51,6 +52,7 @@ export function MeetingSignupCard({
   oralTest: boolean;
   slotCount?: number; // créneaux du même lien (1 = réunion seule)
   proposedCount?: number; // dont proposés en ce moment sur la page du lien
+  staggerText?: string | null; // phrase de l'accueil échelonné ({heure_passage})
 }) {
   const [src, setSrc] = useState("");
   const [pending, startTransition] = useTransition();
@@ -61,6 +63,7 @@ export function MeetingSignupCard({
   const message = renderTemplate(template, {
     organisme: ORG_NAME,
     date: whenText,
+    heure_passage: staggerText,
     lieu: place,
     test_oral: oralTestSentence(oralTest),
     lien_inscription: link,

@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { SANDBOX_SLUG } from "@/lib/production-orgs";
+import { formatMeetingPlace } from "@/lib/admission/messages";
 import {
   isMeetingToken,
   meetingState,
@@ -36,10 +37,7 @@ type MeetingRow = {
 
 // Salle + adresse, comme dans les convocations : l'adresse saisie sur la réunion prime sur celle de la salle.
 function placeOf(row: Pick<MeetingRow, "rooms" | "location">): string | null {
-  const room = row.rooms;
-  if (!room?.name) return row.location;
-  const detail = row.location ?? room.address;
-  return detail ? `${room.name} — ${detail}` : room.name;
+  return formatMeetingPlace(row.rooms?.name, row.location, row.rooms?.address);
 }
 
 // orgId reste côté serveur : seule `meeting` part vers le navigateur.
