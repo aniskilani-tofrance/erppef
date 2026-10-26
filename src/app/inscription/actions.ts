@@ -205,8 +205,15 @@ async function finishMeetingSignup(
   values: SignupValues,
   locale: SignupLocale,
 ): Promise<SignupState> {
-  const outcome = await registerForMeeting(admin, meeting.token, learnerId);
-  if (!outcome) return { status: "error", error: "server", values };
+  const result = await registerForMeeting(admin, meeting.token, learnerId);
+  if (!result) return { status: "error", error: "server", values };
+  const { outcome } = result;
+
+  // Déjà inscrite à un AUTRE créneau du même lien (une place par personne) : l'écran montre CE créneau.
+  let shown = meeting;
+  if (result.token && result.token !== meeting.token) {
+    shown = (await loadPublicMeeting(admin, result.token))?.meeting ?? meeting;
+  }
 
   if (outcome !== "already") {
     await admin.from("learner_contacts").insert({
@@ -214,7 +221,7 @@ async function finishMeetingSignup(
       learner_id: learnerId,
       channel: "whatsapp",
       outcome: outcome === "registered" ? "convoque" : "autre",
-      note: meetingJournalNote(outcome, meeting),
+      note: meetingJournalNote(outcome, shown),
     });
   }
   if (outcome === "registered" || outcome === "already") await advanceAdmissionStatus(admin, [learnerId], "convoque");
@@ -231,7 +238,7 @@ async function finishMeetingSignup(
   }
 
   revalidatePath("/apprenants", "layout");
-  return { status: "done", testUrl, meeting: { outcome, meeting: { ...meeting, state: outcome === "full" ? "full" : meeting.state } } };
+  return { status: "done", testUrl, meeting: { outcome, meeting: { ...shown, state: outcome === "full" ? "full" : shown.state } } };
 }
 
 // Adresse publique de l'ERP : le lien du test part aussi dans un message WhatsApp.

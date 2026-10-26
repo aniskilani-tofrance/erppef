@@ -4,6 +4,7 @@ import {
   isMeetingToken,
   meetingState,
   placesLeft,
+  SEATED_STATUSES,
   type MeetingOutcome,
   type PublicMeeting,
 } from "@/lib/inscription/meeting";
@@ -18,6 +19,7 @@ type MeetingRow = {
   id: string;
   org_id: string;
   signup_token: string;
+  series_token: string | null;
   title: string;
   starts_at: string;
   ends_at: string | null;
@@ -30,8 +32,6 @@ type MeetingRow = {
   info_meeting_invitations: { status: string }[];
 };
 
-// Une personne excusée (ou absente) ne prend plus de place : même règle que la fonction SQL.
-const FREE_STATUSES = ["excusee", "absente"];
 
 // Salle + adresse, comme dans les convocations : l'adresse saisie sur la réunion prime sur celle de la salle.
 function placeOf(row: Pick<MeetingRow, "rooms" | "location">): string | null {
@@ -45,10 +45,10 @@ function placeOf(row: Pick<MeetingRow, "rooms" | "location">): string | null {
 export type LoadedMeeting = { orgId: string; meeting: PublicMeeting };
 
 const COLUMNS =
-  "id, org_id, signup_token, title, starts_at, ends_at, location, capacity, signup_open, oral_test_included, rooms:room_id(name, address, access_notes), org:org_id(slug), info_meeting_invitations(status)";
+  "id, org_id, signup_token, series_token, title, starts_at, ends_at, location, capacity, signup_open, oral_test_included, rooms:room_id(name, address, access_notes), org:org_id(slug), info_meeting_invitations(status)";
 
 function toLoaded(row: MeetingRow, now: Date): LoadedMeeting {
-  const taken = (row.info_meeting_invitations ?? []).filter((i) => !FREE_STATUSES.includes(i.status)).length;
+  const taken = (row.info_meeting_invitations ?? []).filter((i) => SEATED_STATUSES.includes(i.status)).length;
   return {
     orgId: row.org_id,
     meeting: {
@@ -80,9 +80,10 @@ export async function loadPublicMeeting(admin: Admin, token: unknown, now: Date 
 }
 
 /**
- * Ce que propose le lien : le jeton d'une réunion donne cette réunion ; le jeton COMMUN de
- * plusieurs créneaux (series_token) donne tous les créneaux, du plus proche au plus lointain.
- * Même organisme pour tous, jamais le bac à sable. null = lien inconnu.
+ * Ce que propose le lien : tous les créneaux de la réunion, du plus proche au plus lointain. Le jeton
+ * COMMUN (series_token) les donne directement ; le jeton propre d'un créneau qui appartient à une série
+ * (lien copié avant l'ajout des autres créneaux) les donne aussi. Même organisme pour tous, jamais le
+ * bac à sable. null = lien inconnu.
  */
 export async function loadMeetingOffer(
   admin: Admin,
@@ -98,8 +99,18 @@ export async function loadMeetingOffer(
     console.warn(`[inscription] réunions illisibles : ${error.message}`);
     return null;
   }
-  const rows = ((data ?? []) as unknown as MeetingRow[]).filter((r) => r.org?.slug !== SANDBOX_SLUG);
+  let rows = ((data ?? []) as unknown as MeetingRow[]).filter((r) => r.org?.slug !== SANDBOX_SLUG);
   if (rows.length === 0) return null;
+
+  // Lien propre d'un créneau qui fait partie d'une série : on rapatrie les autres créneaux.
+  const own = rows.find((r) => r.signup_token === token);
+  if (own?.series_token && own.series_token !== token) {
+    const { data: more, error: moreError } = await admin.from("info_meetings").select(COLUMNS).eq("series_token", own.series_token);
+    if (moreError) console.warn(`[inscription] créneaux de la série illisibles : ${moreError.message}`);
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    for (const r of (more ?? []) as unknown as MeetingRow[]) if (r.org?.slug !== SANDBOX_SLUG) byId.set(r.id, r);
+    rows = [...byId.values()];
+  }
   const orgId = rows[0].org_id;
   const meetings = rows
     .filter((r) => r.org_id === orgId)
@@ -110,14 +121,21 @@ export async function loadMeetingOffer(
 
 /**
  * Inscrit la personne à la réunion (fonction SQL atomique : le dernier siège ne se vend qu'une
- * fois). null = erreur technique ; la fiche de la personne existe déjà, l'équipe la rappelle.
+ * fois). `token` = jeton du créneau où elle est inscrite (« already » : peut-être un autre créneau du
+ * même lien). null = erreur technique ; la fiche de la personne existe déjà, l'équipe la rappelle.
  */
-export async function registerForMeeting(admin: Admin, token: string, learnerId: string): Promise<MeetingOutcome | null> {
+export async function registerForMeeting(
+  admin: Admin,
+  token: string,
+  learnerId: string,
+): Promise<{ outcome: MeetingOutcome; token: string | null } | null> {
   const { data, error } = await admin.rpc("signup_for_info_meeting", { p_token: token, p_learner_id: learnerId });
   if (error) {
     console.error(`[inscription] inscription à la réunion impossible : ${error.message}`);
     return null;
   }
-  const result = (data as { result?: string } | null)?.result;
-  return result === "registered" || result === "already" || result === "full" || result === "closed" ? result : null;
+  const r = (data ?? null) as { result?: string; token?: string | null } | null;
+  const outcome = r?.result;
+  if (outcome !== "registered" && outcome !== "already" && outcome !== "full" && outcome !== "closed") return null;
+  return { outcome, token: typeof r?.token === "string" ? r.token : null };
 }

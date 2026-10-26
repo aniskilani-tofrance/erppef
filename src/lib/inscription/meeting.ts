@@ -15,6 +15,11 @@ export function isMeetingToken(raw: unknown): raw is string {
   return typeof raw === "string" && MEETING_TOKEN.test(raw);
 }
 
+// Premier inscrit, premier servi : seules les personnes CONFIRMÉES (par le lien, ou « Confirmée »
+// posé par l'équipe sur un OUI) ou présentes occupent une place ; une simple convocation (à envoyer,
+// envoyée) n'en prend pas. Même règle que la fonction SQL signup_for_info_meeting (0057).
+export const SEATED_STATUSES: readonly string[] = ["confirmee", "presente"];
+
 // open   : on peut s'inscrire ; full : toutes les places sont prises ;
 // closed : lien fermé par l'équipe, ou réunion déjà commencée.
 export type MeetingState = "open" | "full" | "closed";
@@ -111,6 +116,38 @@ export function chooseMeetingOffer(meetings: readonly PublicMeeting[]): MeetingO
   if (open.length === 0) return { kind: "single", meeting: bookable[0] }; // tout est complet : le plus proche
   if (open.length === 1) return { kind: "single", meeting: open[0] };
   return { kind: "choice", meetings: open };
+}
+
+// ── Créneaux d'un même lien, côté équipe ────────────────────────────────────
+// Ce que le lien fait d'un créneau, en clair : proposé (ouvert, à venir, avec des places), complet
+// (ouvert mais plus de place : les convocations faites à la main comptent), fermé, ou passé.
+export type SlotOfferState = "propose" | "complet" | "ferme" | "passe";
+
+export function slotOfferState(
+  s: { startsAt: string; signupOpen: boolean; capacity: number | null; taken: number },
+  now: Date = new Date(),
+): SlotOfferState {
+  if (Date.parse(s.startsAt) <= now.getTime()) return "passe";
+  if (!s.signupOpen) return "ferme";
+  if (s.capacity !== null && s.taken >= s.capacity) return "complet";
+  return "propose";
+}
+
+/**
+ * Ouvrir ou fermer le lien : tous les créneaux du lien ensemble (le lien est commun). Ouvrir ne
+ * touche que les créneaux à venir, et exige un nombre maximum de places sur chacun ; fermer ferme tout.
+ */
+export function signupToggleTargets(
+  slots: readonly { id: string; startsAt: string; capacity: number | null }[],
+  open: boolean,
+  now: Date = new Date(),
+): { ok: true; ids: string[] } | { ok: false; reason: "started" | "capacity"; missing: number } {
+  if (!open) return { ok: true, ids: slots.map((s) => s.id) };
+  const upcoming = slots.filter((s) => Date.parse(s.startsAt) > now.getTime());
+  if (upcoming.length === 0) return { ok: false, reason: "started", missing: 0 };
+  const missing = upcoming.filter((s) => !s.capacity).length;
+  if (missing) return { ok: false, reason: "capacity", missing };
+  return { ok: true, ids: upcoming.map((s) => s.id) };
 }
 
 /** Libellé court des places pour l'équipe : « 12 / 20 · 8 restantes ». */
