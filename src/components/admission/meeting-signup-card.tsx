@@ -28,23 +28,29 @@ export function MeetingSignupCard({
   signupOpen,
   capacity,
   taken,
+  waiting = 0,
   onlineCount,
   started,
   whenText,
   place,
   oralTest,
+  slotCount = 1,
+  proposedCount = 0,
 }: {
   meetingId: string;
   token: string;
   template: string;
   signupOpen: boolean;
   capacity: number | null;
-  taken: number; // convoqués qui occupent une place (hors excusés et absents)
+  taken: number; // personnes qui occupent une place : confirmées ou présentes (premier inscrit, premier servi)
+  waiting?: number; // convoquées sans réponse (à envoyer, envoyée) : elles ne prennent pas de place
   onlineCount: number; // dont inscrits par le lien
   started: boolean; // la réunion a déjà commencé
   whenText: string;
   place: string | null;
   oralTest: boolean;
+  slotCount?: number; // créneaux du même lien (1 = réunion seule)
+  proposedCount?: number; // dont proposés en ce moment sur la page du lien
 }) {
   const [src, setSrc] = useState("");
   const [pending, startTransition] = useTransition();
@@ -86,7 +92,9 @@ export function MeetingSignupCard({
         toast.error(result.error);
         return;
       }
-      toast.success(signupOpen ? "Inscription par lien fermée." : "Inscription par lien ouverte.");
+      const n = result.count ?? 1;
+      const scope = n > 1 ? ` (${n} créneaux)` : "";
+      toast.success(signupOpen ? `Inscription par lien fermée${scope}.` : `Inscription par lien ouverte${scope}.`);
       router.refresh();
     });
   }
@@ -103,13 +111,20 @@ export function MeetingSignupCard({
           {!started && (
             <Button size="sm" variant={signupOpen ? "outline" : "default"} onClick={toggle} disabled={pending}>
               {signupOpen ? "Fermer l'inscription" : "Ouvrir l'inscription"}
+              {slotCount > 1 ? ` (${slotCount} créneaux)` : ""}
             </Button>
           )}
         </div>
         <p className="text-xs text-muted-foreground">
-          La personne remplit le formulaire court (2 minutes) et est inscrite d&apos;office, dans la limite des places : elle apparaît ci-dessous comme confirmée, le statut d&apos;admission passe à « convoqué ».
+          La personne remplit le formulaire court (2 minutes) et est inscrite d&apos;office, dans la limite des places : premier inscrit, premier servi. Elle apparaît ci-dessous comme confirmée, le statut d&apos;admission passe à « convoqué ». Une convocation sans réponse ne prend pas de place.
           {oralTest ? " Le test oral individuel lui est annoncé." : ""}
         </p>
+        {slotCount > 1 && (
+          <p className="text-xs font-medium">
+            Lien commun à {slotCount} créneaux : {proposedCount} proposé{proposedCount > 1 ? "s" : ""} en ce moment
+            {proposedCount < 2 ? " — la personne n'aura pas de choix (voir l'état de chaque créneau ci-dessous)" : " — la personne choisit son jour"}.
+          </p>
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-1.5">
@@ -117,7 +132,9 @@ export function MeetingSignupCard({
             <span className="font-medium">
               {capacity ? placesSummary(capacity, taken) : `${taken} inscrit${taken > 1 ? "s" : ""} · pas de maximum`}
             </span>
-            <span className="text-xs text-muted-foreground">dont {onlineCount} par le lien</span>
+            <span className="text-xs text-muted-foreground">
+              dont {onlineCount} par le lien{waiting > 0 ? ` · ${waiting} convoqué${waiting > 1 ? "s" : ""} sans réponse (sans place réservée)` : ""}
+            </span>
           </div>
           {capacity ? (
             <div className="h-2 overflow-hidden rounded-full bg-muted" aria-hidden>

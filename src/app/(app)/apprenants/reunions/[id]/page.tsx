@@ -20,6 +20,7 @@ import { ConvocationTimeButton } from "@/components/admission/convocation-time-b
 import { MeetingSlotsCard } from "@/components/admission/meeting-slots-card";
 import { PrepareTestsButton } from "@/components/admission/prepare-tests-button";
 import { CopyTestLinkButton } from "@/components/admission/copy-test-link-button";
+import { SEATED_STATUSES, slotOfferState } from "@/lib/inscription/meeting";
 import { loadConvocationTests } from "@/lib/placement/convocation-test-server";
 import { SpaceConvocationsDialog } from "@/components/admission/space-convocations-dialog";
 import { whenForInvitation } from "@/lib/admission/convocation";
@@ -128,13 +129,34 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
   const testsToPrepare = active.filter((i) => tests.missing.includes(i.learners!.id)).length;
   const count = (codes: string[]) => invitations.filter((i) => codes.includes(i.status)).length;
   const pendingWithEmail = invitations.filter((i) => i.status === "a_envoyer" && i.learners?.email).length;
-  // Mêmes règles que l'inscription par lien (fonction SQL signup_for_info_meeting) : une personne excusée ou absente ne prend pas de place.
-  const taken = invitations.filter((i) => !["excusee", "absente"].includes(i.status)).length;
+  // Premier inscrit, premier servi (fonction SQL signup_for_info_meeting, 0057) : seules les personnes
+  // confirmées (ou présentes) occupent une place ; une convocation sans réponse n'en prend pas.
+  const taken = invitations.filter((i) => SEATED_STATUSES.includes(i.status)).length;
+  const waiting = invitations.filter((i) => ["a_envoyer", "envoyee"].includes(i.status)).length;
   const onlineCount = invitations.filter((i) => i.signed_up_online).length;
   // Heures de convocation : celle de la réunion par défaut, une par personne si l'équipe en fixe.
   const meetingTime = utcToLocalTime(meeting.starts_at);
   const toPlace = invitations.filter((i) => ["a_envoyer", "envoyee", "confirmee"].includes(i.status)).length;
   const customCount = invitations.filter((i) => i.convocation_at).length;
+  // Créneaux du lien et ce que la page du lien en fait (proposé, complet, fermé, passé).
+  const slotSource = siblingRows?.length
+    ? siblingRows.map((s) => ({
+        id: s.id as string,
+        startsAt: s.starts_at as string,
+        endsAt: (s.ends_at as string | null) ?? null,
+        signupOpen: Boolean(s.signup_open),
+        capacity: (s.capacity as number | null) ?? null,
+        taken: ((s.info_meeting_invitations as unknown as { status: string }[] | null) ?? []).filter((i) => SEATED_STATUSES.includes(i.status)).length,
+      }))
+    : [{ id: meeting.id as string, startsAt: meeting.starts_at as string, endsAt: (meeting.ends_at as string | null) ?? null, signupOpen: Boolean(meeting.signup_open), capacity: (meeting.capacity as number | null) ?? null, taken }];
+  const slotRows = slotSource.map((s) => ({
+    id: s.id,
+    whenText: formatMeetingWhen({ startsAt: s.startsAt, endsAt: s.endsAt }),
+    taken: s.taken,
+    capacity: s.capacity,
+    state: slotOfferState(s),
+    current: s.id === meeting.id,
+  }));
   const started = new Date(meeting.starts_at).getTime() <= new Date().getTime();
 
   const candidates: Candidate[] = (learners ?? [])
@@ -219,27 +241,19 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
         signupOpen={Boolean(meeting.signup_open)}
         capacity={meeting.capacity ?? null}
         taken={taken}
+        waiting={waiting}
         onlineCount={onlineCount}
         started={started}
         whenText={formatMeetingWhen(when)}
         place={place}
         oralTest={meeting.oral_test_included ?? true}
+        slotCount={slotRows.length}
+        proposedCount={slotRows.filter((s) => s.state === "propose").length}
       />
 
       <MeetingSlotsCard
         meetingId={meeting.id}
-        slots={
-          siblingRows?.length
-            ? siblingRows.map((s) => ({
-                id: s.id as string,
-                whenText: formatMeetingWhen({ startsAt: s.starts_at as string, endsAt: s.ends_at as string | null }),
-                taken: ((s.info_meeting_invitations as unknown as { status: string }[] | null) ?? []).filter((i) => !["excusee", "absente"].includes(i.status)).length,
-                capacity: (s.capacity as number | null) ?? null,
-                signupOpen: Boolean(s.signup_open),
-                current: s.id === meeting.id,
-              }))
-            : [{ id: meeting.id, whenText: formatMeetingWhen(when), taken, capacity: meeting.capacity ?? null, signupOpen: Boolean(meeting.signup_open), current: true }]
-        }
+        slots={slotRows}
         defaults={{ startTime: meetingTime, endTime: meeting.ends_at ? utcToLocalTime(meeting.ends_at) : "", capacity: meeting.capacity ? String(meeting.capacity) : "" }}
       />
 

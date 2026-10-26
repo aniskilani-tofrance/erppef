@@ -529,9 +529,11 @@ export default async function AdmissionPage() {
                     </TableCell>
                     <TableCell className="hidden text-sm text-muted-foreground sm:table-cell">{m.place ?? "—"}</TableCell>
                     <TableCell>
-                      {m.invited}{m.capacity ? ` / ${m.capacity}` : ""}
-                      {m.capacity && m.invited > m.capacity && <Badge variant="destructive" className="ml-2">dépassement</Badge>}
-                      {m.capacity && m.invited === m.capacity && <Badge variant="outline" className="ml-2 border-orange-300 bg-orange-50 text-orange-800">complet</Badge>}
+                      {m.invited}
+                      {/* Places : seules les personnes confirmées en prennent (premier inscrit, premier servi). */}
+                      {m.capacity ? <span className="text-xs text-muted-foreground"> · {m.confirmed}/{m.capacity} places</span> : null}
+                      {m.capacity && m.confirmed > m.capacity && <Badge variant="destructive" className="ml-2">dépassement</Badge>}
+                      {m.capacity && m.confirmed === m.capacity && <Badge variant="outline" className="ml-2 border-orange-300 bg-orange-50 text-orange-800">complet</Badge>}
                       {m.signup_open && (
                         <Badge variant="outline" className="ml-2 border-emerald-300 bg-emerald-50 text-emerald-800">lien ouvert</Badge>
                       )}

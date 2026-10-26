@@ -15,6 +15,9 @@ import {
   oralTestSentence,
   placesLeft,
   placesSummary,
+  SEATED_STATUSES,
+  signupToggleTargets,
+  slotOfferState,
   type PublicMeeting,
 } from "@/lib/inscription/meeting";
 
@@ -312,6 +315,139 @@ describe("test de niveau sur l'écran de confirmation", () => {
     const out = done(null);
     expect(out).not.toContain(SIGNUP_TEXTS.fr.testCta);
     expect(out).not.toContain(SIGNUP_TEXTS.fr.meeting.testBefore);
+  });
+});
+
+describe("créneaux d'un même lien : état, ouverture, premier inscrit premier servi", () => {
+  const NOW = new Date("2026-10-26T18:00:00Z");
+  const FUTURE = "2026-10-28T16:00:00Z";
+  const PAST = "2026-10-20T16:00:00Z";
+
+  it("seules les personnes confirmées ou présentes occupent une place", () => {
+    expect([...SEATED_STATUSES].sort()).toEqual(["confirmee", "presente"]);
+  });
+
+  it("état de chaque créneau : proposé, complet, fermé, passé", () => {
+    const base = { startsAt: FUTURE, signupOpen: true, capacity: 30, taken: 0 };
+    expect(slotOfferState(base, NOW)).toBe("propose");
+    expect(slotOfferState({ ...base, taken: 30 }, NOW)).toBe("complet");
+    expect(slotOfferState({ ...base, signupOpen: false }, NOW)).toBe("ferme");
+    expect(slotOfferState({ ...base, startsAt: PAST }, NOW)).toBe("passe");
+    expect(slotOfferState({ ...base, startsAt: PAST, signupOpen: false }, NOW)).toBe("passe");
+  });
+
+  it("ouvrir le lien ouvre TOUS les créneaux à venir ; fermer ferme tout", () => {
+    const slots = [
+      { id: "a", startsAt: FUTURE, capacity: 30 },
+      { id: "b", startsAt: "2026-10-29T09:00:00Z", capacity: 30 },
+      { id: "passe", startsAt: PAST, capacity: 10 },
+    ];
+    expect(signupToggleTargets(slots, true, NOW)).toEqual({ ok: true, ids: ["a", "b"] });
+    expect(signupToggleTargets(slots, false, NOW)).toEqual({ ok: true, ids: ["a", "b", "passe"] });
+  });
+
+  it("ouvrir refuse un créneau à venir sans maximum de places, ou une série toute passée", () => {
+    expect(signupToggleTargets([{ id: "a", startsAt: FUTURE, capacity: 30 }, { id: "b", startsAt: FUTURE, capacity: null }], true, NOW)).toEqual({
+      ok: false,
+      reason: "capacity",
+      missing: 1,
+    });
+    expect(signupToggleTargets([{ id: "a", startsAt: PAST, capacity: 30 }], true, NOW)).toEqual({ ok: false, reason: "started", missing: 0 });
+  });
+
+  // Faux client Supabase : juste ce que loadMeetingOffer appelle (select().or() et select().eq()).
+  type Row = Record<string, unknown>;
+  const row = (over: Row): Row => ({
+    id: "x",
+    org_id: "org",
+    signup_token: "0".repeat(32),
+    series_token: null,
+    title: "Réunion d'information",
+    starts_at: FUTURE,
+    ends_at: null,
+    location: "Salle 12",
+    capacity: 30,
+    signup_open: true,
+    oral_test_included: true,
+    rooms: null,
+    org: { slug: "pef" },
+    info_meeting_invitations: [],
+    ...over,
+  });
+  const fakeAdmin = (rows: Row[]) =>
+    ({
+      from: () => ({
+        select: () => ({
+          or: (expr: string) => {
+            const value = expr.split(",")[0].split(".eq.")[1];
+            return { data: rows.filter((r) => r.signup_token === value || r.series_token === value), error: null };
+          },
+          eq: (col: string, value: unknown) => ({ data: rows.filter((r) => r[col] === value), error: null }),
+        }),
+      }),
+    }) as never;
+
+  const SERIES = "5".repeat(32);
+  const A = "a".repeat(32);
+  const B = "b".repeat(32);
+  const C = "c".repeat(32);
+  const rows = [
+    // Créneau d'origine : 95 convoqués à la main, aucun n'a confirmé → 30 places libres
+    row({ id: "A", signup_token: A, series_token: SERIES, info_meeting_invitations: Array.from({ length: 95 }, () => ({ status: "a_envoyer" })) }),
+    row({ id: "B", signup_token: B, series_token: SERIES, starts_at: "2026-10-29T09:00:00Z", info_meeting_invitations: [{ status: "confirmee" }, { status: "envoyee" }] }),
+    row({ id: "C", signup_token: C }), // réunion seule
+  ];
+
+  it("le lien commun donne tous les créneaux, du plus proche au plus lointain", async () => {
+    const { loadMeetingOffer } = await import("@/lib/inscription/meeting-server");
+    const offer = await loadMeetingOffer(fakeAdmin(rows), SERIES, NOW);
+    expect(offer?.meetings.map((m) => m.token)).toEqual([A, B]);
+  });
+
+  it("le lien PROPRE d'un créneau (copié avant l'ajout des autres) donne aussi toute la série", async () => {
+    const { loadMeetingOffer } = await import("@/lib/inscription/meeting-server");
+    expect((await loadMeetingOffer(fakeAdmin(rows), A, NOW))?.meetings.map((m) => m.token)).toEqual([A, B]);
+    expect((await loadMeetingOffer(fakeAdmin(rows), B, NOW))?.meetings.map((m) => m.token)).toEqual([A, B]);
+  });
+
+  it("une réunion seule reste seule ; un lien inconnu ne donne rien", async () => {
+    const { loadMeetingOffer } = await import("@/lib/inscription/meeting-server");
+    expect((await loadMeetingOffer(fakeAdmin(rows), C, NOW))?.meetings.map((m) => m.token)).toEqual([C]);
+    expect(await loadMeetingOffer(fakeAdmin(rows), "d".repeat(32), NOW)).toBeNull();
+  });
+
+  it("95 convoqués sans réponse n'occupent aucune des 30 places : les deux sessions sont proposées au choix", async () => {
+    const { loadMeetingOffer } = await import("@/lib/inscription/meeting-server");
+    const offer = await loadMeetingOffer(fakeAdmin(rows), SERIES, NOW);
+    const [a, b] = offer!.meetings;
+    expect(a.placesLeft).toBe(30);
+    expect(a.state).toBe("open");
+    expect(b.placesLeft).toBe(29); // une confirmée, une envoyée sans réponse
+    expect(chooseMeetingOffer(offer!.meetings).kind).toBe("choice");
+  });
+
+  it("le bac à sable n'est jamais servi", async () => {
+    const { loadMeetingOffer } = await import("@/lib/inscription/meeting-server");
+    expect(await loadMeetingOffer(fakeAdmin([row({ signup_token: C, org: { slug: "bac-a-sable" } })]), C, NOW)).toBeNull();
+  });
+});
+
+describe("migration 0057 : premier inscrit, premier servi", () => {
+  const sql = readFileSync("supabase/migrations/20261026000057_reunion_premier_inscrit.sql", "utf8");
+
+  it("ne compte que les personnes confirmées ou présentes, sous verrou du créneau", () => {
+    expect(sql).toMatch(/where signup_token = p_token for update/);
+    expect(sql).toMatch(/where meeting_id = m\.id and status in \('confirmee', 'presente'\)/);
+  });
+
+  it("une place par personne sur un même lien, et les convocations en attente des autres créneaux disparaissent", () => {
+    expect(sql).toMatch(/o\.series_token = m\.series_token[\s\S]*i\.status in \('confirmee', 'presente'\)/);
+    expect(sql).toMatch(/delete from public\.info_meeting_invitations i[\s\S]*i\.status in \('a_envoyer', 'envoyee'\)/);
+  });
+
+  it("reste appelable par le seul serveur", () => {
+    expect(sql).toMatch(/revoke all on function public\.signup_for_info_meeting\(text, uuid\) from public, anon, authenticated/);
+    expect(sql).toMatch(/grant execute on function public\.signup_for_info_meeting\(text, uuid\) to service_role/);
   });
 });
 

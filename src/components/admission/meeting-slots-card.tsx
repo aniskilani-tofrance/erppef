@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { CalendarPlus } from "lucide-react";
 import { addMeetingSlot } from "@/app/(app)/apprenants/admission/actions";
-import { placesSummary } from "@/lib/inscription/meeting";
+import { placesSummary, type SlotOfferState } from "@/lib/inscription/meeting";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,8 +25,15 @@ export type SlotRow = {
   whenText: string; // « samedi 7 novembre 2026 à 14h00 »
   taken: number;
   capacity: number | null;
-  signupOpen: boolean;
+  state: SlotOfferState; // ce que le lien en fait : proposé, complet, fermé, passé
   current: boolean;
+};
+
+const STATE_BADGE: Record<SlotOfferState, { label: string; className: string; title: string }> = {
+  propose: { label: "proposé", className: "border-emerald-300 bg-emerald-50 text-emerald-800", title: "Ouvert, à venir, avec des places : la page du lien le propose." },
+  complet: { label: "complet", className: "border-orange-300 bg-orange-50 text-orange-800", title: "Toutes les places sont prises par des personnes confirmées : la page du lien ne le propose plus." },
+  ferme: { label: "fermé", className: "border-gray-300 bg-gray-100 text-gray-600", title: "Inscription fermée : « Ouvrir l'inscription » ouvre tous les créneaux du lien." },
+  passe: { label: "passé", className: "border-gray-300 bg-gray-100 text-gray-500", title: "Le créneau a commencé : plus d'inscription." },
 };
 
 export function MeetingSlotsCard({
@@ -117,7 +124,7 @@ export function MeetingSlotsCard({
         </div>
         <p className="text-xs text-muted-foreground">
           {several
-            ? "La personne choisit son jour et son heure sur la page du lien, parmi les créneaux ouverts qui ont encore des places. Chaque créneau se gère comme une réunion : convoqués, heures de convocation, présence."
+            ? "La personne choisit son jour et son heure sur la page du lien, parmi les créneaux « proposé » (ouverts, à venir, avec des places). Premier inscrit, premier servi : seules les personnes confirmées prennent une place, et chacune n'a qu'une place sur le lien. S'il n'en reste qu'un, la page l'affiche sans choix. « Ouvrir / Fermer l'inscription » agit sur tous les créneaux du lien. Chaque créneau se gère comme une réunion : convoqués, heures de convocation, présence."
             : "Un seul créneau pour l'instant. Ajoutez d'autres dates ou heures : le même lien les propose, et la personne choisit."}
         </p>
       </CardHeader>
@@ -136,11 +143,8 @@ export function MeetingSlotsCard({
                 </span>
                 <span className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground">{placesSummary(s.capacity, s.taken)}</span>
-                  <Badge
-                    variant="outline"
-                    className={s.signupOpen ? "border-emerald-300 bg-emerald-50 text-emerald-800" : "border-gray-300 bg-gray-100 text-gray-600"}
-                  >
-                    {s.signupOpen ? "ouvert" : "fermé"}
+                  <Badge variant="outline" className={STATE_BADGE[s.state].className} title={STATE_BADGE[s.state].title}>
+                    {STATE_BADGE[s.state].label}
                   </Badge>
                 </span>
               </li>

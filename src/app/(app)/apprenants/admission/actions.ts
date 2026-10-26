@@ -41,6 +41,7 @@ import {
 import { isSlotFree, type FreeSlot } from "@/lib/admission/slots";
 import { loadFreeSlots } from "@/lib/admission/slots-server";
 import { BULK_TEST_STATUSES, pickBulkTestTargets, type BulkTarget } from "@/lib/placement/bulk";
+import { signupToggleTargets } from "@/lib/inscription/meeting";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -180,9 +181,11 @@ export async function upsertInfoMeeting(raw: z.infer<typeof meetingSchema>): Pro
   return { ok: true, id: data.id };
 }
 
-// Ouvre ou ferme l'inscription par lien d'une réunion (bouton de la carte « Inscription par lien »).
-// Ouvrir exige un nombre maximum de places et une réunion qui n'a pas encore commencé.
-export async function setMeetingSignupOpen(raw: { meetingId: string; open: boolean }): Promise<ActionResult> {
+// Ouvre ou ferme l'inscription par lien (bouton de la carte « Inscription par lien »). Les créneaux
+// d'un même lien s'ouvrent et se ferment ENSEMBLE : le lien est commun (ouvrir un seul créneau
+// laissait les autres fermés, donc absents de la page). Ouvrir ne touche que les créneaux à venir
+// et exige un nombre maximum de places sur chacun.
+export async function setMeetingSignupOpen(raw: { meetingId: string; open: boolean }): Promise<ActionResult & { count?: number }> {
   const parsed = z.object({ meetingId: uuid, open: z.boolean() }).safeParse(raw);
   if (!parsed.success) return { ok: false, error: "Réunion invalide" };
   const d = parsed.data;
@@ -190,26 +193,34 @@ export async function setMeetingSignupOpen(raw: { meetingId: string; open: boole
   const { orgId } = await requireRole(["admin", "coordinator"]);
   const supabase = await createClient();
 
-  if (d.open) {
-    const { data: meeting } = await supabase
-      .from("info_meetings")
-      .select("capacity, starts_at")
-      .eq("id", d.meetingId)
-      .eq("org_id", orgId)
-      .single();
-    if (!meeting) return { ok: false, error: "Réunion introuvable" };
-    if (!meeting.capacity) return { ok: false, error: SIGNUP_NEEDS_CAPACITY.replace("pour ouvrir", "(« Modifier ») pour ouvrir") };
-    if (new Date(meeting.starts_at).getTime() <= new Date().getTime()) return { ok: false, error: "La réunion a déjà commencé." };
+  const { data: meeting } = await supabase
+    .from("info_meetings")
+    .select("id, capacity, starts_at, series_token")
+    .eq("id", d.meetingId)
+    .eq("org_id", orgId)
+    .single();
+  if (!meeting) return { ok: false, error: "Réunion introuvable" };
+  const { data: seriesRows } = meeting.series_token
+    ? await supabase.from("info_meetings").select("id, capacity, starts_at").eq("org_id", orgId).eq("series_token", meeting.series_token)
+    : { data: [meeting] };
+  const slots = (seriesRows ?? [meeting]).map((r) => ({ id: r.id as string, startsAt: r.starts_at as string, capacity: (r.capacity as number | null) ?? null }));
+
+  const target = signupToggleTargets(slots, d.open);
+  if (!target.ok) {
+    if (target.reason === "started") return { ok: false, error: slots.length > 1 ? "Tous les créneaux ont déjà commencé." : "La réunion a déjà commencé." };
+    return {
+      ok: false,
+      error:
+        slots.length > 1
+          ? `${target.missing} créneau${target.missing > 1 ? "x" : ""} sans nombre maximum de places : « Modifier » sur ${target.missing > 1 ? "chacun" : "ce créneau"} avant d'ouvrir le lien.`
+          : SIGNUP_NEEDS_CAPACITY.replace("pour ouvrir", "(« Modifier ») pour ouvrir"),
+    };
   }
 
-  const { error } = await supabase
-    .from("info_meetings")
-    .update({ signup_open: d.open })
-    .eq("id", d.meetingId)
-    .eq("org_id", orgId);
+  const { error } = await supabase.from("info_meetings").update({ signup_open: d.open }).in("id", target.ids).eq("org_id", orgId);
   if (error) return { ok: false, error: translatePgError(error) };
-  revalidateAdmission(d.meetingId);
-  return { ok: true };
+  for (const id of new Set([d.meetingId, ...target.ids])) revalidateAdmission(id);
+  return { ok: true, count: target.ids.length };
 }
 
 export async function deleteInfoMeeting(id: string): Promise<ActionResult> {
@@ -594,6 +605,16 @@ export async function addMeetingSlot(raw: z.infer<typeof slotSchema>): Promise<M
     const { error } = await supabase.from("info_meetings").update({ series_token: seriesToken }).eq("id", source.id).eq("org_id", orgId);
     if (error) return { ok: false, error: translatePgError(error) };
   }
+  // Le lien est commun : si un créneau du lien est ouvert, le nouveau l'est aussi (sinon il resterait
+  // invisible sur la page du lien sans qu'on le voie).
+  const { data: seriesOpen } = await supabase
+    .from("info_meetings")
+    .select("id")
+    .eq("org_id", orgId)
+    .eq("series_token", seriesToken)
+    .eq("signup_open", true)
+    .limit(1);
+  const open = Boolean(source.signup_open) || Boolean(seriesOpen?.length);
 
   const { data, error } = await supabase
     .from("info_meetings")
@@ -607,7 +628,7 @@ export async function addMeetingSlot(raw: z.infer<typeof slotSchema>): Promise<M
       capacity: d.capacity,
       notes: source.notes,
       oral_test_included: source.oral_test_included,
-      signup_open: source.signup_open,
+      signup_open: open,
       series_token: seriesToken,
     })
     .select("id")
