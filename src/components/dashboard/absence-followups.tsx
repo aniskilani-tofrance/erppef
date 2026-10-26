@@ -1,10 +1,12 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { MessageCircle, Phone } from "lucide-react";
 import { logAbsenceFollowup } from "@/app/(app)/dashboard/actions";
+import { excuseClosedAbsence } from "@/app/(app)/seances/actions";
+import { ExcuseEditor, EXCUSE_BUTTON_CLASS } from "@/components/emargement/excuse-editor";
 import { toWhatsAppNumber, formatPhone } from "@/lib/admission/phone";
 import { buildAbsenceFollowupMessage, type AbsenceFollowup } from "@/lib/absences/followup";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +16,8 @@ import { FollowupDraftButton } from "@/components/assistant/followup-draft-butto
 
 // « Absents à relancer » : un clic ouvre WhatsApp avec le message prêt (à relire), un
 // autre note un appel. Dans les deux cas la relance est tracée dans le carnet de
-// contact et la personne sort de la liste.
+// contact et la personne sort de la liste. « Excuser » : la personne avait prévenu,
+// l'absence devient justifiée sur la feuille (déjà clôturée) et ne se relance plus.
 export function AbsenceFollowupsCard({ items, senderFirstName, aiEnabled = false }: { items: AbsenceFollowup[]; senderFirstName: string | null; aiEnabled?: boolean }) {
   if (!items.length) return null;
   return (
@@ -23,7 +26,7 @@ export function AbsenceFollowupsCard({ items, senderFirstName, aiEnabled = false
         <CardTitle className="text-base">Absents à relancer ({items.length})</CardTitle>
         <p className="text-xs text-muted-foreground">
           Absent(e) à sa dernière séance émargée, sans contact noté depuis. Une fois relancé(e), la personne sort de la liste ;
-          elle y revient si elle manque encore un cours.{aiEnabled && " « Message adapté » : l'assistant écrit une relance selon l'historique (première absence ou série), dans sa langue, à relire avant d'envoyer."}
+          elle y revient si elle manque encore un cours. Elle avait prévenu ? « Excuser » : l&apos;absence devient justifiée, sans relance.{aiEnabled && " « Message adapté » : l'assistant écrit une relance selon l'historique (première absence ou série), dans sa langue, à relire avant d'envoyer."}
         </p>
       </CardHeader>
       <CardContent>
@@ -40,6 +43,7 @@ export function AbsenceFollowupsCard({ items, senderFirstName, aiEnabled = false
 function FollowupRow({ f, senderFirstName, aiEnabled }: { f: AbsenceFollowup; senderFirstName: string | null; aiEnabled: boolean }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [excusing, setExcusing] = useState(false);
   const number = toWhatsAppNumber(f.phone);
   const missedDay = new Date(f.missedAt).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short", timeZone: "Europe/Paris" });
   const note = `Relance absence (${f.groupName}, ${missedDay}${f.streak > 1 ? `, ${f.streak} absences de suite` : ""})`;
@@ -50,6 +54,18 @@ function FollowupRow({ f, senderFirstName, aiEnabled }: { f: AbsenceFollowup; se
       if (!res.ok) toast.error(res.error);
       else {
         if (channel === "telephone") toast.success(`Appel à ${f.firstName} noté dans son carnet.`);
+        router.refresh();
+      }
+    });
+  }
+
+  function excuse(reason: string) {
+    startTransition(async () => {
+      const res = await excuseClosedAbsence({ sessionId: f.sessionId, learnerId: f.learnerId, excused: true, reason });
+      if (!res.ok) toast.error(res.error);
+      else {
+        toast.success(`Absence de ${f.firstName} excusée : plus de relance pour ce cours.`);
+        setExcusing(false);
         router.refresh();
       }
     });
@@ -86,7 +102,18 @@ function FollowupRow({ f, senderFirstName, aiEnabled }: { f: AbsenceFollowup; se
           <Phone className="mr-1 h-3.5 w-3.5" />
           Appelé(e)
         </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className={`h-8 ${EXCUSE_BUTTON_CLASS}`}
+          onClick={() => setExcusing(true)}
+          disabled={pending || excusing}
+          title="La personne avait prévenu : l'absence devient justifiée (feuille non rouverte) et ne se relance plus"
+        >
+          Excuser
+        </Button>
       </span>
+      {excusing && <ExcuseEditor pending={pending} onSave={excuse} onCancel={() => setExcusing(false)} />}
     </li>
   );
 }

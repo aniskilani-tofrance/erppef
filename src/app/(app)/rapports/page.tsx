@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { ReportFilters } from "@/components/rapports/report-filters";
 import { DepositReportButton } from "@/components/rapports/deposit-report-button";
 import { CalendarDays, Download, FileText } from "lucide-react";
+import { absencesSummary, excusedAbsencesLabel } from "@/lib/attendance-status";
 
 // Bilan d'activité par financeur : LA restitution attendue par la Ville, France
 // Travail, le FSE… — heures, bénéficiaires, assiduité (émargements clôturés), typologie.
@@ -103,6 +104,7 @@ export default async function RapportsPage({
             <Kpi
               label="Assiduité moyenne"
               value={report.totals.averageAttendanceRate != null ? `${report.totals.averageAttendanceRate} %` : "—"}
+              sub={report.totals.absences ? absencesSummary(report.totals.absences, report.totals.excusedAbsences) : undefined}
             />
           </div>
 
@@ -138,12 +140,13 @@ export default async function RapportsPage({
                     <TableHead className="text-right">Séances réalisées</TableHead>
                     <TableHead className="text-right">Heures</TableHead>
                     <TableHead className="text-right">Assiduité</TableHead>
+                    <TableHead className="text-right">Absences</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {report.groupDetails.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} className="py-6 text-center text-muted-foreground">
+                      <TableCell colSpan={7} className="py-6 text-center text-muted-foreground">
                         Aucun groupe pour ce financeur sur la période.
                       </TableCell>
                     </TableRow>
@@ -158,6 +161,12 @@ export default async function RapportsPage({
                       <TableCell className="text-right">
                         {g.attendanceRate != null ? `${g.attendanceRate} %` : "—"}
                       </TableCell>
+                      <TableCell className="text-right">
+                        {g.absences}
+                        {g.excusedAbsences > 0 && (
+                          <span className="block text-xs text-muted-foreground">{excusedAbsencesLabel(g.excusedAbsences)}</span>
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -170,12 +179,13 @@ export default async function RapportsPage({
   );
 }
 
-function Kpi({ label, value }: { label: string; value: string }) {
+function Kpi({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <Card>
       <CardContent className="pt-6">
         <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
         <p className="mt-2 text-2xl font-semibold">{value}</p>
+        {sub && <p className="mt-1 text-xs text-muted-foreground">{sub}</p>}
       </CardContent>
     </Card>
   );

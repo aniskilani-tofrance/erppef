@@ -8,6 +8,45 @@ import { AttendanceManager } from "@/components/emargement/attendance-manager";
 import { utcToLocalTime } from "@/lib/dates";
 import { SessionLogCard } from "@/components/emargement/session-log-card";
 import { formatLogDay, loadSessionLogContext } from "@/lib/seances/cahier";
+import { excuseTraceLabel } from "@/lib/emargement/excuse";
+import type { AttendanceStatus } from "@/lib/attendance-status";
+
+type SheetAttendance = {
+  learner_id: string;
+  status: AttendanceStatus;
+  signed_at: string | null;
+  signature: string | null;
+  excuse_reason: string | null;
+  excused_at: string | null;
+  excuser: { full_name: string | null } | null;
+};
+
+// Émargements de la feuille, avec le motif et la trace des absences excusées. Tolérant :
+// tant que la migration 0055 n'est pas appliquée (colonnes excuse_* absentes), on relit
+// sans elles et la page s'affiche comme avant (« Excusé » répondra « indisponible »).
+async function loadSheetAttendances(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  sessionId: string,
+): Promise<{ rows: SheetAttendance[]; excuseAvailable: boolean }> {
+  const full = await supabase
+    .from("attendances")
+    .select("learner_id, status, signed_at, signature, excuse_reason, excused_at, excuser:excused_by(full_name)")
+    .eq("session_id", sessionId);
+  if (!full.error) return { rows: (full.data ?? []) as unknown as SheetAttendance[], excuseAvailable: true };
+  // Nom de l'auteur illisible (cache du schéma pas encore rechargé) : motif et date suffisent
+  const noName = await supabase
+    .from("attendances")
+    .select("learner_id, status, signed_at, signature, excuse_reason, excused_at")
+    .eq("session_id", sessionId);
+  if (!noName.error) {
+    return { rows: ((noName.data ?? []) as unknown as SheetAttendance[]).map((r) => ({ ...r, excuser: null })), excuseAvailable: true };
+  }
+  const basic = await supabase.from("attendances").select("learner_id, status, signed_at, signature").eq("session_id", sessionId);
+  return {
+    rows: ((basic.data ?? []) as unknown as SheetAttendance[]).map((r) => ({ ...r, excuse_reason: null, excused_at: null, excuser: null })),
+    excuseAvailable: false,
+  };
+}
 
 export default async function EmargementSeancePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -23,16 +62,13 @@ export default async function EmargementSeancePage({ params }: { params: Promise
     .single();
   if (!session) notFound();
 
-  const [{ data: enrollments }, { data: attendances }, logContext, { data: membership }] = await Promise.all([
+  const [{ data: enrollments }, { rows: attendances, excuseAvailable }, logContext, { data: membership }] = await Promise.all([
     supabase
       .from("enrollments")
       .select("learner_id, learners(first_name, last_name)")
       .eq("group_id", session.group_id)
       .eq("status", "inscrit"),
-    supabase
-      .from("attendances")
-      .select("learner_id, status, signed_at, signature")
-      .eq("session_id", id),
+    loadSheetAttendances(supabase, id),
     loadSessionLogContext(supabase, { id: session.id, groupId: session.group_id, startsAt: session.starts_at }),
     supabase.from("memberships").select("trainer_id").eq("user_id", userId).eq("org_id", orgId).maybeSingle(),
   ]);
@@ -42,7 +78,7 @@ export default async function EmargementSeancePage({ params }: { params: Promise
   const canEditLog =
     role !== "trainer" || (myTrainerId !== null && [session.trainer_id, session.co_trainer_id].includes(myTrainerId));
 
-  const byLearner = new Map((attendances ?? []).map((a) => [a.learner_id, a]));
+  const byLearner = new Map(attendances.map((a) => [a.learner_id, a]));
   const learners = (enrollments ?? [])
     .map((e) => {
       const l = e.learners as unknown as { first_name: string; last_name: string } | null;
@@ -53,6 +89,8 @@ export default async function EmargementSeancePage({ params }: { params: Promise
         status: a?.status ?? null,
         signedAt: a?.signed_at ?? null,
         hasSignature: Boolean(a?.signature),
+        excuseReason: a?.status === "excuse" ? a.excuse_reason : null,
+        excuseTrace: a?.status === "excuse" ? excuseTraceLabel(a.excused_at, a.excuser?.full_name ?? null) : null,
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name, "fr"));
@@ -100,6 +138,8 @@ export default async function EmargementSeancePage({ params }: { params: Promise
         closedAt={session.attendance_closed_at}
         trainerSignature={session.trainer_signature}
         canReopen={role === "admin" || role === "coordinator"}
+        canExcuseClosed={role === "admin" || role === "coordinator"}
+        excuseAvailable={excuseAvailable}
         publicUrl={publicUrl}
         qrDataUrl={qrDataUrl}
       />

@@ -7,6 +7,7 @@ import { CheckCircle2, CloudUpload, Copy, FileDown, RefreshCw } from "lucide-rea
 import {
   closeAttendanceSheet,
   depositSheetToDrive,
+  excuseClosedAbsence,
   openAttendanceSheet,
   reopenAttendanceSheet,
   setAttendanceStatus,
@@ -15,19 +16,25 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SignaturePad } from "./signature-pad";
+import { ExcuseEditor, EXCUSE_BUTTON_CLASS } from "./excuse-editor";
+import { ATTENDANCE_STATUS_LABELS, EXCUSE_UNAVAILABLE, type AttendanceStatus } from "@/lib/attendance-status";
 
-type LearnerRow = {
+export type LearnerRow = {
   id: string;
   name: string;
-  status: "present" | "retard" | "absent" | null;
+  status: AttendanceStatus | null;
   signedAt: string | null;
   hasSignature: boolean;
+  excuseReason?: string | null; // motif de l'absence excusée (facultatif)
+  excuseTrace?: string | null; // « excusé le 26/10 par Nadia »
 };
 
-const STATUS_LABELS: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
-  present: { label: "Présent", variant: "default" },
-  retard: { label: "Retard", variant: "secondary" },
-  absent: { label: "Absent", variant: "destructive" },
+const STATUS_VARIANTS: Record<AttendanceStatus, { variant: "default" | "secondary" | "outline" | "destructive"; className?: string }> = {
+  present: { variant: "default" },
+  retard: { variant: "secondary" },
+  absent: { variant: "destructive" },
+  // Bleu : une absence prévenue n'est pas une alerte (pas le rouge de l'absence)
+  excuse: { variant: "outline", className: "border-sky-300 bg-sky-50 text-sky-800" },
 };
 
 export function AttendanceManager({
@@ -37,6 +44,8 @@ export function AttendanceManager({
   closedAt,
   trainerSignature,
   canReopen,
+  canExcuseClosed = false,
+  excuseAvailable = true,
   publicUrl,
   qrDataUrl,
 }: {
@@ -46,6 +55,8 @@ export function AttendanceManager({
   closedAt: string | null;
   trainerSignature: string | null;
   canReopen: boolean;
+  canExcuseClosed?: boolean; // admin et coordination : excuser une absence après la clôture
+  excuseAvailable?: boolean; // false tant que la base n'a pas le statut « Excusé »
   publicUrl: string | null;
   qrDataUrl: string | null;
 }) {
@@ -54,6 +65,23 @@ export function AttendanceManager({
   const [closing, setClosing] = useState(false);
   const [signature, setSignature] = useState<string | null>(null);
   const [driveLink, setDriveLink] = useState<string | null>(null);
+  // Ligne dont on saisit le motif d'excuse (un seul champ ouvert à la fois)
+  const [excusing, setExcusing] = useState<string | null>(null);
+
+  function startExcuse(learnerId: string) {
+    if (!excuseAvailable) {
+      toast.error(EXCUSE_UNAVAILABLE);
+      return;
+    }
+    setExcusing(learnerId);
+  }
+
+  function saveExcuse(l: LearnerRow, reason: string) {
+    const action = closedAt
+      ? () => excuseClosedAbsence({ sessionId, learnerId: l.id, excused: true, reason })
+      : () => setAttendanceStatus({ sessionId, learnerId: l.id, status: "excuse", excuseReason: reason });
+    run(action, `${l.name} : absence excusée.`, () => setExcusing(null));
+  }
 
   function deposit() {
     startTransition(async () => {
@@ -74,7 +102,7 @@ export function AttendanceManager({
     return () => clearInterval(timer);
   }, [isOpen, router]);
 
-  function run(action: () => Promise<{ ok: true } | { ok: false; error: string }>, success?: string) {
+  function run(action: () => Promise<{ ok: true } | { ok: false; error: string }>, success?: string, after?: () => void) {
     startTransition(async () => {
       const result = await action();
       if (!result.ok) {
@@ -82,6 +110,7 @@ export function AttendanceManager({
         return;
       }
       if (success) toast.success(success);
+      after?.();
       router.refresh();
     });
   }
@@ -154,43 +183,102 @@ export function AttendanceManager({
               <li className="text-sm text-muted-foreground">Aucun apprenant inscrit à ce groupe.</li>
             )}
             {learners.map((l) => (
-              <li key={l.id} className="flex flex-wrap items-center gap-2 rounded-md border px-3 py-2">
-                <span className="font-medium">{l.name}</span>
-                {l.signedAt && (
-                  <span className="inline-flex items-center gap-1 text-xs text-green-700">
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    signé à {new Date(l.signedAt).toLocaleTimeString("fr-FR", {
-                      hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris",
-                    })}
-                  </span>
-                )}
-                {l.status && (
-                  <Badge variant={STATUS_LABELS[l.status].variant}>{STATUS_LABELS[l.status].label}</Badge>
-                )}
-                {!closedAt && (
-                  <span className="ml-auto flex gap-1">
-                    {!l.signedAt && (
+              <li key={l.id} className="rounded-md border px-3 py-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-medium">{l.name}</span>
+                  {l.signedAt && (
+                    <span className="inline-flex items-center gap-1 text-xs text-green-700">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      signé à {new Date(l.signedAt).toLocaleTimeString("fr-FR", {
+                        hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris",
+                      })}
+                    </span>
+                  )}
+                  {l.status && (
+                    <Badge
+                      variant={STATUS_VARIANTS[l.status]?.variant ?? "outline"}
+                      className={STATUS_VARIANTS[l.status]?.className}
+                      title={l.status === "excuse" && l.excuseReason ? `Motif : ${l.excuseReason}` : undefined}
+                    >
+                      {ATTENDANCE_STATUS_LABELS[l.status] ?? l.status}
+                    </Badge>
+                  )}
+                  {!closedAt && (
+                    <span className="ml-auto flex flex-wrap gap-1">
+                      {!l.signedAt && (
+                        <Button
+                          variant="outline" size="sm" disabled={pending}
+                          onClick={() => run(() => setAttendanceStatus({ sessionId, learnerId: l.id, status: "present" }))}
+                        >
+                          Présent
+                        </Button>
+                      )}
                       <Button
                         variant="outline" size="sm" disabled={pending}
-                        onClick={() => run(() => setAttendanceStatus({ sessionId, learnerId: l.id, status: "present" }))}
+                        onClick={() => run(() => setAttendanceStatus({ sessionId, learnerId: l.id, status: "retard" }))}
                       >
-                        Présent
+                        Retard
                       </Button>
-                    )}
-                    <Button
-                      variant="outline" size="sm" disabled={pending}
-                      onClick={() => run(() => setAttendanceStatus({ sessionId, learnerId: l.id, status: "retard" }))}
-                    >
-                      Retard
-                    </Button>
-                    <Button
-                      variant="outline" size="sm" disabled={pending}
-                      className="text-destructive"
-                      onClick={() => run(() => setAttendanceStatus({ sessionId, learnerId: l.id, status: "absent" }), l.hasSignature ? "Signature effacée, apprenant marqué absent." : undefined)}
-                    >
-                      Absent
-                    </Button>
-                  </span>
+                      <Button
+                        variant="outline" size="sm" disabled={pending}
+                        className="text-destructive"
+                        onClick={() => run(() => setAttendanceStatus({ sessionId, learnerId: l.id, status: "absent" }), l.hasSignature ? "Signature effacée, apprenant marqué absent." : undefined)}
+                      >
+                        Absent
+                      </Button>
+                      {!l.signedAt && (
+                        <Button
+                          variant="outline" size="sm" disabled={pending}
+                          className={EXCUSE_BUTTON_CLASS}
+                          title="Absence prévenue (rendez-vous, enfant malade…) : pas de relance"
+                          onClick={() => startExcuse(l.id)}
+                        >
+                          Excusé
+                        </Button>
+                      )}
+                    </span>
+                  )}
+                  {closedAt && canExcuseClosed && l.status === "absent" && excusing !== l.id && (
+                    <span className="ml-auto">
+                      <Button
+                        variant="outline" size="sm" disabled={pending}
+                        className={EXCUSE_BUTTON_CLASS}
+                        title="La personne avait prévenu : l'absence devient justifiée, sans rouvrir la feuille"
+                        onClick={() => startExcuse(l.id)}
+                      >
+                        Excuser
+                      </Button>
+                    </span>
+                  )}
+                  {closedAt && canExcuseClosed && l.status === "excuse" && excusing !== l.id && (
+                    <span className="ml-auto flex flex-wrap gap-1">
+                      <Button variant="ghost" size="sm" disabled={pending} onClick={() => startExcuse(l.id)}>
+                        Modifier le motif
+                      </Button>
+                      <Button
+                        variant="ghost" size="sm" disabled={pending}
+                        className="text-destructive"
+                        onClick={() => run(() => excuseClosedAbsence({ sessionId, learnerId: l.id, excused: false }), `${l.name} : remis(e) « Absent ».`)}
+                      >
+                        Remettre « Absent »
+                      </Button>
+                    </span>
+                  )}
+                </div>
+                {l.status === "excuse" && (l.excuseReason || l.excuseTrace) && excusing !== l.id && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {l.excuseReason && <span>Motif : {l.excuseReason}</span>}
+                    {l.excuseReason && l.excuseTrace && " · "}
+                    {l.excuseTrace && <span>{l.excuseTrace}</span>}
+                  </p>
+                )}
+                {excusing === l.id && (
+                  <ExcuseEditor
+                    initialReason={l.status === "excuse" ? (l.excuseReason ?? "") : ""}
+                    pending={pending}
+                    onSave={(reason) => saveExcuse(l, reason)}
+                    onCancel={() => setExcusing(null)}
+                  />
                 )}
               </li>
             ))}
@@ -286,6 +374,11 @@ export function AttendanceManager({
                 Voir le fichier sur le Drive →
               </a>
             )}
+            <p className="text-xs text-muted-foreground">
+              {canExcuseClosed
+                ? "Une personne avait prévenu de son absence ? « Excuser » sur sa ligne : l'absence devient justifiée, sans rouvrir la feuille. Une présence ne se change qu'en rouvrant la feuille."
+                : "Une personne avait prévenu de son absence ? La coordination peut l'excuser sans rouvrir la feuille."}
+            </p>
           </CardContent>
         </Card>
       )}

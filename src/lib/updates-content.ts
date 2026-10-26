@@ -26,6 +26,22 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-10-26-absence-excusee",
+    date: "2026-10-26",
+    title: "Émargement : le statut « Excusé » pour une absence prévenue",
+    summary: "Une personne a prévenu de son absence ? Posez « Excusé » sur sa ligne : elle n'est plus relancée, et les bilans montrent ces absences à part.",
+    items: [
+      { text: "Sur la feuille d'émargement, un 4e bouton bleu « Excusé » à côté de Présent, Retard et Absent. Un motif facultatif s'ouvre (rendez-vous médical, préfecture, enfant malade…), puis « Valider « Excusé » ». À la clôture, une ligne « Excusé » reste « Excusé ».", roles: ALL },
+      { text: "Une absence excusée n'apparaît jamais dans « Absents à relancer », n'allonge pas une série d'absences et ne déclenche pas d'alerte de décrochage. Pour les heures, c'est une absence (heures non réalisées), montrée à part : « dont X absences justifiées ».", roles: ALL },
+      { text: "Feuille déjà clôturée : l'admin et la coordination passent une ligne « Absent » en « Excusé » (et inversement) sans rouvrir la feuille, depuis la feuille ou depuis « Absents à relancer » → « Excuser ». Signatures, heures et clôture ne bougent pas ; la ligne garde « excusé le JJ/MM par Prénom ». Jamais sur une ligne présente : il faut rouvrir la feuille.", roles: TEAM },
+      { text: "Bilans : page Rapports, bilan PDF et CSV financeur, export d'assiduité du groupe, email hebdomadaire au financeur et feuille PDF indiquent les absences justifiées à part. Le motif n'apparaît jamais dans ce qui part au financeur. Pas de rattrapage automatique des anciennes absences.", roles: TEAM },
+    ],
+    training: [
+      { moduleId: "f2-emargement", lessonId: "cas-particuliers", label: "Retards, absents, excusés, erreurs" },
+      { moduleId: "c5-vie-quotidienne", lessonId: "qualite", label: "Assiduité et audit Qualiopi" },
+    ],
+  },
+  {
     id: "2026-10-26-envoi-groupe-test",
     date: "2026-10-26",
     title: "Envoyer le test de niveau à toutes les nouvelles demandes, à la suite",

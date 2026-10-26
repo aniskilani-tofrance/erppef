@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { utcToLocalTime } from "@/lib/dates";
 import { LOGO_PEF_BASE64 } from "./logo-data";
 import { trainerStatusSuffix } from "@/lib/referentiels";
+import { ATTENDANCE_STATUS_LABELS, isExcused } from "@/lib/attendance-status";
 
 // Charte ParlerEmploi
 const PEF_GREEN = rgb(0.059, 0.298, 0.227); // #0F4C3A
@@ -17,11 +18,16 @@ const ORG_LEGAL = {
   siret: "SIRET 924 182 546 00011",
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  present: "Présent",
-  retard: "Retard",
-  absent: "Absent",
-};
+/** Libellé du statut sur la feuille. « Excusé » = absence justifiée (le motif n'y figure jamais). */
+export function sheetStatusLabel(status: string): string {
+  return (ATTENDANCE_STATUS_LABELS as Record<string, string>)[status] ?? status;
+}
+
+/** Mention sous le tableau quand la feuille contient des absences excusées, sinon null. */
+export function sheetExcuseNote(rows: { status: string }[]): string | null {
+  if (!rows.some((r) => isExcused(r.status))) return null;
+  return "Excusé : absence justifiée (prévenue), comptée comme une absence (heures non réalisées).";
+}
 
 export type AttendanceSheetData = {
   groupName: string;
@@ -221,7 +227,7 @@ export async function buildAttendancePdf(data: AttendanceSheetData): Promise<Uin
     let x = MARGIN;
     text(page, row.name, x + 4, y - 10, font, 10);
     x += COLS.name;
-    text(page, STATUS_LABELS[row.status] ?? row.status, x + 4, y - 10, font, 10);
+    text(page, sheetStatusLabel(row.status), x + 4, y - 10, font, 10);
     x += COLS.status;
     text(page, row.signedAt ? utcToLocalTime(row.signedAt) : "—", x + 4, y - 10, font, 10);
     x += COLS.time;
@@ -242,9 +248,15 @@ export async function buildAttendancePdf(data: AttendanceSheetData): Promise<Uin
   }
 
   // Contre-signature formateur
-  if (y < MARGIN + 110) {
+  if (y < MARGIN + 124) {
     page = doc.addPage([A4.width, A4.height]);
     y = A4.height - MARGIN;
+  }
+  const excuseNote = sheetExcuseNote(data.rows);
+  if (excuseNote) {
+    y -= 4;
+    text(page, excuseNote, MARGIN, y, font, 8.5);
+    y -= 10;
   }
   y -= 16;
   text(page, `Signature du formateur${data.trainerName ? ` (${data.trainerName})` : ""} :`, MARGIN, y, bold, 10);

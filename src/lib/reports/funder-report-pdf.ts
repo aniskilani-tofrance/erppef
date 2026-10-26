@@ -1,6 +1,7 @@
 import { PDFDocument, PDFFont, PDFPage, StandardFonts, rgb } from "pdf-lib";
 import { LOGO_PEF_BASE64 } from "@/lib/emargement/logo-data";
 import type { Distribution, FunderReport } from "./funder-report";
+import { absencesSummary } from "@/lib/attendance-status";
 
 // Bilan financeur en PDF — même charte que la feuille d'émargement (lib/emargement/pdf.ts).
 const PEF_GREEN = rgb(0.059, 0.298, 0.227);
@@ -89,6 +90,7 @@ export async function buildFunderReportPdf(report: FunderReport): Promise<Uint8A
     ["Heures à venir (période)", `${t.hoursPlanned.toLocaleString("fr-FR")} h`],
     ["Bénéficiaires uniques", String(t.uniqueLearners)],
     ["Assiduité moyenne", t.averageAttendanceRate != null ? `${t.averageAttendanceRate} %` : "—"],
+    ["Absences émargées", absencesSummary(t.absences, t.excusedAbsences)],
     ["Sorties : abandons", String(t.exits.abandon)],
     ["Sorties : parcours terminés", String(t.exits.termine)],
   ];
@@ -143,18 +145,20 @@ export async function buildFunderReportPdf(report: FunderReport): Promise<Uint8A
   newPageIfNeeded(16);
   page.drawRectangle({ x: MARGIN, y: y - 4, width: A4.width - 2 * MARGIN, height: 15, color: PEF_PALE });
   text("Groupe", MARGIN + 4, 8.5, bold);
-  text("Inscrits", MARGIN + 230, 8.5, bold);
-  text("Séances", MARGIN + 290, 8.5, bold);
-  text("Heures", MARGIN + 350, 8.5, bold);
-  text("Assiduité", MARGIN + 420, 8.5, bold);
+  text("Inscrits", MARGIN + 200, 8.5, bold);
+  text("Séances", MARGIN + 245, 8.5, bold);
+  text("Heures", MARGIN + 290, 8.5, bold);
+  text("Assiduité", MARGIN + 340, 8.5, bold);
+  text("Absences (justifiées)", MARGIN + 395, 8.5, bold);
   y -= 17;
   for (const g of report.groupDetails) {
     newPageIfNeeded(14);
-    text(truncate(g.name, 44), MARGIN + 4, 8.5);
-    text(String(g.learnerCount), MARGIN + 230, 8.5);
-    text(String(g.sessionsDone), MARGIN + 290, 8.5);
-    text(`${g.hoursDone.toLocaleString("fr-FR")} h`, MARGIN + 350, 8.5);
-    text(g.attendanceRate != null ? `${g.attendanceRate} %` : "—", MARGIN + 420, 8.5);
+    text(truncate(g.name, 38), MARGIN + 4, 8.5);
+    text(String(g.learnerCount), MARGIN + 200, 8.5);
+    text(String(g.sessionsDone), MARGIN + 245, 8.5);
+    text(`${g.hoursDone.toLocaleString("fr-FR")} h`, MARGIN + 290, 8.5);
+    text(g.attendanceRate != null ? `${g.attendanceRate} %` : "—", MARGIN + 340, 8.5);
+    text(`${g.absences}${g.excusedAbsences ? ` (dont ${g.excusedAbsences})` : ""}`, MARGIN + 395, 8.5);
     y -= 13;
   }
 
@@ -163,6 +167,11 @@ export async function buildFunderReportPdf(report: FunderReport): Promise<Uint8A
   y = Math.max(y - 20, MARGIN + 10);
   text(
     "Assiduité calculée sur les feuilles d'émargement signées et clôturées (détail nominatif dans l'export CSV joint).",
+    MARGIN, 7.5, font, GRAY,
+  );
+  y -= 10;
+  text(
+    "Une absence justifiée (la personne a prévenu) compte comme une absence : ses heures ne sont pas réalisées.",
     MARGIN, 7.5, font, GRAY,
   );
 

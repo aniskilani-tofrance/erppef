@@ -60,3 +60,15 @@ describe("Attestation d'entrée en formation", () => {
     expect(entryAttestationFileName("Cours municipaux A2 — Landy", "Charlène Kiese")).toMatch(/^attestation_entree_Charlene-Kiese_.*\.pdf$/);
   });
 });
+
+describe("attestation d'entrée — absence excusée", () => {
+  it("une absence excusée n'est pas une présence : pas de date d'entrée", () => {
+    const first = firstPresenceByLearner([
+      { learnerId: "a", status: "excuse", startsAt: "2026-10-05T07:00:00Z", closed: true },
+      { learnerId: "a", status: "present", startsAt: "2026-10-07T07:00:00Z", closed: true },
+      { learnerId: "b", status: "excuse", startsAt: "2026-10-05T07:00:00Z", closed: true },
+    ]);
+    expect(first.get("a")).toBe("2026-10-07");
+    expect(first.has("b")).toBe(false);
+  });
+});

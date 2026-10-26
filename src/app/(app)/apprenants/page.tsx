@@ -44,6 +44,7 @@ import {
   computeLearnerStats,
   type AttendanceRecord,
 } from "@/lib/attendance-stats";
+import { excusedShortLabel } from "@/lib/attendance-status";
 
 export default async function ApprenantsPage({
   searchParams,
@@ -348,6 +349,11 @@ export default async function ApprenantsPage({
                       <span className="text-sm">
                         {st.rate} %
                         <span className="ml-1 text-xs text-muted-foreground">({st.total})</span>
+                        {st.excused > 0 && (
+                          <span className="ml-1 text-xs text-sky-700" title="Absences prévenues : comptées comme absences, sans relance">
+                            · {excusedShortLabel(st.excused)}
+                          </span>
+                        )}
                         {st.consecutiveAbsences >= ABSENCE_ALERT_THRESHOLD && (
                           <Badge variant="destructive" className="ml-2">
                             {st.consecutiveAbsences} abs. de suite

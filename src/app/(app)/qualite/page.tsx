@@ -12,6 +12,7 @@ import { VeilleCollector, type VeilleNoteView, type VeilleRunView } from "@/comp
 import {
   ABSENCE_ALERT_THRESHOLD,
   computeLearnerStats,
+  globalAttendance,
   type AttendanceRecord,
 } from "@/lib/attendance-stats";
 
@@ -61,9 +62,8 @@ export default async function QualitePage() {
     startsAt: (a.sessions as unknown as { starts_at: string }).starts_at,
   }));
   const stats = computeLearnerStats(records);
-  const totalMarks = records.length;
-  const presentMarks = records.filter((r) => r.status !== "absent").length;
-  const globalRate = totalMarks ? Math.round((presentMarks / totalMarks) * 100) : null;
+  // Une absence justifiée compte comme une absence ; montrée à part sous le taux.
+  const { total: totalMarks, excused: excusedMarks, rate: globalRate } = globalAttendance(records);
 
   const nameById = new Map((learners ?? []).map((l) => [l.id, `${l.first_name} ${l.last_name}`]));
   const atRisk = [...stats.entries()]
@@ -90,7 +90,7 @@ export default async function QualitePage() {
       <h1 className="text-2xl font-semibold tracking-tight">Qualité (Qualiopi)</h1>
 
       <div className="grid gap-4 sm:grid-cols-4">
-        <Kpi label="Assiduité globale" value={globalRate !== null ? `${globalRate} %` : "—"} sub={totalMarks ? `${totalMarks} émargements` : "aucun émargement clôturé"} />
+        <Kpi label="Assiduité globale" value={globalRate !== null ? `${globalRate} %` : "—"} sub={totalMarks ? `${totalMarks} émargements${excusedMarks ? `, ${excusedMarks} absence${excusedMarks > 1 ? "s" : ""} justifiée${excusedMarks > 1 ? "s" : ""}` : ""}` : "aucun émargement clôturé"} />
         <Kpi label="Heures réalisées" value={`${Math.round(hoursDone)} h`} sub={`sur ${Math.round(hoursScheduled)} h planifiées`} />
         <Kpi label="Satisfaction" value={satisfaction !== null ? `${satisfaction.toFixed(1).replace(".", ",")} / 5` : "—"} sub={overallNotes.length ? `${overallNotes.length} réponse${overallNotes.length > 1 ? "s" : ""}` : "aucune réponse"} />
         <Kpi label="Réclamations ouvertes" value={String(openComplaints)} sub={`${(complaints ?? []).length} au registre`} alert={openComplaints > 0} />

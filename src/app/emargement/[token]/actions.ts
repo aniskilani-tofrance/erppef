@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { EXCUSE_CLEARED } from "@/lib/emargement/excuse";
 
 // Page PUBLIQUE : aucune session Supabase. Le token d'émargement est le secret ;
 // chaque action le revalide avant de toucher la base (client service_role).
@@ -114,7 +115,7 @@ export async function signAttendance(raw: z.infer<typeof signSchema>): Promise<S
 
   const { data: existing } = await supabase
     .from("attendances")
-    .select("id, signed_at")
+    .select("id, signed_at, status")
     .eq("session_id", session.id)
     .eq("learner_id", learnerId)
     .maybeSingle();
@@ -130,6 +131,8 @@ export async function signAttendance(raw: z.infer<typeof signSchema>): Promise<S
     signed_at: new Date().toISOString(),
     method: "tablette" as const,
     device,
+    // Excusée mais finalement venue : le motif et la trace de l'excuse n'ont plus lieu d'être
+    ...(existing?.status === "excuse" ? EXCUSE_CLEARED : {}),
   };
 
   // Un statut posé à la main par le formateur (ex. « retard ») peut préexister : on le remplace par la signature.

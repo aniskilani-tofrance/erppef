@@ -1,7 +1,8 @@
 import { requireRole } from "@/lib/auth";
 import { computeFunderReport, loadFunderReportData } from "@/lib/reports/funder-report";
 
-// Détail nominatif du bilan financeur (par groupe puis par apprenant).
+// Détail nominatif du bilan financeur (par groupe puis par apprenant). Les absences
+// justifiées (« Excusé ») sont comptées dans les absences et montrées à part.
 // Séparateur « ; » et BOM UTF-8 : ouverture directe dans Excel FR (pattern assiduite/route.ts).
 export async function GET(
   request: Request,
@@ -26,18 +27,20 @@ export async function GET(
     `Édité le;${new Date().toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" })}`,
     "",
     "DÉTAIL PAR GROUPE",
-    "Groupe;Dispositif;Inscrits;Séances réalisées;Heures réalisées;Assiduité moyenne",
+    "Groupe;Dispositif;Inscrits;Séances réalisées;Heures réalisées;Assiduité moyenne;Absences émargées;dont absences justifiées",
     ...report.groupDetails.map(
       (g) =>
-        `${g.name};${g.programName ?? ""};${g.learnerCount};${g.sessionsDone};${fmt(g.hoursDone)};${g.attendanceRate != null ? `${g.attendanceRate} %` : ""}`,
+        `${g.name};${g.programName ?? ""};${g.learnerCount};${g.sessionsDone};${fmt(g.hoursDone)};${g.attendanceRate != null ? `${g.attendanceRate} %` : ""};${g.absences};${g.excusedAbsences}`,
     ),
     "",
     "DÉTAIL PAR BÉNÉFICIAIRE",
-    "N°;Bénéficiaire;Groupes;Heures suivies (émargées);Taux de présence",
+    "N°;Bénéficiaire;Groupes;Heures suivies (émargées);Taux de présence;Absences;dont absences justifiées;Heures d'absence justifiée",
     ...report.learnerDetails.map(
       (l) =>
-        `${l.ref};${l.name};${l.groups.join(", ")};${fmt(l.hoursAttended)};${l.rate != null ? `${l.rate} %` : ""}`,
+        `${l.ref};${l.name};${l.groups.join(", ")};${fmt(l.hoursAttended)};${l.rate != null ? `${l.rate} %` : ""};${l.absences};${l.excusedAbsences};${fmt(l.hoursExcused)}`,
     ),
+    "",
+    "Une absence justifiée (la personne a prévenu) compte comme une absence : ses heures ne sont pas réalisées.",
   ];
 
   const csv = "\uFEFF" + lines.join("\r\n");

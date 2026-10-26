@@ -44,6 +44,7 @@ import {
   sessionHours,
   type AttendanceRecord,
 } from "@/lib/attendance-stats";
+import { excusedAbsencesLabel } from "@/lib/attendance-status";
 import { trainerStatusSuffix } from "@/lib/referentiels";
 import { groupsByLearner } from "@/lib/admission/group-colors";
 import { aiConfigured } from "@/lib/ai/client";
@@ -603,7 +604,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
                   <li key={e.enrollmentId}>
                     {e.name}
                     {e.level && <span className="ml-2 text-muted-foreground">{e.level}</span>}
-                    {st && <span className="ml-2 text-muted-foreground">{st.rate} % de présence</span>}
+                    {st && <span className="ml-2 text-muted-foreground">{st.rate} % de présence{st.excused > 0 ? ` (${excusedAbsencesLabel(st.excused)})` : ""}</span>}
                     {st && st.consecutiveAbsences >= ABSENCE_ALERT_THRESHOLD && (
                       <Badge variant="destructive" className="ml-2">
                         {st.consecutiveAbsences} absences de suite

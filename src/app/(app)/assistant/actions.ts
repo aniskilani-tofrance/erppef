@@ -24,6 +24,7 @@ import { GOALS } from "@/lib/referentiels";
 import { logContact, setAdmissionStatus, setInvitationStatus } from "@/app/(app)/apprenants/admission/actions";
 import { addAbsence } from "@/app/(app)/formateurs/actions";
 import { localToUtc, utcToLocalTime } from "@/lib/dates";
+import { isAttended, isExcused } from "@/lib/attendance-status";
 
 type Supa = Awaited<ReturnType<typeof createClient>>;
 const uuid = z.string().uuid();
@@ -142,13 +143,17 @@ export async function draftAbsenceFollowup(learnerId: string): Promise<DraftResu
   ]);
   if (!learner) return { ok: false, error: "Apprenant introuvable" };
   type Row = { status: string; sessions: { starts_at: string; group_id: string; groups: { name: string } | null } };
-  const rows = ((marks ?? []) as unknown as Row[]).sort((a, b) => b.sessions.starts_at.localeCompare(a.sessions.starts_at));
+  const allRows = ((marks ?? []) as unknown as Row[]).sort((a, b) => b.sessions.starts_at.localeCompare(a.sessions.starts_at));
+  // Même règle que « Absents à relancer » : une absence excusée ne se relance pas et
+  // n'allonge pas la série ; elle reste une absence pour le taux de présence.
+  const rows = allRows.filter((r) => !isExcused(r.status));
   const last = rows[0];
   if (!last || last.status !== "absent") return { ok: false, error: "Pas d'absence récente émargée pour cette personne." };
   const sameGroup = rows.filter((r) => r.sessions.group_id === last.sessions.group_id);
   let streak = 0;
   for (const r of sameGroup) { if (r.status !== "absent") break; streak += 1; }
-  const present = sameGroup.filter((r) => r.status !== "absent");
+  const groupMarks = allRows.filter((r) => r.sessions.group_id === last.sessions.group_id);
+  const present = groupMarks.filter((r) => isAttended(r.status));
   const { data: next } = await supabase
     .from("sessions").select("starts_at, rooms:room_id(name)").eq("group_id", last.sessions.group_id).eq("status", "planifiee").gte("starts_at", new Date().toISOString()).order("starts_at").limit(1).maybeSingle();
   const dayLabel = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", timeZone: TZ });
@@ -159,8 +164,8 @@ export async function draftAbsenceFollowup(learnerId: string): Promise<DraftResu
     missedWhen: dayLabel(last.sessions.starts_at),
     streak,
     presentCount: present.length,
-    totalCount: sameGroup.length,
-    rate: sameGroup.length ? Math.round((present.length / sameGroup.length) * 100) : null,
+    totalCount: groupMarks.length,
+    rate: groupMarks.length ? Math.round((present.length / groupMarks.length) * 100) : null,
     lastPresentWhen: present[0] ? dayLabel(present[0].sessions.starts_at) : null,
     nextSession: next ? `${whenLabel(next.starts_at)}${(next.rooms as unknown as { name: string } | null)?.name ? `, ${(next.rooms as unknown as { name: string }).name}` : ""}` : null,
     senderFirstName: sender,

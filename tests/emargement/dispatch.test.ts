@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildDispatchEmail, classifySessions, dispatchWindow, parseEmails, type DispatchSession } from "@/lib/emargement/dispatch";
+import { buildDispatchEmail, classifySessions, dispatchWindow, parseEmails, sheetSummaryLine, type DispatchSession } from "@/lib/emargement/dispatch";
 
 describe("envoi hebdomadaire des feuilles d'émargement — destinataires et fenêtre", () => {
   it("nettoie une liste d'adresses tapée librement", () => {
@@ -60,5 +60,26 @@ describe("envoi hebdomadaire des feuilles d'émargement — email", () => {
     const { subject, text } = buildDispatchEmail({ ...base, mode: "test", realRecipients: ["mba@mairie-saint-ouen.fr", "gfenzi@mairie-saint-ouen.fr (copie)"] });
     expect(subject.startsWith("[TEST] ")).toBe(true);
     expect(text).toContain("Les destinataires réels seraient : mba@mairie-saint-ouen.fr, gfenzi@mairie-saint-ouen.fr (copie)");
+  });
+});
+
+describe("envoi hebdomadaire — absences justifiées", () => {
+  it("la ligne de séance précise « dont X absences justifiées », seulement s'il y en a", () => {
+    expect(sheetSummaryLine({ sessionId: "s", startsAt: "", endsAt: "", present: 10, enrolled: 12 })).toBe("10 présents sur 12 inscrits");
+    expect(sheetSummaryLine({ sessionId: "s", startsAt: "", endsAt: "", present: 10, enrolled: 12, excused: 0 })).toBe("10 présents sur 12 inscrits");
+    expect(sheetSummaryLine({ sessionId: "s", startsAt: "", endsAt: "", present: 10, enrolled: 12, excused: 1 })).toBe(
+      "10 présents sur 12 inscrits — 2 absents, dont 1 absence justifiée",
+    );
+    const { text } = buildDispatchEmail({
+      groupName: "Cours municipaux A1 — Cordon",
+      siteName: null,
+      funderName: null,
+      from: new Date("2026-10-02T14:00:00Z"),
+      to: new Date("2026-10-09T14:00:00Z"),
+      sheets: [{ sessionId: "s1", startsAt: "2026-10-05T07:00:00Z", endsAt: "2026-10-05T11:00:00Z", present: 9, enrolled: 12, excused: 2 }],
+      missing: [],
+      mode: "auto",
+    });
+    expect(text).toContain("- lundi 5 octobre, 09h00-13h00 : 9 présents sur 12 inscrits — 3 absents, dont 2 absences justifiées");
   });
 });
