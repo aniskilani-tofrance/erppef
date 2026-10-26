@@ -102,9 +102,21 @@ export const HELP_SECTIONS: HelpSection[] = [
           "Depuis votre Dashboard ou le Planning, ouvrez la séance → « Feuille d'émargement » → « Ouvrir l'émargement ».",
           "Scannez le QR code avec la tablette (ou votre téléphone) : la liste des apprenants s'affiche avec leurs photos.",
           "Faites circuler la tablette : chacun touche son nom, signe au doigt, valide. Sa ligne se verrouille avec une coche verte.",
-          "Sur votre écran, posez les statuts manquants : « Retard » ou « Absent » (les non-signés seront marqués absents à la clôture).",
+          "Sur votre écran, posez les statuts manquants : « Retard », « Absent » ou « Excusé » (les non-signés sans statut seront marqués absents à la clôture).",
+          "« Excusé » (bouton bleu) : la personne a prévenu de son absence. Un champ « Motif » s'ouvre, facultatif (rendez-vous médical, préfecture, enfant malade…), puis « Valider « Excusé » ». Une ligne « Excusé » a un statut : elle ne devient pas « Absent » à la clôture.",
           "Cliquez « Contre-signer et clôturer », signez à votre tour : la séance passe automatiquement en « réalisée ».",
           "Un retardataire arrive après coup ? Le lien reste valable jusqu'à la clôture (au plus tard 24 h après la séance).",
+        ],
+      },
+      {
+        title: "Une personne a prévenu de son absence : le statut « Excusé »",
+        steps: [
+          "Feuille ouverte : bouton bleu « Excusé » sur sa ligne, motif facultatif (une ligne), puis « Valider « Excusé » ». La ligne affiche le badge bleu « Excusé », le motif et « excusé le JJ/MM par Prénom ».",
+          "Ce que ça change : la personne n'apparaît pas dans « Absents à relancer », ne reçoit pas de relance, et cette absence ne compte pas dans une série d'absences ni dans les alertes de décrochage.",
+          "Pour les heures, c'est une absence : les heures ne sont pas réalisées. Les bilans la montrent à part : « 4 absences, dont 1 absence justifiée ».",
+          "Elle vient finalement ? Elle signe sur la tablette comme les autres : la ligne passe « Présent » et le motif s'efface.",
+          "Feuille déjà clôturée : seule la coordination peut excuser l'absence (« Excuser » sur la ligne), sans rouvrir la feuille. Prévenez-la.",
+          "Le motif reste dans l'ERP : il n'apparaît jamais sur la feuille PDF ni dans les envois au financeur, qui indiquent seulement « Excusé ». N'écrivez pas de détail médical : « rendez-vous médical » suffit.",
         ],
       },
       {
@@ -550,6 +562,19 @@ export const HELP_SECTIONS: HelpSection[] = [
           "« Appelé(e) » : vous avez téléphoné ou vu la personne. La relance est notée sans ouvrir WhatsApp.",
           "Dans les deux cas, la relance est inscrite dans le carnet de contact de l'apprenant (preuve de suivi de l'assiduité pour l'audit) et la personne sort de la liste. Elle y revient seulement si elle manque un nouveau cours.",
           "Elle n'apparaît plus dès qu'elle est revenue en cours (présente ou en retard), ou si son inscription au groupe n'est plus active.",
+          "« Excuser » : la personne avait prévenu. Écrivez le motif si vous voulez (facultatif), puis « Valider « Excusé » » : la ligne de la feuille passe « Excusé » sans rouvrir la feuille, et la personne sort de la liste. Une absence excusée n'est jamais relancée et n'allonge pas une série d'absences.",
+          "Si elle a aussi manqué un autre cours sans prévenir, elle reste dans la liste pour ce cours-là.",
+          "La liste ne regarde que les 14 derniers jours. Rien n'est rattrapé automatiquement pour les absences plus anciennes : pour en excuser une, ouvrez la feuille de la séance (fiche du groupe → la séance → « Feuille d'émargement ») → « Excuser ».",
+        ],
+      },
+      {
+        title: "Excuser une absence sur une feuille déjà clôturée",
+        steps: [
+          "Réservé à l'admin et à la coordination (pas aux formatrices). Deux chemins : Dashboard → « Absents à relancer » → « Excuser », ou la feuille d'émargement de la séance → « Excuser » sur une ligne « Absent ».",
+          "Motif facultatif, puis « Valider « Excusé » ». Seule cette ligne change : les autres lignes, les signatures, les heures, le lien et la date de clôture restent tels quels. Pas besoin de « Rouvrir pour correction ».",
+          "La ligne garde la trace « excusé le JJ/MM par Prénom ». Erreur ? « Remettre « Absent » » sur la même ligne ; « Modifier le motif » pour le corriger.",
+          "Impossible sur une ligne « Présent » ou « Retard » : cela changerait les heures. Pour corriger une présence, il faut toujours rouvrir la feuille.",
+          "Feuille déjà envoyée au financeur ? Elle reste juste : une absence justifiée reste une absence pour les heures. Le bilan suivant indiquera « dont X absences justifiées ». Inutile de renvoyer la feuille.",
         ],
       },
       {
@@ -558,6 +583,7 @@ export const HELP_SECTIONS: HelpSection[] = [
           "Fiche du groupe → carte « Feuilles d'émargement au financeur » : activez l'envoi hebdomadaire, indiquez les destinataires (une adresse par ligne) et les personnes en copie, puis « Enregistrer ». Chez PEF, les trois cours municipaux sont déjà réglés : Cordon → mba@…, Landy → miscache@…, et gfenzi@ + nchahbani@ reçoivent les trois sites.",
           "Chaque vendredi après-midi (16 h l'été, 15 h l'hiver), l'ERP envoie automatiquement un email par groupe avec les feuilles CLÔTURÉES de la semaine en pièces jointes (un PDF signé par séance), la liste des séances avec le nombre de présents, et une copie à la coordination.",
           "Une feuille non clôturée le vendredi n'est pas envoyée : elle est signalée dans l'email et repart la semaine suivante une fois clôturée. Si rien n'est clôturé, le financeur ne reçoit rien et la coordination est prévenue par email. Le cours du samedi matin part avec l'email du vendredi suivant.",
+          "Absences excusées : la feuille PDF indique « Excusé » (jamais le motif) et l'email précise, pour la séance, « 2 absents, dont 1 absence justifiée ».",
           "« Envoyer maintenant » envoie tout de suite ce qui est clôturé depuis le dernier envoi (rattrapage, demande du financeur). « M'envoyer un test » envoie le même email à vous seul, sans toucher au dernier envoi : faites-le avant la rentrée pour voir le rendu.",
           "L'historique sous la carte garde chaque envoi : date, statut (envoyé, reporté, rien à envoyer, erreur), nombre de feuilles, destinataires. En cas d'erreur SMTP, réessayez avec « Envoyer maintenant ».",
         ],
@@ -616,6 +642,7 @@ export const HELP_SECTIONS: HelpSection[] = [
         steps: [
           "Menu « Rapports » : choisissez le financeur et la période (presets : année civile, trimestre, année de formation).",
           "Le bilan se calcule tout seul : heures réalisées, bénéficiaires uniques, assiduité moyenne (émargements clôturés), abandons/terminés, et typologie des publics (sexe, âge, situation, QPV, RQTH, scolarisation, communes).",
+          "Absences : une absence excusée (la personne a prévenu) compte comme une absence, ses heures ne sont pas réalisées. Elle est montrée à part : « 12 absences, dont 3 absences justifiées » (page Rapports, PDF, colonnes « dont absences justifiées » du CSV).",
           "« Bilan PDF » = le document à joindre au compte-rendu ; « Détail CSV » = le nominatif par groupe et par bénéficiaire ; « Déposer sur le Drive » = classement automatique dans « Bilans financeurs ».",
           "La typologie vient des fiches apprenants (section « Typologie ») : plus elle est remplie, moins le bilan affiche de « Non renseigné ». Complétez-la à l'inscription, c'est 30 secondes par personne.",
           "Un abandon se déclare sur la fiche du groupe (menu ⋯ de l'apprenant → « Marquer en abandon ») : il reste compté dans le bilan — ne supprimez jamais une inscription réelle.",
@@ -835,8 +862,18 @@ export const FAQ: FaqItem[] = [
   },
   {
     q: "L'apprenant refuse de signer ou n'a pas pu venir : que met-on sur la feuille ?",
-    a: "Posez le statut à la main : « Absent » ou « Retard ». À la clôture, les inscrits sans signature ni statut sont automatiquement marqués absents — la feuille est donc toujours complète.",
+    a: "Posez le statut à la main : « Absent », « Retard », ou « Excusé » s'il a prévenu. À la clôture, les inscrits sans signature ni statut sont automatiquement marqués absents — la feuille est donc toujours complète.",
     roles: ALL,
+  },
+  {
+    q: "Une personne a prévenu de son absence : que faire ?",
+    a: "Sur la feuille ouverte, bouton bleu « Excusé » sur sa ligne, motif facultatif (« rendez-vous médical », « préfecture », « enfant malade »…), puis « Valider « Excusé » ». Elle ne sera pas relancée et cette absence n'entre ni dans une série d'absences ni dans les alertes. Pour les heures, c'est une absence (heures non réalisées), montrée à part dans les bilans : « dont X absences justifiées ». Feuille déjà clôturée ? La coordination l'excuse sans rouvrir la feuille (« Excuser » sur la ligne, ou depuis « Absents à relancer »).",
+    roles: ALL,
+  },
+  {
+    q: "J'excuse une absence après l'envoi de la feuille au financeur : faut-il la renvoyer ?",
+    a: "Non. La feuille envoyée reste juste : une absence justifiée reste une absence pour les heures. Le bilan suivant indiquera « dont X absences justifiées ». Rien n'est rattrapé automatiquement pour les anciennes absences : « Absents à relancer » ne regarde que les 14 derniers jours ; pour une absence plus ancienne, passez par la feuille de la séance → « Excuser ».",
+    roles: TEAM,
   },
   {
     q: "Où retrouver les feuilles d'émargement des mois passés ?",

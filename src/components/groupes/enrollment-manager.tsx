@@ -15,6 +15,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal } from "lucide-react";
+import { excusedShortLabel } from "@/lib/attendance-status";
 
 export type Enrolled = {
   enrollmentId: string;
@@ -26,6 +27,7 @@ export type Enrolled = {
   stats?: {
     rate: number;
     total: number;
+    excused?: number; // absences justifiées (comptées dans le taux comme des absences)
     consecutiveAbsences: number;
   } | null;
 };
@@ -115,6 +117,7 @@ export function EnrollmentManager({
                 {e.stats && (
                   <span className="ml-2 text-xs text-muted-foreground">
                     {e.stats.rate} % · {e.stats.total} séance{e.stats.total > 1 ? "s" : ""}
+                    {e.stats.excused ? ` · ${excusedShortLabel(e.stats.excused)}` : ""}
                   </span>
                 )}
                 {e.stats && e.stats.consecutiveAbsences >= ALERT_STREAK && (

@@ -1,6 +1,7 @@
 import { PDFDocument, PDFFont, PDFPage, StandardFonts, rgb } from "pdf-lib";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { LOGO_PEF_BASE64 } from "./logo-data";
+import { absencesSummary, isAttended, isExcused } from "@/lib/attendance-status";
 
 // Certificat de réalisation (modèle inspiré du certificat officiel du ministère
 // du Travail) : par apprenant × groupe, à partir des émargements clôturés.
@@ -24,6 +25,7 @@ export type CertificateData = {
   hoursAttended: number;
   sessionsAttended: number;
   sessionsTotal: number;
+  sessionsExcused?: number; // absences justifiées (non comptées dans la durée réalisée)
 };
 
 export async function loadCertificateData(
@@ -45,8 +47,9 @@ export async function loadCertificateData(
   ]);
   if (!group || !learner) return null;
 
+  // Séances suivies : présent ou en retard. Une absence excusée reste une absence.
   const attended = (rows ?? [])
-    .filter((r) => r.status !== "absent")
+    .filter((r) => isAttended(r.status))
     .map((r) => r.sessions as unknown as { starts_at: string; ends_at: string })
     .sort((a, b) => a.starts_at.localeCompare(b.starts_at));
 
@@ -62,6 +65,7 @@ export async function loadCertificateData(
     ),
     sessionsAttended: attended.length,
     sessionsTotal: (rows ?? []).length,
+    sessionsExcused: (rows ?? []).filter((r) => isExcused(r.status)).length,
   };
 }
 
@@ -114,6 +118,8 @@ export async function buildCertificatePdf(data: CertificateData): Promise<Uint8A
     { t: `pour une durée réalisée de ${fmtHours(data.hoursAttended)} heures`, b: true },
     { t: `(${data.sessionsAttended} séance${data.sessionsAttended > 1 ? "s" : ""} suivie${data.sessionsAttended > 1 ? "s" : ""} sur ${data.sessionsTotal} émargée${data.sessionsTotal > 1 ? "s" : ""}, assiduité contrôlée par émargement électronique).` },
   );
+  const excusedLine = certificateAbsenceLine(data);
+  if (excusedLine) lines.push({ t: excusedLine });
 
   for (const l of lines) {
     if (l.t) text(page, l.t, M, y, l.b ? bold : font, l.b ? 13 : 11);
@@ -133,6 +139,15 @@ export async function buildCertificatePdf(data: CertificateData): Promise<Uint8A
   );
 
   return doc.save();
+}
+
+/** « 2 absences, dont 1 absence justifiée : non comptées dans la durée réalisée. » — seulement s'il y a des absences justifiées. */
+export function certificateAbsenceLine(data: Pick<CertificateData, "sessionsAttended" | "sessionsTotal" | "sessionsExcused">): string | null {
+  const excused = data.sessionsExcused ?? 0;
+  if (excused <= 0) return null;
+  const absences = data.sessionsTotal - data.sessionsAttended;
+  const summary = absencesSummary(absences, excused);
+  return `${summary.charAt(0).toUpperCase()}${summary.slice(1)} : non comptée${absences > 1 ? "s" : ""} dans la durée réalisée.`;
 }
 
 export function certificateFileName(data: CertificateData): string {

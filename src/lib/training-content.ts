@@ -143,7 +143,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
     duration: "15 min",
     objectives: [
       "Faire signer un groupe en début de séance",
-      "Gérer retards, absences et cas particuliers",
+      "Gérer retards, absences (prévenues ou non) et cas particuliers",
       "Clôturer proprement (et pourquoi c'est important)",
     ],
     lessons: [
@@ -161,10 +161,12 @@ export const TRAINING_MODULES: TrainingModule[] = [
       },
       {
         id: "cas-particuliers",
-        title: "Retards, absents, erreurs",
+        title: "Retards, absents, excusés, erreurs",
         steps: [
           "Un retardataire ? Le lien reste valable jusqu'à la clôture : il signe en arrivant. Posez-lui le statut « Retard » pour la traçabilité.",
           "Un absent ? Rien à faire : à la clôture, tout inscrit sans signature ni statut est marqué absent automatiquement. Vous pouvez aussi poser « Absent » à la main.",
+          "Une personne a prévenu (rendez-vous médical, préfecture, enfant malade…) ? Bouton bleu « Excusé » sur sa ligne, motif facultatif en une ligne, puis « Valider « Excusé » ». Elle ne sera pas relancée et l'absence n'entre pas dans une série d'absences. Pour les heures, c'est une absence : les bilans la montrent à part (« dont 1 absence justifiée »).",
+          "Feuille déjà clôturée quand vous apprenez qu'elle avait prévenu ? Dites-le à la coordination : elle l'excuse sans rouvrir la feuille.",
           "Quelqu'un a signé sur la mauvaise ligne ? Marquez cette ligne « Absent » (la signature erronée s'efface) puis faites re-signer au bon endroit.",
           "La signature refuse de partir ? Vérifiez la connexion de la tablette et réessayez : rien n'est perdu tant que la feuille est ouverte.",
         ],
@@ -195,6 +197,12 @@ export const TRAINING_MODULES: TrainingModule[] = [
         choices: ["Ils restent « en attente »", "La clôture est bloquée", "Ils sont marqués absents automatiquement"],
         answerIndex: 2,
         explanation: "La clôture complète la feuille : les non-signés sans statut deviennent absents — la feuille est toujours complète.",
+      },
+      {
+        question: "Une apprenante vous a prévenue qu'elle a un rendez-vous à la préfecture. Que posez-vous sur sa ligne ?",
+        choices: ["Rien : elle sera « Absent » à la clôture", "« Retard »", "« Excusé », avec le motif « préfecture »"],
+        answerIndex: 2,
+        explanation: "« Excusé » = absence justifiée : pas de relance, pas de série d'absences. Pour les heures, cela reste une absence, montrée à part dans les bilans.",
       },
       {
         question: "Un apprenant arrive 40 minutes en retard. Que faites-vous ?",
@@ -666,6 +674,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
         steps: [
           "Le Dashboard affiche le taux de présence global et les apprenants en alerte (moins de 70 % ou 3 absences de suite) : appelez-les, notez l'action dans leur fiche.",
           "« Absents à relancer » (Dashboard) : chaque apprenant absent à son dernier cours émargé et pas encore contacté depuis. « WhatsApp » ouvre un message prêt (le cours manqué, le prochain cours et sa salle) à relire puis envoyer ; « Appelé(e) » note un appel. La relance est tracée dans son carnet de contact et la personne sort de la liste ; elle y revient si elle manque encore un cours. Relancer dès la première absence est le meilleur moyen d'éviter le décrochage.",
+          "Elle avait prévenu ? « Excuser » sur sa ligne (motif facultatif) : l'absence devient « Excusé » sur la feuille, sans la rouvrir, et ne se relance plus. Même geste sur la feuille d'une séance clôturée (« Excuser » sur une ligne « Absent », « Remettre « Absent » » pour annuler). Réservé à l'admin et à la coordination ; jamais sur une ligne présente (il faut rouvrir la feuille). Une absence excusée ne compte ni dans les séries ni dans les alertes, mais reste une absence pour les heures : « dont X absences justifiées » dans les bilans.",
           "Enquête de satisfaction : fiche du groupe → QR code anonyme en fin de session (1 minute). Les moyennes s'affichent sur la fiche.",
           "Réclamations : page Qualité → registre — consignez la réclamation ET l'action corrective (c'est elle qui compte en audit).",
           "Analyse du besoin (ind. 4) : sur la fiche apprenant, objectif visé + besoin exprimé + date d'entretien, puis « Télécharger le dossier d'entrée (PDF) » — la preuve individuelle.",

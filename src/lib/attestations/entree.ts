@@ -2,6 +2,7 @@ import { PDFDocument, PDFFont, PDFPage, StandardFonts, rgb } from "pdf-lib";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { LOGO_PEF_BASE64 } from "@/lib/emargement/logo-data";
 import { PLANNING_THEME, describePattern, fmtDay, localDate, pdfSafe, slug, wrapText } from "@/lib/reports/group-planning";
+import { isAttended } from "@/lib/attendance-status";
 
 // Attestation d'entrée en formation : remise à chaque apprenant qui a réellement commencé
 // le cours, c'est-à-dire présent (ou en retard) sur au moins une feuille d'émargement
@@ -19,7 +20,7 @@ export type AttendanceRow = { learnerId: string; status: string; startsAt: strin
 export function firstPresenceByLearner(rows: AttendanceRow[]): Map<string, string> {
   const first = new Map<string, string>();
   for (const r of rows) {
-    if (!r.closed || r.status === "absent") continue;
+    if (!r.closed || !isAttended(r.status)) continue; // absent ou excusé : pas une présence
     const prev = first.get(r.learnerId);
     if (!prev || r.startsAt < prev) first.set(r.learnerId, r.startsAt);
   }

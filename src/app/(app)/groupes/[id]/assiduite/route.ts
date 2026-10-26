@@ -8,6 +8,8 @@ import {
 
 // Export CSV de l'assiduité d'un groupe (récapitulatif par apprenant, pour les
 // financeurs). Séparateur « ; » et BOM UTF-8 : ouverture directe dans Excel FR.
+// « Absences » compte toutes les absences ; « dont justifiées » les absences excusées
+// (prévenues), qui restent des heures non réalisées.
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   await requireGroupAccess(id, ["admin", "coordinator", "stagiaire"]);
@@ -44,7 +46,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     `Groupe;${group.name}`,
     `Export du;${new Date().toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" })}`,
     "",
-    "Apprenant;Séances émargées;Présences;Retards;Absences;Taux de présence;Heures suivies",
+    "Apprenant;Séances émargées;Présences;Retards;Absences;dont absences justifiées;Taux de présence;Heures suivies;Heures d'absence justifiée",
   ];
   for (const e of enrollments ?? []) {
     const l = e.learners as unknown as { first_name: string; last_name: string } | null;
@@ -52,8 +54,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     const st = stats.get(e.learner_id);
     lines.push(
       st
-        ? `${name};${st.total};${st.attended - st.late};${st.late};${st.absent};${st.rate} %;${fmt(st.hoursAttended)}`
-        : `${name};0;0;0;0;—;0`,
+        ? `${name};${st.total};${st.attended - st.late};${st.late};${st.absent};${st.excused};${st.rate} %;${fmt(st.hoursAttended)};${fmt(st.hoursExcused)}`
+        : `${name};0;0;0;0;0;—;0;0`,
     );
   }
 

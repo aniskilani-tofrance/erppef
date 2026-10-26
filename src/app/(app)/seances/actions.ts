@@ -8,6 +8,8 @@ import { assertSessionAccess } from "@/lib/stagiaires";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { driveConfigured, uploadSheetToDrive } from "@/lib/emargement/gdrive";
 import { buildAttendancePdf, loadAttendanceSheetData, sheetFileName } from "@/lib/emargement/pdf";
+import { ATTENDANCE_STATUSES, EXCUSE_REASON_MAX, EXCUSE_UNAVAILABLE, isExcuseSchemaMissing } from "@/lib/attendance-status";
+import { openSheetStatusPatch, planClosedSheetExcuse } from "@/lib/emargement/excuse";
 
 // Gestion des feuilles d'émargement côté équipe. La RLS de `sessions` n'autorise pas
 // l'écriture aux formateurs : on passe par le client service_role, toujours après
@@ -52,18 +54,25 @@ export async function openAttendanceSheet(sessionId: string): Promise<ActionResu
 const statusSchema = z.object({
   sessionId: z.string().uuid(),
   learnerId: z.string().uuid(),
-  status: z.enum(["present", "retard", "absent"]),
+  status: z.enum(ATTENDANCE_STATUSES),
+  excuseReason: z.string().trim().max(EXCUSE_REASON_MAX).nullish(), // motif, seulement pour « Excusé »
 });
 
-// Statut posé à la main par le formateur. « Absent » efface une éventuelle signature
-// (choix explicite) ; « présent »/« retard » la conservent.
-export async function setAttendanceStatus(raw: z.infer<typeof statusSchema>): Promise<ActionResult> {
+const REASON_TOO_LONG = `Motif trop long (${EXCUSE_REASON_MAX} caractères maximum) : une ligne suffit.`;
+
+// Statut posé à la main par le formateur. « Absent » et « Excusé » effacent une éventuelle
+// signature (choix explicite) ; « présent »/« retard » la conservent. « Excusé » garde le
+// motif facultatif et la trace (qui, quand) ; quitter « Excusé » les efface.
+export async function setAttendanceStatus(raw: z.input<typeof statusSchema>): Promise<ActionResult> {
   const parsed = statusSchema.safeParse(raw);
-  if (!parsed.success) return { ok: false, error: "Paramètres invalides" };
+  if (!parsed.success) {
+    const tooLong = parsed.error.issues.some((i) => i.path[0] === "excuseReason");
+    return { ok: false, error: tooLong ? REASON_TOO_LONG : "Paramètres invalides" };
+  }
   const d = parsed.data;
 
   const ctx = await requireRole([...ROLES]);
-  const { orgId } = ctx;
+  const { orgId, userId } = ctx;
   if (!(await assertSessionAccess(createAdminClient(), ctx, d.sessionId))) return { ok: false, error: OUT_OF_SCOPE };
   const supabase = createAdminClient();
 
@@ -78,24 +87,96 @@ export async function setAttendanceStatus(raw: z.infer<typeof statusSchema>): Pr
 
   const { data: existing } = await supabase
     .from("attendances")
-    .select("id")
+    .select("id, status")
     .eq("session_id", d.sessionId)
     .eq("learner_id", d.learnerId)
     .maybeSingle();
 
-  const wipeSignature = d.status === "absent" ? { signature: null, signed_at: null, method: "manuel" } : {};
+  const patch = openSheetStatusPatch({
+    status: d.status,
+    previousStatus: existing?.status ?? null,
+    reason: d.excuseReason,
+    userId,
+    now: new Date(),
+  });
   const { error } = existing
-    ? await supabase.from("attendances").update({ status: d.status, ...wipeSignature }).eq("id", existing.id)
+    ? await supabase.from("attendances").update(patch).eq("id", existing.id)
     : await supabase.from("attendances").insert({
         org_id: orgId,
         session_id: d.sessionId,
         learner_id: d.learnerId,
-        status: d.status,
         method: "manuel",
+        ...patch,
       });
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: isExcuseSchemaMissing(error) ? EXCUSE_UNAVAILABLE : error.message };
   revalidatePath(`/seances/${d.sessionId}/emargement`);
+  return { ok: true };
+}
+
+const closedExcuseSchema = z.object({
+  sessionId: z.string().uuid(),
+  learnerId: z.string().uuid(),
+  excused: z.boolean(), // true : « Excusé » ; false : retour à « Absent »
+  reason: z.string().trim().max(EXCUSE_REASON_MAX).nullish(),
+});
+
+// Feuille CLÔTURÉE : l'admin et la coordination excusent une absence (ou reviennent à
+// « Absent ») sans rouvrir la feuille. Seule la ligne concernée change (statut, motif,
+// trace) : signatures, autres lignes, heures, lien et date de clôture restent intacts.
+// Une ligne présente ou en retard est refusée (rouvrir la feuille). Appelée depuis la
+// feuille d'émargement et depuis « Absents à relancer » du Dashboard.
+export async function excuseClosedAbsence(raw: z.input<typeof closedExcuseSchema>): Promise<ActionResult> {
+  const parsed = closedExcuseSchema.safeParse(raw);
+  if (!parsed.success) {
+    const tooLong = parsed.error.issues.some((i) => i.path[0] === "reason");
+    return { ok: false, error: tooLong ? REASON_TOO_LONG : "Paramètres invalides" };
+  }
+  const d = parsed.data;
+
+  const ctx = await requireRole([...ROLES]);
+  const { orgId, userId, role } = ctx;
+  if (!(await assertSessionAccess(createAdminClient(), ctx, d.sessionId))) return { ok: false, error: OUT_OF_SCOPE };
+  const supabase = createAdminClient();
+
+  const [{ data: session }, { data: row }] = await Promise.all([
+    supabase.from("sessions").select("id, attendance_closed_at").eq("id", d.sessionId).eq("org_id", orgId).maybeSingle(),
+    supabase
+      .from("attendances")
+      .select("id, status")
+      .eq("session_id", d.sessionId)
+      .eq("learner_id", d.learnerId)
+      .eq("org_id", orgId)
+      .maybeSingle(),
+  ]);
+  if (!session) return { ok: false, error: "Séance introuvable" };
+
+  const plan = planClosedSheetExcuse({
+    role,
+    closed: Boolean(session.attendance_closed_at),
+    current: row?.status ?? null,
+    excused: d.excused,
+    reason: d.reason,
+    userId,
+    now: new Date(),
+  });
+  if (!plan.ok) return plan;
+  if (!plan.patch || !row) return { ok: true }; // déjà « Absent » : rien à faire
+
+  // Garde : la ligne n'a pas changé entre la lecture et l'écriture (pas d'écrasement
+  // d'une présence posée entre-temps par une réouverture).
+  const { data: updated, error } = await supabase
+    .from("attendances")
+    .update(plan.patch)
+    .eq("id", row.id)
+    .eq("org_id", orgId)
+    .eq("status", row.status)
+    .select("id");
+  if (error) return { ok: false, error: isExcuseSchemaMissing(error) ? EXCUSE_UNAVAILABLE : error.message };
+  if (!updated?.length) return { ok: false, error: "La ligne a changé entre-temps : actualisez la page et recommencez." };
+
+  revalidatePath(`/seances/${d.sessionId}/emargement`);
+  revalidatePath("/dashboard");
   return { ok: true };
 }
 
