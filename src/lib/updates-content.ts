@@ -26,6 +26,22 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-10-26-changer-formateur",
+    date: "2026-10-26",
+    title: "Changer le formateur d'un groupe en un clic",
+    summary: "Fiche du groupe → « Changer de formateur » : une autre personne anime toutes les séances à venir, sans les reprendre une par une dans le Planning.",
+    items: [
+      { text: "Carte « Formateur » de la fiche du groupe : bouton « Changer de formateur » (« Choisir un formateur » pour un groupe « Non affecté »). Vous choisissez la personne (salariés, vacataires, stagiaires, bénévoles) et la date d'effet, aujourd'hui par défaut.", roles: TEAM },
+      { text: "Avant de valider, l'aperçu dit tout : « 12 séances confiées à Anne, 2 restent à régler : … ». Une séance où la personne a déjà un cours ou un congé n'est pas confiée : elle garde son formateur actuel, à régler dans le Planning. Plafond d'heures dépassé ou créneau hors disponibilités : simple avertissement.", roles: TEAM },
+      { text: "Les séances passées, annulées ou à feuille clôturée ne bougent jamais. Si la personne co-animait le groupe, elle quitte la co-animation. Le changement est noté dans les notes du groupe et s'affiche sous le nom du formateur.", roles: TEAM },
+      { text: "La nouvelle personne reçoit un email (groupe, jours, horaires, date d'effet, lieu), l'ancienne aussi. Ma journée, le Planning et l'émargement changent tout de suite ; les agendas Google à la synchronisation de la nuit.", roles: TEAM },
+    ],
+    training: [
+      { moduleId: "c5-vie-quotidienne", lessonId: "ajustements", label: "Ajustements quotidiens" },
+      { moduleId: "c4-groupes", lessonId: "revue", label: "Lire la proposition avant de valider" },
+    ],
+  },
+  {
     id: "2026-10-26-absence-excusee",
     date: "2026-10-26",
     title: "Émargement : le statut « Excusé » pour une absence prévenue",

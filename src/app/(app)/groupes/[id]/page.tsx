@@ -22,6 +22,8 @@ import { SurveyManager } from "@/components/groupes/survey-manager";
 import { PlanningShare, type PlanningRecipient } from "@/components/groupes/planning-share";
 import { AttendanceDispatchCard, type DispatchHistoryRow } from "@/components/groupes/attendance-dispatch-card";
 import { CoTrainerSelect } from "@/components/groupes/co-trainer-select";
+import { TrainerChangeDialog } from "@/components/groupes/trainer-change-dialog";
+import { lastTrainerChangeTrace, trainerChoices } from "@/lib/groupes/changer-formateur";
 import { EntryAttestationsCard, type EntryAttestationRow } from "@/components/groupes/entry-attestations-card";
 import { ENTRY_CONTACT_MARK, firstPresenceByLearner } from "@/lib/attestations/entree";
 import { KIND_LABELS } from "@/lib/evaluations/grid";
@@ -391,6 +393,8 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
   const total = Number(group.total_hours);
   const funder = group.funders as unknown as { name: string; color: string } | null;
   const trainer = group.trainers as unknown as { first_name: string; last_name: string } | null;
+  // Dernier « Changer de formateur » (trace écrite dans les notes du groupe)
+  const lastTrainerChange = lastTrainerChangeTrace(group.notes as string | null);
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -414,6 +418,8 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
           {canWrite && <DuplicateGroupDialog groupId={id} groupName={group.name} />}
           {canWrite && (
             <GroupEditDialog
+              // Remonté à chaque modification du groupe : jamais de notes périmées (trace du changement de formateur)
+              key={String(group.updated_at)}
               groupId={id}
               initial={{
                 name: group.name,
@@ -446,6 +452,16 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
             <p className="mt-1 font-medium">
               {trainer ? `${trainer.first_name} ${trainer.last_name ?? ""}`.trim() : "Non affecté"}
             </p>
+            {canWrite && group.status !== "termine" && group.status !== "annule" && (
+              <TrainerChangeDialog
+                groupId={id}
+                groupName={group.name}
+                currentTrainerName={trainer ? `${trainer.first_name} ${trainer.last_name ?? ""}`.trim() : null}
+                trainers={trainerChoices(coTrainerOptions ?? [], (group.trainer_id as string | null) ?? null)}
+                today={today}
+              />
+            )}
+            {canWrite && lastTrainerChange && <p className="mt-1 text-xs text-muted-foreground">{lastTrainerChange}</p>}
             {canWrite ? (
               <>
                 <p className="mt-2 text-xs uppercase tracking-wide text-muted-foreground">Co-animation</p>

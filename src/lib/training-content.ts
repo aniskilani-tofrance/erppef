@@ -569,6 +569,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
           "Les avertissements : dernière séance raccourcie, créneau hors horaires, aucune solution… Lisez-les, ils évitent les surprises.",
           "Les séances sautées (vacances, fériés) sont listées : vous savez pourquoi le groupe finit à telle date.",
           "Validez : toutes les séances sont créées d'un coup, la salle est réservée, le formateur affecté.",
+          "Le formateur n'est pas figé : plus tard, « Changer de formateur » (fiche du groupe, carte Formateur) confie toutes les séances à venir à une autre personne.",
         ],
         practice: {
           instruction: "Lancez une proposition de groupe test (sans la valider !) et lisez les alternatives de formateurs : repérez les raisons d'exclusion.",
@@ -638,6 +639,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
           "Séances annulées : la fiche du groupe affiche un bandeau « X h manquantes » — « Replanifier automatiquement » ajoute les rattrapages à la suite du planning.",
           "Fin de parcours : fiche du groupe → « Modifier » → statut « Terminé ».",
           "Formatrice absente : Planning → « Remplacements » (ou la ligne « séances à remplacer » de « À faire aujourd'hui »). Chaque séance des 3 prochaines semaines dont la formatrice a un congé validé (ou une demande encore à valider), et chaque séance sans formateur, avec les personnes libres sur le créneau, classées comme le fait le moteur (salariées d'abord, stagiaires et bénévoles en dernier). « Confier à … » change la formatrice et la prévient par email ; son agenda se met à jour la nuit. Personne de libre ? Déplacez ou annulez la séance dans le Planning.",
+          "Changer de formateur pour toute la suite (départ, absence longue, groupe « Non affecté ») : fiche du groupe → carte « Formateur » → « Changer de formateur ». Choisissez la personne et la date d'effet (aujourd'hui par défaut). L'aperçu annonce « 12 séances confiées à Anne, 2 restent à régler » : une séance où elle a déjà un cours ou un congé garde son formateur actuel, à régler ensuite dans le Planning. Plafond d'heures ou disponibilités : simple avertissement. Les séances passées, annulées ou à feuille clôturée ne bougent jamais ; les deux personnes sont prévenues par email, les agendas suivent la nuit.",
         ],
       },
       {
@@ -741,6 +743,16 @@ export const TRAINING_MODULES: TrainingModule[] = [
         ],
         answerIndex: 0,
         explanation: "L'alerte sert à agir tôt : un appel tracé dans sa fiche est à la fois la bonne pratique pédagogique et la preuve du suivi.",
+      },
+      {
+        question: "Anne reprend le groupe de Marie à partir de lundi. Après « Changer de formateur », l'aperçu affiche « 12 séances confiées à Anne, 2 restent à régler ». Que deviennent ces 2 séances ?",
+        choices: [
+          "Elles sont annulées",
+          "Elles sont confiées à Anne quand même",
+          "Elles gardent leur formateur actuel (Anne a déjà un cours ou un congé ce jour-là) : à régler une par une dans le Planning",
+        ],
+        answerIndex: 2,
+        explanation: "Une séance en conflit (autre cours au même moment, congé validé ou demandé) n'est jamais confiée : elle reste à Marie, ou sans formateur, et se règle dans le Planning ou « Remplacements ».",
       },
     ],
   },

@@ -288,6 +288,22 @@ export const HELP_SECTIONS: HelpSection[] = [
           "Pour chacune, jusqu'à trois personnes libres sur le créneau : disponibilités de leur fiche, congés validés, plafond d'heures de la semaine et autres cours vérifiés. Le classement est celui du moteur : salariées d'abord, puis coût, stagiaires et bénévoles en dernier.",
           "« Confier à … » : la séance change de formatrice tout de suite, la remplaçante reçoit un email (groupe, date, salle, lien vers la séance et son cahier) et son agenda Google se met à jour la nuit.",
           "Personne de libre ? Déplacez la séance ou annulez-la dans le Planning ; les heures manquantes se replanifient depuis la fiche du groupe.",
+          "Absence longue, départ, groupe resté « Non affecté » : « Changer de formateur » sur la fiche du groupe confie toutes les séances à venir en une fois (article suivant).",
+        ],
+      },
+      {
+        title: "Changer le formateur d'un groupe (toutes les séances à venir)",
+        steps: [
+          "Fiche du groupe → carte « Formateur » → « Changer de formateur » (« Choisir un formateur » si le groupe est « Non affecté »). Réservé à l'admin et à la coordination.",
+          "Choisissez la personne dans l'équipe active (salariés, vacataires, prestataires, stagiaires, bénévoles) et la date d'effet : aujourd'hui par défaut. Seules les séances qui commencent à partir de cette date changent.",
+          "Avant de valider, le dialogue dit ce qui va se passer : « 12 séances confiées à Anne, 2 restent à régler : … ». Les séances passées, annulées ou à feuille d'émargement clôturée ne bougent jamais.",
+          "Restent à régler (non confiées) : les séances où la personne a déjà un cours (formatrice ou co-animatrice d'un autre groupe) et celles où elle a un congé, validé ou demandé. Elles gardent leur formateur actuel, ou restent « Non affecté » : changez-les une par une dans le Planning (ou « Remplacements » pour les 3 prochaines semaines).",
+          "Simples avertissements (les séances sont confiées quand même) : plafond d'heures de la semaine dépassé, créneau en dehors des disponibilités de sa fiche.",
+          "Si la personne co-animait le groupe, elle quitte la co-animation de ces séances : jamais formatrice et co-animatrice d'une même séance.",
+          "À la validation, la nouvelle personne reçoit un email (groupe, jours, horaires, date d'effet, lieu, séances non confiées) ; l'ancienne aussi, avec les séances qu'elle garde. Les agendas Google suivent à la synchronisation de la nuit (Paramètres → « Synchroniser maintenant » pour ne pas attendre).",
+          "Ma journée, le Planning, les feuilles d'émargement, les plannings PDF, les évaluations et les bilans affichent tout de suite la nouvelle personne.",
+          "Le changement est noté dans les notes du groupe (« Formateur changé le 26/10 par Anis : Non affecté → Anne Philippon, à partir du 26/10 ») ; la dernière ligne s'affiche sous le nom, sur la carte Formateur.",
+          "Pour une seule séance (absence d'un jour), passez plutôt par le Planning ou « Remplacements » → « Confier à … ».",
         ],
       },
       {
@@ -852,6 +868,11 @@ export const FAQ: FaqItem[] = [
   {
     q: "Le moteur ne propose pas le formateur que j'attendais.",
     a: "La proposition affiche les alternatives avec la raison exacte (créneau occupé, hors disponibilités, plafond hebdo atteint, absence). Vérifiez la fiche du formateur : disponibilités récurrentes et plafond d'heures. Vous pouvez toujours choisir une alternative dans l'écran de revue.",
+    roles: TEAM,
+  },
+  {
+    q: "Comment changer le formateur d'un groupe pour toute la suite ?",
+    a: "Fiche du groupe → carte « Formateur » → « Changer de formateur » (« Choisir un formateur » si le groupe est « Non affecté »). Choisissez la personne et la date d'effet (aujourd'hui par défaut) : l'aperçu dit combien de séances lui seront confiées et lesquelles restent à régler (elle a déjà un cours ou un congé à ce moment-là : la séance garde son formateur actuel). Les séances passées, annulées ou à feuille clôturée ne changent jamais. Elle reçoit un email, l'ancienne personne aussi ; les agendas Google suivent la nuit. Pour une seule séance, passez par le Planning ou « Remplacements ».",
     roles: TEAM,
   },
   {
