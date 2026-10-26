@@ -51,21 +51,42 @@ export function publicQuestions(): Question[] {
   return ALL_QUESTIONS.map(publicQuestion);
 }
 
-async function evaluateFreeAnswer(q: Question, answer: string): Promise<boolean> {
+export const MISTRAL_MODEL = "mistral-small-latest";
+
+export type MessageIA = { role: "system" | "user"; content: string };
+
+/**
+ * Appel au chat Mistral (clé MISTRAL_API_KEY, modèle mistral-small-latest, réponse JSON).
+ * Partagé par la correction des réponses libres d'ici et par le test de positionnement
+ * (src/lib/positionnement/ia.ts). Lève une erreur sans clé, sur un refus (429…) ou après
+ * `timeoutMs` : à l'appelant de prévoir son repli sans IA.
+ */
+export async function appelMistral(messages: MessageIA[], opts: { timeoutMs?: number } = {}): Promise<string> {
   const key = process.env.MISTRAL_API_KEY;
-  if (!key) return fallbackFree(q, answer);
+  if (!key) throw new Error("MISTRAL_API_KEY absente");
+  const res = await fetch("https://api.mistral.ai/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: MISTRAL_MODEL,
+      temperature: 0,
+      response_format: { type: "json_object" },
+      messages,
+    }),
+    ...(opts.timeoutMs ? { signal: AbortSignal.timeout(opts.timeoutMs) } : {}),
+  });
+  if (!res.ok) throw new Error(String(res.status));
+  const data = await res.json();
+  return String(data.choices[0].message.content);
+}
+
+async function evaluateFreeAnswer(q: Question, answer: string): Promise<boolean> {
+  if (!process.env.MISTRAL_API_KEY) return fallbackFree(q, answer);
   try {
-    const res = await fetch("https://api.mistral.ai/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "mistral-small-latest",
-        temperature: 0,
-        response_format: { type: "json_object" },
-        messages: [
-          {
-            role: "user",
-            content: `Tu es un évaluateur de français langue étrangère niveau ${q.level}.
+    const content = await appelMistral([
+      {
+        role: "user",
+        content: `Tu es un évaluateur de français langue étrangère niveau ${q.level}.
 Évalue cette réponse selon les critères suivants :
 ${(q.criteria ?? ["Réponse cohérente", "Français correct"]).map((c: string) => `- ${c}`).join("\n")}
 
@@ -76,13 +97,9 @@ Réponse de l'étudiant : "${answer}"
 Évalue si la réponse respecte MAJORITAIREMENT les critères pour le niveau ${q.level}.
 ${q.type === "oral" ? "Note : il peut y avoir des erreurs de transcription vocale, sois indulgent sur l'orthographe." : ""}
 Réponds en JSON : {"evaluation": "correct" | "incorrect", "explanation": "une phrase"}`,
-          },
-        ],
-      }),
-    });
-    if (!res.ok) throw new Error(String(res.status));
-    const data = await res.json();
-    const parsed = JSON.parse(data.choices[0].message.content);
+      },
+    ]);
+    const parsed = JSON.parse(content);
     return parsed.evaluation === "correct";
   } catch {
     return fallbackFree(q, answer);

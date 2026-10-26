@@ -21,6 +21,16 @@ export function buildSignupUrl(origin: string, src?: string | null): string {
   return s ? `${base}?src=${encodeURIComponent(s)}` : base;
 }
 
+/**
+ * Lien personnel du test de niveau proposé à la fin du formulaire. Langue du formulaire autre
+ * que le français → ?lang= : le test affiche ses consignes dans cette langue (les questions
+ * restent en français, c'est la langue testée).
+ */
+export function buildTestUrl(origin: string, token: string, locale: string): string {
+  const base = `${origin.replace(/\/+$/, "")}/test/${token}`;
+  return locale && locale !== "fr" ? `${base}?lang=${encodeURIComponent(locale)}` : base;
+}
+
 /** Message prêt à coller : le modèle « Lien d'inscription » rempli avec le lien. */
 export function buildSignupMessage(template: string, link: string): string {
   return renderTemplate(template, { lien_inscription: link });
