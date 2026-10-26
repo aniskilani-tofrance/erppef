@@ -26,6 +26,58 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-10-26-absence-excusee",
+    date: "2026-10-26",
+    title: "Émargement : le statut « Excusé » pour une absence prévenue",
+    summary: "Une personne a prévenu de son absence ? Posez « Excusé » sur sa ligne : elle n'est plus relancée, et les bilans montrent ces absences à part.",
+    items: [
+      { text: "Sur la feuille d'émargement, un 4e bouton bleu « Excusé » à côté de Présent, Retard et Absent. Un motif facultatif s'ouvre (rendez-vous médical, préfecture, enfant malade…), puis « Valider « Excusé » ». À la clôture, une ligne « Excusé » reste « Excusé ».", roles: ALL },
+      { text: "Une absence excusée n'apparaît jamais dans « Absents à relancer », n'allonge pas une série d'absences et ne déclenche pas d'alerte de décrochage. Pour les heures, c'est une absence (heures non réalisées), montrée à part : « dont X absences justifiées ».", roles: ALL },
+      { text: "Feuille déjà clôturée : l'admin et la coordination passent une ligne « Absent » en « Excusé » (et inversement) sans rouvrir la feuille, depuis la feuille ou depuis « Absents à relancer » → « Excuser ». Signatures, heures et clôture ne bougent pas ; la ligne garde « excusé le JJ/MM par Prénom ». Jamais sur une ligne présente : il faut rouvrir la feuille.", roles: TEAM },
+      { text: "Bilans : page Rapports, bilan PDF et CSV financeur, export d'assiduité du groupe, email hebdomadaire au financeur et feuille PDF indiquent les absences justifiées à part. Le motif n'apparaît jamais dans ce qui part au financeur. Pas de rattrapage automatique des anciennes absences.", roles: TEAM },
+    ],
+    training: [
+      { moduleId: "f2-emargement", lessonId: "cas-particuliers", label: "Retards, absents, excusés, erreurs" },
+      { moduleId: "c5-vie-quotidienne", lessonId: "qualite", label: "Assiduité et audit Qualiopi" },
+    ],
+  },
+  {
+    id: "2026-10-26-envoi-groupe-test",
+    date: "2026-10-26",
+    title: "Envoyer le test de niveau à toutes les nouvelles demandes, à la suite",
+    summary: "Onglet Admission → « Envoyer le test » : tous les « À contacter » et « Contacté » sans test fait reçoivent leur lien, un toucher par personne sur WhatsApp.",
+    items: [
+      { text: "Le bouton prépare la liste (ordre d'arrivée) et crée les liens de test manquants. Sont exclus : test déjà fait, niveau déjà connu. Sans numéro WhatsApp : affiché, non cochable.", roles: TEAM },
+      { text: "« Envoyer au suivant » ouvre WhatsApp avec le message « Invitation au test de niveau » et le lien personnel : appuyez sur Envoyer, revenez, passez au suivant. Chaque envoi est noté au journal et la personne passe « Contacté ».", roles: TEAM },
+      { text: "Une personne déjà invitée depuis moins de 14 jours est signalée et décochée, pour ne pas envoyer deux fois.", roles: TEAM },
+    ],
+    training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "L'admission : WhatsApp, réunion d'information, entretien oral" }],
+  },
+  {
+    id: "2026-10-23-meta-api-conversions",
+    date: "2026-10-23",
+    title: "Meta apprend quels restaurateurs se qualifient vraiment",
+    summary: "L'ERP signale à Meta les leads reçus, qualifiés et ceux qui prennent rendez-vous : la publicité peut chercher des restaurateurs qui avancent, pas seulement des formulaires remplis.",
+    items: [
+      { text: "Trois signaux partent tout seuls vers Meta (API Conversions) : « Lead » à la réception du formulaire, « Lead qualifié » quand la fiche passe « Qualifié » ou « RDV pris », « RDV pris » quand le rendez-vous est posé (bouton, statut ou Calendly de direction). Une seule fois chacun par fiche.", roles: LEADS },
+      { text: "Seulement pour les restaurateurs qui ont coché « J'accepte d'être recontacté » sur la landing. Rien pour une fiche saisie à la main, « Terrain » ou du bac à sable. Le journal de la fiche note « Signal … transmis à Meta ».", roles: LEADS },
+      { text: "Aucune donnée en clair : e-mail, téléphone, prénom, nom, ville et code postal partent hachés. Inactif tant que le jeton Meta n'est pas posé sur Vercel ; une panne de Meta ne bloque jamais l'ERP.", roles: TEAM },
+    ],
+    training: [{ moduleId: "m1-leads", lessonId: "messages", label: "SMS, WhatsApp, email : ce qui part tout seul et ce que vous envoyez" }],
+  },
+  {
+    id: "2026-10-23-alerte-sms-setter",
+    date: "2026-10-23",
+    title: "Un SMS au setter à chaque nouveau lead restaurateur",
+    summary: "Dès qu'un restaurateur laisse ses coordonnées, le setter reçoit un SMS sur son téléphone avec le restaurant, le contact, le numéro et le lien de la fiche : rappeler sous 15 minutes.",
+    items: [
+      { text: "Le SMS arrive dans la minute : « Nouveau lead POEI : restaurant (ville), contact téléphone. Rappelle sous 15 min. » suivi du lien de la fiche. L'e-mail de notification continue de partir.", roles: LEADS },
+      { text: "Il part au « Téléphone du setter » des Réglages, jamais au restaurateur, une seule fois par lead. Rien pour une fiche saisie à la main, une fiche « Terrain » ni un doublon. Le journal de la fiche note « Alerte SMS envoyée au setter ».", roles: LEADS },
+      { text: "Leads → Réglages → « Alerte SMS au setter à chaque nouveau lead » : activée par défaut, indépendante de l'interrupteur des envois automatiques au prospect.", roles: TEAM },
+    ],
+    training: [{ moduleId: "m1-leads", lessonId: "journee", label: "Ma journée de setter" }],
+  },
+  {
     id: "2026-10-23-test-positionnement-v2",
     date: "2026-10-23",
     title: "Nouveau test de positionnement : plus court, adapté à chacun",

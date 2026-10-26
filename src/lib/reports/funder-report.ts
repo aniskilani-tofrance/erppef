@@ -118,6 +118,10 @@ export type FunderReport = {
     uniqueLearners: number;
     exits: { abandon: number; termine: number };
     averageAttendanceRate: number | null; // % moyen, null si aucun émargement
+    // Absences émargées (séances clôturées) : une absence justifiée (« Excusé ») est une
+    // absence — heures non réalisées — montrée à part : « dont X absences justifiées ».
+    absences: number;
+    excusedAbsences: number;
   };
   distributions: {
     gender: Distribution;
@@ -138,6 +142,8 @@ export type FunderReport = {
     sessionsDone: number;
     hoursDone: number;
     attendanceRate: number | null;
+    absences: number;
+    excusedAbsences: number;
   }[];
   learnerDetails: {
     learnerId: string;
@@ -146,6 +152,9 @@ export type FunderReport = {
     groups: string[];
     hoursAttended: number;
     rate: number | null;
+    absences: number;
+    excusedAbsences: number;
+    hoursExcused: number; // heures non réalisées pour absence justifiée
   }[];
   acquis: AcquisSummary | null; // null tant qu'aucune évaluation finale n'est saisie
 };
@@ -214,6 +223,15 @@ export function computeFunderReport(data: FunderReportData): FunderReport {
   const averageAttendanceRate = rates.length
     ? Math.round(rates.reduce((a, b) => a + b, 0) / rates.length)
     : null;
+  const sumOf = (list: Iterable<{ absent: number; excused: number }>) => {
+    let absences = 0;
+    let excusedAbsences = 0;
+    for (const st of list) {
+      absences += st.absent;
+      excusedAbsences += st.excused;
+    }
+    return { absences, excusedAbsences };
+  };
 
   const exits = {
     abandon: data.enrollments.filter((e) => e.status === "abandon").length,
@@ -233,6 +251,7 @@ export function computeFunderReport(data: FunderReportData): FunderReport {
     const gRates = [...gStats.entries()]
       .filter(([id]) => gLearnerIds.has(id))
       .map(([, s]) => s.rate);
+    const gAbsences = sumOf([...gStats.entries()].filter(([id]) => gLearnerIds.has(id)).map(([, s]) => s));
     return {
       groupId: g.id,
       name: g.name,
@@ -243,6 +262,7 @@ export function computeFunderReport(data: FunderReportData): FunderReport {
       attendanceRate: gRates.length
         ? Math.round(gRates.reduce((a, b) => a + b, 0) / gRates.length)
         : null,
+      ...gAbsences,
     };
   });
 
@@ -259,6 +279,9 @@ export function computeFunderReport(data: FunderReportData): FunderReport {
         groups,
         hoursAttended: st ? Math.round(st.hoursAttended * 10) / 10 : 0,
         rate: st?.rate ?? null,
+        absences: st?.absent ?? 0,
+        excusedAbsences: st?.excused ?? 0,
+        hoursExcused: st ? Math.round(st.hoursExcused * 10) / 10 : 0,
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name, "fr"));
@@ -275,6 +298,7 @@ export function computeFunderReport(data: FunderReportData): FunderReport {
       uniqueLearners: learners.length,
       exits,
       averageAttendanceRate,
+      ...sumOf(stats.values()),
     },
     distributions: {
       gender: distribute(learners, (l) => l.gender, GENDER_LABELS),

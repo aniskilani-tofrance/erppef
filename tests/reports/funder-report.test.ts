@@ -6,6 +6,8 @@ import {
   type FunderReportData,
   type ReportLearner,
 } from "@/lib/reports/funder-report";
+import { buildFunderReportPdf } from "@/lib/reports/funder-report-pdf";
+import { absencesSummary } from "@/lib/attendance-status";
 
 function learner(id: string, overrides: Partial<ReportLearner> = {}): ReportLearner {
   return {
@@ -136,5 +138,51 @@ describe("computeFunderReport", () => {
     expect(report.totals.uniqueLearners).toBe(0);
     expect(report.totals.averageAttendanceRate).toBeNull();
     expect(report.distributions.gender).toEqual([]);
+  });
+});
+
+describe("computeFunderReport — absences justifiées", () => {
+  it("une absence excusée compte comme absence (heures, taux) et se montre à part", () => {
+    const report = computeFunderReport(
+      baseData({
+        attendanceRecords: [
+          { learnerId: "a", status: "present", startsAt: "2026-01-05T08:00:00Z", hours: 3 },
+          { learnerId: "a", status: "excuse", startsAt: "2026-01-06T08:00:00Z", hours: 3 },
+          { learnerId: "b", status: "absent", startsAt: "2026-01-05T08:00:00Z", hours: 3 },
+          { learnerId: "b", status: "excuse", startsAt: "2026-01-06T08:00:00Z", hours: 3 },
+        ],
+      }),
+    );
+    expect(report.totals.absences).toBe(3);
+    expect(report.totals.excusedAbsences).toBe(2);
+    expect(absencesSummary(report.totals.absences, report.totals.excusedAbsences)).toBe("3 absences, dont 2 absences justifiées");
+    expect(report.groupDetails[0]).toMatchObject({ absences: 3, excusedAbsences: 2 });
+
+    const a = report.learnerDetails.find((l) => l.learnerId === "a")!;
+    expect(a).toMatchObject({ hoursAttended: 3, rate: 50, absences: 1, excusedAbsences: 1, hoursExcused: 3 });
+    // Taux moyen : a 50 %, b 0 % (l'excusé n'est pas une présence)
+    expect(report.totals.averageAttendanceRate).toBe(25);
+  });
+
+  it("sans absence excusée, rien ne change", () => {
+    const report = computeFunderReport(baseData());
+    expect(report.totals.absences).toBe(1);
+    expect(report.totals.excusedAbsences).toBe(0);
+    expect(absencesSummary(report.totals.absences, report.totals.excusedAbsences)).toBe("1 absence");
+  });
+});
+
+describe("bilan financeur PDF — absences justifiées", () => {
+  it("se génère avec des absences excusées", async () => {
+    const report = computeFunderReport(
+      baseData({
+        attendanceRecords: [
+          { learnerId: "a", status: "excuse", startsAt: "2026-01-05T08:00:00Z", hours: 3 },
+          { learnerId: "a", status: "present", startsAt: "2026-01-06T08:00:00Z", hours: 3 },
+        ],
+      }),
+    );
+    const pdf = await buildFunderReportPdf(report);
+    expect(new TextDecoder().decode(pdf.slice(0, 5))).toBe("%PDF-");
   });
 });

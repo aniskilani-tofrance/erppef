@@ -37,6 +37,7 @@ import {
 } from "@/lib/admission/appointments-server";
 import { isSlotFree, type FreeSlot } from "@/lib/admission/slots";
 import { loadFreeSlots } from "@/lib/admission/slots-server";
+import { BULK_TEST_STATUSES, pickBulkTestTargets, type BulkTarget } from "@/lib/placement/bulk";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -626,4 +627,56 @@ export async function listAdmissionFreeSlots(raw?: {
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Créneaux indisponibles" };
   }
+}
+
+// ── Envoi groupé de l'invitation au test de positionnement ──────────────────
+// « À contacter » et « Contacté » sans test fait ni niveau connu : on crée les tests
+// manquants (un lien personnel chacun) et on renvoie la file d'envoi. Les messages
+// partent ensuite un par un sur WhatsApp depuis l'écran (un toucher par personne) ;
+// chaque envoi passe par logContact (journal + « À contacter » → « Contacté »).
+export type BulkTestResult =
+  | { ok: true; targets: BulkTarget[]; created: number; skippedDone: number }
+  | { ok: false; error: string };
+
+export async function prepareBulkPlacementTests(): Promise<BulkTestResult> {
+  const { orgId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+
+  const { data: learners, error } = await supabase
+    .from("learners")
+    .select("id, first_name, last_name, phone, admission_status, level_assessed, created_at")
+    .eq("org_id", orgId)
+    .in("admission_status", [...BULK_TEST_STATUSES]);
+  if (error) return { ok: false, error: translatePgError(error) };
+  const ids = (learners ?? []).map((l) => l.id as string);
+  if (!ids.length) return { ok: true, targets: [], created: 0, skippedDone: 0 };
+
+  const since = new Date(Date.now() - 30 * 86_400_000).toISOString();
+  const [{ data: tests, error: testsError }, { data: contacts }] = await Promise.all([
+    supabase.from("placement_tests").select("learner_id, status, token, created_at").eq("org_id", orgId).in("learner_id", ids),
+    supabase.from("learner_contacts").select("learner_id, contacted_at, note").eq("org_id", orgId).in("learner_id", ids).gte("contacted_at", since),
+  ]);
+  if (testsError) return { ok: false, error: translatePgError(testsError) };
+
+  const { targets, skippedDone } = pickBulkTestTargets(learners ?? [], tests ?? [], contacts ?? []);
+
+  // Un lien personnel pour chaque personne joignable qui n'en a pas encore.
+  const missing = targets.filter((t) => !t.token && t.phoneOk);
+  let created = 0;
+  if (missing.length) {
+    const { data: rows, error: insertError } = await supabase
+      .from("placement_tests")
+      .insert(missing.map((t) => ({ org_id: orgId, learner_id: t.learnerId })))
+      .select("learner_id, token");
+    if (insertError) return { ok: false, error: translatePgError(insertError) };
+    const tokenOf = new Map((rows ?? []).map((r) => [r.learner_id as string, r.token as string]));
+    for (const t of targets) if (!t.token) t.token = tokenOf.get(t.learnerId) ?? null;
+    created = rows?.length ?? 0;
+  }
+
+  if (created) {
+    revalidateAdmission();
+    revalidatePath("/apprenants");
+  }
+  return { ok: true, targets, created, skippedDone };
 }

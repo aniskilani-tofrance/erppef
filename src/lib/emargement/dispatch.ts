@@ -3,6 +3,7 @@ import { buildAttendancePdf, loadAttendanceSheetData, sheetFileName } from "@/li
 import { mailerConfigured, sendMail } from "@/lib/mailer";
 import { textToHtml } from "@/lib/admission/messages";
 import { productionOrgIds } from "@/lib/production-orgs";
+import { excusedAbsencesLabel, isAttended, isExcused } from "@/lib/attendance-status";
 
 // Envoi hebdomadaire des feuilles d'émargement au financeur (ex. cours municipaux →
 // Ville de Saint-Ouen). Réglé par groupe (fiche groupe : actif, destinataires, copies) et
@@ -31,7 +32,17 @@ export type DispatchSession = {
   attendance_closed_at: string | null;
 };
 
-export type SheetSummary = { sessionId: string; startsAt: string; endsAt: string; present: number; enrolled: number };
+// present = présents + retards ; excused = absences justifiées (comptées parmi les absents).
+export type SheetSummary = { sessionId: string; startsAt: string; endsAt: string; present: number; enrolled: number; excused?: number };
+
+/** « 10 présents sur 12 inscrits », complété de « — 2 absents, dont 1 absence justifiée » s'il y en a. */
+export function sheetSummaryLine(s: SheetSummary): string {
+  const base = `${s.present} présent${s.present > 1 ? "s" : ""} sur ${s.enrolled} inscrit${s.enrolled > 1 ? "s" : ""}`;
+  const excused = s.excused ?? 0;
+  if (excused <= 0) return base;
+  const absent = s.enrolled - s.present;
+  return `${base} — ${absent} absent${absent > 1 ? "s" : ""}, ${excusedAbsencesLabel(excused)}`;
+}
 
 export type DispatchResult = {
   groupId: string;
@@ -113,7 +124,7 @@ export function buildDispatchEmail(input: DispatchEmailInput): { subject: string
   if (input.sheets.length) {
     lines.push(`Séances jointes (${input.sheets.length}) :`);
     for (const s of input.sheets) {
-      lines.push(`- ${fmtDay(s.startsAt)}, ${fmtTime(s.startsAt)}-${fmtTime(s.endsAt)} : ${s.present} présent${s.present > 1 ? "s" : ""} sur ${s.enrolled} inscrit${s.enrolled > 1 ? "s" : ""}`);
+      lines.push(`- ${fmtDay(s.startsAt)}, ${fmtTime(s.startsAt)}-${fmtTime(s.endsAt)} : ${sheetSummaryLine(s)}`);
     }
     lines.push("");
   } else {
@@ -236,7 +247,14 @@ export async function dispatchGroupAttendance(
     const data = await loadAttendanceSheetData(s.id, g.org_id);
     if (!data) continue;
     attachments.push({ filename: sheetFileName(data), content: await buildAttendancePdf(data), contentType: "application/pdf" });
-    sheets.push({ sessionId: s.id, startsAt: s.starts_at, endsAt: s.ends_at, present: data.rows.filter((r) => r.status !== "absent").length, enrolled: data.rows.length });
+    sheets.push({
+      sessionId: s.id,
+      startsAt: s.starts_at,
+      endsAt: s.ends_at,
+      present: data.rows.filter((r) => isAttended(r.status)).length,
+      enrolled: data.rows.length,
+      excused: data.rows.filter((r) => isExcused(r.status)).length,
+    });
   }
 
   const email = buildDispatchEmail({

@@ -4,6 +4,18 @@
 
 import { segmentFromText } from "@/lib/leads/csv";
 
+// Données de suivi publicitaire transmises par la landing, pour l'API Conversions de
+// Meta : identifiant d'événement partagé avec le pixel (déduplication), cookies _fbc et
+// _fbp, fbclid du lien publicitaire, navigateur et page d'origine du formulaire.
+export type InboundTracking = {
+  eventId: string | null;
+  fbc: string | null;
+  fbp: string | null;
+  fbclid: string | null;
+  userAgent: string | null;
+  pageUrl: string | null;
+};
+
 export type InboundLead = {
   kind: "lead";
   company: string;
@@ -18,6 +30,9 @@ export type InboundLead = {
   source: "formulaire_meta" | "site" | "appel_entrant" | "recommandation" | "terrain" | "autre";
   campaign: string | null;
   segment: string | null;
+  // Case « J'accepte d'être recontacté » de la landing : true / false, null si absente.
+  recontactConsent: boolean | null;
+  tracking: InboundTracking;
 };
 
 export type InboundCalendly = {
@@ -96,6 +111,21 @@ function pick(flat: Flat, aliases: string[], contains: string[] = []): string | 
   return null;
 }
 
+/** « true », « oui », « on », « 1 » → true ; « false », « non », « off », « 0 » → false ; sinon null. */
+export function parseConsent(raw: string | null): boolean | null {
+  const v = (raw ?? "").trim().toLowerCase();
+  if (/^(true|1|oui|yes|on|y|o|accepte|checked)$/.test(v)) return true;
+  if (/^(false|0|non|no|off|n|refuse)$/.test(v)) return false;
+  return null;
+}
+
+function clean(value: string | null, max: number, pattern?: RegExp): string | null {
+  const v = value?.trim();
+  if (!v || v.length > max) return null;
+  if (pattern && !pattern.test(v)) return null;
+  return v;
+}
+
 const SOURCES = ["formulaire_meta", "site", "appel_entrant", "recommandation", "terrain", "autre"] as const;
 
 export function normalizeInbound(payload: unknown): Inbound | null {
@@ -153,6 +183,15 @@ export function normalizeInbound(payload: unknown): Inbound | null {
   const sourceRaw = pick(flat, ["source", "canal", "channel", "origine"]);
   const campaign = pick(flat, ["utm_campaign", "campaign", "campagne", "utm_content", "visuel", "ad_name", "adset_name", "form_name"]);
   const segmentRaw = pick(flat, ["type_d_etablissement", "type_etablissement", "segment", "secteur", "type", "categorie"]);
+  const consentRaw = pick(flat, ["consentement_recontact", "recontact_consent", "consentement", "consent", "rgpd", "optin", "opt_in"]);
+  const tracking: InboundTracking = {
+    eventId: clean(pick(flat, ["event_id", "meta_event_id", "fb_event_id", "eventid", "journey_id"]), 100, /^[\w.:-]+$/),
+    fbc: clean(pick(flat, ["fbc", "fb_fbc"]), 600, /^fb\.\d\.\d+\.\S+$/),
+    fbp: clean(pick(flat, ["fbp", "fb_fbp"]), 200, /^fb\.\d\.\d+\.\S+$/),
+    fbclid: clean(pick(flat, ["fbclid"]), 500, /^[\w-]+$/),
+    userAgent: clean(pick(flat, ["client_user_agent", "user_agent", "useragent"]), 500),
+    pageUrl: clean(pick(flat, ["event_source_url", "page_url", "landing_url", "source_url"]), 500, /^https?:\/\//),
+  };
 
   const sourceNorm = (sourceRaw ?? "").toLowerCase();
   const source: InboundLead["source"] = (SOURCES as readonly string[]).includes(sourceNorm)
@@ -179,5 +218,7 @@ export function normalizeInbound(payload: unknown): Inbound | null {
     source,
     campaign,
     segment: segmentFromText(segmentRaw),
+    recontactConsent: parseConsent(consentRaw),
+    tracking,
   };
 }

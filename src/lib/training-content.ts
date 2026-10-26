@@ -143,7 +143,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
     duration: "15 min",
     objectives: [
       "Faire signer un groupe en début de séance",
-      "Gérer retards, absences et cas particuliers",
+      "Gérer retards, absences (prévenues ou non) et cas particuliers",
       "Clôturer proprement (et pourquoi c'est important)",
     ],
     lessons: [
@@ -161,10 +161,12 @@ export const TRAINING_MODULES: TrainingModule[] = [
       },
       {
         id: "cas-particuliers",
-        title: "Retards, absents, erreurs",
+        title: "Retards, absents, excusés, erreurs",
         steps: [
           "Un retardataire ? Le lien reste valable jusqu'à la clôture : il signe en arrivant. Posez-lui le statut « Retard » pour la traçabilité.",
           "Un absent ? Rien à faire : à la clôture, tout inscrit sans signature ni statut est marqué absent automatiquement. Vous pouvez aussi poser « Absent » à la main.",
+          "Une personne a prévenu (rendez-vous médical, préfecture, enfant malade…) ? Bouton bleu « Excusé » sur sa ligne, motif facultatif en une ligne, puis « Valider « Excusé » ». Elle ne sera pas relancée et l'absence n'entre pas dans une série d'absences. Pour les heures, c'est une absence : les bilans la montrent à part (« dont 1 absence justifiée »).",
+          "Feuille déjà clôturée quand vous apprenez qu'elle avait prévenu ? Dites-le à la coordination : elle l'excuse sans rouvrir la feuille.",
           "Quelqu'un a signé sur la mauvaise ligne ? Marquez cette ligne « Absent » (la signature erronée s'efface) puis faites re-signer au bon endroit.",
           "La signature refuse de partir ? Vérifiez la connexion de la tablette et réessayez : rien n'est perdu tant que la feuille est ouverte.",
         ],
@@ -195,6 +197,12 @@ export const TRAINING_MODULES: TrainingModule[] = [
         choices: ["Ils restent « en attente »", "La clôture est bloquée", "Ils sont marqués absents automatiquement"],
         answerIndex: 2,
         explanation: "La clôture complète la feuille : les non-signés sans statut deviennent absents — la feuille est toujours complète.",
+      },
+      {
+        question: "Une apprenante vous a prévenue qu'elle a un rendez-vous à la préfecture. Que posez-vous sur sa ligne ?",
+        choices: ["Rien : elle sera « Absent » à la clôture", "« Retard »", "« Excusé », avec le motif « préfecture »"],
+        answerIndex: 2,
+        explanation: "« Excusé » = absence justifiée : pas de relance, pas de série d'absences. Pour les heures, cela reste une absence, montrée à part dans les bilans.",
       },
       {
         question: "Un apprenant arrive 40 minutes en retard. Que faites-vous ?",
@@ -668,6 +676,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
         steps: [
           "Le Dashboard affiche le taux de présence global et les apprenants en alerte (moins de 70 % ou 3 absences de suite) : appelez-les, notez l'action dans leur fiche.",
           "« Absents à relancer » (Dashboard) : chaque apprenant absent à son dernier cours émargé et pas encore contacté depuis. « WhatsApp » ouvre un message prêt (le cours manqué, le prochain cours et sa salle) à relire puis envoyer ; « Appelé(e) » note un appel. La relance est tracée dans son carnet de contact et la personne sort de la liste ; elle y revient si elle manque encore un cours. Relancer dès la première absence est le meilleur moyen d'éviter le décrochage.",
+          "Elle avait prévenu ? « Excuser » sur sa ligne (motif facultatif) : l'absence devient « Excusé » sur la feuille, sans la rouvrir, et ne se relance plus. Même geste sur la feuille d'une séance clôturée (« Excuser » sur une ligne « Absent », « Remettre « Absent » » pour annuler). Réservé à l'admin et à la coordination ; jamais sur une ligne présente (il faut rouvrir la feuille). Une absence excusée ne compte ni dans les séries ni dans les alertes, mais reste une absence pour les heures : « dont X absences justifiées » dans les bilans.",
           "Enquête de satisfaction : fiche du groupe → QR code anonyme en fin de session (1 minute). Les moyennes s'affichent sur la fiche.",
           "Réclamations : page Qualité → registre — consignez la réclamation ET l'action corrective (c'est elle qui compte en audit).",
           "Analyse du besoin (ind. 4) : sur la fiche apprenant, objectif visé + besoin exprimé + date d'entretien, puis « Télécharger le dossier d'entrée (PDF) » — la preuve individuelle.",
@@ -848,6 +857,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
           "L'horloge du service en haut : vert = appelez (9h30-11h30, 14h30-17h30) ; orange = service du midi, pas d'appel ; gris = trop tôt ou trop tard. Restauration collective : 9h-11h et 14h-16h.",
           "« À rappeler sous 24 h » : les leads jamais contactés, le plus ancien en premier. La pub promet un rappel sous 24 h — en rouge, c'est déjà trop tard.",
           "Les leads arrivent tout seuls : quand un restaurateur remplit le formulaire (landing, Meta) ou prend un créneau Calendly, sa fiche se crée et vous recevez un email avec le lien. Rien à recopier — juste rappeler.",
+          "Pour un formulaire, vous recevez aussi un SMS dans la minute, au numéro des Réglages (« Téléphone du setter ») : « Nouveau lead POEI : restaurant (ville), contact téléphone. Rappelle sous 15 min. » et le lien de la fiche. Pendant les heures d'appel, rappelez dans le quart d'heure ; pendant le service, à la reprise.",
           "« Relances dues » : ce que la cadence prévoit aujourd'hui ou en retard. « SMS de rappel à envoyer pour demain » : les RDV de demain sans SMS n°3.",
           "17h30 : message court à la direction — nombre d'appels, de joignables, de RDV pris, blocages. Le lundi, le point hebdo lit les chiffres en haut de la page Leads.",
         ],
@@ -875,6 +885,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
         steps: [
           "Ce qui part sans vous : invitation à réserver un créneau dix minutes après le formulaire s'il n'a rien réservé, confirmation du créneau Calendly, rappel la veille et deux heures avant, message après un rendez-vous manqué. Chaque envoi est écrit dans le journal de la fiche, et le survol d'une ligne affiche le message complet — lisez-le avant de rappeler, le restaurateur l'a déjà reçu.",
           "Tout part dans la seconde, à toute heure : un restaurateur qui remplit le formulaire à minuit après son service reçoit son SMS aussitôt. Un même message n'est jamais envoyé deux fois à la même fiche.",
+          "Une ligne « Signal … transmis à Meta » dans le journal n'est pas un message au restaurateur : l'ERP dit à Meta que ce lead est arrivé, qu'il est qualifié ou qu'il a pris rendez-vous, pour que la publicité trouve des restaurateurs qui avancent. Passer la fiche « Qualifié » ou « RDV pris » au bon moment, c'est donc aussi améliorer les prochains leads.",
           "Prospection terrain : quand vous créez la fiche d'un restaurant visité, choisissez la source « Terrain / visite ». Aucun e-mail ni SMS automatique ne partira vers lui, rendez-vous posé compris : vous gardez la relation en main, par appel, WhatsApp ou e-mail du kit.",
           "Les messages qui annoncent un appel montrent votre numéro (Réglages → « Téléphone du setter ») avec « enregistrez ce numéro » : invitation à réserver, confirmation du créneau, rappels, SMS après appel manqué. Appelez donc toujours depuis ce numéro — un appel depuis un autre téléphone arrive en inconnu et n'est pas décroché. Le numéro n'est jamais montré avant qu'un appel soit annoncé.",
           "Ce que vous envoyez à la main : le menu SMS ne garde que « rappel de créneau promis » (le jour où vous avez promis d'appeler à 15h) et il part depuis l'ERP, pas depuis votre téléphone. WhatsApp reste disponible pour les restaurateurs qui y répondent mieux.",

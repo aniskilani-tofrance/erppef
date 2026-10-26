@@ -5,6 +5,13 @@
 // clôturée) des 14 derniers jours. S'il y était absent et qu'aucun contact n'a été noté
 // dans son carnet depuis le début de cette séance, il apparaît dans la liste. Revenu
 // en cours (présent ou en retard) ou déjà contacté → il disparaît tout seul.
+//
+// Absence excusée (la personne a prévenu) : JAMAIS relancée, et transparente pour la
+// série. On l'ignore comme si la séance n'avait pas été émargée pour cette personne :
+// absent lundi, excusé mercredi → relancé(e) pour lundi seulement ; absent, excusé,
+// absent → « 2 absences de suite ».
+
+import { isExcused, type AttendanceStatus } from "@/lib/attendance-status";
 
 export const FOLLOWUP_WINDOW_DAYS = 14;
 
@@ -14,7 +21,7 @@ export type FollowupAttendance = {
   groupId: string;
   groupName: string;
   startsAt: string; // ISO UTC
-  status: "present" | "retard" | "absent";
+  status: AttendanceStatus;
 };
 
 export type FollowupLearner = {
@@ -34,6 +41,7 @@ export type AbsenceFollowup = {
   lastName: string;
   phone: string | null;
   groupName: string;
+  sessionId: string; // séance manquée (sert au bouton « Excuser »)
   missedAt: string; // début de la séance manquée (ISO UTC)
   streak: number; // absences consécutives sur ce groupe, la dernière comprise
   nextSession: { startsAt: string; roomName: string | null } | null;
@@ -56,9 +64,10 @@ export function computeAbsenceFollowups(input: {
     if (t > (lastContact.get(c.learnerId) ?? 0)) lastContact.set(c.learnerId, t);
   }
 
-  // Émargements par apprenant, du plus récent au plus ancien
+  // Émargements par apprenant, du plus récent au plus ancien (absences excusées écartées)
   const byLearner = new Map<string, FollowupAttendance[]>();
   for (const a of input.attendances) {
+    if (isExcused(a.status)) continue;
     const list = byLearner.get(a.learnerId) ?? [];
     list.push(a);
     byLearner.set(a.learnerId, list);
@@ -92,6 +101,7 @@ export function computeAbsenceFollowups(input: {
       lastName: learner.lastName,
       phone: learner.phone,
       groupName: last.groupName,
+      sessionId: last.sessionId,
       missedAt: last.startsAt,
       streak,
       nextSession: next ? { startsAt: next.startsAt, roomName: next.roomName } : null,

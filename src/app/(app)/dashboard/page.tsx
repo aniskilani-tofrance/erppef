@@ -24,8 +24,10 @@ import { RemindersList, type ReminderItem } from "@/components/assistant/reminde
 import {
   ABSENCE_ALERT_THRESHOLD,
   computeLearnerStats,
+  globalAttendance,
   type AttendanceRecord,
 } from "@/lib/attendance-stats";
+import { excusedShortLabel } from "@/lib/attendance-status";
 
 // Seuil d'alerte assiduité : en dessous, l'apprenant apparaît nommément sur le dashboard.
 const RATE_ALERT_THRESHOLD = 70;
@@ -258,21 +260,22 @@ export default async function DashboardPage() {
     startsAt: (a.sessions as unknown as { starts_at: string }).starts_at,
   }));
   const learnerStats = computeLearnerStats(attendanceRecords);
-  const presentMarks = attendanceRecords.filter((r) => r.status !== "absent").length;
-  const globalRate = attendanceRecords.length
-    ? Math.round((presentMarks / attendanceRecords.length) * 100)
-    : null;
+  // Taux global : une absence justifiée compte comme une absence (heures non réalisées)
+  const { rate: globalRate } = globalAttendance(attendanceRecords);
   const learnerNameById = new Map((learnersList.data ?? []).map((l) => [l.id, `${l.first_name} ${l.last_name}`]));
+  // Alerte : série d'absences NON justifiées, ou taux faible hors absences justifiées
+  // (une absence prévenue n'est pas un signal de décrochage).
   const atRiskLearners = [...learnerStats.entries()]
     .filter(
       ([, st]) =>
         st.consecutiveAbsences >= ABSENCE_ALERT_THRESHOLD ||
-        (st.total >= 3 && st.rate < RATE_ALERT_THRESHOLD),
+        (st.unexcusedTotal >= 3 && st.unexcusedRate !== null && st.unexcusedRate < RATE_ALERT_THRESHOLD),
     )
     .map(([id, st]) => ({
       name: learnerNameById.get(id) ?? "—",
       rate: st.rate,
       streak: st.consecutiveAbsences,
+      excused: st.excused,
     }))
     .sort((a, b) => a.rate - b.rate);
 
@@ -423,13 +426,14 @@ export default async function DashboardPage() {
                   <Badge variant="destructive" className="text-sm">
                     {l.name} — {l.rate} % de présence
                     {l.streak >= 3 ? ` · ${l.streak} abs. de suite` : ""}
+                    {l.excused > 0 ? ` · ${excusedShortLabel(l.excused)}` : ""}
                   </Badge>
                 </li>
               ))}
             </ul>
             <p className="text-xs text-muted-foreground">
               Seuils : moins de {RATE_ALERT_THRESHOLD} % de présence (sur 3 séances émargées ou plus)
-              ou 3 absences consécutives.{" "}
+              ou 3 absences consécutives. Les absences justifiées (« Excusé ») ne déclenchent pas l&apos;alerte.{" "}
               <Link href="/apprenants" className="hover:underline">Voir les apprenants →</Link>
             </p>
           </CardContent>

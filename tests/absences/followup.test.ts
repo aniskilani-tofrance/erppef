@@ -76,6 +76,75 @@ describe("computeAbsenceFollowups", () => {
     });
     expect(res.map((r) => r.learnerId)).toEqual(["fatima", "omar"]);
   });
+
+  describe("absence excusée (la personne a prévenu)", () => {
+    it("n'est jamais relancée, même seule ou en dernier", () => {
+      const res = computeAbsenceFollowups({
+        attendances: [
+          mark("omar", "2026-10-07T07:00:00Z", "excuse"),
+          mark("fatima", "2026-10-05T07:00:00Z", "present"),
+          mark("fatima", "2026-10-07T07:00:00Z", "excuse"),
+        ],
+        learners,
+        contacts: [],
+        nextSessions: [],
+        now: NOW,
+      });
+      expect(res).toEqual([]);
+    });
+
+    it("absent puis excusé : relancé(e) pour l'absence non prévenue seulement", () => {
+      const res = computeAbsenceFollowups({
+        attendances: [
+          mark("fatima", "2026-10-02T07:00:00Z", "present"),
+          mark("fatima", "2026-10-05T07:00:00Z", "absent"),
+          mark("fatima", "2026-10-07T07:00:00Z", "excuse"),
+        ],
+        learners,
+        contacts: [],
+        nextSessions: [],
+        now: NOW,
+      });
+      expect(res).toHaveLength(1);
+      expect(res[0]).toMatchObject({
+        learnerId: "fatima",
+        missedAt: "2026-10-05T07:00:00Z",
+        sessionId: "fatima-2026-10-05T07:00:00Z",
+        streak: 1,
+      });
+    });
+
+    it("n'allonge pas la série et ne la casse pas : absent, excusé, absent = 2 de suite", () => {
+      const res = computeAbsenceFollowups({
+        attendances: [
+          mark("fatima", "2026-10-01T07:00:00Z", "present"),
+          mark("fatima", "2026-10-02T07:00:00Z", "absent"),
+          mark("fatima", "2026-10-05T07:00:00Z", "excuse"),
+          mark("fatima", "2026-10-07T07:00:00Z", "absent"),
+        ],
+        learners,
+        contacts: [],
+        nextSessions: [],
+        now: NOW,
+      });
+      expect(res).toHaveLength(1);
+      expect(res[0].streak).toBe(2);
+      expect(res[0].missedAt).toBe("2026-10-07T07:00:00Z");
+    });
+
+    it("excuser la séance listée retire la personne de la liste (aucune autre absence)", () => {
+      const before = computeAbsenceFollowups({
+        attendances: [mark("omar", "2026-10-07T07:00:00Z", "absent")],
+        learners, contacts: [], nextSessions: [], now: NOW,
+      });
+      expect(before.map((r) => r.learnerId)).toEqual(["omar"]);
+      const after = computeAbsenceFollowups({
+        attendances: [mark("omar", "2026-10-07T07:00:00Z", "excuse")],
+        learners, contacts: [], nextSessions: [], now: NOW,
+      });
+      expect(after).toEqual([]);
+    });
+  });
 });
 
 describe("buildAbsenceFollowupMessage", () => {

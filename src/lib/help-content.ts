@@ -102,9 +102,21 @@ export const HELP_SECTIONS: HelpSection[] = [
           "Depuis votre Dashboard ou le Planning, ouvrez la séance → « Feuille d'émargement » → « Ouvrir l'émargement ».",
           "Scannez le QR code avec la tablette (ou votre téléphone) : la liste des apprenants s'affiche avec leurs photos.",
           "Faites circuler la tablette : chacun touche son nom, signe au doigt, valide. Sa ligne se verrouille avec une coche verte.",
-          "Sur votre écran, posez les statuts manquants : « Retard » ou « Absent » (les non-signés seront marqués absents à la clôture).",
+          "Sur votre écran, posez les statuts manquants : « Retard », « Absent » ou « Excusé » (les non-signés sans statut seront marqués absents à la clôture).",
+          "« Excusé » (bouton bleu) : la personne a prévenu de son absence. Un champ « Motif » s'ouvre, facultatif (rendez-vous médical, préfecture, enfant malade…), puis « Valider « Excusé » ». Une ligne « Excusé » a un statut : elle ne devient pas « Absent » à la clôture.",
           "Cliquez « Contre-signer et clôturer », signez à votre tour : la séance passe automatiquement en « réalisée ».",
           "Un retardataire arrive après coup ? Le lien reste valable jusqu'à la clôture (au plus tard 24 h après la séance).",
+        ],
+      },
+      {
+        title: "Une personne a prévenu de son absence : le statut « Excusé »",
+        steps: [
+          "Feuille ouverte : bouton bleu « Excusé » sur sa ligne, motif facultatif (une ligne), puis « Valider « Excusé » ». La ligne affiche le badge bleu « Excusé », le motif et « excusé le JJ/MM par Prénom ».",
+          "Ce que ça change : la personne n'apparaît pas dans « Absents à relancer », ne reçoit pas de relance, et cette absence ne compte pas dans une série d'absences ni dans les alertes de décrochage.",
+          "Pour les heures, c'est une absence : les heures ne sont pas réalisées. Les bilans la montrent à part : « 4 absences, dont 1 absence justifiée ».",
+          "Elle vient finalement ? Elle signe sur la tablette comme les autres : la ligne passe « Présent » et le motif s'efface.",
+          "Feuille déjà clôturée : seule la coordination peut excuser l'absence (« Excuser » sur la ligne), sans rouvrir la feuille. Prévenez-la.",
+          "Le motif reste dans l'ERP : il n'apparaît jamais sur la feuille PDF ni dans les envois au financeur, qui indiquent seulement « Excusé ». N'écrivez pas de détail médical : « rendez-vous médical » suffit.",
         ],
       },
       {
@@ -559,6 +571,19 @@ export const HELP_SECTIONS: HelpSection[] = [
           "« Appelé(e) » : vous avez téléphoné ou vu la personne. La relance est notée sans ouvrir WhatsApp.",
           "Dans les deux cas, la relance est inscrite dans le carnet de contact de l'apprenant (preuve de suivi de l'assiduité pour l'audit) et la personne sort de la liste. Elle y revient seulement si elle manque un nouveau cours.",
           "Elle n'apparaît plus dès qu'elle est revenue en cours (présente ou en retard), ou si son inscription au groupe n'est plus active.",
+          "« Excuser » : la personne avait prévenu. Écrivez le motif si vous voulez (facultatif), puis « Valider « Excusé » » : la ligne de la feuille passe « Excusé » sans rouvrir la feuille, et la personne sort de la liste. Une absence excusée n'est jamais relancée et n'allonge pas une série d'absences.",
+          "Si elle a aussi manqué un autre cours sans prévenir, elle reste dans la liste pour ce cours-là.",
+          "La liste ne regarde que les 14 derniers jours. Rien n'est rattrapé automatiquement pour les absences plus anciennes : pour en excuser une, ouvrez la feuille de la séance (fiche du groupe → la séance → « Feuille d'émargement ») → « Excuser ».",
+        ],
+      },
+      {
+        title: "Excuser une absence sur une feuille déjà clôturée",
+        steps: [
+          "Réservé à l'admin et à la coordination (pas aux formatrices). Deux chemins : Dashboard → « Absents à relancer » → « Excuser », ou la feuille d'émargement de la séance → « Excuser » sur une ligne « Absent ».",
+          "Motif facultatif, puis « Valider « Excusé » ». Seule cette ligne change : les autres lignes, les signatures, les heures, le lien et la date de clôture restent tels quels. Pas besoin de « Rouvrir pour correction ».",
+          "La ligne garde la trace « excusé le JJ/MM par Prénom ». Erreur ? « Remettre « Absent » » sur la même ligne ; « Modifier le motif » pour le corriger.",
+          "Impossible sur une ligne « Présent » ou « Retard » : cela changerait les heures. Pour corriger une présence, il faut toujours rouvrir la feuille.",
+          "Feuille déjà envoyée au financeur ? Elle reste juste : une absence justifiée reste une absence pour les heures. Le bilan suivant indiquera « dont X absences justifiées ». Inutile de renvoyer la feuille.",
         ],
       },
       {
@@ -567,6 +592,7 @@ export const HELP_SECTIONS: HelpSection[] = [
           "Fiche du groupe → carte « Feuilles d'émargement au financeur » : activez l'envoi hebdomadaire, indiquez les destinataires (une adresse par ligne) et les personnes en copie, puis « Enregistrer ». Chez PEF, les trois cours municipaux sont déjà réglés : Cordon → mba@…, Landy → miscache@…, et gfenzi@ + nchahbani@ reçoivent les trois sites.",
           "Chaque vendredi après-midi (16 h l'été, 15 h l'hiver), l'ERP envoie automatiquement un email par groupe avec les feuilles CLÔTURÉES de la semaine en pièces jointes (un PDF signé par séance), la liste des séances avec le nombre de présents, et une copie à la coordination.",
           "Une feuille non clôturée le vendredi n'est pas envoyée : elle est signalée dans l'email et repart la semaine suivante une fois clôturée. Si rien n'est clôturé, le financeur ne reçoit rien et la coordination est prévenue par email. Le cours du samedi matin part avec l'email du vendredi suivant.",
+          "Absences excusées : la feuille PDF indique « Excusé » (jamais le motif) et l'email précise, pour la séance, « 2 absents, dont 1 absence justifiée ».",
           "« Envoyer maintenant » envoie tout de suite ce qui est clôturé depuis le dernier envoi (rattrapage, demande du financeur). « M'envoyer un test » envoie le même email à vous seul, sans toucher au dernier envoi : faites-le avant la rentrée pour voir le rendu.",
           "L'historique sous la carte garde chaque envoi : date, statut (envoyé, reporté, rien à envoyer, erreur), nombre de feuilles, destinataires. En cas d'erreur SMTP, réessayez avec « Envoyer maintenant ».",
         ],
@@ -625,6 +651,7 @@ export const HELP_SECTIONS: HelpSection[] = [
         steps: [
           "Menu « Rapports » : choisissez le financeur et la période (presets : année civile, trimestre, année de formation).",
           "Le bilan se calcule tout seul : heures réalisées, bénéficiaires uniques, assiduité moyenne (émargements clôturés), abandons/terminés, et typologie des publics (sexe, âge, situation, QPV, RQTH, scolarisation, communes).",
+          "Absences : une absence excusée (la personne a prévenu) compte comme une absence, ses heures ne sont pas réalisées. Elle est montrée à part : « 12 absences, dont 3 absences justifiées » (page Rapports, PDF, colonnes « dont absences justifiées » du CSV).",
           "« Bilan PDF » = le document à joindre au compte-rendu ; « Détail CSV » = le nominatif par groupe et par bénéficiaire ; « Déposer sur le Drive » = classement automatique dans « Bilans financeurs ».",
           "La typologie vient des fiches apprenants (section « Typologie ») : plus elle est remplie, moins le bilan affiche de « Non renseigné ». Complétez-la à l'inscription, c'est 30 secondes par personne.",
           "Un abandon se déclare sur la fiche du groupe (menu ⋯ de l'apprenant → « Marquer en abandon ») : il reste compté dans le bilan — ne supprimez jamais une inscription réelle.",
@@ -657,6 +684,7 @@ export const HELP_SECTIONS: HelpSection[] = [
         title: "Rappeler un nouveau lead sous 24 h",
         steps: [
           "Menu « Leads resto » (ou votre Dashboard si vous êtes commercial) : la carte « À rappeler sous 24 h » liste les leads jamais contactés, le plus ancien en premier ; en rouge au-delà de 24 h.",
+          "Alerte SMS : à chaque formulaire reçu, le setter reçoit dans la minute un SMS au « Téléphone du setter » des Réglages — « Nouveau lead POEI : restaurant (ville), contact téléphone. Rappelle sous 15 min. » avec le lien de la fiche. Il ne part qu'une fois par lead, jamais au restaurateur, et pas pour une fiche saisie à la main, une fiche « Terrain » ni un doublon. Le journal de la fiche note « Alerte SMS envoyée au setter ».",
           "Regardez d'abord l'horloge du service en haut : vert = c'est l'heure d'appeler (9h30-11h30, 14h30-17h30) ; orange ou gris = emails, SMS et préparation des fiches, pas d'appel.",
           "Ouvrez la fiche, bouton « Appeler » : le téléphone compose le numéro et la fenêtre « Noter » s'ouvre pour enregistrer le résultat dès que vous raccrochez.",
           "Appelez toujours depuis le numéro renseigné dans Réglages → « Téléphone du setter » : c'est celui que les messages annoncent au restaurateur (« enregistrez ce numéro »). Un appel depuis un autre numéro arrive en inconnu et n'est pas décroché.",
@@ -726,7 +754,7 @@ export const HELP_SECTIONS: HelpSection[] = [
         steps: [
           "« Importer » : collez les lignes du Google Sheet de suivi (avec la ligne d'en-têtes) ou une liste simple « Entreprise ; Contact ; Téléphone ; Email ; Ville CP ; Postes ; Nb ; Notes » — un aperçu s'affiche avant l'import.",
           "« Exporter CSV » : les 24 colonnes du Sheet de suivi dans le même ordre, puis les colonnes propres à l'ERP (référence, offre, heures, décideur, HACCP, RDV). Ouvrable dans Excel ou Google Sheets.",
-          "« Réglages » (direction) : la date du prochain groupe restauration (l'argument d'urgence des scripts), le lien Calendly de qualification, le lien Calendly de direction, les deux créneaux types, le nom de la personne qui tient le RDV, le téléphone du setter (affiché au restaurateur quand un appel est annoncé, saisi comme « 07 59 11 90 97 »), et l'interrupteur des envois automatiques. Ils alimentent tous les modèles.",
+          "« Réglages » (direction) : la date du prochain groupe restauration (l'argument d'urgence des scripts), le lien Calendly de qualification, le lien Calendly de direction, les deux créneaux types, le nom de la personne qui tient le RDV, le téléphone du setter (affiché au restaurateur quand un appel est annoncé, saisi comme « 07 59 11 90 97 », et qui reçoit l'alerte SMS de chaque nouveau lead), l'alerte SMS au setter (activée par défaut, indépendante des envois au prospect) et l'interrupteur des envois automatiques. Ils alimentent tous les modèles.",
           "Paramètres → Utilisateurs → « Inviter » avec le rôle « Commercial (setter) » : la personne ne voit que les leads, la Formation et l'Aide.",
         ],
       },
@@ -735,11 +763,22 @@ export const HELP_SECTIONS: HelpSection[] = [
         steps: [
           "Leads → Réglages → partie « Leads qui arrivent tout seuls » : choisissez à qui attribuer les nouveaux leads (le setter) et l'email prévenu à chaque arrivée, puis Enregistrer : l'adresse du webhook apparaît (…/api/leads/inbound?token=…). Copiez-la.",
           "Brevo : Automations → nouveau scénario → point d'entrée « Formulaire soumis » (ou « Contact ajouté à la liste ») → action « Appeler un webhook » (POST) avec cette adresse : le contact et ses attributs (PRENOM, NOM, SMS, ENTREPRISE…) créent la fiche.",
-          "Formulaire de la landing (Manus) : en plus de Brevo, envoyez le formulaire en POST vers la même adresse (JSON ou formulaire classique) avec entreprise, prénom, nom, téléphone, email, ville, postes, utm_source, utm_campaign.",
+          "Formulaire de la landing (Manus) : en plus de Brevo, envoyez le formulaire en POST vers la même adresse (JSON ou formulaire classique) avec entreprise, prénom, nom, téléphone, email, ville, postes, utm_source, utm_campaign, consentement_recontact (la case « J'accepte d'être recontacté ») et, pour Meta, fbclid (ou le cookie _fbc), le cookie _fbp, event_id (le même que celui du pixel), user_agent et page_url.",
           "Meta Lead Ads : dans Make, module « Facebook Lead Ads → Watch leads » puis « HTTP → Make a request » (POST, JSON, corps = le lead) vers l'adresse : le nom du visuel (ad_name) devient la campagne de la fiche.",
           "Calendly (forfait Standard ou plus) : Intégrations → Webhooks → événements « Invitee Created » et « Invitee Canceled » vers la même adresse. Deux cas : le Calendly du setter (l'hôte du créneau = l'email de notification, ou un créneau nommé « appel » / « découverte ») note un appel de qualification réservé (statut « À rappeler », prochaine action à la date du créneau) ; le Calendly de la direction pose le RDV sur la fiche (statut « RDV pris »). La fiche est retrouvée par email ou téléphone, ou créée.",
           "Test : ouvrez l'adresse du webhook dans le navigateur : « Point d'entrée actif » confirme le jeton. Un même téléphone ou email reçu deux fois en 30 jours ne crée pas de doublon : l'événement est noté sur la fiche existante.",
           "Le jeton est un secret : s'il fuit, Réglages → « Régénérer le jeton » (l'ancienne adresse cesse de fonctionner) ; « Fermer le webhook » coupe tout.",
+        ],
+      },
+      {
+        title: "Meta : apprendre à la publicité quels leads sont les bons (API Conversions)",
+        steps: [
+          "L'ERP envoie trois signaux à Meta, côté serveur : « Lead » à la réception du formulaire, « Lead qualifié » quand la fiche passe « Qualifié » (ou directement « RDV pris »), « RDV pris » quand le rendez-vous avec la direction est posé (bouton « Poser le RDV », changement de statut ou Calendly de direction). Dans le Gestionnaire d'événements, « LeadQualifie » et « RdvPris » apparaissent comme événements personnalisés : on peut en faire des conversions personnalisées et y optimiser la campagne.",
+          "Conditions : le restaurateur a coché « J'accepte d'être recontacté » sur la landing ; la fiche vient du formulaire (rien pour une fiche saisie à la main, « Terrain », « Prospection », ni pour le bac à sable). Chaque signal ne part qu'une fois par fiche ; le journal note « Signal … transmis à Meta ».",
+          "Aucune donnée en clair : e-mail, téléphone, prénom, nom, ville et code postal sont normalisés puis hachés (SHA-256) avant de partir. Partent aussi, non hachés car ils ne nomment personne : l'identifiant de clic publicitaire (fbclid / _fbc), le cookie _fbp et le navigateur, quand la landing les transmet, et la référence de la fiche (L-0021), sa source et sa campagne.",
+          "Déduplication avec le pixel : si la landing transmet l'event_id utilisé par le pixel pour son « Lead », Meta ne compte le lead qu'une fois. Sans lui, l'identifiant de la fiche est utilisé et Meta peut compter deux « Lead » (navigateur + serveur) : demandez à la landing de transmettre event_id.",
+          "Mise en route (direction) : Gestionnaire d'événements → jeu de données 1407849964096510 → Paramètres → API Conversions → « Générer un jeton d'accès ». Sur Vercel : META_PIXEL_ID = 1407849964096510 et META_CAPI_TOKEN = le jeton. Tant que l'une des deux manque, rien ne part. Pour tester : META_CAPI_TEST_CODE = le code de l'onglet « Tester les événements », à retirer ensuite.",
+          "Une panne ou un refus de Meta est écrit dans les journaux du serveur et n'empêche rien : la fiche est créée, le statut change, les messages partent.",
         ],
       },
       {
@@ -832,8 +871,18 @@ export const FAQ: FaqItem[] = [
   },
   {
     q: "L'apprenant refuse de signer ou n'a pas pu venir : que met-on sur la feuille ?",
-    a: "Posez le statut à la main : « Absent » ou « Retard ». À la clôture, les inscrits sans signature ni statut sont automatiquement marqués absents — la feuille est donc toujours complète.",
+    a: "Posez le statut à la main : « Absent », « Retard », ou « Excusé » s'il a prévenu. À la clôture, les inscrits sans signature ni statut sont automatiquement marqués absents — la feuille est donc toujours complète.",
     roles: ALL,
+  },
+  {
+    q: "Une personne a prévenu de son absence : que faire ?",
+    a: "Sur la feuille ouverte, bouton bleu « Excusé » sur sa ligne, motif facultatif (« rendez-vous médical », « préfecture », « enfant malade »…), puis « Valider « Excusé » ». Elle ne sera pas relancée et cette absence n'entre ni dans une série d'absences ni dans les alertes. Pour les heures, c'est une absence (heures non réalisées), montrée à part dans les bilans : « dont X absences justifiées ». Feuille déjà clôturée ? La coordination l'excuse sans rouvrir la feuille (« Excuser » sur la ligne, ou depuis « Absents à relancer »).",
+    roles: ALL,
+  },
+  {
+    q: "J'excuse une absence après l'envoi de la feuille au financeur : faut-il la renvoyer ?",
+    a: "Non. La feuille envoyée reste juste : une absence justifiée reste une absence pour les heures. Le bilan suivant indiquera « dont X absences justifiées ». Rien n'est rattrapé automatiquement pour les anciennes absences : « Absents à relancer » ne regarde que les 14 derniers jours ; pour une absence plus ancienne, passez par la feuille de la séance → « Excuser ».",
+    roles: TEAM,
   },
   {
     q: "Où retrouver les feuilles d'émargement des mois passés ?",
