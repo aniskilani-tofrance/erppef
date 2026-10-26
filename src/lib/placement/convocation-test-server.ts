@@ -46,9 +46,11 @@ export async function ensureConvocationTests(
   db: SupabaseClient,
   orgId: string,
   learnerIds: string[],
+  locale: string = "fr", // langue des consignes du test (formulaire public) ; les messages de l'équipe sont en français
 ): Promise<{ urls: Map<string, string>; created: number }> {
   const first = await load(db, orgId, learnerIds);
-  const urls = new Map([...first.pending].map(([id, token]) => [id, testLink(token)]));
+  const link = (token: string) => testLink(token, undefined, locale);
+  const urls = new Map([...first.pending].map(([id, token]) => [id, link(token)]));
   if (!first.missing.length) return { urls, created: 0 };
 
   const { data: rows, error } = await db
@@ -60,6 +62,6 @@ export async function ensureConvocationTests(
     console.warn(`[convocation] tests de niveau non créés : ${error.message}`);
     return { urls, created: 0 };
   }
-  for (const r of (rows ?? []) as { learner_id: string; token: string }[]) urls.set(r.learner_id, testLink(r.token));
+  for (const r of (rows ?? []) as { learner_id: string; token: string }[]) urls.set(r.learner_id, link(r.token));
   return { urls, created: rows?.length ?? 0 };
 }

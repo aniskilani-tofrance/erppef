@@ -6,6 +6,8 @@
 // (learners.level_assessed, côté serveur à la correction) : le lien ne peut pas aller à une autre
 // personne tant qu'il est choisi dans la liste des tests de cet apprenant, ce que fait pickConvocationTests.
 
+import { buildTestUrl } from "@/lib/inscription/link";
+
 // Adresse publique de l'ERP : le lien part dans un message WhatsApp ou un email, hors de l'ERP.
 export const PUBLIC_ERP_URL = "https://pef-erp.vercel.app";
 
@@ -51,8 +53,9 @@ export function pickConvocationTests(
   return { pending, missing, done };
 }
 
-export function testLink(token: string, origin: string = PUBLIC_ERP_URL): string {
-  return `${origin.replace(/\/+$/, "")}/test/${token}`;
+/** Lien du test ; hors français, ?lang= pour que les consignes s'ouvrent dans la langue de la personne. */
+export function testLink(token: string, origin: string = PUBLIC_ERP_URL, locale: string = "fr"): string {
+  return buildTestUrl(origin, token, locale);
 }
 
 /** Phrase de la convocation ({test_avant}) ; null si la personne n'a rien à faire. */

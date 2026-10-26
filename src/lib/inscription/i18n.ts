@@ -219,7 +219,8 @@ export const SIGNUP_TEXTS: Record<SignupLocale, SignupTexts> = {
     privacy: [
       { h: "Qui garde vos informations ?", p: "ParlerEmploi Formation, organisme de formation à Saint-Ouen (SIRET 924 182 546 00011)." },
       { h: "Pourquoi ?", p: "Pour vous contacter et vous proposer une formation de français : test de niveau, réunion d'information, inscription dans un groupe." },
-      { h: "Quelles informations ?", p: "Prénom, nom, numéro WhatsApp, langues parlées, français (ce que vous dites), disponibilités, ville ou quartier. Le lien peut dire d'où vous venez (par exemple une maison de quartier)." },
+      { h: "Quelles informations ?", p: "Prénom, nom, numéro WhatsApp, français (ce que vous dites), ville, et vos réponses au test de niveau. Le lien peut dire d'où vous venez (par exemple une maison de quartier)." },
+      { h: "Le test de niveau et le micro", p: "Le test garde vos réponses pour connaître votre niveau de français. Si vous répondez au micro, votre téléphone (service de Google ou d'Apple) change votre voix en texte. ParlerEmploi reçoit seulement ce texte, jamais l'enregistrement de votre voix. Vous pouvez aussi écrire vos réponses." },
       { h: "Qui les voit ?", p: "Seulement l'équipe de ParlerEmploi Formation. Nous ne vendons pas vos informations. Elles sont stockées chez nos prestataires techniques (hébergement du site et base de données)." },
       { h: "Combien de temps ?", p: "2 ans après notre dernier contact avec vous, puis nous les supprimons. Si vous suivez une formation, votre dossier de formation est gardé le temps exigé par la loi." },
       { h: "Vos droits", p: `Vous pouvez voir, corriger ou supprimer vos informations, et retirer votre accord à tout moment. Écrivez à ${PRIVACY_CONTACT} ou sur WhatsApp. Vous pouvez aussi vous plaindre à la CNIL (cnil.fr).` },
@@ -305,7 +306,8 @@ export const SIGNUP_TEXTS: Record<SignupLocale, SignupTexts> = {
     privacy: [
       { h: "Who keeps your information?", p: "ParlerEmploi Formation, a training organisation in Saint-Ouen, France (SIRET 924 182 546 00011)." },
       { h: "Why?", p: "To contact you and offer you a French course: level test, information meeting, place in a group." },
-      { h: "What information?", p: "First name, last name, WhatsApp number, languages, your French (what you tell us), availability, town or neighbourhood. The link may say where you come from (for example a community centre)." },
+      { h: "What information?", p: "First name, last name, WhatsApp number, your French (what you tell us), town, and your answers to the level test. The link may say where you come from (for example a community centre)." },
+      { h: "The level test and the microphone", p: "The test saves your answers to know your French level. If you answer with the microphone, your phone (a Google or Apple service) turns your voice into text. ParlerEmploi only receives this text, never the recording of your voice. You can also write your answers." },
       { h: "Who sees it?", p: "Only the ParlerEmploi Formation team. We never sell your information. It is stored by our technical providers (website hosting and database)." },
       { h: "How long?", p: "2 years after our last contact with you, then we delete it. If you take a course, your training file is kept as long as the law requires." },
       { h: "Your rights", p: `You can see, correct or delete your information, and withdraw your consent at any time. Write to ${PRIVACY_CONTACT} or on WhatsApp. You can also complain to the CNIL (cnil.fr), the French data protection authority.` },
@@ -391,7 +393,8 @@ export const SIGNUP_TEXTS: Record<SignupLocale, SignupTexts> = {
     privacy: [
       { h: "من يحتفظ بمعلوماتك؟", p: "ParlerEmploi Formation، مؤسسة تدريب في سانت أوان، فرنسا (SIRET 924 182 546 00011)." },
       { h: "لماذا؟", p: "للتواصل معك واقتراح دورة في اللغة الفرنسية: اختبار المستوى، اجتماع إعلامي، مكان في مجموعة." },
-      { h: "ما هي المعلومات؟", p: "الاسم الأول، اسم العائلة، رقم واتساب، اللغات، مستواك في الفرنسية (كما تقول)، أوقات فراغك، المدينة أو الحي. قد يذكر الرابط من أين أتيت (مثلًا دار الحي)." },
+      { h: "ما هي المعلومات؟", p: "الاسم الأول، اسم العائلة، رقم واتساب، مستواك في الفرنسية (كما تقول)، المدينة، وإجاباتك في اختبار المستوى. قد يبيّن الرابط من أين أتيت (مثلًا مركز حيّ)." },
+      { h: "اختبار المستوى والميكروفون", p: "يحفظ الاختبار إجاباتك لمعرفة مستواك في اللغة الفرنسية. إذا أجبت عبر الميكروفون، يحوّل هاتفك (خدمة من Google أو Apple) صوتك إلى نص. لا تتلقى ParlerEmploi إلا هذا النص، ولا تتلقى أبدًا تسجيل صوتك. ويمكنك أيضًا كتابة إجاباتك." },
       { h: "من يراها؟", p: "فريق ParlerEmploi Formation فقط. لا نبيع معلوماتك أبدًا. تُحفظ لدى مزوّدينا التقنيين (استضافة الموقع وقاعدة البيانات)." },
       { h: "إلى متى؟", p: "سنتان بعد آخر تواصل معك، ثم نحذفها. إذا تابعت دورة، يُحفظ ملف التدريب المدة التي يفرضها القانون." },
       { h: "حقوقك", p: `يمكنك الاطلاع على معلوماتك أو تصحيحها أو حذفها، وسحب موافقتك في أي وقت. اكتب إلى ${PRIVACY_CONTACT} أو على واتساب. يمكنك أيضًا تقديم شكوى إلى CNIL ‏(cnil.fr)، هيئة حماية البيانات في فرنسا.` },
