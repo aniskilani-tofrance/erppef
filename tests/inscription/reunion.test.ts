@@ -295,13 +295,17 @@ describe("test de niveau sur l'écran de confirmation", () => {
   const done = (testUrl: string | null) =>
     decode(renderToStaticMarkup(createElement(SignupMeetingDone, { locale: "fr", confirmation: { outcome: "registered", meeting: meeting() }, testUrl })));
 
-  it("propose le lien personnel, après les informations de la réunion", () => {
+  it("propose le lien personnel EN PREMIER, juste sous « Vous êtes inscrit(e) ! », avant la réunion et l'agenda", () => {
     const url = `https://pef-erp.vercel.app/test/${TOKEN}`;
     const out = done(url);
     expect(out).toContain(`href="${url}"`);
     expect(out).toContain(SIGNUP_TEXTS.fr.meeting.testBefore);
     expect(out).toContain(SIGNUP_TEXTS.fr.testCta);
-    expect(out.indexOf("Samedi 7 novembre")).toBeLessThan(out.indexOf(SIGNUP_TEXTS.fr.testCta));
+    const title = out.indexOf(SIGNUP_TEXTS.fr.meeting.doneTitle);
+    const test = out.indexOf(SIGNUP_TEXTS.fr.meeting.testBefore);
+    expect(title).toBeLessThan(test);
+    expect(test).toBeLessThan(out.indexOf("Samedi 7 novembre"));
+    expect(out.indexOf(SIGNUP_TEXTS.fr.testCta)).toBeLessThan(out.indexOf("calendar.google.com"));
   });
 
   it("rien si la personne a déjà fait son test", () => {
