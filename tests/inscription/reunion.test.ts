@@ -1,0 +1,369 @@
+import { readFileSync } from "node:fs";
+import { describe, expect, it, vi } from "vitest";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { DEFAULT_TEMPLATES, renderTemplate } from "@/lib/admission/templates";
+import { SIGNUP_LOCALES, SIGNUP_TEXTS } from "@/lib/inscription/i18n";
+import {
+  buildMeetingSignupUrl,
+  chooseMeetingOffer,
+  isMeetingToken,
+  meetingCalendarEnd,
+  meetingJournalNote,
+  meetingState,
+  meetingWhenText,
+  oralTestSentence,
+  placesLeft,
+  placesSummary,
+  type PublicMeeting,
+} from "@/lib/inscription/meeting";
+
+// Les polices Google sont chargées par Next à la compilation : simples variables CSS ici.
+vi.mock("next/font/google", () => ({
+  Outfit: () => ({ variable: "font-titre" }),
+  DM_Sans: () => ({ variable: "font-texte" }),
+}));
+
+// Les actions serveur ne sont pas appelées au rendu : on évite d'importer la base.
+vi.mock("@/app/inscription/actions", () => ({
+  submitSignup: vi.fn(),
+  bookSignupSlot: vi.fn(),
+  requestSignupCallback: vi.fn(),
+}));
+
+const { MeetingCard, SignupMeetingDone } = await import("@/components/inscription/signup-meeting");
+const { SignupForm } = await import("@/components/inscription/signup-form");
+
+const TOKEN = "3f2a9c1d4b6e8f0a1c2d3e4f5a6b7c8d";
+// Samedi 7 novembre 2026, 14h00 à Paris (UTC+1 en hiver)
+const STARTS = "2026-11-07T13:00:00.000Z";
+const BEFORE = new Date("2026-10-26T10:00:00Z");
+
+const meeting = (over: Partial<PublicMeeting> = {}): PublicMeeting => ({
+  token: TOKEN,
+  title: "Réunion d'information",
+  startsAt: STARTS,
+  endsAt: "2026-11-07T15:00:00.000Z",
+  place: "Salle 12 — 14 rue Alexandre Bachelet, Saint-Ouen",
+  access: null,
+  oralTest: true,
+  placesLeft: 8,
+  state: "open",
+  ...over,
+});
+
+const decode = (s: string) => s.replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, "&");
+
+describe("jeton du lien de réunion", () => {
+  it("accepte 32 caractères hexadécimaux, refuse le reste", () => {
+    expect(isMeetingToken(TOKEN)).toBe(true);
+    for (const bad of ["", "abc", TOKEN.toUpperCase(), `${TOKEN}0`, TOKEN.slice(1), "../etc/passwd", null, undefined, 42]) {
+      expect(isMeetingToken(bad), String(bad)).toBe(false);
+    }
+  });
+});
+
+describe("places et état de l'inscription", () => {
+  it("places restantes : jamais négatives, null sans maximum", () => {
+    expect(placesLeft(20, 12)).toBe(8);
+    expect(placesLeft(20, 20)).toBe(0);
+    expect(placesLeft(20, 25)).toBe(0);
+    expect(placesLeft(null, 99)).toBeNull();
+  });
+
+  it("ouverte tant qu'il reste une place et que la réunion n'a pas commencé", () => {
+    const base = { signupOpen: true, startsAt: STARTS, capacity: 20, taken: 19 };
+    expect(meetingState(base, BEFORE)).toBe("open");
+    expect(meetingState({ ...base, taken: 20 }, BEFORE)).toBe("full");
+    expect(meetingState({ ...base, taken: 31 }, BEFORE)).toBe("full");
+    expect(meetingState({ ...base, capacity: null, taken: 500 }, BEFORE)).toBe("open");
+  });
+
+  it("fermée si l'équipe a fermé le lien ou si la réunion a commencé (même avec des places)", () => {
+    const base = { startsAt: STARTS, capacity: 20, taken: 0 };
+    expect(meetingState({ ...base, signupOpen: false }, BEFORE)).toBe("closed");
+    expect(meetingState({ ...base, signupOpen: true }, new Date(STARTS))).toBe("closed");
+    expect(meetingState({ ...base, signupOpen: true }, new Date("2026-11-08T09:00:00Z"))).toBe("closed");
+  });
+
+  it("résumé pour l'équipe", () => {
+    expect(placesSummary(20, 12)).toBe("12 / 20 · 8 restantes");
+    expect(placesSummary(20, 19)).toBe("19 / 20 · 1 restante");
+    expect(placesSummary(20, 20)).toBe("20 / 20 · complet");
+    expect(placesSummary(null, 1)).toBe("1 inscrit");
+    expect(placesSummary(null, 3)).toBe("3 inscrits");
+  });
+});
+
+describe("lien et libellés", () => {
+  it("construit le lien public, avec la provenance nettoyée", () => {
+    expect(buildMeetingSignupUrl("https://pef-erp.vercel.app/", TOKEN)).toBe(`https://pef-erp.vercel.app/inscription/reunion/${TOKEN}`);
+    expect(buildMeetingSignupUrl("https://pef-erp.vercel.app", TOKEN, "MDQ Landy")).toBe(
+      `https://pef-erp.vercel.app/inscription/reunion/${TOKEN}?src=MDQ%20Landy`,
+    );
+    expect(buildMeetingSignupUrl("https://x.fr", TOKEN, "  <b>  ")).not.toContain("<");
+  });
+
+  it("jour et heure traduits, à l'heure de Paris, chiffres latins", () => {
+    const m = { startsAt: STARTS, endsAt: "2026-11-07T15:00:00.000Z" };
+    expect(meetingWhenText(m, "fr")).toEqual({ day: "Samedi 7 novembre", time: "14h00", until: "16h00" });
+    expect(meetingWhenText(m, "en")).toEqual({ day: "Saturday 7 November", time: "14:00", until: "16:00" });
+    expect(meetingWhenText({ startsAt: STARTS, endsAt: null }, "ar")).toEqual({ day: "السبت 7 نوفمبر", time: "14:00", until: null });
+  });
+
+  it("agenda : fin connue, sinon deux heures après le début", () => {
+    expect(meetingCalendarEnd({ startsAt: STARTS, endsAt: "2026-11-07T15:30:00.000Z" })).toBe("2026-11-07T15:30:00.000Z");
+    expect(meetingCalendarEnd({ startsAt: STARTS, endsAt: null })).toBe("2026-11-07T15:00:00.000Z");
+  });
+
+  it("phrase du test oral absente si la réunion n'en comprend pas", () => {
+    expect(oralTestSentence(true)).toContain("test oral");
+    expect(oralTestSentence(false)).toBeNull();
+  });
+
+  it("note du journal : une phrase par résultat, avec la date", () => {
+    const m = { startsAt: STARTS, oralTest: true };
+    expect(meetingJournalNote("registered", m)).toBe(
+      "Inscrit(e) par le lien à la réunion d'information du samedi 7 novembre 2026 à 14h00 (test oral individuel inclus)",
+    );
+    expect(meetingJournalNote("registered", { ...m, oralTest: false })).not.toContain("test oral");
+    expect(meetingJournalNote("already", m)).toContain("Déjà inscrit(e)");
+    expect(meetingJournalNote("full", m)).toContain("complète");
+    expect(meetingJournalNote("closed", m)).toContain("fermée");
+  });
+});
+
+describe("textes dans les trois langues", () => {
+  it("chaque langue a tous les textes, avec leurs variables", () => {
+    for (const l of SIGNUP_LOCALES) {
+      const t = SIGNUP_TEXTS[l].meeting;
+      for (const [k, v] of Object.entries(t)) {
+        if (k === "introPoints") continue;
+        expect((v as string).trim(), `${l}.${k}`).not.toBe("");
+      }
+      expect(t.introPoints, `${l}.introPoints`).toHaveLength(3);
+      expect(t.introPoints.every((p) => p.trim() !== "")).toBe(true);
+      expect(t.placesLeft, `${l}.placesLeft`).toContain("{n}");
+      expect(t.until, `${l}.until`).toContain("{time}");
+    }
+  });
+});
+
+describe("carte et écrans de fin", () => {
+  it("la carte montre quand, où, le test oral et les places restantes", () => {
+    const out = decode(renderToStaticMarkup(createElement(MeetingCard, { meeting: meeting(), locale: "fr" })));
+    expect(out).toContain("Samedi 7 novembre");
+    expect(out).toContain("14h00");
+    expect(out).toContain("jusqu'à 16h00");
+    expect(out).toContain("Salle 12");
+    expect(out).toContain(SIGNUP_TEXTS.fr.meeting.oralTest);
+    expect(out).toContain("8 places restantes");
+  });
+
+  it("une seule place : formulation au singulier ; complète : pastille « Complet »", () => {
+    expect(decode(renderToStaticMarkup(createElement(MeetingCard, { meeting: meeting({ placesLeft: 1 }), locale: "fr" })))).toContain("1 place restante");
+    const full = decode(renderToStaticMarkup(createElement(MeetingCard, { meeting: meeting({ placesLeft: 0, state: "full" }), locale: "fr" })));
+    expect(full).toContain("Complet");
+    expect(full).not.toContain("places restantes");
+  });
+
+  it("sans test oral dans la réunion, la phrase n'apparaît pas", () => {
+    const out = decode(renderToStaticMarkup(createElement(MeetingCard, { meeting: meeting({ oralTest: false }), locale: "fr" })));
+    expect(out).not.toContain(SIGNUP_TEXTS.fr.meeting.oralTest);
+  });
+
+  it("inscrit(e) : confirmation, carte, agenda ; déjà inscrit(e) : titre dédié", () => {
+    const done = decode(renderToStaticMarkup(createElement(SignupMeetingDone, { locale: "fr", confirmation: { outcome: "registered", meeting: meeting() } })));
+    expect(done).toContain(SIGNUP_TEXTS.fr.meeting.doneTitle);
+    expect(done).toContain("Samedi 7 novembre");
+    expect(done).toContain("calendar.google.com/calendar/render");
+    expect(done).toContain(SIGNUP_TEXTS.fr.meeting.cannotCome);
+    // plus de « places restantes » une fois inscrit
+    expect(done).not.toContain("places restantes");
+    const already = decode(renderToStaticMarkup(createElement(SignupMeetingDone, { locale: "fr", confirmation: { outcome: "already", meeting: meeting() } })));
+    expect(already).toContain(SIGNUP_TEXTS.fr.meeting.alreadyTitle);
+  });
+
+  it("complète ou fermée entre-temps : on garde le numéro, ni agenda ni carte de la réunion", () => {
+    for (const outcome of ["full", "closed"] as const) {
+      const out = decode(renderToStaticMarkup(createElement(SignupMeetingDone, { locale: "fr", confirmation: { outcome, meeting: meeting() } })));
+      expect(out).toContain(SIGNUP_TEXTS.fr.meeting.waitText);
+      expect(out).not.toContain("calendar.google.com");
+      expect(out).not.toContain("Samedi 7 novembre");
+    }
+  });
+
+  it("l'écran d'arabe est en arabe", () => {
+    const out = decode(renderToStaticMarkup(createElement(SignupMeetingDone, { locale: "ar", confirmation: { outcome: "registered", meeting: meeting() } })));
+    expect(out).toContain(SIGNUP_TEXTS.ar.meeting.doneTitle);
+    expect(out).toContain('dir="rtl"');
+  });
+});
+
+describe("formulaire ouvert par le lien d'une réunion", () => {
+  const form = (m: PublicMeeting | null) =>
+    decode(renderToStaticMarkup(createElement(SignupForm, { locale: "fr", orgSlug: null, src: null, stamp: "x", meeting: m })));
+
+  it("envoie le jeton de la réunion, annonce la réunion et la carte", () => {
+    const out = form(meeting());
+    expect(out).toContain(`name="m" value="${TOKEN}"`);
+    expect(out).toContain(SIGNUP_TEXTS.fr.meeting.title);
+    expect(out).not.toContain(`>${SIGNUP_TEXTS.fr.title}<`);
+    expect(out).toContain("Samedi 7 novembre");
+    expect(out).toContain(SIGNUP_TEXTS.fr.meeting.oralTest);
+    expect(out).toContain(SIGNUP_TEXTS.fr.meeting.introPoints[2]);
+  });
+
+  it("réunion complète : le formulaire reste ouvert, avec l'avertissement et sans « place réservée »", () => {
+    const out = form(meeting({ state: "full", placesLeft: 0 }));
+    expect(out).toContain(`name="m" value="${TOKEN}"`);
+    expect(out).toContain(SIGNUP_TEXTS.fr.meeting.fullText);
+    expect(out).not.toContain(SIGNUP_TEXTS.fr.meeting.introPoints[2]);
+  });
+
+  it("le formulaire général ne change pas : ni champ « m », ni carte", () => {
+    const out = form(null);
+    expect(out).not.toContain('name="m"');
+    expect(out).toContain(SIGNUP_TEXTS.fr.title);
+    expect(out).toContain(SIGNUP_TEXTS.fr.introPoints[2]);
+    expect(out).not.toContain(SIGNUP_TEXTS.fr.meeting.oralTest);
+  });
+});
+
+describe("plusieurs créneaux sur le même lien", () => {
+  const slot = (n: number, over: Partial<PublicMeeting> = {}): PublicMeeting =>
+    meeting({ token: `${n}`.repeat(32), startsAt: `2026-11-${String(7 + n).padStart(2, "0")}T13:00:00.000Z`, ...over });
+
+  it("un seul créneau ouvrable : formulaire simple ; aucun : lien fermé", () => {
+    expect(chooseMeetingOffer([slot(1)])).toEqual({ kind: "single", meeting: slot(1) });
+    expect(chooseMeetingOffer([slot(1, { state: "closed" })])).toEqual({ kind: "closed" });
+    expect(chooseMeetingOffer([])).toEqual({ kind: "closed" });
+  });
+
+  it("plusieurs créneaux ouverts : la personne choisit, du plus proche au plus lointain", () => {
+    const offer = chooseMeetingOffer([slot(3), slot(1), slot(2)]);
+    expect(offer.kind).toBe("choice");
+    expect(offer.kind === "choice" && offer.meetings.map((m) => m.startsAt.slice(8, 10))).toEqual(["08", "09", "10"]);
+  });
+
+  it("un créneau fermé ou complet n'est pas proposé ; un seul ouvert → pas de choix", () => {
+    const offer = chooseMeetingOffer([slot(1, { state: "full", placesLeft: 0 }), slot(2), slot(3, { state: "closed" })]);
+    expect(offer).toEqual({ kind: "single", meeting: slot(2) });
+  });
+
+  it("tout est complet : on garde le numéro pour la prochaine réunion (le créneau le plus proche)", () => {
+    const offer = chooseMeetingOffer([slot(2, { state: "full", placesLeft: 0 }), slot(1, { state: "full", placesLeft: 0 })]);
+    expect(offer.kind).toBe("single");
+    expect(offer.kind === "single" && offer.meeting.startsAt).toBe(slot(1).startsAt);
+  });
+
+  const form = (choices: PublicMeeting[]) =>
+    decode(renderToStaticMarkup(createElement(SignupForm, { locale: "fr", orgSlug: null, src: null, stamp: "x", meeting: null, choices })));
+
+  it("le formulaire demande « Quel jour ? » avec un choix par créneau, chacun envoyant son propre jeton", () => {
+    const out = form([slot(1), slot(2, { placesLeft: 1 })]);
+    expect(out).toContain(SIGNUP_TEXTS.fr.meeting.chooseQ);
+    expect(out).toContain(`name="m" value="${slot(1).token}"`);
+    expect(out).toContain(`name="m" value="${slot(2).token}"`);
+    expect(out).toContain("Dimanche 8 novembre");
+    expect(out).toContain("Lundi 9 novembre");
+    expect(out).toContain("1 place restante");
+    // la carte commune ne montre ni jour ni heure : ils se choisissent à l'étape suivante
+    expect(out).toContain(SIGNUP_TEXTS.fr.meeting.oralTest);
+    // sans JavaScript, le choix est obligatoire (radios « required »)
+    expect(out).toMatch(/type="radio"[^>]*required[^>]*name="m"/);
+  });
+
+  it("sans choix, aucune question de jour : un seul champ « m » caché, comme avant", () => {
+    const out = decode(renderToStaticMarkup(createElement(SignupForm, { locale: "fr", orgSlug: null, src: null, stamp: "x", meeting: meeting() })));
+    expect(out).not.toContain(SIGNUP_TEXTS.fr.meeting.chooseQ);
+    expect(out).not.toMatch(/type="radio"[^>]*name="m"/);
+    expect(out.match(/name="m"/g)).toHaveLength(1);
+  });
+
+  it("chaque langue a la question du créneau et son message d'erreur", () => {
+    for (const l of SIGNUP_LOCALES) {
+      expect(SIGNUP_TEXTS[l].meeting.chooseQ.trim(), l).not.toBe("");
+      expect(SIGNUP_TEXTS[l].meeting.chooseHint.trim(), l).not.toBe("");
+      expect(SIGNUP_TEXTS[l].errors.slot.trim(), l).not.toBe("");
+      expect(SIGNUP_TEXTS[l].meeting.testBefore.trim(), l).not.toBe("");
+    }
+  });
+});
+
+describe("test de niveau sur l'écran de confirmation", () => {
+  const done = (testUrl: string | null) =>
+    decode(renderToStaticMarkup(createElement(SignupMeetingDone, { locale: "fr", confirmation: { outcome: "registered", meeting: meeting() }, testUrl })));
+
+  it("propose le lien personnel, après les informations de la réunion", () => {
+    const url = `https://pef-erp.vercel.app/test/${TOKEN}`;
+    const out = done(url);
+    expect(out).toContain(`href="${url}"`);
+    expect(out).toContain(SIGNUP_TEXTS.fr.meeting.testBefore);
+    expect(out).toContain(SIGNUP_TEXTS.fr.testCta);
+    expect(out.indexOf("Samedi 7 novembre")).toBeLessThan(out.indexOf(SIGNUP_TEXTS.fr.testCta));
+  });
+
+  it("rien si la personne a déjà fait son test", () => {
+    const out = done(null);
+    expect(out).not.toContain(SIGNUP_TEXTS.fr.testCta);
+    expect(out).not.toContain(SIGNUP_TEXTS.fr.meeting.testBefore);
+  });
+});
+
+describe("message WhatsApp du lien de réunion", () => {
+  const vars = {
+    organisme: "Parler Emploi Formation",
+    date: "samedi 7 novembre 2026 à 14h00",
+    lieu: "Salle 12 — 14 rue Alexandre Bachelet, Saint-Ouen",
+    lien_inscription: `https://pef-erp.vercel.app/inscription/reunion/${TOKEN}`,
+  };
+
+  it("remplit la date, le lieu, le test oral et le lien", () => {
+    const out = renderTemplate(DEFAULT_TEMPLATES.lien_reunion, { ...vars, test_oral: oralTestSentence(true) });
+    expect(out).toContain("📅 samedi 7 novembre 2026 à 14h00");
+    expect(out).toContain("📍 Salle 12");
+    expect(out).toContain("test oral");
+    expect(out).toContain(vars.lien_inscription);
+    expect(out).toContain("English:");
+    expect(out).toContain("العربية:");
+    expect(out).not.toMatch(/\{[a-z_]+\}/);
+  });
+
+  it("sans test oral, la ligne disparaît sans laisser de trou", () => {
+    const out = renderTemplate(DEFAULT_TEMPLATES.lien_reunion, { ...vars, test_oral: oralTestSentence(false) });
+    expect(out).not.toContain("test oral");
+    expect(out).not.toMatch(/\n\n\n/);
+    expect(out).toContain("📍 Salle 12");
+  });
+});
+
+describe("migration 0056 : garde-fous", () => {
+  const sql = readFileSync("supabase/migrations/20261026000056_reunion_inscription_publique.sql", "utf8");
+
+  it("verrouille la réunion le temps du comptage (le dernier siège ne se vend qu'une fois)", () => {
+    expect(sql).toMatch(/from public\.info_meetings where signup_token = p_token for update/);
+    expect(sql).toMatch(/count\(\*\) into taken/);
+    expect(sql).toMatch(/taken >= m\.capacity/);
+  });
+
+  it("n'est appelable que par le serveur (service_role)", () => {
+    expect(sql).toMatch(/revoke all on function public\.signup_for_info_meeting\(text, uuid\) from public, anon, authenticated/);
+    expect(sql).toMatch(/grant execute on function public\.signup_for_info_meeting\(text, uuid\) to service_role/);
+    expect(sql).toMatch(/security definer\s+set search_path = ''/);
+  });
+
+  it("impose un maximum de places pour ouvrir le lien, et un jeton unique", () => {
+    expect(sql).toMatch(/check \(not signup_open or capacity is not null\)/);
+    expect(sql).toMatch(/create unique index if not exists info_meetings_signup_token_key/);
+  });
+
+  it("ajoute l'heure de convocation par personne et le jeton commun des créneaux", () => {
+    expect(sql).toMatch(/add column if not exists convocation_at timestamptz/);
+    expect(sql).toMatch(/add column if not exists series_token text/);
+  });
+
+  it("une personne excusée ou absente ne prend pas de place", () => {
+    expect(sql).toMatch(/status not in \('excusee', 'absente'\)/);
+  });
+});

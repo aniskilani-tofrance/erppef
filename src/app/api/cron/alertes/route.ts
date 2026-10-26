@@ -5,6 +5,9 @@ import { mailerConfigured, sendMail } from "@/lib/mailer";
 import { localToUtc, nextDay, utcToLocalTime } from "@/lib/dates";
 import { buildMeetingReminderMessage, formatMeetingWhen, textToHtml } from "@/lib/admission/messages";
 import { loadTemplates } from "@/lib/admission/load-templates";
+import { whenForInvitation } from "@/lib/admission/convocation";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { loadConvocationTests } from "@/lib/placement/convocation-test-server";
 import { announceUpdatesEverywhere, type AnnounceResult } from "@/lib/updates-announce";
 import { sendTrainerRelances } from "@/lib/emargement/relances";
 import { sendEvaluationReminders } from "@/lib/evaluations/reminders";
@@ -334,7 +337,7 @@ async function sendMeetingReminders(
   const dayAfter = nextDay(tomorrow);
   const { data: meetings } = await supabase
     .from("info_meetings")
-    .select("id, org_id, starts_at, ends_at, location, rooms:room_id(name, address, access_notes), info_meeting_invitations(status, learners(first_name, email))")
+    .select("id, org_id, starts_at, ends_at, location, rooms:room_id(name, address, access_notes), info_meeting_invitations(status, convocation_at, learners(id, first_name, email))")
     .in("org_id", orgIds)
     .gte("starts_at", localToUtc(tomorrow, "00:00"))
     .lt("starts_at", localToUtc(dayAfter, "00:00"));
@@ -346,7 +349,13 @@ async function sendMeetingReminders(
     const roomRow = m.rooms as unknown as { name: string; address: string | null; access_notes: string | null } | null;
     const room = roomRow?.name;
     const place = room ? `${room}${m.location ? ` — ${m.location}` : roomRow?.address ? ` — ${roomRow.address}` : ""}` : m.location;
-    const invitations = (m.info_meeting_invitations as unknown as { status: string; learners: { first_name: string; email: string | null } | null }[] | null) ?? [];
+    const invitations = (m.info_meeting_invitations as unknown as { status: string; convocation_at: string | null; learners: { id: string; first_name: string; email: string | null } | null }[] | null) ?? [];
+    // Test de niveau pas encore fait : on en rappelle le lien PERSONNEL de chacun (jamais celui d'un autre).
+    const { urls: testUrls } = await loadConvocationTests(
+      supabase as unknown as SupabaseClient,
+      m.org_id,
+      invitations.flatMap((i) => (i.learners ? [i.learners.id] : [])),
+    );
     for (const inv of invitations) {
       if (!["envoyee", "confirmee"].includes(inv.status) || !inv.learners) continue;
       if (!inv.learners.email) {
@@ -356,7 +365,9 @@ async function sendMeetingReminders(
       const text = buildMeetingReminderMessage({
         learnerFirstName: inv.learners.first_name,
         senderFirstName: null,
-        meeting: { startsAt: m.starts_at, endsAt: m.ends_at, place, access: roomRow?.access_notes ?? null },
+        // Heure propre à la personne si l'équipe en a fixé une (test oral échelonné).
+        meeting: whenForInvitation({ startsAt: m.starts_at, endsAt: m.ends_at, place, access: roomRow?.access_notes ?? null }, inv.convocation_at),
+        testUrl: testUrls.get(inv.learners.id) ?? null,
         templates,
       });
       const ok = await sendMail({

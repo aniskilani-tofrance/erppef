@@ -10,12 +10,15 @@ import type { SignupErrorCode } from "@/lib/inscription/i18n";
 import { SANDBOX_SLUG } from "@/lib/production-orgs";
 import { isAppointmentOverlap } from "@/lib/pg-errors";
 import { BOOKED_ONLINE_NOTE } from "@/lib/admission/appointments";
-import { createAdmissionAppointment } from "@/lib/admission/appointments-server";
+import { advanceAdmissionStatus, createAdmissionAppointment } from "@/lib/admission/appointments-server";
 import { loadFreeSlotsForOrg } from "@/lib/admission/slots-server";
 import type { FreeSlot } from "@/lib/admission/slots";
 import { utcToLocalDate, utcToLocalTime } from "@/lib/dates";
 import { BOOKING_ADDRESS, PUBLIC_BOOKING_ENABLED, pickPublicSlots, type BookingOffer } from "@/lib/inscription/booking";
 import { issueBookingToken, verifyBookingToken } from "@/lib/inscription/booking-token";
+import { meetingJournalNote, type MeetingConfirmation, type PublicMeeting } from "@/lib/inscription/meeting";
+import { loadPublicMeeting, registerForMeeting } from "@/lib/inscription/meeting-server";
+import { ensureConvocationTests } from "@/lib/placement/convocation-test-server";
 import {
   buildSignupNote,
   checkStamp,
@@ -44,7 +47,9 @@ export type SignupState =
   // booking : créneaux à réserver sur l'écran de fin (absent pour un robot ignoré,
   // ou si les créneaux n'ont pas pu être chargés → « Nous vous appelons »).
   // testUrl : lien personnel du test de niveau, proposé tout de suite sur l'écran de fin.
-  | { status: "done"; booking?: BookingOffer | null; testUrl?: string | null }
+  // meeting : lien d'une réunion d'information → inscrit(e), déjà inscrit(e), complète ou fermée
+  // (ni créneau ni test écrit : le test oral individuel a lieu à la réunion).
+  | { status: "done"; booking?: BookingOffer | null; testUrl?: string | null; meeting?: MeetingConfirmation }
   | { status: "error"; error: SignupErrorCode; values: SignupValues };
 
 // Au-delà, on suspend (robot ou lien diffusé par erreur) : 30 inscriptions en 10 minutes.
@@ -88,11 +93,18 @@ export async function submitSignup(_prev: SignupState, fd: FormData): Promise<Si
   if (!parsed.ok) return { status: "error", error: parsed.error, values: valuesOf(fd) };
   const d = parsed.data;
 
-  const org = await resolveSignupOrg(typeof fd.get("o") === "string" ? (fd.get("o") as string) : null);
+  const admin = createAdminClient();
+  // Lien d'une réunion d'information (champ caché « m ») : l'organisme est celui de la réunion,
+  // jamais celui d'un paramètre ?o=. Un jeton inconnu = lien invalide, rien n'est enregistré.
+  const rawMeeting = fd.get("m");
+  const loaded = typeof rawMeeting === "string" && rawMeeting ? await loadPublicMeeting(admin, rawMeeting) : null;
+  if (typeof rawMeeting === "string" && rawMeeting && !loaded) return { status: "error", error: "link", values: valuesOf(fd) };
+  const meeting = loaded?.meeting ?? null;
+
+  const org = loaded ? { id: loaded.orgId } : await resolveSignupOrg(typeof fd.get("o") === "string" ? (fd.get("o") as string) : null);
   if (!org) return { status: "error", error: "link", values: valuesOf(fd) };
 
   const src = sanitizeSrc(typeof fd.get("src") === "string" ? (fd.get("src") as string) : null);
-  const admin = createAdminClient();
 
   // Afflux anormal : on n'écrit plus rien (l'équipe garde la main).
   const since = new Date(Date.now() - FLOOD_WINDOW_MS).toISOString();
@@ -130,6 +142,7 @@ export async function submitSignup(_prev: SignupState, fd: FormData): Promise<Si
     if (existing.admission_status === "sans_suite") {
       await admin.from("learners").update({ admission_status: "nouveau" }).eq("id", existing.id);
     }
+    if (meeting) return finishMeetingSignup(admin, org.id, existing.id, meeting, valuesOf(fd));
     revalidatePath("/apprenants", "layout");
     const testUrl = await signupTestUrl(admin, org.id, existing.id, Boolean(existing.level_assessed));
     return { status: "done", booking: await offerBooking(org.id, existing.id, []), testUrl };
@@ -169,11 +182,52 @@ export async function submitSignup(_prev: SignupState, fd: FormData): Promise<Si
     outcome: "autre",
     note: buildSignupNote(d, { src }),
   });
+  if (meeting) return finishMeetingSignup(admin, org.id, created.id, meeting, valuesOf(fd));
   // Pas de niveau connu → test de positionnement, proposé tout de suite sur l'écran de fin.
   const testUrl = await signupTestUrl(admin, org.id, created.id, false);
 
   revalidatePath("/apprenants", "layout");
   return { status: "done", booking: await offerBooking(org.id, created.id, []), testUrl };
+}
+
+// Inscription à la réunion d'information dont le lien a été ouvert : la fiche existe (créée ou
+// retrouvée), on la place dans la réunion tant qu'il reste une place (verrou en base, 0056).
+// Complète ou fermée entre-temps : la fiche reste dans « À contacter » avec une note, l'équipe
+// prévient pour la prochaine réunion. Pas de test écrit ni de rendez-vous proposés ici.
+async function finishMeetingSignup(
+  admin: ReturnType<typeof createAdminClient>,
+  orgId: string,
+  learnerId: string,
+  meeting: PublicMeeting,
+  values: SignupValues,
+): Promise<SignupState> {
+  const outcome = await registerForMeeting(admin, meeting.token, learnerId);
+  if (!outcome) return { status: "error", error: "server", values };
+
+  if (outcome !== "already") {
+    await admin.from("learner_contacts").insert({
+      org_id: orgId,
+      learner_id: learnerId,
+      channel: "whatsapp",
+      outcome: outcome === "registered" ? "convoque" : "autre",
+      note: meetingJournalNote(outcome, meeting),
+    });
+  }
+  if (outcome === "registered" || outcome === "already") await advanceAdmissionStatus(admin, [learnerId], "convoque");
+
+  // Inscrit(e) : son test de niveau, créé POUR sa fiche, est proposé tout de suite (avant la réunion) ;
+  // rien si elle l'a déjà fait ou si son niveau est connu. Jamais bloquant.
+  let testUrl: string | null = null;
+  if (outcome === "registered" || outcome === "already") {
+    try {
+      testUrl = (await ensureConvocationTests(admin, orgId, [learnerId])).urls.get(learnerId) ?? null;
+    } catch (e) {
+      console.warn(`[inscription] test de niveau indisponible : ${e instanceof Error ? e.message : e}`);
+    }
+  }
+
+  revalidatePath("/apprenants", "layout");
+  return { status: "done", testUrl, meeting: { outcome, meeting: { ...meeting, state: outcome === "full" ? "full" : meeting.state } } };
 }
 
 // Adresse publique de l'ERP : le lien du test part aussi dans un message WhatsApp.

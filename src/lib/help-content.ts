@@ -474,6 +474,28 @@ export const HELP_SECTIONS: HelpSection[] = [
         ],
       },
       {
+        title: "Ouvrir l'inscription à une réunion par un lien (places limitées)",
+        steps: [
+          "« Nouvelle réunion » (ou « Modifier » sur une réunion existante) : renseignez « Places maximum (apprenants) », activez « Inscription en ligne par lien » et laissez « Test oral individuel inclus » si chaque personne passe l'oral à la réunion. Le nombre maximum de places est obligatoire pour ouvrir le lien.",
+          "Sur la page de la réunion, la carte « Inscription par lien » donne l'état (Ouverte, Complète, Fermée, Réunion passée), les places prises sur le maximum (« 12 / 20 · 8 restantes »), le lien à copier et le message WhatsApp prêt (date, lieu, test oral, lien). « Provenance » (facultatif : MDQ Landy, CCAS…) s'ajoute au lien comme sur le lien d'inscription général. « Ouvrir WhatsApp » : vous choisissez le groupe ou la personne.",
+          "La personne ouvre le lien et répond au formulaire court (2 minutes, français facile, anglais ou arabe). Elle est inscrite d'office : sa ligne apparaît dans les convoqués, « Confirmée » et marquée « inscrit(e) par le lien », son statut d'admission passe à « Convoqué » et le journal garde une ligne. Elle voit la date, l'heure, le lieu, le test oral annoncé (« pas un examen ») et « Ajouter à mon agenda ».",
+          "Le nombre de places est tenu en base : si deux personnes prennent la dernière place au même instant, une seule est inscrite. Quand la réunion est complète, la page affiche « Complet » mais garde le numéro : la fiche arrive dans « À contacter » avec la note « Réunion … complète : à prévenir pour la prochaine réunion ».",
+          "Une personne que vous aviez déjà convoquée à la main et qui s'inscrit par le lien passe simplement en « Confirmée » (pas de seconde place). Une personne « Excusé(e) » ou « Absent(e) » libère sa place. Vous pouvez toujours convoquer au-delà du maximum à la main : le tableau signale alors « dépassement ».",
+          "« Fermer l'inscription » arrête le lien (il affiche « Inscription fermée »). Il se ferme aussi tout seul quand la réunion commence. Le jour J, le déroulé est le même : « Présent(e) » puis « Entretien oral » sur chaque ligne.",
+          "Le message est un modèle comme les autres : bouton « Messages » de l'onglet Admission → « Lien d'inscription à une réunion d'information ». L'ERP n'envoie rien tout seul : c'est vous qui diffusez le lien.",
+        ],
+      },
+      {
+        title: "Des heures différentes, plusieurs jours, le test de niveau dans la convocation",
+        steps: [
+          "Heure propre à chaque personne (test oral à tour de rôle) : sur la page de la réunion, chaque convoqué a une petite horloge sous son statut (« 14h00 · réunion » en gris, « 14h20 » en vert si elle a sa propre heure). Touchez-la, choisissez l'heure (le même jour que la réunion) : le message WhatsApp, l'email et le rappel de la veille donnent alors CETTE heure, sans « jusqu'à… ». « Heure de la réunion » la supprime.",
+          "Pour tout le monde d'un coup : bouton « Espacer les heures » → première heure, minutes par personne (5 à 120), ordre d'inscription ou alphabétique. L'aperçu donne la dernière heure avant d'appliquer ; un avertissement signale si elle dépasse la fin de la réunion. Les présents, absents et excusés sont laissés de côté. « Tout remettre à l'heure de la réunion » annule.",
+          "Plusieurs dates ou heures sur le même lien : carte « Plusieurs jours ou heures sur le même lien » → « Ajouter un créneau » (date, heures, places maximum). Chaque créneau est une vraie réunion (ses places, ses convoqués, ses heures, sa présence) qui reprend le titre, le lieu et le test oral. Le lien est commun : la page publique propose d'abord « Quel jour ? » avec les créneaux ouverts qui ont encore des places, et la personne est inscrite à celui qu'elle choisit. Un créneau fermé ou complet n'est plus proposé ; si tous sont complets, le numéro est gardé pour la prochaine réunion.",
+          "Test de niveau avant la réunion : pour chaque convoqué qui n'a ni niveau connu ni test fait, la convocation et le rappel contiennent SON lien personnel (« 📝 Avant la réunion, faites votre test de niveau… »). Le lien est créé pour sa fiche : son résultat remplit le niveau de cette personne, jamais d'une autre. Sur la ligne : « 📝 test de niveau : fait / à faire / à préparer ».",
+          "Les liens se créent tout seuls quand vous ajoutez des convoqués, quand vous envoyez un email, et quand une personne s'inscrit par le lien (l'écran de confirmation lui propose son test à faire tout de suite ou à garder dans WhatsApp). Pour les personnes convoquées avant : bouton « Préparer les tests de niveau (n) ». Un message retouché sans la ligne {test_avant} reçoit quand même le lien à la fin.",
+        ],
+      },
+      {
         title: "Enregistrer l'entretien oral d'entrée",
         steps: [
           "Pendant la réunion, sur la ligne de la personne : « Entretien oral » → date (pré-remplie avec le jour de la réunion), niveau à l'oral, évaluateur (pré-rempli avec votre nom), commentaire. 20 secondes. Cette date remplit aussi la date de l'entretien d'entrée du bloc « Analyse du besoin », si elle est encore vide.",

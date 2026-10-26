@@ -15,6 +15,13 @@ import { loadActiveGroupRefs } from "@/lib/admission/load-groups";
 import { InvitationActions } from "@/components/admission/invitation-actions";
 import { InviteLearnersDialog, type Candidate } from "@/components/admission/invite-learners-dialog";
 import { MeetingFormDialog } from "@/components/admission/meeting-form-dialog";
+import { MeetingSignupCard } from "@/components/admission/meeting-signup-card";
+import { ConvocationTimeButton } from "@/components/admission/convocation-time-button";
+import { MeetingSlotsCard } from "@/components/admission/meeting-slots-card";
+import { PrepareTestsButton } from "@/components/admission/prepare-tests-button";
+import { loadConvocationTests } from "@/lib/placement/convocation-test-server";
+import { SpaceConvocationsDialog } from "@/components/admission/space-convocations-dialog";
+import { whenForInvitation } from "@/lib/admission/convocation";
 import { OralTestDialog } from "@/components/admission/oral-test-dialog";
 import { SendPendingEmailsButton } from "@/components/admission/send-pending-emails-button";
 import {
@@ -37,6 +44,9 @@ type InvitationRow = {
   status: string;
   channel: string | null;
   sent_at: string | null;
+  signed_up_online: boolean;
+  convocation_at: string | null; // heure propre à la personne (null = celle de la réunion)
+  created_at: string;
   learners: {
     id: string;
     first_name: string;
@@ -62,14 +72,14 @@ const CANDIDATE_ORDER: Record<string, number> = {
 
 export default async function MeetingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { userId } = await requireRole(["admin", "coordinator"]);
+  const { userId, orgId } = await requireRole(["admin", "coordinator"]);
   const supabase = await createClient();
 
   const [{ data: meeting }, { data: invitationRows }, { data: learners }, { data: rooms }, { data: profile }, templates] = await Promise.all([
     supabase.from("info_meetings").select("*, rooms:room_id(name, address, access_notes)").eq("id", id).single(),
     supabase
       .from("info_meeting_invitations")
-      .select("id, status, channel, sent_at, learners(id, first_name, last_name, learner_no, phone, email, admission_status, level_assessed, contact_source, contact_source_detail, prescriber, oral_test_on, oral_test_level, oral_test_evaluator, oral_test_comment)")
+      .select("id, status, channel, sent_at, signed_up_online, convocation_at, created_at, learners(id, first_name, last_name, learner_no, phone, email, admission_status, level_assessed, contact_source, contact_source_detail, prescriber, oral_test_on, oral_test_level, oral_test_evaluator, oral_test_comment)")
       .eq("meeting_id", id),
     supabase
       .from("learners")
@@ -81,6 +91,14 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
     loadTemplates(supabase),
   ]);
   if (!meeting) notFound();
+  // Créneaux du même lien (jeton commun) : chacun est une réunion à part entière.
+  const { data: siblingRows } = meeting.series_token
+    ? await supabase
+        .from("info_meetings")
+        .select("id, starts_at, ends_at, capacity, signup_open, info_meeting_invitations(status)")
+        .eq("series_token", meeting.series_token)
+        .order("starts_at")
+    : { data: null };
   // Pastilles provenance + groupe (convoqués et candidats)
   const [{ data: enrollmentRows }, groupRefs] = await Promise.all([
     supabase.from("enrollments").select("learner_id, group_id, status, groups(name, trainers:trainer_id(color))").eq("status", "inscrit"),
@@ -102,8 +120,21 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
     .filter((i) => i.learners)
     .sort((a, b) => `${a.learners!.last_name} ${a.learners!.first_name}`.localeCompare(`${b.learners!.last_name} ${b.learners!.first_name}`, "fr"));
   const invitedIds = new Set(invitations.map((i) => i.learners!.id));
+  // Test de niveau dans la convocation : pour chaque convoqué, SON lien s'il ne l'a pas fait
+  // (un test est créé POUR un apprenant : son résultat remplit le niveau de la bonne fiche).
+  const tests = await loadConvocationTests(supabase, orgId, [...invitedIds]);
+  const active = invitations.filter((i) => !["excusee", "absente"].includes(i.status));
+  const testsToPrepare = active.filter((i) => tests.missing.includes(i.learners!.id)).length;
   const count = (codes: string[]) => invitations.filter((i) => codes.includes(i.status)).length;
   const pendingWithEmail = invitations.filter((i) => i.status === "a_envoyer" && i.learners?.email).length;
+  // Mêmes règles que l'inscription par lien (fonction SQL signup_for_info_meeting) : une personne excusée ou absente ne prend pas de place.
+  const taken = invitations.filter((i) => !["excusee", "absente"].includes(i.status)).length;
+  const onlineCount = invitations.filter((i) => i.signed_up_online).length;
+  // Heures de convocation : celle de la réunion par défaut, une par personne si l'équipe en fixe.
+  const meetingTime = utcToLocalTime(meeting.starts_at);
+  const toPlace = invitations.filter((i) => ["a_envoyer", "envoyee", "confirmee"].includes(i.status)).length;
+  const customCount = invitations.filter((i) => i.convocation_at).length;
+  const started = new Date(meeting.starts_at).getTime() <= new Date().getTime();
 
   const candidates: Candidate[] = (learners ?? [])
     .filter((l) => !invitedIds.has(l.id))
@@ -156,8 +187,12 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
               location: meeting.location ?? "",
               capacity: meeting.capacity ? String(meeting.capacity) : "",
               notes: meeting.notes ?? "",
+              signupOpen: Boolean(meeting.signup_open),
+              oralTestIncluded: meeting.oral_test_included ?? true,
             }}
           />
+          <PrepareTestsButton meetingId={meeting.id} count={testsToPrepare} />
+          <SpaceConvocationsDialog meetingId={meeting.id} meetingTime={meetingTime} count={toPlace} customCount={customCount} />
           <SendPendingEmailsButton meetingId={meeting.id} count={pendingWithEmail} />
           <InviteLearnersDialog meetingId={meeting.id} candidates={candidates} />
         </div>
@@ -175,6 +210,37 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
         <Badge variant="outline" className={invitationBadgeClass("presente")}>Présents · {count(["presente"])}</Badge>
         <Badge variant="outline" className={invitationBadgeClass("absente")}>Absents · {count(["absente", "excusee"])}</Badge>
       </div>
+
+      <MeetingSignupCard
+        meetingId={meeting.id}
+        token={meeting.series_token ?? meeting.signup_token}
+        template={templates.lien_reunion}
+        signupOpen={Boolean(meeting.signup_open)}
+        capacity={meeting.capacity ?? null}
+        taken={taken}
+        onlineCount={onlineCount}
+        started={started}
+        whenText={formatMeetingWhen(when)}
+        place={place}
+        oralTest={meeting.oral_test_included ?? true}
+      />
+
+      <MeetingSlotsCard
+        meetingId={meeting.id}
+        slots={
+          siblingRows?.length
+            ? siblingRows.map((s) => ({
+                id: s.id as string,
+                whenText: formatMeetingWhen({ startsAt: s.starts_at as string, endsAt: s.ends_at as string | null }),
+                taken: ((s.info_meeting_invitations as unknown as { status: string }[] | null) ?? []).filter((i) => !["excusee", "absente"].includes(i.status)).length,
+                capacity: (s.capacity as number | null) ?? null,
+                signupOpen: Boolean(s.signup_open),
+                current: s.id === meeting.id,
+              }))
+            : [{ id: meeting.id, whenText: formatMeetingWhen(when), taken, capacity: meeting.capacity ?? null, signupOpen: Boolean(meeting.signup_open), current: true }]
+        }
+        defaults={{ startTime: meetingTime, endTime: meeting.ends_at ? utcToLocalTime(meeting.ends_at) : "", capacity: meeting.capacity ? String(meeting.capacity) : "" }}
+      />
 
       <div className="rounded-lg border bg-background">
         <Table>
@@ -198,6 +264,10 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
             {invitations.map((inv) => {
               const l = inv.learners!;
               const name = `${l.first_name} ${l.last_name}`;
+              // Date et heure vues par CETTE personne (son heure de convocation si elle en a une)
+              const personWhen = whenForInvitation(when, inv.convocation_at);
+              const testUrl = tests.urls.get(l.id) ?? null; // null : test déjà fait (ou lien à préparer)
+              const testState = tests.done.has(l.id) ? "fait" : testUrl ? "à faire" : "à préparer";
               return (
                 <TableRow key={inv.id}>
                   <TableCell className="font-medium">
@@ -217,6 +287,19 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className={invitationBadgeClass(inv.status)}>{invitationLabel(inv.status)}</Badge>
+                    {inv.signed_up_online && <span className="block text-xs text-muted-foreground">inscrit(e) par le lien</span>}
+                    <span
+                      className={testState === "à préparer" ? "block text-xs text-amber-700" : "block text-xs text-muted-foreground"}
+                      title={testState === "fait" ? "Niveau déjà connu ou test fait : aucun lien dans la convocation" : testState === "à faire" ? "Son lien personnel est dans la convocation et le rappel" : "« Préparer les tests de niveau » crée son lien"}
+                    >
+                      📝 test de niveau : {testState}
+                    </span>
+                    <ConvocationTimeButton
+                      invitationId={inv.id}
+                      learnerName={name}
+                      meetingTime={meetingTime}
+                      custom={inv.convocation_at ? utcToLocalTime(inv.convocation_at) : null}
+                    />
                     {inv.sent_at && <span className="block text-xs text-muted-foreground">{fmtSent(inv.sent_at, inv.channel)}</span>}
                   </TableCell>
                   <TableCell>
@@ -238,9 +321,9 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
                       invitation={{ id: inv.id, status: inv.status }}
                       learner={{ id: l.id, name, phone: l.phone, email: l.email }}
                       messages={{
-                        invite: buildMeetingInvitationMessage({ learnerFirstName: l.first_name, senderFirstName, meeting: when, templates }),
-                        reminder: buildMeetingReminderMessage({ learnerFirstName: l.first_name, senderFirstName, meeting: when, templates }),
-                        missed: buildMissedMeetingMessage({ learnerFirstName: l.first_name, senderFirstName, meeting: when, templates }),
+                        invite: buildMeetingInvitationMessage({ learnerFirstName: l.first_name, senderFirstName, meeting: personWhen, testUrl, templates }),
+                        reminder: buildMeetingReminderMessage({ learnerFirstName: l.first_name, senderFirstName, meeting: personWhen, testUrl, templates }),
+                        missed: buildMissedMeetingMessage({ learnerFirstName: l.first_name, senderFirstName, meeting: personWhen, templates }),
                       }}
                       meetingUpcoming={upcoming}
                     />

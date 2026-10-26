@@ -14,6 +14,8 @@ import {
 } from "@/lib/inscription/i18n";
 import { cn } from "@/lib/utils";
 import { SignupBooking } from "@/components/inscription/signup-booking";
+import { MeetingCard, SignupMeetingDone } from "@/components/inscription/signup-meeting";
+import { meetingWhenText, type PublicMeeting } from "@/lib/inscription/meeting";
 import { SignupShell as Shell } from "@/components/inscription/signup-shell";
 import { postToHost } from "@/lib/inscription/embed";
 import { carriedEntries } from "@/lib/inscription/carry";
@@ -23,11 +25,13 @@ import { carriedEntries } from "@/lib/inscription/carry";
 // JavaScript, tous les écrans s'affichent l'un sous l'autre et le formulaire s'envoie
 // quand même (action serveur).
 
-const STEPS = ["intro", "name", "phone", "french", "city", "consent"] as const;
-type Step = (typeof STEPS)[number];
-const QUESTION_COUNT = STEPS.length - 1; // l'accueil n'est pas une question
+const BASE_STEPS = ["intro", "name", "phone", "french", "city", "consent"] as const;
+// Lien commun à plusieurs créneaux d'une réunion : une première question « Quel jour ? ».
+const CHOICE_STEPS = ["intro", "slot", "name", "phone", "french", "city", "consent"] as const;
+type Step = (typeof CHOICE_STEPS)[number];
 
 const STEP_OF_ERROR: Record<SignupErrorCode, Step> = {
+  slot: "slot",
   name: "name",
   phone: "phone",
   french: "french",
@@ -54,8 +58,10 @@ function useEnhanced(): boolean {
 }
 
 // Contrôle d'un écran avant « Suivant » (le serveur revalide tout).
-function stepError(step: Step, v: SignupValues): SignupErrorCode | null {
+function stepError(step: Step, v: SignupValues, slot: string | null): SignupErrorCode | null {
   switch (step) {
+    case "slot":
+      return slot ? null : "slot";
     case "name":
       return v.firstName.trim() && v.lastName.trim() ? null : "name";
     case "phone":
@@ -77,6 +83,8 @@ export function SignupForm({
   src,
   stamp,
   embed = false,
+  meeting = null,
+  choices = null,
 }: {
   locale: SignupLocale;
   orgSlug: string | null;
@@ -84,6 +92,10 @@ export function SignupForm({
   stamp: string;
   /** Formulaire dans l'iframe du site (/inscription?embed=1). */
   embed?: boolean;
+  /** Lien d'une réunion d'information (/inscription/reunion/<jeton>) : la personne y est inscrite d'office. */
+  meeting?: PublicMeeting | null;
+  /** Lien commun à plusieurs créneaux ouverts : la personne choisit son jour et son heure (étape « Quel jour ? »). */
+  choices?: PublicMeeting[] | null;
 }) {
   const [state, formAction, pending] = useActionState<SignupState, FormData>(submitSignup, { status: "idle" });
   const enhanced = useEnhanced();
@@ -91,6 +103,11 @@ export function SignupForm({
   const [values, setValues] = useState<SignupValues>(state.status === "error" ? state.values : EMPTY);
   const [step, setStep] = useState<Step>(state.status === "error" ? STEP_OF_ERROR[state.error] : "intro");
   const [error, setError] = useState<SignupErrorCode | null>(state.status === "error" ? state.error : null);
+  // Créneau choisi (lien commun à plusieurs créneaux) : son jeton part dans le champ « m ».
+  const [slot, setSlot] = useState<string | null>(null);
+  const steps: readonly Step[] = choices ? CHOICE_STEPS : BASE_STEPS;
+  const questionCount = steps.length - 1; // l'accueil n'est pas une question
+  const numberOf = (s: Step) => steps.indexOf(s);
 
   // Réponse du serveur : on revient sur l'écran de l'erreur (ajustement pendant le rendu).
   const [seen, setSeen] = useState(state);
@@ -112,7 +129,9 @@ export function SignupForm({
 
   const t = SIGNUP_TEXTS[lang];
   const meta = LOCALE_META[lang];
-  const index = STEPS.indexOf(step);
+  const index = steps.indexOf(step);
+  // « Votre place est réservée » : un créneau avec des places, ou plusieurs à choisir (jamais quand c'est complet).
+  const reserved = Boolean(choices) || (meeting !== null && meeting.state !== "full");
   const forward = meta.dir === "rtl" ? "←" : "→";
   const backward = meta.dir === "rtl" ? "→" : "←";
 
@@ -121,21 +140,21 @@ export function SignupForm({
     setError(null);
   }
   function go(to: number) {
-    setStep(STEPS[Math.max(0, Math.min(STEPS.length - 1, to))]);
+    setStep(steps[Math.max(0, Math.min(steps.length - 1, to))]);
     setError(null);
     // Dans l'iframe du site, c'est la page parente qui remonte en haut du formulaire.
     if (embed) postToHost({ type: "pef-inscription:step" });
     else window.scrollTo({ top: 0 });
   }
   function next() {
-    const e = stepError(step, values);
+    const e = stepError(step, values, slot);
     if (e) return setError(e);
     go(index + 1);
   }
   function onSubmit(ev: React.FormEvent<HTMLFormElement>) {
     if (!enhanced) return;
-    for (const s of STEPS) {
-      const e = stepError(s, values);
+    for (const s of steps) {
+      const e = stepError(s, values, slot);
       if (e) {
         ev.preventDefault();
         setStep(s);
@@ -157,6 +176,7 @@ export function SignupForm({
 
   const shown = (s: Step) => !enhanced || step === s;
 
+  if (state.status === "done" && state.meeting) return <SignupMeetingDone locale={lang} confirmation={state.meeting} testUrl={state.testUrl ?? null} embed={embed} />;
   if (state.status === "done") return <SignupBooking locale={lang} offer={state.booking ?? null} testUrl={state.testUrl ?? null} embed={embed} />;
 
   const switcher = (
@@ -190,6 +210,8 @@ export function SignupForm({
         <input type="hidden" name="lang" value={lang} />
         {orgSlug && <input type="hidden" name="o" value={orgSlug} />}
         {src && <input type="hidden" name="src" value={src} />}
+        {meeting && <input type="hidden" name="m" value={meeting.token} />}
+        {choices && enhanced && slot && <input type="hidden" name="m" value={slot} />}
         {/* Champ piège : invisible pour les personnes, rempli par les robots. */}
         <div aria-hidden="true" className="absolute -left-[9999px] h-px w-px overflow-hidden">
           <label>
@@ -209,13 +231,23 @@ export function SignupForm({
               <p className="mx-auto w-fit rounded-full bg-[#E8F6F0] px-3 py-1 text-sm font-semibold tracking-wide text-[#00504E]">
                 ParlerEmploi · Saint-Ouen
               </p>
-              <h1 className="text-[2rem] leading-tight font-bold text-[#00504E] [font-family:var(--font-signup-title),inherit]">{t.title}</h1>
+              <h1 className="text-[2rem] leading-tight font-bold text-[#00504E] [font-family:var(--font-signup-title),inherit]">
+                {meeting || choices ? t.meeting.title : t.title}
+              </h1>
             </div>
+            {meeting && <MeetingCard meeting={meeting} locale={lang} />}
+            {choices && <MeetingCard meeting={choices[0]} locale={lang} showWhen={false} />}
+            {meeting?.state === "full" && (
+              <p className="flex items-start gap-2 rounded-2xl bg-amber-50 px-4 py-3 text-start text-xl font-semibold text-amber-950 ring-1 ring-amber-200">
+                <span aria-hidden>⚠️</span>
+                <span>{t.meeting.fullText}</span>
+              </p>
+            )}
             <ul className="mx-auto grid max-w-xs gap-3 text-start">
-              {(["⏱️", "📱", "💬"] as const).map((icon, i) => (
+              {(["⏱️", "📱", reserved ? "✅" : "💬"] as const).map((icon, i) => (
                 <li key={icon} className="flex items-center gap-3 rounded-2xl bg-white px-4 py-3 text-lg ring-1 ring-zinc-200">
                   <Bubble>{icon}</Bubble>
-                  <span className="font-medium">{t.introPoints[i]}</span>
+                  <span className="font-medium">{reserved ? t.meeting.introPoints[i] : t.introPoints[i]}</span>
                 </li>
               ))}
             </ul>
@@ -227,8 +259,34 @@ export function SignupForm({
           </section>
         )}
 
+        {choices && shown("slot") && (
+          <Question n={numberOf("slot")} total={questionCount} t={t} icon="📅" title={t.meeting.chooseQ} hint={t.meeting.chooseHint} enhanced={enhanced}>
+            <div className="grid gap-3">
+              {choices.map((c) => {
+                const when = meetingWhenText(c, lang);
+                const left = c.placesLeft;
+                return (
+                  <SlotChoice
+                    key={c.token}
+                    name={enhanced ? "slot" : "m"}
+                    value={c.token}
+                    checked={slot === c.token}
+                    onChange={() => {
+                      setSlot(c.token);
+                      setError(null);
+                    }}
+                    day={when.day}
+                    time={when.until ? `${when.time} → ${when.until}` : when.time}
+                    places={left === null ? null : left === 1 ? t.meeting.placeLeftOne : t.meeting.placesLeft.replace("{n}", String(left))}
+                  />
+                );
+              })}
+            </div>
+          </Question>
+        )}
+
         {shown("name") && (
-          <Question n={1} t={t} icon="👤" title={t.nameQ} enhanced={enhanced}>
+          <Question n={numberOf("name")} total={questionCount} t={t} icon="👤" title={t.nameQ} enhanced={enhanced}>
             <Field label={t.firstName}>
               <input
                 name="firstName"
@@ -255,7 +313,7 @@ export function SignupForm({
         )}
 
         {shown("phone") && (
-          <Question n={2} t={t} icon="📱" title={t.phoneQ} enhanced={enhanced}>
+          <Question n={numberOf("phone")} total={questionCount} t={t} icon="📱" title={t.phoneQ} enhanced={enhanced}>
             <Field label={t.phoneLabel} hint={t.phoneHint}>
               <input
                 name="phone"
@@ -274,7 +332,7 @@ export function SignupForm({
         )}
 
         {shown("french") && (
-          <Question n={3} t={t} icon="🇫🇷" title={t.frenchQ} hint={t.frenchHint} enhanced={enhanced}>
+          <Question n={numberOf("french")} total={questionCount} t={t} icon="🇫🇷" title={t.frenchQ} hint={t.frenchHint} enhanced={enhanced}>
             <div className="grid gap-3">
               {FRENCH_LEVELS.map((f) => (
                 <Choice
@@ -292,7 +350,7 @@ export function SignupForm({
         )}
 
         {shown("city") && (
-          <Question n={4} t={t} icon="🏠" title={t.cityQ} enhanced={enhanced}>
+          <Question n={numberOf("city")} total={questionCount} t={t} icon="🏠" title={t.cityQ} enhanced={enhanced}>
             <div className="grid gap-3">
               {CITY_CHOICES.map((c) => (
                 <Choice
@@ -322,7 +380,7 @@ export function SignupForm({
         )}
 
         {shown("consent") && (
-          <Question n={5} t={t} icon="✅" title={t.consentQ} enhanced={enhanced}>
+          <Question n={numberOf("consent")} total={questionCount} t={t} icon="✅" title={t.consentQ} enhanced={enhanced}>
             <label className="flex cursor-pointer items-start gap-4 rounded-2xl border-2 border-zinc-200 bg-white p-4 text-lg transition-colors has-[:checked]:border-[#00504E] has-[:checked]:bg-[#E8F6F0] has-[:focus-visible]:ring-4 has-[:focus-visible]:ring-[#32CF8A]/40">
               <input
                 type="checkbox"
@@ -401,6 +459,7 @@ function Bubble({ children }: { children: ReactNode }) {
 
 function Question({
   n,
+  total,
   t,
   icon,
   title,
@@ -409,6 +468,7 @@ function Question({
   children,
 }: {
   n: number;
+  total: number;
   t: (typeof SIGNUP_TEXTS)[SignupLocale];
   icon: string;
   title: string;
@@ -420,9 +480,9 @@ function Question({
     <fieldset className="space-y-5">
       {enhanced && (
         <div className="space-y-2">
-          <p className="text-sm font-semibold tracking-wide text-[#00504E]">{stepLabel(t, n, QUESTION_COUNT)}</p>
+          <p className="text-sm font-semibold tracking-wide text-[#00504E]">{stepLabel(t, n, total)}</p>
           <div className="h-2 overflow-hidden rounded-full bg-[#E8F6F0]" aria-hidden>
-            <div className="h-full rounded-full bg-[#32CF8A] transition-[width] duration-300" style={{ width: `${(n / QUESTION_COUNT) * 100}%` }} />
+            <div className="h-full rounded-full bg-[#32CF8A] transition-[width] duration-300" style={{ width: `${(n / total) * 100}%` }} />
           </div>
         </div>
       )}
@@ -474,6 +534,52 @@ function Choice({
       <input type="radio" name={name} value={value} checked={checked} onChange={onChange} className="sr-only" />
       <Bubble>{emoji}</Bubble>
       <span className="flex-1">{label}</span>
+      <span
+        aria-hidden
+        className={cn(
+          "grid size-7 shrink-0 place-items-center rounded-full border-2 text-base font-bold",
+          checked ? "border-[#00504E] bg-[#00504E] text-white" : "border-zinc-300 text-transparent",
+        )}
+      >
+        ✓
+      </span>
+    </label>
+  );
+}
+
+// Un créneau à choisir (lien commun à plusieurs jours) : grosse carte « Samedi 7 novembre », l'heure
+// en dessous et les places restantes. Même présentation que les autres choix du formulaire.
+function SlotChoice({
+  name,
+  value,
+  checked,
+  onChange,
+  day,
+  time,
+  places,
+}: {
+  name: string;
+  value: string;
+  checked: boolean;
+  onChange: () => void;
+  day: string;
+  time: string;
+  places: string | null;
+}) {
+  return (
+    <label
+      className={cn(
+        "flex min-h-16 cursor-pointer items-center gap-4 rounded-2xl border-2 bg-white px-4 py-3 text-xl transition-colors has-[:focus-visible]:ring-4 has-[:focus-visible]:ring-[#32CF8A]/40",
+        checked ? "border-[#00504E] bg-[#E8F6F0] font-semibold text-[#00504E]" : "border-zinc-200 text-zinc-900 hover:border-zinc-300",
+      )}
+    >
+      <input type="radio" name={name} value={value} checked={checked} onChange={onChange} required className="sr-only" />
+      <Bubble>📅</Bubble>
+      <span className="flex-1">
+        <span className="block">{day}</span>
+        <span dir="ltr" className="block text-lg font-medium">{time}</span>
+        {places && <span className="block text-base font-normal text-zinc-600">{places}</span>}
+      </span>
       <span
         aria-hidden
         className={cn(

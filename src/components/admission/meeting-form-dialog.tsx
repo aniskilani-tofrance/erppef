@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 
 export type MeetingFormValues = {
@@ -24,8 +25,10 @@ export type MeetingFormValues = {
   endTime: string; // "" = non renseignée
   roomId: string; // "none" = pas de salle
   location: string;
-  capacity: string; // "" = illimitée
+  capacity: string; // nombre MAXIMUM d'apprenants ; "" = illimité (impossible si l'inscription par lien est ouverte)
   notes: string;
+  signupOpen: boolean; // inscription en ligne par lien ouverte
+  oralTestIncluded: boolean; // la réunion comprend un test oral individuel
 };
 
 const EMPTY: MeetingFormValues = {
@@ -37,6 +40,8 @@ const EMPTY: MeetingFormValues = {
   location: "",
   capacity: "",
   notes: "",
+  signupOpen: false,
+  oralTestIncluded: true,
 };
 
 // Création / modification d'une réunion d'information. À la création, on arrive
@@ -71,12 +76,20 @@ export function MeetingFormDialog({
         location: values.location.trim() || null,
         capacity: values.capacity.trim() ? Number(values.capacity) : null,
         notes: values.notes.trim() || null,
+        signupOpen: values.signupOpen,
+        oralTestIncluded: values.oralTestIncluded,
       });
       if (!result.ok) {
         toast.error(result.error);
         return;
       }
-      toast.success(isEdit ? "Réunion mise à jour." : "Réunion créée — ajoutez maintenant les convoqués.");
+      toast.success(
+        isEdit
+          ? "Réunion mise à jour."
+          : values.signupOpen
+            ? "Réunion créée — le lien d'inscription est prêt à envoyer."
+            : "Réunion créée — ajoutez maintenant les convoqués.",
+      );
       setOpen(false);
       if (isEdit) router.refresh();
       else router.push(`/apprenants/reunions/${result.id}`);
@@ -150,9 +163,40 @@ export function MeetingFormDialog({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Capacité (optionnel)</Label>
+              <Label>Places maximum (apprenants){values.signupOpen ? "" : " — optionnel"}</Label>
               <Input type="number" min={1} value={values.capacity} onChange={(e) => set("capacity", e.target.value)} placeholder="20" />
             </div>
+          </div>
+          <div className="space-y-3 rounded-lg border bg-muted/30 p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-0.5">
+                <Label htmlFor="meeting-signup-open">Inscription en ligne par lien</Label>
+                <p className="text-xs text-muted-foreground">
+                  Un lien à envoyer sur WhatsApp : chaque personne s&apos;inscrit seule en 2 minutes, jusqu&apos;au nombre maximum de places. Le lien est sur la page de la réunion.
+                </p>
+              </div>
+              <Switch
+                id="meeting-signup-open"
+                checked={values.signupOpen}
+                onCheckedChange={(v) => set("signupOpen", v)}
+              />
+            </div>
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-0.5">
+                <Label htmlFor="meeting-oral-test">Test oral individuel inclus</Label>
+                <p className="text-xs text-muted-foreground">
+                  Annoncé à la personne (« un petit test oral avec vous, ce n&apos;est pas un examen »). Il se saisit ensuite en 20 secondes sur la page de la réunion.
+                </p>
+              </div>
+              <Switch
+                id="meeting-oral-test"
+                checked={values.oralTestIncluded}
+                onCheckedChange={(v) => set("oralTestIncluded", v)}
+              />
+            </div>
+            {values.signupOpen && !values.capacity.trim() && (
+              <p className="text-xs font-medium text-destructive">Indiquez le nombre maximum de places pour ouvrir l&apos;inscription par lien.</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label>Lieu / adresse (dans le message envoyé)</Label>
@@ -177,7 +221,10 @@ export function MeetingFormDialog({
             )}
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setOpen(false)} disabled={pending}>Annuler</Button>
-              <Button onClick={submit} disabled={pending || !values.title.trim() || !values.date || !values.startTime}>
+              <Button
+                onClick={submit}
+                disabled={pending || !values.title.trim() || !values.date || !values.startTime || (values.signupOpen && !values.capacity.trim())}
+              >
                 {pending ? "Enregistrement…" : isEdit ? "Enregistrer" : "Créer la réunion"}
               </Button>
             </div>

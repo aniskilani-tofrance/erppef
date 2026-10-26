@@ -52,6 +52,7 @@ type MeetingRow = {
   ends_at: string | null;
   location: string | null;
   capacity: number | null;
+  signup_open: boolean;
   rooms: { name: string } | null;
   info_meeting_invitations: { status: string }[];
 };
@@ -331,7 +332,7 @@ export default async function AdmissionPage() {
       .limit(500),
     supabase
       .from("info_meetings")
-      .select("id, title, starts_at, ends_at, location, capacity, rooms:room_id(name), info_meeting_invitations(status)")
+      .select("id, title, starts_at, ends_at, location, capacity, signup_open, rooms:room_id(name), info_meeting_invitations(status)")
       .order("starts_at", { ascending: false }),
     supabase.from("rooms").select("id, name").eq("is_active", true).order("name"),
     supabase.from("profiles").select("full_name").eq("id", userId).single(),
@@ -530,6 +531,10 @@ export default async function AdmissionPage() {
                     <TableCell>
                       {m.invited}{m.capacity ? ` / ${m.capacity}` : ""}
                       {m.capacity && m.invited > m.capacity && <Badge variant="destructive" className="ml-2">dépassement</Badge>}
+                      {m.capacity && m.invited === m.capacity && <Badge variant="outline" className="ml-2 border-orange-300 bg-orange-50 text-orange-800">complet</Badge>}
+                      {m.signup_open && (
+                        <Badge variant="outline" className="ml-2 border-emerald-300 bg-emerald-50 text-emerald-800">lien ouvert</Badge>
+                      )}
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">
                       {m.toSend > 0 ? <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800">{m.toSend}</Badge> : "—"}

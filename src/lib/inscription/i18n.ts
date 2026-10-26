@@ -55,9 +55,36 @@ export const AVAILABILITIES = [
 export type Availability = (typeof AVAILABILITIES)[number]["code"];
 
 // Erreurs renvoyées par la validation : un code, traduit à l'affichage.
-export type SignupErrorCode = "name" | "phone" | "french" | "city" | "consent" | "server" | "link";
+export type SignupErrorCode = "name" | "phone" | "french" | "city" | "consent" | "server" | "link" | "slot";
+
+// Inscription à une réunion d'information collective (/inscription/reunion/<jeton>) :
+// le même formulaire, avec la carte de la réunion et un écran de fin dédié.
+export type MeetingTexts = {
+  title: string;
+  introPoints: [string, string, string]; // ⏱️ 📱 ✅
+  oralTest: string; // 🗣️ test oral individuel (pas un examen)
+  placesLeft: string; // « {n} »
+  placeLeftOne: string;
+  full: string; // pastille « Complet »
+  fullText: string; // avant le formulaire : on garde le numéro pour la prochaine réunion
+  until: string; // « {time} »
+  doneTitle: string;
+  alreadyTitle: string;
+  fullTitle: string;
+  closedTitle: string;
+  waitText: string; // fin « complet » ou « fermé »
+  cannotCome: string;
+  calendarTitle: string;
+  closedPage: string; // lien fermé : aucun formulaire
+  // Plusieurs jours sur le même lien : la personne choisit son créneau
+  chooseQ: string;
+  chooseHint: string;
+  // Test de niveau à faire avant la réunion (lien personnel, pour ceux qui ne l'ont pas fait)
+  testBefore: string;
+};
 
 export type SignupTexts = {
+  meeting: MeetingTexts;
   title: string;
   intro: string;
   introPoints: [string, string, string]; // ⏱️ 📱 💬
@@ -113,6 +140,27 @@ const PRIVACY_CONTACT = "contact@parleremploi.fr";
 
 export const SIGNUP_TEXTS: Record<SignupLocale, SignupTexts> = {
   fr: {
+    meeting: {
+      title: "Réunion d'information",
+      introPoints: ["2 minutes", "Sur votre téléphone", "Votre place est réservée"],
+      oralTest: "Après la réunion : un petit test oral avec vous. Ce n'est pas un examen.",
+      placesLeft: "{n} places restantes",
+      placeLeftOne: "1 place restante",
+      full: "Complet",
+      fullText: "Il n'y a plus de place. Laissez votre numéro : nous vous écrivons pour la prochaine réunion.",
+      until: "jusqu'à {time}",
+      doneTitle: "Vous êtes inscrit(e) !",
+      alreadyTitle: "Vous êtes déjà inscrit(e).",
+      fullTitle: "Réunion complète",
+      closedTitle: "Inscription fermée",
+      waitText: "Nous gardons votre numéro. Nous vous écrivons pour la prochaine réunion.",
+      cannotCome: "Vous ne pouvez pas venir ? Écrivez-nous sur WhatsApp.",
+      calendarTitle: "Réunion d'information ParlerEmploi",
+      closedPage: "Cette réunion n'accepte plus d'inscriptions. Écrivez-nous sur WhatsApp.",
+      chooseQ: "Quel jour ?",
+      chooseHint: "Choisissez un jour et une heure.",
+      testBefore: "Faites aussi votre test de niveau avant la réunion.",
+    },
     title: "Cours de français",
     intro: "Inscription rapide : 2 minutes.",
     introPoints: ["2 minutes", "Sur votre téléphone", "Nous vous contactons"],
@@ -164,6 +212,7 @@ export const SIGNUP_TEXTS: Record<SignupLocale, SignupTexts> = {
       consent: "Cochez la case pour envoyer.",
       server: "Problème. Réessayez, s'il vous plaît.",
       link: "Ce lien ne marche pas. Demandez un nouveau lien.",
+      slot: "Choisissez un jour.",
     },
     privacyTitle: "Vos informations",
     privacyBack: "Retour au formulaire",
@@ -177,6 +226,27 @@ export const SIGNUP_TEXTS: Record<SignupLocale, SignupTexts> = {
     ],
   },
   en: {
+    meeting: {
+      title: "Information meeting",
+      introPoints: ["2 minutes", "On your phone", "Your place is reserved"],
+      oralTest: "After the meeting: a short oral test with you. It is not an exam.",
+      placesLeft: "{n} places left",
+      placeLeftOne: "1 place left",
+      full: "Full",
+      fullText: "There are no places left. Leave your number: we will write to you about the next meeting.",
+      until: "until {time}",
+      doneTitle: "You are registered!",
+      alreadyTitle: "You are already registered.",
+      fullTitle: "Meeting full",
+      closedTitle: "Registration closed",
+      waitText: "We keep your number. We will write to you about the next meeting.",
+      cannotCome: "Can't come? Write to us on WhatsApp.",
+      calendarTitle: "ParlerEmploi information meeting",
+      closedPage: "This meeting no longer takes registrations. Write to us on WhatsApp.",
+      chooseQ: "Which day?",
+      chooseHint: "Choose a day and a time.",
+      testBefore: "Please also take your level test before the meeting.",
+    },
     title: "French classes",
     intro: "Quick sign-up: 2 minutes.",
     introPoints: ["2 minutes", "On your phone", "We contact you"],
@@ -228,6 +298,7 @@ export const SIGNUP_TEXTS: Record<SignupLocale, SignupTexts> = {
       consent: "Tick the box to send.",
       server: "Problem. Please try again.",
       link: "This link does not work. Ask for a new link.",
+      slot: "Choose a day.",
     },
     privacyTitle: "Your information",
     privacyBack: "Back to the form",
@@ -241,6 +312,27 @@ export const SIGNUP_TEXTS: Record<SignupLocale, SignupTexts> = {
     ],
   },
   ar: {
+    meeting: {
+      title: "اجتماع إعلامي",
+      introPoints: ["دقيقتان", "من هاتفك", "مكانك محجوز"],
+      oralTest: "بعد الاجتماع: اختبار شفهي قصير معك. ليس امتحانًا.",
+      placesLeft: "الأماكن المتبقية: {n}",
+      placeLeftOne: "بقي مكان واحد",
+      full: "اكتمل العدد",
+      fullText: "لا توجد أماكن متبقية. اترك رقمك: سنكتب لك بخصوص الاجتماع القادم.",
+      until: "حتى {time}",
+      doneTitle: "تم تسجيلك!",
+      alreadyTitle: "أنت مسجّل بالفعل.",
+      fullTitle: "اكتمل عدد الاجتماع",
+      closedTitle: "التسجيل مغلق",
+      waitText: "نحتفظ برقمك. سنكتب لك بخصوص الاجتماع القادم.",
+      cannotCome: "لا تستطيع الحضور؟ اكتب لنا على واتساب.",
+      calendarTitle: "اجتماع ParlerEmploi الإعلامي",
+      closedPage: "هذا الاجتماع لا يقبل تسجيلات جديدة. اكتب لنا على واتساب.",
+      chooseQ: "أي يوم؟",
+      chooseHint: "اختر يومًا وساعة.",
+      testBefore: "أجرِ أيضًا اختبار المستوى قبل الاجتماع.",
+    },
     title: "دروس اللغة الفرنسية",
     intro: "تسجيل سريع: دقيقتان.",
     introPoints: ["دقيقتان", "من هاتفك", "سنتواصل معك"],
@@ -292,6 +384,7 @@ export const SIGNUP_TEXTS: Record<SignupLocale, SignupTexts> = {
       consent: "ضع علامة في المربع للإرسال.",
       server: "حدثت مشكلة. حاول مرة أخرى من فضلك.",
       link: "هذا الرابط لا يعمل. اطلب رابطًا جديدًا.",
+      slot: "اختر يومًا.",
     },
     privacyTitle: "معلوماتك",
     privacyBack: "العودة إلى الاستمارة",
