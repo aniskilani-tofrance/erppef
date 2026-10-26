@@ -5,8 +5,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveSignupOrg } from "@/lib/inscription/org";
 import { provenanceFromSignupSource } from "@/lib/admission/sources";
 import { toWhatsAppNumber } from "@/lib/admission/phone";
-import { sanitizeSrc } from "@/lib/inscription/link";
-import type { SignupErrorCode } from "@/lib/inscription/i18n";
+import { buildTestUrl, sanitizeSrc } from "@/lib/inscription/link";
+import { toLocale, type SignupErrorCode, type SignupLocale } from "@/lib/inscription/i18n";
 import { SANDBOX_SLUG } from "@/lib/production-orgs";
 import { isAppointmentOverlap } from "@/lib/pg-errors";
 import { BOOKED_ONLINE_NOTE } from "@/lib/admission/appointments";
@@ -92,6 +92,8 @@ export async function submitSignup(_prev: SignupState, fd: FormData): Promise<Si
   if (!org) return { status: "error", error: "link", values: valuesOf(fd) };
 
   const src = sanitizeSrc(typeof fd.get("src") === "string" ? (fd.get("src") as string) : null);
+  // Langue du formulaire : le test s'ouvre avec les consignes dans la même langue.
+  const locale = toLocale(typeof fd.get("lang") === "string" ? (fd.get("lang") as string) : null);
   const admin = createAdminClient();
 
   // Afflux anormal : on n'écrit plus rien (l'équipe garde la main).
@@ -131,7 +133,7 @@ export async function submitSignup(_prev: SignupState, fd: FormData): Promise<Si
       await admin.from("learners").update({ admission_status: "nouveau" }).eq("id", existing.id);
     }
     revalidatePath("/apprenants", "layout");
-    const testUrl = await signupTestUrl(admin, org.id, existing.id, Boolean(existing.level_assessed));
+    const testUrl = await signupTestUrl(admin, org.id, existing.id, Boolean(existing.level_assessed), locale);
     return { status: "done", booking: await offerBooking(org.id, existing.id, []), testUrl };
   }
 
@@ -170,7 +172,7 @@ export async function submitSignup(_prev: SignupState, fd: FormData): Promise<Si
     note: buildSignupNote(d, { src }),
   });
   // Pas de niveau connu → test de positionnement, proposé tout de suite sur l'écran de fin.
-  const testUrl = await signupTestUrl(admin, org.id, created.id, false);
+  const testUrl = await signupTestUrl(admin, org.id, created.id, false, locale);
 
   revalidatePath("/apprenants", "layout");
   return { status: "done", booking: await offerBooking(org.id, created.id, []), testUrl };
@@ -187,6 +189,7 @@ async function signupTestUrl(
   orgId: string,
   learnerId: string,
   levelKnown: boolean,
+  locale: SignupLocale,
 ): Promise<string | null> {
   try {
     const { data: pending } = await admin
@@ -199,14 +202,14 @@ async function signupTestUrl(
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (pending?.token) return `${PUBLIC_ERP_URL}/test/${pending.token}`;
+    if (pending?.token) return buildTestUrl(PUBLIC_ERP_URL, pending.token, locale);
     if (levelKnown) return null;
     const { data: created } = await admin
       .from("placement_tests")
       .insert({ org_id: orgId, learner_id: learnerId })
       .select("token")
       .single();
-    return created?.token ? `${PUBLIC_ERP_URL}/test/${created.token}` : null;
+    return created?.token ? buildTestUrl(PUBLIC_ERP_URL, created.token, locale) : null;
   } catch (e) {
     console.warn(`[inscription] test de niveau indisponible : ${e instanceof Error ? e.message : e}`);
     return null;
