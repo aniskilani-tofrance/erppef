@@ -20,6 +20,7 @@ type MeetingRow = {
   org_id: string;
   signup_token: string;
   series_token: string | null;
+  stagger_minutes: number | null;
   title: string;
   starts_at: string;
   ends_at: string | null;
@@ -45,7 +46,7 @@ function placeOf(row: Pick<MeetingRow, "rooms" | "location">): string | null {
 export type LoadedMeeting = { orgId: string; meeting: PublicMeeting };
 
 const COLUMNS =
-  "id, org_id, signup_token, series_token, title, starts_at, ends_at, location, capacity, signup_open, oral_test_included, rooms:room_id(name, address, access_notes), org:org_id(slug), info_meeting_invitations(status)";
+  "id, org_id, signup_token, series_token, stagger_minutes, title, starts_at, ends_at, location, capacity, signup_open, oral_test_included, rooms:room_id(name, address, access_notes), org:org_id(slug), info_meeting_invitations(status)";
 
 function toLoaded(row: MeetingRow, now: Date): LoadedMeeting {
   const taken = (row.info_meeting_invitations ?? []).filter((i) => SEATED_STATUSES.includes(i.status)).length;
@@ -61,6 +62,7 @@ function toLoaded(row: MeetingRow, now: Date): LoadedMeeting {
       oralTest: row.oral_test_included,
       placesLeft: placesLeft(row.capacity, taken),
       state: meetingState({ signupOpen: row.signup_open, startsAt: row.starts_at, capacity: row.capacity, taken }, now),
+      staggered: Boolean(row.stagger_minutes),
     },
   };
 }
@@ -128,14 +130,19 @@ export async function registerForMeeting(
   admin: Admin,
   token: string,
   learnerId: string,
-): Promise<{ outcome: MeetingOutcome; token: string | null } | null> {
+): Promise<{ outcome: MeetingOutcome; token: string | null; convocationAt: string | null } | null> {
   const { data, error } = await admin.rpc("signup_for_info_meeting", { p_token: token, p_learner_id: learnerId });
   if (error) {
     console.error(`[inscription] inscription à la réunion impossible : ${error.message}`);
     return null;
   }
-  const r = (data ?? null) as { result?: string; token?: string | null } | null;
+  const r = (data ?? null) as { result?: string; token?: string | null; convocation_at?: string | null } | null;
   const outcome = r?.result;
   if (outcome !== "registered" && outcome !== "already" && outcome !== "full" && outcome !== "closed") return null;
-  return { outcome, token: typeof r?.token === "string" ? r.token : null };
+  return {
+    outcome,
+    token: typeof r?.token === "string" ? r.token : null,
+    // Heure de passage attribuée (accueil échelonné, 0058) ; absente avant 0058 ou sans accueil échelonné.
+    convocationAt: typeof r?.convocation_at === "string" ? r.convocation_at : null,
+  };
 }

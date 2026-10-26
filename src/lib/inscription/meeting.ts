@@ -49,11 +49,13 @@ export type PublicMeeting = {
   oralTest: boolean; // la réunion comprend un test oral individuel
   placesLeft: number | null;
   state: MeetingState;
+  staggered?: boolean; // accueil échelonné : chaque inscrit reçoit son heure de passage
 };
 
 // Résultat d'une tentative d'inscription (celui de la fonction SQL signup_for_info_meeting).
 export type MeetingOutcome = "registered" | "already" | "full" | "closed";
-export type MeetingConfirmation = { outcome: MeetingOutcome; meeting: PublicMeeting };
+// convocationAt : heure de passage attribuée à la personne (accueil échelonné), sinon absente.
+export type MeetingConfirmation = { outcome: MeetingOutcome; meeting: PublicMeeting; convocationAt?: string | null };
 
 /** https://…/inscription/reunion/<jeton>, avec ?src= si une provenance est donnée. */
 export function buildMeetingSignupUrl(origin: string, token: string, src?: string | null): string {

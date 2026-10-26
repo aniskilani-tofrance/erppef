@@ -9,7 +9,7 @@ import { translatePgError } from "@/lib/pg-errors";
 import { randomBytes } from "node:crypto";
 import { ensureConvocationTests } from "@/lib/placement/convocation-test-server";
 import { localToUtc, utcToLocalDate, utcToLocalTime } from "@/lib/dates";
-import { clockLabel, parseClock, spreadTimes, orderForSpacing, whenForInvitation, MAX_STEP_MINUTES, MIN_STEP_MINUTES } from "@/lib/admission/convocation";
+import { clockLabel, parseClock, spreadTimes, orderForSpacing, whenForInvitation, MAX_PARALLEL, MAX_STEP_MINUTES, MIN_STEP_MINUTES } from "@/lib/admission/convocation";
 import { sendMail } from "@/lib/mailer";
 import {
   ADMISSION_REASON_CODES,
@@ -140,6 +140,10 @@ const meetingSchema = z.object({
   // maximum d'apprenants est alors obligatoire (aussi imposé en base par la migration 0056).
   signupOpen: z.boolean().default(false),
   oralTestIncluded: z.boolean().default(true),
+  // Accueil échelonné (0058) : une arrivée toutes les N minutes, K personnes accueillies en même
+  // temps ; chaque inscrit par le lien reçoit la première heure libre. null = tous à l'heure de la réunion.
+  staggerMinutes: z.number().int().min(MIN_STEP_MINUTES).max(MAX_STEP_MINUTES).nullable().default(null),
+  staggerParallel: z.number().int().min(1).max(MAX_PARALLEL).nullable().default(null),
 });
 
 export type MeetingResult = { ok: true; id: string } | { ok: false; error: string };
@@ -167,6 +171,8 @@ export async function upsertInfoMeeting(raw: z.infer<typeof meetingSchema>): Pro
     notes: d.notes?.trim() || null,
     signup_open: d.signupOpen,
     oral_test_included: d.oralTestIncluded,
+    stagger_minutes: d.staggerMinutes,
+    stagger_parallel: d.staggerMinutes ? (d.staggerParallel ?? 1) : null,
   };
 
   if (d.id) {
@@ -501,19 +507,30 @@ export type SpaceResult =
   | { ok: true; count: number; first: string; last: string; afterEnd: boolean }
   | { ok: false; error: string };
 
-// Espace les heures de convocation des personnes à venir (à envoyer, envoyée, confirmée) :
-// la première à `firstTime`, puis une toutes les `minutes` minutes, par ordre d'inscription
-// ou par nom. Les présents, absents et excusés sont laissés de côté.
+// Espace les heures de convocation : la première à `firstTime`, puis une toutes les `minutes`
+// minutes, `parallel` personnes à la fois (accueillants), par ordre d'inscription ou par nom.
+// `who` : « confirmes » = seulement les personnes qui ont confirmé (premier inscrit, premier servi :
+// les convoqués sans réponse n'ont pas de place) ; « tous » = aussi les convocations à envoyer ou
+// envoyées. Les présents, absents et excusés sont toujours laissés de côté.
 export async function spaceMeetingConvocations(raw: {
   meetingId: string;
   firstTime: string;
   minutes: number;
   order: "inscription" | "alphabetique";
+  parallel?: number;
+  who?: "confirmes" | "tous";
 }): Promise<SpaceResult> {
   const parsed = z
-    .object({ meetingId: uuid, firstTime: time, minutes: z.number().int().min(MIN_STEP_MINUTES).max(MAX_STEP_MINUTES), order: z.enum(["inscription", "alphabetique"]) })
+    .object({
+      meetingId: uuid,
+      firstTime: time,
+      minutes: z.number().int().min(MIN_STEP_MINUTES).max(MAX_STEP_MINUTES),
+      order: z.enum(["inscription", "alphabetique"]),
+      parallel: z.number().int().min(1).max(MAX_PARALLEL).default(1),
+      who: z.enum(["confirmes", "tous"]).default("tous"),
+    })
     .safeParse(raw);
-  if (!parsed.success) return { ok: false, error: `Heure de départ et durée (${MIN_STEP_MINUTES} à ${MAX_STEP_MINUTES} minutes) obligatoires.` };
+  if (!parsed.success) return { ok: false, error: `Heure de départ, durée (${MIN_STEP_MINUTES} à ${MAX_STEP_MINUTES} minutes) et personnes en même temps (1 à ${MAX_PARALLEL}) obligatoires.` };
   const d = parsed.data;
 
   const { orgId } = await requireRole(["admin", "coordinator"]);
@@ -526,16 +543,21 @@ export async function spaceMeetingConvocations(raw: {
     .select("id, created_at, learners(first_name, last_name)")
     .eq("meeting_id", d.meetingId)
     .eq("org_id", orgId)
-    .in("status", ["a_envoyer", "envoyee", "confirmee"]);
-  const people = ((rows ?? []) as unknown as { id: string; created_at: string; learners: { first_name: string; last_name: string } | null }[]).map((r) => ({
+    .in("status", d.who === "confirmes" ? ["confirmee"] : ["a_envoyer", "envoyee", "confirmee"]);
+  const people =((rows ?? []) as unknown as { id: string; created_at: string; learners: { first_name: string; last_name: string } | null }[]).map((r) => ({
     id: r.id,
     createdAt: r.created_at,
     firstName: r.learners?.first_name ?? "",
     lastName: r.learners?.last_name ?? "",
   }));
-  if (people.length === 0) return { ok: false, error: "Aucun convoqué à placer (les présents, absents et excusés sont laissés de côté)." };
+  if (people.length === 0) {
+    return {
+      ok: false,
+      error: d.who === "confirmes" ? "Aucune personne confirmée à placer." : "Aucun convoqué à placer (les présents, absents et excusés sont laissés de côté).",
+    };
+  }
 
-  const spread = spreadTimes(d.firstTime, d.minutes, people.length);
+  const spread = spreadTimes(d.firstTime, d.minutes, people.length, d.parallel);
   if (!spread.ok) return spread;
 
   const meetingDay = utcToLocalDate(meeting.starts_at);
@@ -593,7 +615,7 @@ export async function addMeetingSlot(raw: z.infer<typeof slotSchema>): Promise<M
 
   const { data: source } = await supabase
     .from("info_meetings")
-    .select("id, title, room_id, location, notes, oral_test_included, signup_open, series_token")
+    .select("id, title, room_id, location, notes, oral_test_included, signup_open, series_token, stagger_minutes, stagger_parallel")
     .eq("id", d.meetingId)
     .eq("org_id", orgId)
     .single();
@@ -628,6 +650,8 @@ export async function addMeetingSlot(raw: z.infer<typeof slotSchema>): Promise<M
       capacity: d.capacity,
       notes: source.notes,
       oral_test_included: source.oral_test_included,
+      stagger_minutes: source.stagger_minutes,
+      stagger_parallel: source.stagger_parallel,
       signup_open: open,
       series_token: seriesToken,
     })
