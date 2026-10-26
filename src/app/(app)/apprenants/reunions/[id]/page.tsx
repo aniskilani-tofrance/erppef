@@ -23,7 +23,7 @@ import { CopyTestLinkButton } from "@/components/admission/copy-test-link-button
 import { SEATED_STATUSES, slotOfferState } from "@/lib/inscription/meeting";
 import { loadConvocationTests } from "@/lib/placement/convocation-test-server";
 import { SpaceConvocationsDialog } from "@/components/admission/space-convocations-dialog";
-import { whenForInvitation } from "@/lib/admission/convocation";
+import { staggerSummary, whenForInvitation } from "@/lib/admission/convocation";
 import { OralTestDialog } from "@/components/admission/oral-test-dialog";
 import { SendPendingEmailsButton } from "@/components/admission/send-pending-emails-button";
 import {
@@ -137,6 +137,7 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
   // Heures de convocation : celle de la réunion par défaut, une par personne si l'équipe en fixe.
   const meetingTime = utcToLocalTime(meeting.starts_at);
   const toPlace = invitations.filter((i) => ["a_envoyer", "envoyee", "confirmee"].includes(i.status)).length;
+  const confirmedToPlace = invitations.filter((i) => i.status === "confirmee").length;
   const customCount = invitations.filter((i) => i.convocation_at).length;
   // Créneaux du lien et ce que la page du lien en fait (proposé, complet, fermé, passé).
   const slotSource = siblingRows?.length
@@ -194,6 +195,11 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
           <h1 className="text-2xl font-semibold tracking-tight">{meeting.title}</h1>
           <p className="text-sm">{formatMeetingWhen(when)}</p>
           <p className="text-sm text-muted-foreground">{place ?? "Lieu à préciser (modifier la réunion)"}</p>
+          {meeting.stagger_minutes && (
+            <p className="mt-1 text-sm font-medium text-teal-800">
+              🕒 Accueil échelonné : {staggerSummary(meeting.stagger_minutes, meeting.stagger_parallel ?? 1).toLowerCase()} — chaque inscrit par le lien reçoit son heure.
+            </p>
+          )}
           {meeting.notes && <p className="mt-1 whitespace-pre-line text-xs text-muted-foreground">{meeting.notes}</p>}
         </div>
         <div className="flex flex-wrap gap-2">
@@ -212,10 +218,20 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
               notes: meeting.notes ?? "",
               signupOpen: Boolean(meeting.signup_open),
               oralTestIncluded: meeting.oral_test_included ?? true,
+              staggerMinutes: meeting.stagger_minutes ? String(meeting.stagger_minutes) : "",
+              staggerParallel: String(meeting.stagger_parallel ?? 1),
             }}
           />
           <PrepareTestsButton meetingId={meeting.id} count={testsToPrepare} />
-          <SpaceConvocationsDialog meetingId={meeting.id} meetingTime={meetingTime} count={toPlace} customCount={customCount} />
+          <SpaceConvocationsDialog
+            meetingId={meeting.id}
+            meetingTime={meetingTime}
+            count={toPlace}
+            confirmedCount={confirmedToPlace}
+            customCount={customCount}
+            defaultMinutes={meeting.stagger_minutes ?? 15}
+            defaultParallel={meeting.stagger_parallel ?? 1}
+          />
           <SendPendingEmailsButton meetingId={meeting.id} count={pendingWithEmail} />
           <InviteLearnersDialog meetingId={meeting.id} candidates={candidates} />
         </div>

@@ -16,6 +16,9 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  MAX_PARALLEL, MAX_STEP_MINUTES, MIN_STEP_MINUTES, staggerCapacity, staggerLastArrival, staggerPerHour,
+} from "@/lib/admission/convocation";
 
 export type MeetingFormValues = {
   id?: string;
@@ -29,6 +32,8 @@ export type MeetingFormValues = {
   notes: string;
   signupOpen: boolean; // inscription en ligne par lien ouverte
   oralTestIncluded: boolean; // la réunion comprend un test oral individuel
+  staggerMinutes: string; // accueil échelonné : minutes entre deux arrivées ; "" = tous à l'heure de la réunion
+  staggerParallel: string; // personnes accueillies en même temps (accueillants)
 };
 
 const EMPTY: MeetingFormValues = {
@@ -42,7 +47,16 @@ const EMPTY: MeetingFormValues = {
   notes: "",
   signupOpen: false,
   oralTestIncluded: true,
+  staggerMinutes: "",
+  staggerParallel: "1",
 };
+
+// « 17:00 » + 10 minutes → « 17h10 » (aperçu de l'accueil échelonné).
+function formatPlus(time: string, minutes: number): string {
+  const [h, m] = time.split(":").map(Number);
+  const total = h * 60 + m + minutes;
+  return `${String(Math.floor(total / 60) % 24).padStart(2, "0")}h${String(total % 60).padStart(2, "0")}`;
+}
 
 // Création / modification d'une réunion d'information. À la création, on arrive
 // directement sur la page de la réunion pour ajouter les convoqués.
@@ -64,6 +78,18 @@ export function MeetingFormDialog({
   const set = <K extends keyof MeetingFormValues>(key: K, v: MeetingFormValues[K]) =>
     setValues((s) => ({ ...s, [key]: v }));
 
+  // Accueil échelonné : une arrivée toutes les N minutes, K en même temps (3 accueillants → 3 à 17h00,
+  // 3 à 17h10…). Places conseillées d'après l'heure de fin ; dernière arrivée d'après les places.
+  const staggerMin = Number(values.staggerMinutes);
+  const staggerPar = Math.max(1, Number(values.staggerParallel) || 1);
+  const stagger =
+    values.staggerMinutes.trim() && Number.isInteger(staggerMin) && staggerMin >= MIN_STEP_MINUTES && staggerMin <= MAX_STEP_MINUTES
+      ? { minutes: staggerMin, parallel: Math.min(staggerPar, MAX_PARALLEL) }
+      : null;
+  const suggestedCapacity = stagger ? staggerCapacity(values.startTime, values.endTime || null, stagger.minutes, stagger.parallel) : null;
+  const capacityNumber = Number(values.capacity);
+  const lastArrival = stagger && capacityNumber > 0 ? staggerLastArrival(values.startTime, stagger.minutes, stagger.parallel, capacityNumber) : null;
+
   function submit() {
     startTransition(async () => {
       const result = await upsertInfoMeeting({
@@ -78,6 +104,8 @@ export function MeetingFormDialog({
         notes: values.notes.trim() || null,
         signupOpen: values.signupOpen,
         oralTestIncluded: values.oralTestIncluded,
+        staggerMinutes: stagger ? stagger.minutes : null,
+        staggerParallel: stagger ? stagger.parallel : null,
       });
       if (!result.ok) {
         toast.error(result.error);
@@ -198,6 +226,59 @@ export function MeetingFormDialog({
               <p className="text-xs font-medium text-destructive">Indiquez le nombre maximum de places pour ouvrir l&apos;inscription par lien.</p>
             )}
           </div>
+          <div className="space-y-3 rounded-lg border bg-muted/30 p-3">
+            <div className="space-y-0.5">
+              <Label>Accueil échelonné (facultatif)</Label>
+              <p className="text-xs text-muted-foreground">
+                Chaque personne inscrite par le lien reçoit SON heure d&apos;arrivée : la première heure libre, premier inscrit premier servi. Elle la voit en fin d&apos;inscription et la retrouve dans la convocation et le rappel. Vide : tout le monde à l&apos;heure de la réunion.
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="meeting-stagger-minutes">Une arrivée toutes les (minutes)</Label>
+                <Input
+                  id="meeting-stagger-minutes"
+                  type="number"
+                  min={MIN_STEP_MINUTES}
+                  max={MAX_STEP_MINUTES}
+                  step={5}
+                  value={values.staggerMinutes}
+                  onChange={(e) => set("staggerMinutes", e.target.value)}
+                  placeholder="10"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="meeting-stagger-parallel">Personnes accueillies en même temps</Label>
+                <Input
+                  id="meeting-stagger-parallel"
+                  type="number"
+                  min={1}
+                  max={MAX_PARALLEL}
+                  value={values.staggerParallel}
+                  onChange={(e) => set("staggerParallel", e.target.value)}
+                  placeholder="3"
+                />
+              </div>
+            </div>
+            {stagger && (
+              <div className="space-y-1 text-xs">
+                <p>
+                  {stagger.parallel} à {values.startTime.replace(":", "h")}, {stagger.parallel} à{" "}
+                  {formatPlus(values.startTime, stagger.minutes)}… soit {staggerPerHour(stagger.minutes, stagger.parallel) / stagger.parallel} par accueillant et{" "}
+                  {staggerPerHour(stagger.minutes, stagger.parallel)} par heure.
+                  {lastArrival ? ` Avec ${capacityNumber} places : dernière arrivée à ${lastArrival.replace(":", "h")}.` : ""}
+                </p>
+                {suggestedCapacity !== null && suggestedCapacity !== capacityNumber && (
+                  <p>
+                    Jusqu&apos;à {values.endTime.replace(":", "h")}, cela fait {suggestedCapacity} places.{" "}
+                    <button type="button" className="font-medium text-primary underline underline-offset-2" onClick={() => set("capacity", String(suggestedCapacity))}>
+                      Mettre {suggestedCapacity} places
+                    </button>
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
           <div className="space-y-2">
             <Label>Lieu / adresse (dans le message envoyé)</Label>
             <Input
@@ -223,7 +304,14 @@ export function MeetingFormDialog({
               <Button variant="outline" onClick={() => setOpen(false)} disabled={pending}>Annuler</Button>
               <Button
                 onClick={submit}
-                disabled={pending || !values.title.trim() || !values.date || !values.startTime || (values.signupOpen && !values.capacity.trim())}
+                disabled={
+                  pending ||
+                  !values.title.trim() ||
+                  !values.date ||
+                  !values.startTime ||
+                  (values.signupOpen && !values.capacity.trim()) ||
+                  (values.staggerMinutes.trim() !== "" && !stagger)
+                }
               >
                 {pending ? "Enregistrement…" : isEdit ? "Enregistrer" : "Créer la réunion"}
               </Button>

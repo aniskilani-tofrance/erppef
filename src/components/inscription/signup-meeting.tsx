@@ -47,6 +47,12 @@ export function MeetingCard({ meeting, locale, showWhen = true }: { meeting: Pub
           <span>{t.oralTest}</span>
         </p>
       )}
+      {meeting.staggered && meeting.state !== "closed" && (
+        <p className="flex items-start gap-2 text-lg font-medium text-zinc-800">
+          <span aria-hidden>🕒</span>
+          <span>{t.staggered}</span>
+        </p>
+      )}
       {meeting.state === "full" && (
         <p className="rounded-xl bg-amber-50 px-3 py-2 text-lg font-semibold text-amber-950 ring-1 ring-amber-200">{t.full}</p>
       )}
@@ -75,7 +81,7 @@ export function SignupMeetingDone({
 }) {
   const t = SIGNUP_TEXTS[locale];
   const m = t.meeting;
-  const { outcome, meeting } = confirmation;
+  const { outcome, meeting, convocationAt } = confirmation;
 
   if (outcome === "full" || outcome === "closed") {
     return (
@@ -83,9 +89,17 @@ export function SignupMeetingDone({
     );
   }
 
+  // Accueil échelonné : la personne vient à SON heure (le jour de la réunion) ; la carte et l'agenda la reprennent.
+  const mine = convocationAt
+    ? {
+        ...meeting,
+        startsAt: convocationAt,
+        endsAt: meeting.endsAt && Date.parse(meeting.endsAt) > Date.parse(convocationAt) ? meeting.endsAt : null,
+      }
+    : meeting;
   const calendarUrl = googleCalendarTemplateUrl({
-    startsAt: meeting.startsAt,
-    endsAt: meetingCalendarEnd(meeting),
+    startsAt: mine.startsAt,
+    endsAt: meetingCalendarEnd(mine),
     title: m.calendarTitle,
     details: `${SIGNUP_CONTACT.name} — ${SIGNUP_CONTACT.phone}`,
     location: meeting.place ?? undefined,
@@ -100,8 +114,13 @@ export function SignupMeetingDone({
           <SignupTestCard locale={locale} testUrl={testUrl} embed={embed} />
         </>
       )}
+      {convocationAt && (
+        <p className="w-full rounded-2xl bg-[#00504E] px-4 py-3 text-center text-2xl font-bold text-white">
+          🕒 {fill(m.yourTime, "time", meetingWhenText({ startsAt: convocationAt, endsAt: null }, locale).time)}
+        </p>
+      )}
       <div className="w-full">
-        <MeetingCard meeting={{ ...meeting, state: "closed" }} locale={locale} />
+        <MeetingCard meeting={{ ...mine, endsAt: convocationAt ? null : mine.endsAt, state: "closed" }} locale={locale} />
       </div>
       <p className="text-xl font-semibold">📸 {t.keepMessage}</p>
       <a

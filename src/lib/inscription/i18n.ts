@@ -81,6 +81,9 @@ export type MeetingTexts = {
   chooseHint: string;
   // Test de niveau à faire avant la réunion (lien personnel, pour ceux qui ne l'ont pas fait)
   testBefore: string;
+  // Accueil échelonné : chaque inscrit reçoit son heure de passage
+  staggered: string;
+  yourTime: string; // « {time} »
 };
 
 export type SignupTexts = {
@@ -160,6 +163,8 @@ export const SIGNUP_TEXTS: Record<SignupLocale, SignupTexts> = {
       chooseQ: "Quel jour ?",
       chooseHint: "Choisissez un jour et une heure.",
       testBefore: "Faites aussi votre test de niveau avant la réunion.",
+      staggered: "Chaque personne a son heure. Vous la recevez à la fin.",
+      yourTime: "Votre heure : {time}",
     },
     title: "Cours de français",
     intro: "Inscription rapide : 2 minutes.",
@@ -247,6 +252,8 @@ export const SIGNUP_TEXTS: Record<SignupLocale, SignupTexts> = {
       chooseQ: "Which day?",
       chooseHint: "Choose a day and a time.",
       testBefore: "Please also take your level test before the meeting.",
+      staggered: "Everyone has their own time. You get yours at the end.",
+      yourTime: "Your time: {time}",
     },
     title: "French classes",
     intro: "Quick sign-up: 2 minutes.",
@@ -334,6 +341,8 @@ export const SIGNUP_TEXTS: Record<SignupLocale, SignupTexts> = {
       chooseQ: "أي يوم؟",
       chooseHint: "اختر يومًا وساعة.",
       testBefore: "أجرِ أيضًا اختبار المستوى قبل الاجتماع.",
+      staggered: "لكل شخص موعده الخاص. ستعرف موعدك في النهاية.",
+      yourTime: "موعدك: {time}",
     },
     title: "دروس اللغة الفرنسية",
     intro: "تسجيل سريع: دقيقتان.",

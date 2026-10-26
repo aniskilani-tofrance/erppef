@@ -5,6 +5,10 @@ import {
   orderForSpacing,
   parseClock,
   spreadTimes,
+  staggerCapacity,
+  staggerLastArrival,
+  staggerPerHour,
+  staggerSummary,
   whenForInvitation,
 } from "@/lib/admission/convocation";
 import { buildMeetingInvitationMessage, buildMeetingReminderMessage } from "@/lib/admission/messages";
@@ -42,6 +46,32 @@ describe("heures de convocation", () => {
     expect(spreadTimes("14:00", 15, 5)).toEqual({ ok: true, times: ["14:00", "14:15", "14:30", "14:45", "15:00"] });
     expect(spreadTimes("14:00", 20, 1)).toEqual({ ok: true, times: ["14:00"] });
     expect(spreadTimes("14:00", 15, 0)).toEqual({ ok: true, times: [] });
+  });
+
+  it("plusieurs accueillants : 3 personnes à la même heure, puis l'heure suivante", () => {
+    const r = spreadTimes("17:00", 10, 7, 3);
+    expect(r).toEqual({ ok: true, times: ["17:00", "17:00", "17:00", "17:10", "17:10", "17:10", "17:20"] });
+    // 30 places, 3 à la fois, toutes les 10 minutes : dernière arrivée 18h30
+    const big = spreadTimes("17:00", 10, 30, 3);
+    expect(big.ok && big.times[29]).toBe("18:30");
+    expect(spreadTimes("17:00", 10, 3, 0).ok).toBe(false);
+    expect(spreadTimes("17:00", 10, 3, 21).ok).toBe(false);
+    // le dépassement de minuit se calcule par heure d'arrivée, pas par personne
+    expect(spreadTimes("23:30", 10, 9, 3).ok).toBe(true); // 23h30, 23h40, 23h50
+    expect(spreadTimes("23:30", 10, 10, 3).ok).toBe(false);
+  });
+
+  it("accueil échelonné : 6 par accueillant et 18 par heure, places et dernière arrivée", () => {
+    expect(staggerPerHour(10, 3)).toBe(18);
+    expect(staggerPerHour(10, 1)).toBe(6);
+    expect(staggerCapacity("17:00", "19:00", 10, 3)).toBe(36);
+    expect(staggerCapacity("17:00", "18:40", 10, 3)).toBe(30);
+    expect(staggerCapacity("17:00", null, 10, 3)).toBeNull();
+    expect(staggerCapacity("17:00", "16:00", 10, 3)).toBeNull();
+    expect(staggerLastArrival("17:00", 10, 3, 30)).toBe("18:30");
+    expect(staggerLastArrival("10:00", 10, 3, 30)).toBe("11:30");
+    expect(staggerLastArrival("17:00", 10, 3, 1)).toBe("17:00");
+    expect(staggerSummary(10, 3)).toBe("Une arrivée toutes les 10 min, 3 en même temps (18 par heure)");
   });
 
   it("refuse une heure invalide, un pas hors limites ou un dépassement de minuit", () => {

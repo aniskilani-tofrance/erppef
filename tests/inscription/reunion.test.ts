@@ -432,6 +432,78 @@ describe("créneaux d'un même lien : état, ouverture, premier inscrit premier 
   });
 });
 
+describe("accueil échelonné : chaque inscrit reçoit son heure", () => {
+  it("l'écran de fin donne SON heure, en grand, et la carte la reprend", () => {
+    const out = decode(
+      renderToStaticMarkup(
+        createElement(SignupMeetingDone, {
+          locale: "fr",
+          confirmation: { outcome: "registered", meeting: meeting({ staggered: true }), convocationAt: "2026-11-07T13:20:00.000Z" },
+        }),
+      ),
+    );
+    expect(out).toContain("Votre heure : 14h20");
+    expect(out).toContain("Samedi 7 novembre");
+    expect(out).not.toContain("14h00");
+    // l'agenda commence à son heure
+    expect(out).toContain("dates=20261107T132000Z");
+  });
+
+  it("sans heure attribuée, l'écran reste celui de la réunion", () => {
+    const out = decode(renderToStaticMarkup(createElement(SignupMeetingDone, { locale: "fr", confirmation: { outcome: "registered", meeting: meeting() } })));
+    expect(out).not.toContain("Votre heure");
+    expect(out).toContain("14h00");
+  });
+
+  it("avant l'inscription, la carte annonce que chacun aura son heure", () => {
+    const out = decode(renderToStaticMarkup(createElement(MeetingCard, { meeting: meeting({ staggered: true }), locale: "fr" })));
+    expect(out).toContain(SIGNUP_TEXTS.fr.meeting.staggered);
+    expect(decode(renderToStaticMarkup(createElement(MeetingCard, { meeting: meeting(), locale: "fr" })))).not.toContain(SIGNUP_TEXTS.fr.meeting.staggered);
+  });
+
+  it("chaque langue a les textes de l'heure de passage", () => {
+    for (const l of SIGNUP_LOCALES) {
+      expect(SIGNUP_TEXTS[l].meeting.yourTime, l).toContain("{time}");
+      expect(SIGNUP_TEXTS[l].meeting.staggered.trim(), l).not.toBe("");
+    }
+  });
+
+  it("registerForMeeting rend l'heure attribuée par la base", async () => {
+    const { registerForMeeting } = await import("@/lib/inscription/meeting-server");
+    const rpc = (data: unknown) => ({ rpc: async () => ({ data, error: null }) }) as never;
+    expect(await registerForMeeting(rpc({ result: "registered", token: TOKEN, convocation_at: "2026-11-07T13:20:00+00:00" }), TOKEN, "l")).toEqual({
+      outcome: "registered",
+      token: TOKEN,
+      convocationAt: "2026-11-07T13:20:00+00:00",
+    });
+    expect(await registerForMeeting(rpc({ result: "full" }), TOKEN, "l")).toEqual({ outcome: "full", token: null, convocationAt: null });
+    expect(await registerForMeeting(rpc({ result: "not_found" }), TOKEN, "l")).toBeNull();
+  });
+});
+
+describe("migration 0058 : accueil échelonné", () => {
+  const sql = readFileSync("supabase/migrations/20261026000058_reunion_accueil_echelonne.sql", "utf8");
+
+  it("ajoute les deux réglages, bornés", () => {
+    expect(sql).toMatch(/add column if not exists stagger_minutes smallint/);
+    expect(sql).toMatch(/add column if not exists stagger_parallel smallint/);
+    expect(sql).toMatch(/stagger_minutes between 5 and 120/);
+    expect(sql).toMatch(/stagger_parallel between 1 and 20/);
+  });
+
+  it("donne la première heure qui a moins de K personnes confirmées, sous verrou, et la renvoie", () => {
+    expect(sql).toMatch(/for update/);
+    expect(sql).toMatch(/< coalesce\(m\.stagger_parallel, 1\)/);
+    expect(sql).toMatch(/'convocation_at', coalesce\(seat_at, existing\.convocation_at\)/);
+  });
+
+  it("garde les règles de 0057 et reste appelable par le seul serveur", () => {
+    expect(sql).toMatch(/where meeting_id = m\.id and status in \('confirmee', 'presente'\)/);
+    expect(sql).toMatch(/revoke all on function public\.signup_for_info_meeting\(text, uuid\) from public, anon, authenticated/);
+    expect(sql).toMatch(/grant execute on function public\.signup_for_info_meeting\(text, uuid\) to service_role/);
+  });
+});
+
 describe("migration 0057 : premier inscrit, premier servi", () => {
   const sql = readFileSync("supabase/migrations/20261026000057_reunion_premier_inscrit.sql", "utf8");
 

@@ -238,7 +238,15 @@ async function finishMeetingSignup(
   }
 
   revalidatePath("/apprenants", "layout");
-  return { status: "done", testUrl, meeting: { outcome, meeting: { ...shown, state: outcome === "full" ? "full" : shown.state } } };
+  return {
+    status: "done",
+    testUrl,
+    meeting: {
+      outcome,
+      meeting: { ...shown, state: outcome === "full" ? "full" : shown.state },
+      convocationAt: outcome === "registered" || outcome === "already" ? result.convocationAt : null,
+    },
+  };
 }
 
 // Adresse publique de l'ERP : le lien du test part aussi dans un message WhatsApp.
