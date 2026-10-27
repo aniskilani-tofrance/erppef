@@ -81,6 +81,20 @@ export function meetingCalendarEnd(m: Pick<PublicMeeting, "startsAt" | "endsAt">
   return m.endsAt ?? new Date(Date.parse(m.startsAt) + 2 * 3_600_000).toISOString();
 }
 
+/**
+ * Dates du message du lien ({date}) : une session → sa date ; plusieurs sessions sur le même lien →
+ * « Au choix : » puis une ligne par session, pour que la personne sache qu'elle choisira son jour.
+ */
+export function choiceDatesText(whenTexts: readonly string[]): string {
+  if (whenTexts.length <= 1) return whenTexts[0] ?? "";
+  return ["Au choix :", ...whenTexts.map((w) => `• ${w}`)].join("\n");
+}
+
+/** Phrase de l'accueil échelonné pour le message du lien ({heure_passage}) ; null sans accueil échelonné. */
+export function staggerSentence(minutes: number | null | undefined): string | null {
+  return minutes ? `🕒 Chacun reçoit son heure de passage en s'inscrivant (une arrivée toutes les ${minutes} minutes).` : null;
+}
+
 /** Phrase sur le test oral pour le message WhatsApp ({test_oral}) ; null si la réunion n'en comprend pas. */
 export function oralTestSentence(oralTest: boolean): string | null {
   return oralTest ? "🗣️ Après la réunion : un petit test oral avec chaque personne (ce n'est pas un examen)." : null;

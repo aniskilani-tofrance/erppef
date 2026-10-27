@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { driveConfigured, uploadBufferToDrive } from "@/lib/emargement/gdrive";
 import { mailerConfigured, sendMail } from "@/lib/mailer";
 import { localToUtc, nextDay, utcToLocalTime } from "@/lib/dates";
-import { buildMeetingReminderMessage, formatMeetingWhen, textToHtml } from "@/lib/admission/messages";
+import { buildMeetingReminderMessage, formatMeetingPlace, formatMeetingWhen, textToHtml } from "@/lib/admission/messages";
 import { loadTemplates } from "@/lib/admission/load-templates";
 import { whenForInvitation } from "@/lib/admission/convocation";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -348,7 +348,7 @@ async function sendMeetingReminders(
     const templates = await loadTemplates(supabase, m.org_id);
     const roomRow = m.rooms as unknown as { name: string; address: string | null; access_notes: string | null } | null;
     const room = roomRow?.name;
-    const place = room ? `${room}${m.location ? ` — ${m.location}` : roomRow?.address ? ` — ${roomRow.address}` : ""}` : m.location;
+    const place = formatMeetingPlace(room, m.location, roomRow?.address);
     const invitations = (m.info_meeting_invitations as unknown as { status: string; convocation_at: string | null; learners: { id: string; first_name: string; email: string | null } | null }[] | null) ?? [];
     // Test de niveau pas encore fait : on en rappelle le lien PERSONNEL de chacun (jamais celui d'un autre).
     const { urls: testUrls } = await loadConvocationTests(

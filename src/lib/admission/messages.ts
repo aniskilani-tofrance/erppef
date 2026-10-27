@@ -12,6 +12,23 @@ export type MeetingWhen = {
   access?: string | null; // consignes pour trouver la salle
 };
 
+/**
+ * Lieu en clair : « Salle 13 — 14 rue Alexandre Bachelet, Saint-Ouen ». Le lieu saisi sur la réunion
+ * prime sur l'adresse de la salle ; s'il contient déjà le nom de la salle (« Salle 13 - 14 rue… »),
+ * on ne le répète pas.
+ */
+export function formatMeetingPlace(
+  roomName: string | null | undefined,
+  location: string | null | undefined,
+  address?: string | null,
+): string | null {
+  const name = roomName?.trim() || null;
+  const detail = location?.trim() || address?.trim() || null;
+  if (!name) return detail;
+  if (!detail) return name;
+  return detail.toLocaleLowerCase("fr").includes(name.toLocaleLowerCase("fr")) ? detail : `${name} — ${detail}`;
+}
+
 // « mardi 16 septembre 2026 à 14h00 » (+ « jusqu'à 16h00 » si une fin est connue)
 export function formatMeetingWhen(m: MeetingWhen): string {
   const start = new Date(m.startsAt);

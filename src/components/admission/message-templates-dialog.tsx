@@ -38,6 +38,7 @@ const VAR_HELP: Record<string, string> = {
   lien_inscription: "lien du formulaire d'inscription rapide (avec la provenance choisie) ou de la réunion",
   test_oral: "phrase sur le test oral individuel (absente si la réunion n'en comprend pas)",
   test_avant: "test de niveau à faire AVANT la réunion, avec le lien personnel de la personne (absent si elle l'a déjà fait)",
+  heure_passage: "phrase sur l'heure de passage donnée à l'inscription (absente sans accueil échelonné)",
 };
 
 const PREVIEW_VARS = {
@@ -50,6 +51,7 @@ const PREVIEW_VARS = {
   lien_inscription: "https://pef-erp.vercel.app/inscription?src=MDQ%20Landy",
   test_oral: "🗣️ Après la réunion : un petit test oral avec chaque personne (ce n'est pas un examen).",
   test_avant: "📝 Avant la réunion, faites votre test de niveau (entre 5 et 35 minutes, au calme, son au maximum). Ce n'est pas un examen :\nhttps://pef-erp.vercel.app/test/exemple",
+  heure_passage: "🕒 Chacun reçoit son heure de passage en s'inscrivant (une arrivée toutes les 10 minutes).",
 };
 
 // Retouche des messages, étape par étape : un texte par étape, variables entre accolades,

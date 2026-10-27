@@ -6,7 +6,9 @@ import { DEFAULT_TEMPLATES, renderTemplate } from "@/lib/admission/templates";
 import { SIGNUP_LOCALES, SIGNUP_TEXTS } from "@/lib/inscription/i18n";
 import {
   buildMeetingSignupUrl,
+  choiceDatesText,
   chooseMeetingOffer,
+  staggerSentence,
   isMeetingToken,
   meetingCalendarEnd,
   meetingJournalNote,
@@ -520,6 +522,47 @@ describe("migration 0057 : premier inscrit, premier servi", () => {
   it("reste appelable par le seul serveur", () => {
     expect(sql).toMatch(/revoke all on function public\.signup_for_info_meeting\(text, uuid\) from public, anon, authenticated/);
     expect(sql).toMatch(/grant execute on function public\.signup_for_info_meeting\(text, uuid\) to service_role/);
+  });
+});
+
+describe("message du lien commun à plusieurs sessions", () => {
+  const dates = ["mercredi 28 octobre 2026 à 17h00 (jusqu'à 18h30)", "jeudi 29 octobre 2026 à 10h00 (jusqu'à 12h00)"];
+
+  it("une session : sa date ; plusieurs : « Au choix » puis une ligne par session", () => {
+    expect(choiceDatesText([dates[0]])).toBe(dates[0]);
+    expect(choiceDatesText(dates)).toBe(`Au choix :\n• ${dates[0]}\n• ${dates[1]}`);
+    expect(choiceDatesText([])).toBe("");
+  });
+
+  it("le message liste les deux sessions, l'heure de passage et le lieu sans doublon", async () => {
+    const { formatMeetingPlace } = await import("@/lib/admission/messages");
+    const out = renderTemplate(DEFAULT_TEMPLATES.lien_reunion, {
+      organisme: "Parler Emploi Formation",
+      date: choiceDatesText(dates),
+      heure_passage: staggerSentence(10),
+      lieu: formatMeetingPlace("Salle 13", "Salle 13 - 14 rue Alexandre Bachelet 93400 Saint-Ouen"),
+      test_oral: oralTestSentence(true),
+      lien_inscription: `https://pef-erp.vercel.app/inscription/reunion/${TOKEN}`,
+    });
+    expect(out).toContain(`📅 Au choix :\n• ${dates[0]}\n• ${dates[1]}\n🕒 Chacun reçoit son heure de passage en s'inscrivant (une arrivée toutes les 10 minutes).`);
+    expect(out).toContain("📍 Salle 13 - 14 rue Alexandre Bachelet 93400 Saint-Ouen");
+    expect(out).not.toContain("Salle 13 — Salle 13");
+  });
+
+  it("sans accueil échelonné, pas de ligne d'heure de passage", () => {
+    expect(staggerSentence(null)).toBeNull();
+    const out = renderTemplate(DEFAULT_TEMPLATES.lien_reunion, { date: dates[0], heure_passage: staggerSentence(null), lieu: "Salle 12" });
+    expect(out).not.toContain("heure de passage");
+    expect(out).toContain(`📅 ${dates[0]}\n📍 Salle 12`);
+  });
+
+  it("lieu : la salle et l'adresse, sans répéter la salle", async () => {
+    const { formatMeetingPlace } = await import("@/lib/admission/messages");
+    expect(formatMeetingPlace("Salle 12", "14 rue Alexandre Bachelet, Saint-Ouen")).toBe("Salle 12 — 14 rue Alexandre Bachelet, Saint-Ouen");
+    expect(formatMeetingPlace("Salle 12", null, "14 rue Bachelet")).toBe("Salle 12 — 14 rue Bachelet");
+    expect(formatMeetingPlace("Salle 12", null, null)).toBe("Salle 12");
+    expect(formatMeetingPlace(null, "Maison de quartier Landy")).toBe("Maison de quartier Landy");
+    expect(formatMeetingPlace("salle 13", "Salle 13 - 14 rue Bachelet")).toBe("Salle 13 - 14 rue Bachelet");
   });
 });
 
