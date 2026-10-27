@@ -42,6 +42,9 @@ import { isSlotFree, type FreeSlot } from "@/lib/admission/slots";
 import { loadFreeSlots } from "@/lib/admission/slots-server";
 import { BULK_TEST_STATUSES, pickBulkTestTargets, type BulkTarget } from "@/lib/placement/bulk";
 import { signupToggleTargets } from "@/lib/inscription/meeting";
+import {
+  LINK_QUEUE_NOTE, LINK_RECENT_DAYS, pickLinkQueue, type LinkQueueContact, type LinkQueueInvitation, type LinkTarget,
+} from "@/lib/inscription/link-queue";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -275,6 +278,79 @@ export async function inviteToMeeting(raw: { meetingId: string; learnerIds: stri
 
   revalidateAdmission(d.meetingId);
   return { ok: true, invited: fresh.length };
+}
+
+// ── « Envoyer le lien à la suite » ───────────────────────────────────────────
+// Le lien d'une réunion vaut pour tous ses créneaux (series_token) : la file reprend les convoqués
+// de tous les créneaux du lien qui n'ont pas encore de place (pickLinkQueue).
+async function seriesMeetingIds(supabase: Awaited<ReturnType<typeof createClient>>, orgId: string, meetingId: string): Promise<string[] | null> {
+  const { data: meeting } = await supabase.from("info_meetings").select("id, series_token").eq("id", meetingId).eq("org_id", orgId).single();
+  if (!meeting) return null;
+  if (!meeting.series_token) return [meeting.id as string];
+  const { data } = await supabase.from("info_meetings").select("id").eq("org_id", orgId).eq("series_token", meeting.series_token);
+  return (data ?? []).map((m) => m.id as string);
+}
+
+export type LinkQueueResult = { ok: true; targets: LinkTarget[]; skippedRegistered: number } | { ok: false; error: string };
+
+export async function prepareMeetingLinkQueue(meetingId: string): Promise<LinkQueueResult> {
+  if (!uuid.safeParse(meetingId).success) return { ok: false, error: "Réunion invalide" };
+  const { orgId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+  const ids = await seriesMeetingIds(supabase, orgId, meetingId);
+  if (!ids) return { ok: false, error: "Réunion introuvable" };
+
+  const { data: invitations, error } = await supabase
+    .from("info_meeting_invitations")
+    .select("learner_id, status, created_at, learners(first_name, last_name, phone)")
+    .eq("org_id", orgId)
+    .in("meeting_id", ids);
+  if (error) return { ok: false, error: translatePgError(error) };
+  const rows = (invitations ?? []) as unknown as LinkQueueInvitation[];
+  const learnerIds = [...new Set(rows.map((r) => r.learner_id))];
+  const since = new Date(Date.now() - LINK_RECENT_DAYS * 86_400_000).toISOString();
+  const { data: contacts } = learnerIds.length
+    ? await supabase
+        .from("learner_contacts")
+        .select("learner_id, contacted_at, note")
+        .eq("org_id", orgId)
+        .in("learner_id", learnerIds)
+        .gte("contacted_at", since)
+        .like("note", `${LINK_QUEUE_NOTE}%`)
+    : { data: [] };
+  return { ok: true, ...pickLinkQueue(rows, (contacts ?? []) as LinkQueueContact[]) };
+}
+
+// Un envoi de la file : trace au journal, convocations « à envoyer » du lien passées « envoyée »,
+// statut d'admission « convoqué » (jamais de recul).
+export async function markMeetingLinkSent(raw: { meetingId: string; learnerId: string }): Promise<ActionResult> {
+  const parsed = z.object({ meetingId: uuid, learnerId: uuid }).safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Données invalides" };
+  const d = parsed.data;
+  const { orgId, userId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+  const ids = await seriesMeetingIds(supabase, orgId, d.meetingId);
+  if (!ids) return { ok: false, error: "Réunion introuvable" };
+
+  const { error } = await supabase.from("learner_contacts").insert({
+    org_id: orgId,
+    learner_id: d.learnerId,
+    channel: "whatsapp",
+    outcome: "message_envoye",
+    note: LINK_QUEUE_NOTE,
+    created_by: userId,
+  });
+  if (error) return { ok: false, error: translatePgError(error) };
+  await supabase
+    .from("info_meeting_invitations")
+    .update({ status: "envoyee", channel: "whatsapp", sent_at: new Date().toISOString() })
+    .eq("org_id", orgId)
+    .eq("learner_id", d.learnerId)
+    .in("meeting_id", ids)
+    .eq("status", "a_envoyer");
+  await advanceStatus(supabase, [d.learnerId], "convoque");
+  for (const id of ids) revalidateAdmission(id);
+  return { ok: true };
 }
 
 // Prépare les tests de niveau des personnes déjà convoquées qui n'ont pas encore leur lien (convoquées
