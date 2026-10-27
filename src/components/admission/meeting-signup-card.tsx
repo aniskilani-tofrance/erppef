@@ -8,6 +8,7 @@ import { setMeetingSignupOpen } from "@/app/(app)/apprenants/admission/actions";
 import { ORG_NAME, renderTemplate } from "@/lib/admission/templates";
 import { whatsappShareUrl } from "@/lib/inscription/link";
 import { buildMeetingSignupUrl, oralTestSentence, placesLeft, placesSummary } from "@/lib/inscription/meeting";
+import { MeetingLinkQueue } from "@/components/admission/meeting-link-queue";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -194,6 +195,7 @@ export function MeetingSignupCard({
                 Ouvrir WhatsApp
               </a>
             </Button>
+            <MeetingLinkQueue meetingId={meetingId} message={message} disabled={!signupOpen || started} />
           </div>
           <p className="text-xs text-muted-foreground">
             WhatsApp s&apos;ouvre avec le message : choisissez la personne ou le groupe. Texte modifiable dans « Messages » (étape « Lien d&apos;inscription à une réunion d&apos;information »).
