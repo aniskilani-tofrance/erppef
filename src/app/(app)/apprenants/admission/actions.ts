@@ -43,7 +43,7 @@ import { loadFreeSlots } from "@/lib/admission/slots-server";
 import { BULK_TEST_STATUSES, pickBulkTestTargets, type BulkTarget } from "@/lib/placement/bulk";
 import { signupToggleTargets } from "@/lib/inscription/meeting";
 import {
-  LINK_QUEUE_NOTE, LINK_RECENT_DAYS, pickLinkQueue, type LinkQueueContact, type LinkQueueInvitation, type LinkTarget,
+  LINK_QUEUE_NOTE, LINK_QUEUE_NOTE_PREFIX, LINK_QUEUE_SMS_NOTE, LINK_RECENT_DAYS, pickLinkQueue, type LinkQueueContact, type LinkQueueInvitation, type LinkTarget,
 } from "@/lib/inscription/link-queue";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -316,15 +316,15 @@ export async function prepareMeetingLinkQueue(meetingId: string): Promise<LinkQu
         .eq("org_id", orgId)
         .in("learner_id", learnerIds)
         .gte("contacted_at", since)
-        .like("note", `${LINK_QUEUE_NOTE}%`)
+        .like("note", `${LINK_QUEUE_NOTE_PREFIX}%`)
     : { data: [] };
   return { ok: true, ...pickLinkQueue(rows, (contacts ?? []) as LinkQueueContact[]) };
 }
 
-// Un envoi de la file : trace au journal, convocations « à envoyer » du lien passées « envoyée »,
-// statut d'admission « convoqué » (jamais de recul).
-export async function markMeetingLinkSent(raw: { meetingId: string; learnerId: string }): Promise<ActionResult> {
-  const parsed = z.object({ meetingId: uuid, learnerId: uuid }).safeParse(raw);
+// Un envoi de la file (WhatsApp ou SMS) : trace au journal, convocations « à envoyer » du lien
+// passées « envoyée », statut d'admission « convoqué » (jamais de recul).
+export async function markMeetingLinkSent(raw: { meetingId: string; learnerId: string; channel?: "whatsapp" | "sms" }): Promise<ActionResult> {
+  const parsed = z.object({ meetingId: uuid, learnerId: uuid, channel: z.enum(["whatsapp", "sms"]).default("whatsapp") }).safeParse(raw);
   if (!parsed.success) return { ok: false, error: "Données invalides" };
   const d = parsed.data;
   const { orgId, userId } = await requireRole(["admin", "coordinator"]);
@@ -335,15 +335,15 @@ export async function markMeetingLinkSent(raw: { meetingId: string; learnerId: s
   const { error } = await supabase.from("learner_contacts").insert({
     org_id: orgId,
     learner_id: d.learnerId,
-    channel: "whatsapp",
+    channel: d.channel,
     outcome: "message_envoye",
-    note: LINK_QUEUE_NOTE,
+    note: d.channel === "sms" ? LINK_QUEUE_SMS_NOTE : LINK_QUEUE_NOTE,
     created_by: userId,
   });
   if (error) return { ok: false, error: translatePgError(error) };
   await supabase
     .from("info_meeting_invitations")
-    .update({ status: "envoyee", channel: "whatsapp", sent_at: new Date().toISOString() })
+    .update({ status: "envoyee", channel: d.channel, sent_at: new Date().toISOString() })
     .eq("org_id", orgId)
     .eq("learner_id", d.learnerId)
     .in("meeting_id", ids)

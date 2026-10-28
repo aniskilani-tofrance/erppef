@@ -153,6 +153,7 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
     : [{ id: meeting.id as string, startsAt: meeting.starts_at as string, endsAt: (meeting.ends_at as string | null) ?? null, signupOpen: Boolean(meeting.signup_open), capacity: (meeting.capacity as number | null) ?? null, taken }];
   const slotRows = slotSource.map((s) => ({
     id: s.id,
+    startsAt: s.startsAt,
     whenText: formatMeetingWhen({ startsAt: s.startsAt, endsAt: s.endsAt }),
     taken: s.taken,
     capacity: s.capacity,
@@ -162,9 +163,9 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
   // Dates du message du lien : toutes les sessions que le lien propose (« Au choix »), sinon toutes
   // celles à venir (lien encore fermé), sinon cette réunion.
   const offeredSlots = slotRows.filter((s) => s.state === "propose");
-  const linkDatesText =
-    choiceDatesText((offeredSlots.length ? offeredSlots : slotRows.filter((s) => s.state !== "passe")).map((s) => s.whenText)) ||
-    formatMeetingWhen(when);
+  const linkSlots = offeredSlots.length ? offeredSlots : slotRows.filter((s) => s.state !== "passe");
+  const linkDatesText = choiceDatesText(linkSlots.map((s) => s.whenText)) || formatMeetingWhen(when);
+  const linkStartsAts = linkSlots.length ? linkSlots.map((s) => s.startsAt) : [meeting.starts_at as string];
   const started = new Date(meeting.starts_at).getTime() <= new Date().getTime();
 
   const candidates: Candidate[] = (learners ?? [])
@@ -185,7 +186,7 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
 
   const fmtSent = (iso: string | null, channel: string | null) =>
     iso
-      ? `le ${new Date(iso).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", timeZone: "Europe/Paris" })}${channel ? ` · ${channel === "whatsapp" ? "WhatsApp" : channel}` : ""}`
+      ? `le ${new Date(iso).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", timeZone: "Europe/Paris" })}${channel ? ` · ${channel === "whatsapp" ? "WhatsApp" : channel === "sms" ? "SMS" : channel}` : ""}`
       : "";
 
   return (
@@ -268,6 +269,7 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
         onlineCount={onlineCount}
         started={started}
         whenText={linkDatesText}
+        startsAts={linkStartsAts}
         staggerText={staggerSentence(meeting.stagger_minutes)}
         place={place}
         oralTest={meeting.oral_test_included ?? true}
