@@ -26,6 +26,18 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-10-28-reunion-lien-sms",
+    date: "2026-10-28",
+    title: "Réunion d'information : envoyer le lien par SMS, gratuitement",
+    summary: "Pour les convoqués qui n'ont pas WhatsApp : la file d'envoi du lien a maintenant un bouton « SMS », qui part du téléphone de l'association avec un message court.",
+    items: [
+      { text: "Carte « Inscription par lien » → « Envoyer aux convoqués, un par un » : à côté de « WhatsApp au suivant », « SMS au suivant » ouvre l'application Messages du téléphone avec le numéro et un message court (dates au choix, test oral, lien). Vous appuyez sur Envoyer, vous revenez, vous passez au suivant. Chaque ligne a aussi ses deux boutons « WhatsApp » et « SMS ».", roles: TEAM },
+      { text: "Gratuit : le SMS part de votre téléphone, c'est votre forfait qui paie (SMS illimités). Ouvrez la page de la réunion sur le téléphone : sur un ordinateur, le bouton « SMS » reste grisé (sauf un Mac relié à l'iPhone).", roles: TEAM },
+      { text: "Chaque SMS est noté au journal (« Lien d'inscription à la réunion envoyé (SMS) ») et la convocation passe « Envoyée · SMS ». Une personne qui a reçu le lien par SMS ou par WhatsApp depuis moins de 14 jours est décochée. Le texte du SMS s'affiche sur la carte, avec « Copier le SMS ».", roles: TEAM },
+    ],
+    training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "L'admission : WhatsApp, réunion d'information, entretien oral" }],
+  },
+  {
     id: "2026-10-26-reunion-inscription-lien",
     date: "2026-10-26",
     title: "Réunion d'information : inscription par un lien, avec un nombre maximum de places",

@@ -7,6 +7,7 @@ import { Copy, ExternalLink, Link2, MessageCircle } from "lucide-react";
 import { setMeetingSignupOpen } from "@/app/(app)/apprenants/admission/actions";
 import { ORG_NAME, renderTemplate } from "@/lib/admission/templates";
 import { whatsappShareUrl } from "@/lib/inscription/link";
+import { buildMeetingSms } from "@/lib/inscription/link-queue";
 import { buildMeetingSignupUrl, oralTestSentence, placesLeft, placesSummary } from "@/lib/inscription/meeting";
 import { MeetingLinkQueue } from "@/components/admission/meeting-link-queue";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +34,7 @@ export function MeetingSignupCard({
   onlineCount,
   started,
   whenText,
+  startsAts = [],
   place,
   oralTest,
   slotCount = 1,
@@ -49,6 +51,7 @@ export function MeetingSignupCard({
   onlineCount: number; // dont inscrits par le lien
   started: boolean; // la réunion a déjà commencé
   whenText: string;
+  startsAts?: string[]; // débuts des sessions proposées par le lien (SMS court)
   place: string | null;
   oralTest: boolean;
   slotCount?: number; // créneaux du même lien (1 = réunion seule)
@@ -69,6 +72,7 @@ export function MeetingSignupCard({
     test_oral: oralTestSentence(oralTest),
     lien_inscription: link,
   });
+  const smsMessage = buildMeetingSms({ startsAts, link, oralTest });
 
   const left = placesLeft(capacity, taken);
   const full = left === 0;
@@ -195,10 +199,24 @@ export function MeetingSignupCard({
                 Ouvrir WhatsApp
               </a>
             </Button>
-            <MeetingLinkQueue meetingId={meetingId} message={message} disabled={!signupOpen || started} />
+            <MeetingLinkQueue meetingId={meetingId} message={message} smsMessage={smsMessage} disabled={!signupOpen || started} />
           </div>
           <p className="text-xs text-muted-foreground">
             WhatsApp s&apos;ouvre avec le message : choisissez la personne ou le groupe. Texte modifiable dans « Messages » (étape « Lien d&apos;inscription à une réunion d&apos;information »).
+          </p>
+        </div>
+
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Label>SMS court (gratuit, depuis le téléphone)</Label>
+            <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => copy(smsMessage, "SMS")}>
+              <Copy className="mr-1 h-3.5 w-3.5" />
+              Copier le SMS
+            </Button>
+          </div>
+          <p className="rounded-md border bg-muted/40 p-2 text-xs">{smsMessage}</p>
+          <p className="text-xs text-muted-foreground">
+            Pour qui n&apos;a pas WhatsApp : dans « Envoyer aux convoqués, un par un », ouvert sur le téléphone, le bouton « SMS » ouvre Messages avec ce texte et le numéro. C&apos;est le forfait du téléphone qui paie.
           </p>
         </div>
       </CardContent>
