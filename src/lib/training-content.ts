@@ -156,6 +156,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
           "Un QR code s'affiche : scannez-le avec la tablette (ou votre téléphone) — la liste des apprenants apparaît, avec leurs photos.",
           "Faites circuler la tablette : chacun touche son nom, signe au doigt, valide. La ligne se verrouille (coche verte).",
           "Sur votre écran, la liste se met à jour toute seule : vous voyez qui a signé en temps réel.",
+          "Cours PEF et ateliers : à la première séance, chaque nouvel inscrit signe aussi l'adhésion, le contrat et le règlement. Fiche du groupe → carte « Adhésion, contrat et règlement intérieur » → « Faire signer ici » : sa page s'ouvre sur la tablette, il lit, coche, signe au doigt, puis vous revenez à la fiche pour le suivant.",
         ],
         tip: "Les photos des apprenants rendent la liste très rapide à utiliser, même avec un public peu à l'aise en lecture.",
       },
@@ -482,6 +483,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
           "Un par un : « Nouvel apprenant » — photo à la caméra (webcam ou tablette, aperçu en direct), langue première, niveau évalué (positionnement d'entrée, ind. 8), et inscription immédiate à un groupe.",
           "Typologie (section dédiée) : c'est elle qui remplit les bilans financeurs. Astuce : saisissez l'adresse puis « Détecter depuis l'adresse » — la case QPV se coche seule (périmètres officiels). Si la commune est Saint-Ouen, le champ Quartier apparaît (6 quartiers).",
           "Chaque apprenant reçoit une référence unique A-0001 (sous son nom) : c'est elle qu'on met sur les dossiers papier — tapez-la dans la recherche ⌘K pour retrouver la fiche instantanément.",
+          "Cours PEF et ateliers (jamais les cours municipaux) : chaque inscrit signe au doigt le bulletin d'adhésion (40 € par an, du 1er septembre au 31 août), le contrat de formation et le règlement intérieur. Fiche groupe → carte « Adhésion, contrat et règlement intérieur » (ou fiche apprenant → même bloc) : « Faire signer ici » sur la tablette, ou « Lien WhatsApp » pour signer chez soi. Le PDF signé et horodaté va dans le dossier ; « Cotisation payée » enregistre montant, date et mode, et donne le reçu.",
           "Dossier administratif (fiche → bloc dédié) : pièce d'identité recto et verso, justificatif de domicile, autres documents. Sur téléphone, « Photo / scan » ouvre l'appareil photo ; sur iPhone, « Fichier » → ⋯ → « Scanner des documents » donne un PDF redressé. Visible par la coordination seulement, supprimé avec la fiche ; le compteur « 3 / 3 pièces » dit que le dossier est complet.",
           "En masse : « Importer une liste » — collez les colonnes depuis Excel (6 colonnes de base + typologie complète jusqu'à 17 colonnes), aperçu, et inscription groupée. Une cohorte de 12 en 30 secondes.",
           "Sans niveau renseigné, un test de positionnement est généré automatiquement : copiez son lien depuis la liste et envoyez-le à l'apprenant — son niveau remplira sa fiche tout seul (« Test fait »).",
@@ -530,6 +532,16 @@ export const TRAINING_MODULES: TrainingModule[] = [
         ],
         answerIndex: 1,
         explanation: "Le public répond sur WhatsApp : le premier contact part en un clic, et le statut passe à « Contacté » tout seul.",
+      },
+      {
+        question: "Une nouvelle inscrite du groupe « Cours municipaux A1 » doit-elle signer l'adhésion à 40 € et le contrat de l'association ?",
+        choices: [
+          "Oui, comme tout le monde",
+          "Non : seuls les cours PEF et les ateliers (financés par l'association) les demandent ; les cours municipaux ont leur propre cadre",
+          "Seulement si elle a plus de 25 ans",
+        ],
+        answerIndex: 1,
+        explanation: "La carte « Adhésion, contrat et règlement intérieur » n'apparaît que sur les groupes financés par l'association (financeur PEF) : cours PEF et ateliers bénévoles.",
       },
       {
         question: "Comment inscrire 12 nouveaux apprenants le jour de la rentrée ?",

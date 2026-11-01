@@ -39,6 +39,8 @@ export async function proxy(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/enquete") ||
     // Test de positionnement : lien personnel à jeton.
     request.nextUrl.pathname.startsWith("/test") ||
+    // Adhésion, contrat, règlement : lien personnel à jeton (WhatsApp ou tablette).
+    request.nextUrl.pathname.startsWith("/signer/") ||
     // Inscription rapide (lien envoyé sur WhatsApp) : formulaire public, sans compte.
     request.nextUrl.pathname === "/inscription" ||
     request.nextUrl.pathname.startsWith("/inscription/") ||

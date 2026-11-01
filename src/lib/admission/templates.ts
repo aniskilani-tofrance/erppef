@@ -253,6 +253,30 @@ Les places sont limitées. Pour vous inscrire (2 minutes) :
 English: information meeting about French classes. Places are limited. Sign up here (2 minutes).
 العربية: اجتماع إعلامي حول دروس اللغة الفرنسية. الأماكن محدودة. للتسجيل اضغط على الرابط (دقيقتان).`,
   },
+  {
+    code: "documents_a_signer",
+    label: "Documents à signer (adhésion, contrat, règlement)",
+    when: "Fiche apprenant ou fiche groupe (cours PEF et ateliers) → « Envoyer le lien WhatsApp » : le lien personnel pour lire et signer, chez soi, le bulletin d'adhésion, le contrat de formation et le règlement intérieur.",
+    variables: ["prenom", "expediteur", "signature", "organisme", "groupe", "lien"],
+    text: `Bonjour {prenom},
+
+Je suis {expediteur} de {organisme}.
+
+Pour le groupe « {groupe} », vous devez lire et signer 3 documents :
+1. le bulletin d'adhésion à l'association,
+2. le contrat de formation,
+3. le règlement intérieur.
+
+Voici votre lien personnel :
+{lien}
+
+Lisez bien chaque document. Vous signez avec votre doigt, sur votre téléphone. C'est rapide : 5 minutes.
+
+Une question ? Répondez à ce message.
+
+Merci,
+{signature}`,
+  },
 ] as const;
 
 export type MessageStage = (typeof MESSAGE_STAGES)[number]["code"];

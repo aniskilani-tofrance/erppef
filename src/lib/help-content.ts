@@ -109,6 +109,15 @@ export const HELP_SECTIONS: HelpSection[] = [
         ],
       },
       {
+        title: "Faire signer l'adhésion, le contrat et le règlement (cours PEF et ateliers)",
+        steps: [
+          "Fiche de votre groupe → carte « Adhésion, contrat et règlement intérieur » : qui a signé (vert), qui doit encore signer (ambre).",
+          "« Faire signer ici » : la page de signature de la personne s'ouvre sur votre tablette. Donnez-lui la tablette : elle lit, coche « J'ai lu », signe au doigt. Puis revenez à la fiche groupe pour la personne suivante.",
+          "La personne préfère lire chez elle ? « Lien WhatsApp » : le message est prêt, vous l'envoyez.",
+          "La cotisation (40 €) est encaissée par la coordination, pas en cours.",
+        ],
+      },
+      {
         title: "Une personne a prévenu de son absence : le statut « Excusé »",
         steps: [
           "Feuille ouverte : bouton bleu « Excusé » sur sa ligne, motif facultatif (une ligne), puis « Valider « Excusé » ». La ligne affiche le badge bleu « Excusé », le motif et « excusé le JJ/MM par Prénom ».",
@@ -487,6 +496,21 @@ export const HELP_SECTIONS: HelpSection[] = [
         ],
       },
       {
+        title: "Faire signer l'adhésion, le contrat de formation et le règlement intérieur (cours PEF et ateliers)",
+        steps: [
+          "Qui ? Chaque inscrit d'un groupe financé par l'association elle-même (financeur « ParlerEmploi Formation », code PEF) : cours PEF A1, A2 et ateliers bénévoles. Jamais les cours municipaux de la Ville de Saint-Ouen (ni les groupes France Travail, CPF…), qui ont leur propre cadre : la carte n'y apparaît pas.",
+          "Où voir l'état ? Fiche groupe → carte « Adhésion, contrat et règlement intérieur » : pour chaque inscrit, trois pastilles (Adhésion, Contrat, Règlement) « signé le JJ/MM » en vert ou « à signer » en ambre, et la cotisation de l'année. En tête : « 3 / 12 n'ont pas tout signé », « 4 cotisations non payées », les noms, et la case « Seulement ce qui reste à faire ». La fiche apprenant (crayon) a le même bloc, sous le dossier administratif.",
+          "Sur place : « Faire signer ici » ouvre, sur la tablette ou le téléphone que vous tenez, la page de signature de CETTE personne. Elle lit chaque document en gros caractères (« L'essentiel » en tête), coche « J'ai lu », signe une fois au doigt, puis « Je signe ». L'écran dit « Rendez la tablette à l'équipe » : revenez à la fiche groupe (bouton Retour du navigateur) pour la personne suivante. Ce lien ne sert qu'une fois et dure 2 heures.",
+          "À distance : « Lien WhatsApp » prépare un lien personnel (30 jours) et le message prérempli (modèle « Documents à signer », retouchable dans Admission → « Messages »). Relisez, « Ouvrir WhatsApp », Envoyer. Pas de numéro valable : « Copier le message ». La personne signe chez elle et peut télécharger sa copie PDF.",
+          "Ce qui est gardé : un PDF par document, avec le texte lu, la case cochée, la signature, la date et l'heure, la façon de signer (sur place ou à distance), l'adresse IP et l'appareil, et une empreinte qui prouve que le fichier n'a pas changé. Il va dans le dossier privé de l'apprenant : clic sur une pastille verte pour l'ouvrir (admin et coordination seulement).",
+          "Délai pour changer d'avis : 10 jours après la signature du contrat, 14 jours si la personne a signé avec le lien. Le PDF du contrat donne la date limite. N'encaissez pas la cotisation avant.",
+          "Cotisation (40 € par an, du 1er septembre au 31 août) : « Cotisation payée » → montant (40 € par défaut, modifiable : tarif réduit décidé par le bureau), date, mode (espèces, chèque, virement, carte, HelloAsso), note → « Enregistrer le paiement ». Le bouton « Reçu » donne le reçu PDF (n° ADH-2026-0042, pas un reçu fiscal), avec la signature du président et le cachet de l'association. Erreur de saisie : la flèche de retour remet « non payée ».",
+          "Texte modifié : chaque texte a une version. Quand l'association change un texte, la pastille passe « à re-signer (texte modifié) » pour l'année en cours. L'adhésion et le règlement se signent une fois par année d'adhésion (même avec plusieurs groupes), le contrat une fois par groupe.",
+          "Formatrice : dans SES groupes, vous voyez qui a signé et vous pouvez faire signer (tablette ou lien). La cotisation et les PDF restent à la coordination.",
+          "Si la carte dit « migration 0059 à appliquer » : la base n'est pas encore à jour, prévenez l'administrateur.",
+        ],
+      },
+      {
         title: "Convoquer à une réunion d'information",
         steps: [
           "Onglet Admission → « Nouvelle réunion » : titre, date, heures, salle (ou lieu en clair), capacité. Le lieu apparaît dans le message envoyé.",
@@ -654,7 +678,7 @@ export const HELP_SECTIONS: HelpSection[] = [
         steps: [
           "Feuille d'émargement PDF : sur la séance clôturée → « Télécharger le PDF » ou « Déposer sur le Drive » (classée par formation dans le Drive partagé).",
           "Certificat de réalisation : fiche du groupe → lien « Certificat » à côté de l'apprenant (dates et heures réellement suivies).",
-          "Attestation d'entrée en formation : fiche du groupe → carte « Attestations d'entrée en formation ». Elle liste chaque apprenant présent au moins une fois sur une feuille clôturée, avec sa date d'entrée (première présence). « PDF à imprimer » donne une page par personne, à remettre en cours ; « Envoyer par email et classer » l'envoie à ceux qui ont une adresse et range une copie dans leur dossier administratif. Chaque personne ne la reçoit qu'une fois (« envoyée le … »).",
+          "Attestation d'entrée en formation : fiche du groupe → carte « Attestations d'entrée en formation ». Elle liste chaque apprenant présent au moins une fois sur une feuille clôturée, avec sa date d'entrée (première présence). « PDF à imprimer » donne une page par personne, à remettre en cours ; « Envoyer par email et classer » l'envoie à ceux qui ont une adresse et range une copie dans leur dossier administratif. Chaque personne ne la reçoit qu'une fois (« envoyée le … »). La signature du président et le cachet de l'association y sont déjà imprimés.",
           "Export d'assiduité : fiche du groupe → « Export assiduité (CSV) » — s'ouvre dans Excel.",
         ],
       },

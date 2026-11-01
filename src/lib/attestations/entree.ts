@@ -1,8 +1,9 @@
-import { PDFDocument, PDFFont, PDFPage, StandardFonts, rgb } from "pdf-lib";
+import { PDFDocument, PDFFont, PDFImage, PDFPage, StandardFonts, rgb } from "pdf-lib";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { LOGO_PEF_BASE64 } from "@/lib/emargement/logo-data";
 import { PLANNING_THEME, describePattern, fmtDay, localDate, pdfSafe, slug, wrapText } from "@/lib/reports/group-planning";
 import { isAttended } from "@/lib/attendance-status";
+import { drawImageInBox, embedPngOrNull } from "@/lib/signature-association";
 
 // Attestation d'entrée en formation : remise à chaque apprenant qui a réellement commencé
 // le cours, c'est-à-dire présent (ou en retard) sur au moins une feuille d'émargement
@@ -123,7 +124,7 @@ export function entryAttestationFileName(groupName: string, learnerName?: string
 const day = (d: string) => fmtDay(d, { day: "numeric", month: "long", year: "numeric" });
 const hours = (h: number) => `${(Math.round(h * 10) / 10).toString().replace(".", ",")} heures`;
 
-function drawPage(doc: PDFDocument, page: PDFPage, a: EntryAttestation, font: PDFFont, bold: PDFFont, logo: Awaited<ReturnType<PDFDocument["embedPng"]>> | null, today: string) {
+function drawPage(doc: PDFDocument, page: PDFPage, a: EntryAttestation, font: PDFFont, bold: PDFFont, logo: Awaited<ReturnType<PDFDocument["embedPng"]>> | null, signature: PDFImage | null, today: string) {
   let y = A4.height - MARGIN;
   const text = (s: string, x: number, size: number, f: PDFFont = font, color = rgb(0.1, 0.1, 0.1)) =>
     page.drawText(pdfSafe(s), { x, y, size, font: f, color });
@@ -207,6 +208,7 @@ function drawPage(doc: PDFDocument, page: PDFPage, a: EntryAttestation, font: PD
   y -= 16;
   text(`${ENTRY_SIGNATORY.name}, ${ENTRY_SIGNATORY.title.toLowerCase()} de ${ORG_LEGAL.name}`, MARGIN, 10.5, bold);
   y -= 64;
+  if (signature) drawImageInBox(page, signature, { x: MARGIN, y: y + 3, width: 200, height: 52 });
   page.drawLine({ start: { x: MARGIN, y }, end: { x: MARGIN + 200, y }, thickness: 0.5, color: GRAY });
   y -= 11;
   text("Signature et cachet", MARGIN, 7.5, font, GRAY);
@@ -215,8 +217,11 @@ function drawPage(doc: PDFDocument, page: PDFPage, a: EntryAttestation, font: PD
   void doc;
 }
 
-/** Une page par apprenant (un seul PDF pour imprimer tout le groupe, ou une page pour l'envoi individuel). */
-export async function buildEntryAttestationsPdf(list: EntryAttestation[], issuedOn = new Date()): Promise<Uint8Array> {
+/**
+ * Une page par apprenant (un seul PDF pour imprimer tout le groupe, ou une page pour l'envoi
+ * individuel). `associationSignature` : signature du président + cachet (PNG), sinon à la main.
+ */
+export async function buildEntryAttestationsPdf(list: EntryAttestation[], issuedOn = new Date(), associationSignature: Uint8Array | null = null): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
@@ -226,8 +231,9 @@ export async function buildEntryAttestationsPdf(list: EntryAttestation[], issued
   } catch {
     logo = null;
   }
+  const signature = await embedPngOrNull(doc, associationSignature);
   const today = issuedOn.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", timeZone: TZ });
-  for (const a of list) drawPage(doc, doc.addPage([A4.width, A4.height]), a, font, bold, logo, today);
+  for (const a of list) drawPage(doc, doc.addPage([A4.width, A4.height]), a, font, bold, logo, signature, today);
   doc.setTitle("Attestations d'entrée en formation");
   doc.setAuthor(ORG_LEGAL.name);
   return doc.save();
