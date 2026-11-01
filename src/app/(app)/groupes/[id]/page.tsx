@@ -61,6 +61,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { loadContactContext, selectionOf, userCanExportContacts } from "@/lib/contacts/load";
 import { internationalPhone } from "@/lib/contacts/vcard";
 import { formatPhone } from "@/lib/admission/phone";
+import { GroupDocumentsCard } from "@/components/documents-apprenant/group-documents-card";
+import { loadGroupDocumentsCard } from "@/lib/documents-apprenant/serveur";
+import { membershipYearLabel, parisDay } from "@/lib/documents-apprenant/regles";
 
 export default async function GroupePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -369,6 +372,9 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
       })()
     : null;
 
+  // Adhésion, contrat de formation, règlement intérieur : cours PEF et ateliers seulement.
+  const docsCard = await loadGroupDocumentsCard(contactsAdmin, { orgId, userId, role }, id, parisDay());
+
   let surveyUrl: string | null = null;
   let surveyQr: string | null = null;
   if (group.survey_token) {
@@ -559,6 +565,21 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
           <EntryAttestationsCard groupId={id} rows={entryRows} canWrite={canWrite} />
         </CardContent>
       </Card>
+
+      {docsCard && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Adhésion, contrat et règlement intérieur</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Chaque inscrit signe au doigt le bulletin d&apos;adhésion ({membershipYearLabel(docsCard.year)}), le contrat de formation et le règlement intérieur :
+              ici sur la tablette, ou chez lui avec son lien WhatsApp. Le PDF signé et horodaté va dans son dossier.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <GroupDocumentsCard groupId={id} year={docsCard.year} rows={docsCard.rows} perms={docsCard.perms} available={docsCard.available} />
+          </CardContent>
+        </Card>
+      )}
 
       {canAdminDocs && (
         <Card>
