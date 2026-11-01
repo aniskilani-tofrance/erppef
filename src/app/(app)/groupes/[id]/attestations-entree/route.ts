@@ -1,5 +1,7 @@
 import { requireGroupAccess } from "@/lib/stagiaires";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { loadAssociationSignature } from "@/lib/signature-association";
 import { buildEntryAttestationsPdf, entryAttestationFileName, loadEntryAttestations } from "@/lib/attestations/entree";
 
 // Attestations d'entrée en formation du groupe : un PDF, une page par apprenant ayant au
@@ -17,7 +19,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       { status: 400, headers: { "Content-Type": "text/plain; charset=utf-8" } },
     );
   }
-  const pdf = await buildEntryAttestationsPdf(list);
+  const pdf = await buildEntryAttestationsPdf(list, new Date(), await loadAssociationSignature(createAdminClient(), orgId));
   const name = entryAttestationFileName(list[0].groupName, learnerId ? list[0].learnerName : undefined);
   return new Response(Buffer.from(pdf), {
     headers: { "Content-Type": "application/pdf", "Content-Disposition": `attachment; filename="${name}"` },

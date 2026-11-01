@@ -29,6 +29,7 @@ import {
 } from "./regles";
 import { documentText, learnerFullName, learnerIdentityLines, type DocumentText, type GroupForText, type LearnerForText } from "./textes";
 import { buildSignedDocumentPdf, sha256 } from "./pdf";
+import { loadAssociationSignature } from "@/lib/signature-association";
 
 // Accès base des documents de l'apprenant. Toujours appelé avec le client service_role
 // (page publique à jeton, ou action serveur APRÈS contrôle des droits) : chaque requête est
@@ -261,6 +262,7 @@ export async function completeSignature(admin: SupabaseClient, input: SignInput)
   }
 
   const storage = admin.storage.from("dossiers");
+  const associationSignature = await loadAssociationSignature(admin, ctx.orgId);
   const signedAt = now.toISOString();
   const signed: SignedDocumentKind[] = [];
   for (const kind of ctx.pending) {
@@ -271,6 +273,7 @@ export async function completeSignature(admin: SupabaseClient, input: SignInput)
       identity: learnerIdentityLines(ctx.learner),
       membership: kind === "adhesion" ? { year: ctx.year, amountCents: COTISATION_EUROS * 100 } : null,
       proof: { docId: id, signerName: ctx.learnerName, signedAt, channel: ctx.channel, ip: input.ip, userAgent: input.userAgent, signaturePng: input.signature },
+      associationSignature,
     });
     const path = signedDocumentPath(ctx.orgId, ctx.learnerId, kind, id);
     const { error: upErr } = await storage.upload(path, pdf, { contentType: "application/pdf", upsert: false });

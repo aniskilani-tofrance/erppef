@@ -20,6 +20,7 @@ import { dispatchGroupAttendance, parseEmails } from "@/lib/emargement/dispatch"
 import { createAdminClient } from "@/lib/supabase/admin";
 import { documentStoragePath } from "@/lib/dossier/documents";
 import { ENTRY_CONTACT_MARK, buildEntryAttestationsPdf, entryAttestationFileName, loadEntryAttestations } from "@/lib/attestations/entree";
+import { loadAssociationSignature } from "@/lib/signature-association";
 import { withoutTrainerChangeTraces } from "@/lib/groupes/changer-formateur";
 
 // Envoie le planning (message + PDF apprenants en pièce jointe) à chaque inscrit qui a un email.
@@ -563,7 +564,9 @@ export async function sendEntryAttestations(groupId: string): Promise<EntryAttes
     (contacts ?? []).filter((c) => (c.note ?? "").includes(list[0].groupName) && (c.note ?? "").includes("envoyée par email")).map((c) => c.learner_id),
   );
   const canEmail = mailerConfigured();
-  const storage = createAdminClient().storage.from("dossiers");
+  const admin = createAdminClient();
+  const storage = admin.storage.from("dossiers");
+  const associationSignature = await loadAssociationSignature(admin, orgId);
 
   let sent = 0;
   let archived = 0;
@@ -574,7 +577,7 @@ export async function sendEntryAttestations(groupId: string): Promise<EntryAttes
     if (!a.email) withoutEmail.push(a.learnerName);
     if (!needsArchive && !needsEmail) continue;
 
-    const pdf = await buildEntryAttestationsPdf([a]);
+    const pdf = await buildEntryAttestationsPdf([a], new Date(), associationSignature);
     if (needsArchive) {
       const path = documentStoragePath(orgId, a.learnerId, "autre", "pdf", crypto.randomUUID());
       const { error: upErr } = await storage.upload(path, Buffer.from(pdf), { contentType: "application/pdf", upsert: false });

@@ -37,6 +37,7 @@ export const APP_UPDATES: AppUpdate[] = [
       { text: "Cotisation : « Cotisation payée » → montant (40 € par défaut), date, mode (espèces, chèque, virement, carte, HelloAsso) ; reçu PDF en un clic ; la carte du groupe compte les cotisations non payées de l'année (1er septembre → 31 août). À encaisser après le délai pour changer d'avis (10 jours, 14 jours si signé par le lien).", roles: TEAM },
       { text: "Formatrices : dans vos groupes, vous voyez qui a signé et vous pouvez faire signer sur la tablette ou par le lien. La cotisation et les PDF restent à la coordination.", roles: ["trainer"] },
       { text: "Les textes ont une version : un texte modifié est à re-signer. Nouveau modèle de message « Documents à signer » dans Admission → « Messages ». Migration 0059 à appliquer avant la mise en ligne.", roles: TEAM },
+      { text: "La signature du président et le cachet de l'association sont imprimés tout seuls sur ces documents, sur le reçu de cotisation et sur l'attestation d'entrée en formation : plus rien à signer ni à tamponner à la main.", roles: TEAM },
     ],
     training: [
       { moduleId: "c3-equipe", lessonId: "apprenants", label: "Apprenants : fiche, photo, import" },

@@ -3,13 +3,20 @@
 // (« Prénom Exemple »). Mêmes fonctions que l'ERP : ce qui est ici est ce qui sera signé.
 // Aucune base, aucun réseau. Lancer depuis la racine du dépôt :
 //   JITI_ALIAS="{\"@\": \"$PWD/src\"}" npx jiti scripts/exemples-documents-apprenant.mts
-import { mkdirSync, writeFileSync } from "node:fs";
+// Avec SIGNATURE_ASSOCIATION=/chemin/signature-cachet.png : les mêmes exemples AVEC la signature
+// du président et le cachet, écrits HORS du dépôt (SORTIE, sinon le dossier temporaire) : le
+// dépôt est public, la signature n'y entre jamais.
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { deflateSync } from "node:zlib";
 
 const { adhesionText, contratText, documentMarkdown, learnerIdentityLines, reglementText } = await import("../src/lib/documents-apprenant/textes");
 const { buildMembershipReceiptPdf, buildSignedDocumentPdf } = await import("../src/lib/documents-apprenant/pdf");
+const { buildEntryAttestationsPdf } = await import("../src/lib/attestations/entree");
 
-const OUT = "docs/documents-apprenant";
+const associationSignature = process.env.SIGNATURE_ASSOCIATION ? new Uint8Array(readFileSync(process.env.SIGNATURE_ASSOCIATION)) : null;
+const OUT = associationSignature ? (process.env.SORTIE ?? join(tmpdir(), "exemples-documents-apprenant")) : "docs/documents-apprenant";
 mkdirSync(OUT, { recursive: true });
 
 // Signature fictive : un trait ondulé dessiné pixel par pixel, encodé en PNG (sans canvas).
@@ -102,11 +109,38 @@ const docs = [
 ];
 for (const [i, d] of docs.entries()) {
   writeFileSync(`${OUT}/${d.file}.md`, documentMarkdown(d.text));
-  const pdf = await buildSignedDocumentPdf({ text: d.text, identity, membership: d.membership, proof: proof(`00000000-0000-4000-8000-00000000000${i + 1}`) });
+  const pdf = await buildSignedDocumentPdf({ text: d.text, identity, membership: d.membership, proof: proof(`00000000-0000-4000-8000-00000000000${i + 1}`), associationSignature });
   writeFileSync(`${OUT}/exemple-${d.file}.pdf`, pdf);
 }
 writeFileSync(
   `${OUT}/exemple-4-recu-cotisation.pdf`,
-  await buildMembershipReceiptPdf({ receiptNo: "ADH-2026-0000", learnerName: "Prénom Exemple", identity, year, amountCents: 4000, paidOn: "2026-11-16", method: "especes", issuedOn: new Date("2026-11-16T10:00:00Z") }),
+  await buildMembershipReceiptPdf({ receiptNo: "ADH-2026-0000", learnerName: "Prénom Exemple", identity, year, amountCents: 4000, paidOn: "2026-11-16", method: "especes", issuedOn: new Date("2026-11-16T10:00:00Z"), associationSignature }),
+);
+writeFileSync(
+  `${OUT}/exemple-5-attestation-entree.pdf`,
+  await buildEntryAttestationsPdf(
+    [
+      {
+        learnerId: "exemple",
+        learnerRef: learner.ref,
+        learnerName: "Prénom Exemple",
+        birthDate: learner.birthDate,
+        gender: learner.gender,
+        email: null,
+        groupName: group.name,
+        programName: group.programName,
+        level: group.level,
+        schedule: group.schedule,
+        place: group.place,
+        plannedStart: group.startsOn,
+        plannedEnd: group.endsOn,
+        plannedHours: group.totalHours,
+        entryOn: "2026-10-05",
+        funderName: null,
+      },
+    ],
+    new Date("2026-11-16T10:00:00Z"),
+    associationSignature,
+  ),
 );
 console.log(`Exemples écrits dans ${OUT}/`);

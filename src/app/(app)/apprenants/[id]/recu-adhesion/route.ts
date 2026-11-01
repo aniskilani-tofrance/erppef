@@ -1,5 +1,7 @@
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { loadAssociationSignature } from "@/lib/signature-association";
 import { buildMembershipReceiptPdf, receiptFileName } from "@/lib/documents-apprenant/pdf";
 import { receiptNumber, type PaymentMethod } from "@/lib/documents-apprenant/regles";
 import { isUuid, learnerForText } from "@/lib/documents-apprenant/serveur";
@@ -41,6 +43,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     amountCents: Number(m.amount_cents),
     paidOn: m.paid_on as string,
     method: m.payment_method as PaymentMethod | null,
+    associationSignature: await loadAssociationSignature(createAdminClient(), orgId),
   });
   return new Response(Buffer.from(pdf), {
     headers: {

@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { PDFDocument, PDFFont, PDFImage, PDFPage, StandardFonts, rgb } from "pdf-lib";
 import { LOGO_PEF_BASE64 } from "@/lib/emargement/logo-data";
 import { pdfSafe, slug, wrapText } from "@/lib/reports/group-planning";
+import { drawImageInBox, embedPngOrNull } from "@/lib/signature-association";
 import {
   DOCUMENT_LABELS,
   euros,
@@ -44,6 +45,7 @@ export type SignedPdfInput = {
   identity: string[]; // lignes « qui signe »
   membership?: { year: number; amountCents: number } | null; // bulletin d'adhésion
   proof: SignatureProof;
+  associationSignature?: Uint8Array | null; // signature du président + cachet (PNG)
 };
 
 const dateFr = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", timeZone: TZ });
@@ -221,6 +223,7 @@ export async function buildSignedDocumentPdf(input: SignedPdfInput): Promise<Uin
 
   // Bloc signature (toujours entier sur une page)
   const signature = await embedSignature(doc, proof.signaturePng);
+  const assoc = await embedPngOrNull(doc, input.associationSignature);
   w.ensure(230);
   w.y -= 4;
   w.paragraph("Signature", 10.5, w.bold, TEAL);
@@ -255,10 +258,14 @@ export async function buildSignedDocumentPdf(input: SignedPdfInput): Promise<Uin
     const scale = Math.min((colW - 10) / signature.width, (boxH - 10) / signature.height);
     w.page.drawImage(signature, { x: MARGIN + 5, y: boxTop - boxH + 5, width: signature.width * scale, height: signature.height * scale });
   }
-  w.y = boxTop - 14;
-  for (const ln of wrapText(`Document émis par l'association ${ASSOCIATION.name} avec son outil de gestion, au nom de son président.`, colW, 8.5, w.font)) {
-    w.page.drawText(pdfSafe(ln), { x: MARGIN + colW + 20, y: w.y, size: 8.5, font: w.font, color: GRAY });
-    w.y -= 11;
+  if (assoc) {
+    drawImageInBox(w.page, assoc, { x: MARGIN + colW + 20, y: boxTop - boxH + 2, width: colW, height: boxH - 4 });
+  } else {
+    w.y = boxTop - 14;
+    for (const ln of wrapText(`Document émis par l'association ${ASSOCIATION.name} avec son outil de gestion, au nom de son président.`, colW, 8.5, w.font)) {
+      w.page.drawText(pdfSafe(ln), { x: MARGIN + colW + 20, y: w.y, size: 8.5, font: w.font, color: GRAY });
+      w.y -= 11;
+    }
   }
   w.y = top - 12 - 6 - boxH - 22;
 
@@ -295,6 +302,7 @@ export type ReceiptInput = {
   paidOn: string; // AAAA-MM-JJ
   method: PaymentMethod | null;
   issuedOn?: Date;
+  associationSignature?: Uint8Array | null; // signature du président + cachet (PNG)
 };
 
 export async function buildMembershipReceiptPdf(r: ReceiptInput): Promise<Uint8Array> {
@@ -325,6 +333,8 @@ export async function buildMembershipReceiptPdf(r: ReceiptInput): Promise<Uint8A
   w.paragraph(`Fait à ${ASSOCIATION.city}, le ${dateFr((r.issuedOn ?? new Date()).toISOString())}.`, 10);
   w.paragraph(`${ASSOCIATION.president}, ${ASSOCIATION.presidentTitle} de ${ASSOCIATION.name}`, 10, w.bold);
   w.y -= 56;
+  const assoc = await embedPngOrNull(doc, r.associationSignature);
+  if (assoc) drawImageInBox(w.page, assoc, { x: MARGIN, y: w.y + 3, width: 200, height: 52 });
   w.page.drawLine({ start: { x: MARGIN, y: w.y }, end: { x: MARGIN + 200, y: w.y }, thickness: 0.5, color: GRAY });
   w.y -= 11;
   w.text("Signature et cachet", MARGIN, 7.5, w.font, GRAY);

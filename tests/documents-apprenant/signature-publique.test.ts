@@ -119,3 +119,19 @@ describe("lien valable", () => {
     expect(page.ok && page.texts.map((t) => t.kind)).toEqual(["contrat_formation"]);
   });
 });
+
+describe("signature et cachet de l'association", () => {
+  it("image rangée pour l'organisme : posée sur chaque PDF signé (plus de mention écrite)", async () => {
+    db.files.set(`dossiers/association/${ORG}/signature-cachet.png`, new Uint8Array(Buffer.from(PNG.split(",")[1], "base64")));
+    expect((await signDocuments({ token: addLink(db), accepted: [...ALL], signature: PNG })).ok).toBe(true);
+    for (const r of db.tables.learner_signed_documents) {
+      expect(await pdfText(db.files.get(`dossiers/${r.file_path}`)!)).not.toContain("Document émis par l'association");
+    }
+  });
+
+  it("pas d'image : les PDF partent quand même, avec la mention écrite", async () => {
+    expect((await signDocuments({ token: addLink(db), accepted: [...ALL], signature: PNG })).ok).toBe(true);
+    const contrat = db.tables.learner_signed_documents.find((r) => r.kind === "contrat_formation")!;
+    expect(await pdfText(db.files.get(`dossiers/${contrat.file_path}`)!)).toContain("Document émis par l'association");
+  });
+});

@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# signature du président et cachet : jamais dans le dépôt (public), voir src/lib/signature-association.ts
+*signature-cachet*
