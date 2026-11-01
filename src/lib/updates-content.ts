@@ -26,6 +26,24 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-11-01-adhesion-contrat-reglement",
+    date: "2026-11-01",
+    title: "Cours PEF et ateliers : adhésion, contrat de formation et règlement intérieur signés au doigt",
+    summary: "Chaque inscrit des cours PEF et des ateliers lit et signe au doigt le bulletin d'adhésion (40 € par an), le contrat de formation et le règlement intérieur, sur la tablette ou chez lui avec un lien WhatsApp ; le PDF signé va dans son dossier.",
+    items: [
+      { text: "Fiche groupe → nouvelle carte « Adhésion, contrat et règlement intérieur » (cours PEF A1, A2 et ateliers bénévoles seulement, jamais les cours municipaux) : pour chaque inscrit, Adhésion / Contrat / Règlement « signé le JJ/MM » ou « à signer », et en tête qui n'a pas encore signé.", roles: ALL },
+      { text: "« Faire signer ici » ouvre la page de signature de la personne sur la tablette : elle lit chaque document en gros caractères, coche « J'ai lu », signe une fois au doigt. « Lien WhatsApp » prépare un lien personnel (30 jours) avec le message prérempli : elle signe chez elle et télécharge sa copie.", roles: ALL },
+      { text: "Un PDF signé et horodaté par document (texte lu, case cochée, signature, date, sur place ou à distance, IP et appareil) est rangé dans le dossier privé de l'apprenant ; clic sur une pastille verte pour l'ouvrir. La fiche apprenant a le même bloc.", roles: TEAM },
+      { text: "Cotisation : « Cotisation payée » → montant (40 € par défaut), date, mode (espèces, chèque, virement, carte, HelloAsso) ; reçu PDF en un clic ; la carte du groupe compte les cotisations non payées de l'année (1er septembre → 31 août). À encaisser après le délai pour changer d'avis (10 jours, 14 jours si signé par le lien).", roles: TEAM },
+      { text: "Formatrices : dans vos groupes, vous voyez qui a signé et vous pouvez faire signer sur la tablette ou par le lien. La cotisation et les PDF restent à la coordination.", roles: ["trainer"] },
+      { text: "Les textes ont une version : un texte modifié est à re-signer. Nouveau modèle de message « Documents à signer » dans Admission → « Messages ». Migration 0059 à appliquer avant la mise en ligne.", roles: TEAM },
+    ],
+    training: [
+      { moduleId: "c3-equipe", lessonId: "apprenants", label: "Apprenants : fiche, photo, import" },
+      { moduleId: "f2-emargement", lessonId: "ouvrir", label: "Ouvrir la feuille et faire signer" },
+    ],
+  },
+  {
     id: "2026-10-28-reunion-lien-sms",
     date: "2026-10-28",
     title: "Réunion d'information : envoyer le lien par SMS, gratuitement",
