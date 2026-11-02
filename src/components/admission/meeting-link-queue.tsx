@@ -6,18 +6,12 @@ import { toast } from "sonner";
 import { Check, ListChecks, MessageCircle, MessageSquareText } from "lucide-react";
 import { markMeetingLinkSent, prepareMeetingLinkQueue } from "@/app/(app)/apprenants/admission/actions";
 import { toWhatsAppNumber } from "@/lib/admission/phone";
-import { LINK_RECENT_DAYS, smsUrl, type LinkTarget } from "@/lib/inscription/link-queue";
+import { LINK_RECENT_DAYS, canSendSms, smsUrl, type LinkTarget } from "@/lib/inscription/link-queue";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 type Channel = "whatsapp" | "sms";
-
-// Le lien « sms: » n'ouvre l'application Messages que sur un téléphone (ou un Mac relié à l'iPhone) :
-// ailleurs, le bouton SMS reste grisé pour ne pas noter au journal un envoi qui n'a pas eu lieu.
-function canSendSms(): boolean {
-  return typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod|Macintosh/i.test(navigator.userAgent);
-}
 
 // « Envoyer le lien à la suite » (carte « Inscription par lien ») : le message du lien à chaque
 // convoqué qui n'a pas encore de place, un par un. « WhatsApp au suivant » ouvre WhatsApp avec le

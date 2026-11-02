@@ -26,6 +26,12 @@ export function smsUrl(phone: string | null | undefined, body: string): string |
   return n ? `sms:+${n}?&body=${encodeURIComponent(body)}` : null;
 }
 
+// Le lien « sms: » n'ouvre l'application Messages que sur un téléphone (ou un Mac relié à l'iPhone) :
+// ailleurs, le bouton SMS reste grisé pour ne pas noter au journal un envoi qui n'a pas eu lieu.
+export function canSendSms(): boolean {
+  return typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod|Macintosh/i.test(navigator.userAgent);
+}
+
 /** « le 28/10 à 17h00 ou le 29/10 à 10h00 » (heure de Paris), dans l'ordre chronologique. */
 export function shortDatesText(startsAts: readonly string[]): string {
   const parts = [...startsAts]

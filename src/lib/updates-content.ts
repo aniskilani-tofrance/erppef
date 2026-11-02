@@ -26,6 +26,18 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-11-02-inviter-groupe-whatsapp",
+    date: "2026-11-02",
+    title: "Groupe WhatsApp de la classe : inviter tous les inscrits, un par un",
+    summary: "Sur la fiche du groupe, « Inviter tout le groupe » envoie le lien du groupe WhatsApp à chaque inscrit : un toucher par personne, sur WhatsApp ou par SMS, et chaque invitation est notée.",
+    items: [
+      { text: "Fiche du groupe → carte « Groupe WhatsApp de la classe » → « Inviter tout le groupe » : la liste des inscrits, sans ceux qui ont refusé le groupe. « WhatsApp au suivant » ouvre WhatsApp avec le message et le lien : on appuie sur Envoyer, on revient, on passe au suivant.", roles: TEAM },
+      { text: "« SMS au suivant » envoie un message court avec le lien, depuis le téléphone (gratuit). Ceux qui ont déjà reçu l'invitation sont décochés ; chaque envoi est noté au journal de la personne.", roles: TEAM },
+      { text: "Le texte de l'invitation se modifie dans Apprenants → Admission → « Messages » → « Invitation au groupe WhatsApp de la classe ».", roles: TEAM },
+    ],
+    training: [{ moduleId: "c5-vie-quotidienne", lessonId: "groupe-whatsapp", label: "Le groupe WhatsApp de la classe" }],
+  },
+  {
     id: "2026-11-01-adhesion-contrat-reglement",
     date: "2026-11-01",
     title: "Cours PEF et ateliers : adhésion, contrat de formation et règlement intérieur signés au doigt",

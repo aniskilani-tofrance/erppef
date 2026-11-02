@@ -3,11 +3,13 @@ import { Badge } from "@/components/ui/badge";
 import { formatPhone } from "@/lib/admission/phone";
 import type { WhatsAppRoster } from "@/lib/groupes/whatsapp-group";
 import { WhatsAppGroupActions } from "@/components/groupes/whatsapp-group-actions";
+import { WhatsAppGroupInviteQueue } from "@/components/groupes/whatsapp-group-invite-queue";
 
 // Groupe WhatsApp de la classe : lien + QR code à montrer en cours, et qui ajouter /
 // retirer d'après l'inscription et le consentement de chacun. L'ERP ne peut pas écrire
-// dans un groupe WhatsApp : ici on prépare, l'envoi se fait depuis le téléphone.
-export function WhatsAppGroupCard({ url, qrDataUrl, roster, canWrite }: { url: string | null; qrDataUrl: string | null; roster: WhatsAppRoster; canWrite: boolean }) {
+// dans un groupe WhatsApp : ici on prépare, l'envoi se fait depuis le téléphone. « Inviter tout le
+// groupe » (coordination) envoie le lien à chaque inscrit, un par un.
+export function WhatsAppGroupCard({ groupId, url, qrDataUrl, roster, canWrite }: { groupId: string; url: string | null; qrDataUrl: string | null; roster: WhatsAppRoster; canWrite: boolean }) {
   const total = roster.toAdd.length + roster.refused.length + roster.notAsked.length;
   return (
     <Card>
@@ -31,7 +33,10 @@ export function WhatsAppGroupCard({ url, qrDataUrl, roster, canWrite }: { url: s
             )}
             <div className="min-w-0 flex-1 space-y-2 text-sm">
               <p className="break-all font-mono text-xs text-muted-foreground">{url}</p>
-              <WhatsAppGroupActions url={url} />
+              <div className="flex flex-wrap items-center gap-2">
+                <WhatsAppGroupActions url={url} />
+                {canWrite && <WhatsAppGroupInviteQueue groupId={groupId} />}
+              </div>
               <p className="text-xs text-muted-foreground">Montrez le QR code au premier cours : chaque personne rejoint elle-même. Le lien est aussi dans le message « Planning » envoyé aux inscrits qui n&apos;ont pas refusé.</p>
             </div>
           </div>

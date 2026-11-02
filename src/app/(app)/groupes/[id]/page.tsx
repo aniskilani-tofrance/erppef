@@ -530,7 +530,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
         </CardContent>
       </Card>
 
-      <WhatsAppGroupCard url={whatsappGroupUrl} qrDataUrl={whatsappQr} roster={whatsappRoster} canWrite={canWrite} />
+      <WhatsAppGroupCard groupId={id} url={whatsappGroupUrl} qrDataUrl={whatsappQr} roster={whatsappRoster} canWrite={canWrite} />
       {contactsCard && <GroupContactsCard groupId={id} {...contactsCard} />}
 
       {!isIntern && (

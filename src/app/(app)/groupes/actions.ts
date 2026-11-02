@@ -2,7 +2,16 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { normalizeWhatsAppGroupLink } from "@/lib/groupes/whatsapp-group";
+import {
+  buildGroupInviteSms,
+  GROUP_INVITE_NOTE_PREFIX,
+  groupInviteNote,
+  normalizeWhatsAppGroupLink,
+  pickGroupInviteQueue,
+  type InviteContact,
+  type InviteMember,
+  type InviteTarget,
+} from "@/lib/groupes/whatsapp-group";
 import { requireRole } from "@/lib/auth";
 import { loadEngineData } from "@/lib/engine/loader";
 import { proposeGroupPlan } from "@/lib/engine/propose";
@@ -658,5 +667,97 @@ export async function removeGroupIntern(raw: z.infer<typeof internSchema>): Prom
     .eq("user_id", parsed.data.userId);
   if (error) return { ok: false, error: translatePgError(error) };
   revalidatePath(`/groupes/${parsed.data.groupId}`);
+  return { ok: true };
+}
+
+// ── « Inviter tout le groupe » au groupe WhatsApp de la classe ─────────────────
+// Le lien du groupe à chaque inscrit (sauf refus), un par un depuis le téléphone : l'ERP prépare
+// le message de chacun, la personne qui envoie appuie sur Envoyer. Chaque envoi est noté au journal.
+
+export type GroupInviteQueueResult =
+  | { ok: true; groupName: string; targets: (InviteTarget & { message: string })[]; smsMessage: string; refused: number }
+  | { ok: false; error: string };
+
+export async function prepareGroupWhatsAppInvites(groupId: string): Promise<GroupInviteQueueResult> {
+  if (!z.string().uuid().safeParse(groupId).success) return { ok: false, error: "Groupe invalide" };
+  const { orgId, userId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+
+  const [{ data: group }, { data: enrollments, error }, { data: profile }, templates] = await Promise.all([
+    supabase.from("groups").select("name, whatsapp_group_url").eq("id", groupId).eq("org_id", orgId).maybeSingle(),
+    supabase
+      .from("enrollments")
+      .select("learner_id, status, learners(first_name, last_name, phone, whatsapp_group_consent)")
+      .eq("group_id", groupId)
+      .eq("org_id", orgId)
+      .eq("status", "inscrit"),
+    supabase.from("profiles").select("full_name").eq("id", userId).single(),
+    loadTemplates(supabase, orgId),
+  ]);
+  if (!group) return { ok: false, error: "Groupe introuvable" };
+  const url = normalizeWhatsAppGroupLink(group.whatsapp_group_url as string | null);
+  if (!url) return { ok: false, error: "Pas de lien de groupe WhatsApp : collez-le d'abord via « Modifier »." };
+  if (error) return { ok: false, error: translatePgError(error) };
+
+  const members: InviteMember[] = (enrollments ?? []).map((e) => {
+    const l = e.learners as unknown as { first_name: string | null; last_name: string | null; phone: string | null; whatsapp_group_consent: boolean | null } | null;
+    return {
+      learnerId: e.learner_id as string,
+      name: [l?.first_name, l?.last_name].filter(Boolean).join(" ") || "—",
+      firstName: l?.first_name ?? null,
+      phone: l?.phone ?? null,
+      status: "inscrit",
+      consent: l?.whatsapp_group_consent ?? null,
+    };
+  });
+  const ids = members.map((m) => m.learnerId);
+  const { data: contacts } = ids.length
+    ? await supabase
+        .from("learner_contacts")
+        .select("learner_id, contacted_at, note")
+        .eq("org_id", orgId)
+        .in("learner_id", ids)
+        .like("note", `${GROUP_INVITE_NOTE_PREFIX}%`)
+    : { data: [] };
+
+  const groupName = group.name as string;
+  const sender = profile?.full_name?.trim().split(/\s+/)[0] ?? null;
+  const { targets, refused } = pickGroupInviteQueue(members, (contacts ?? []) as InviteContact[], groupName);
+  return {
+    ok: true,
+    groupName,
+    refused,
+    smsMessage: buildGroupInviteSms(groupName, url),
+    targets: targets.map((t) => ({
+      ...t,
+      message: buildStageMessage("invitation_groupe_whatsapp", { ...baseVars(t.firstName, sender), groupe: groupName, lien_whatsapp: url }, templates),
+    })),
+  };
+}
+
+const groupInviteSentSchema = z.object({ groupId: z.string().uuid(), learnerId: z.string().uuid(), channel: z.enum(["whatsapp", "sms"]).default("whatsapp") });
+
+// Un envoi de la file : note au journal de la personne (canal, groupe). Seulement pour un inscrit du groupe.
+export async function markGroupWhatsAppInviteSent(raw: z.input<typeof groupInviteSentSchema>): Promise<SimpleResult> {
+  const parsed = groupInviteSentSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Données invalides" };
+  const d = parsed.data;
+  const { orgId, userId } = await requireRole(["admin", "coordinator"]);
+  const supabase = await createClient();
+  const [{ data: group }, { data: enrollment }] = await Promise.all([
+    supabase.from("groups").select("name").eq("id", d.groupId).eq("org_id", orgId).maybeSingle(),
+    supabase.from("enrollments").select("id").eq("group_id", d.groupId).eq("learner_id", d.learnerId).eq("org_id", orgId).eq("status", "inscrit").maybeSingle(),
+  ]);
+  if (!group || !enrollment) return { ok: false, error: "Cette personne n'est pas inscrite dans ce groupe." };
+  const { error } = await supabase.from("learner_contacts").insert({
+    org_id: orgId,
+    learner_id: d.learnerId,
+    channel: d.channel,
+    outcome: "message_envoye",
+    note: groupInviteNote(group.name as string, d.channel),
+    created_by: userId,
+  });
+  if (error) return { ok: false, error: translatePgError(error) };
+  revalidatePath(`/groupes/${d.groupId}`);
   return { ok: true };
 }
