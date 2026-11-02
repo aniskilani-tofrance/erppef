@@ -26,6 +26,18 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-11-02-documents-signes-en-classe",
+    date: "2026-11-02",
+    title: "Adhésion, contrat et règlement : signés en classe, comme l'émargement",
+    summary: "Après la lecture des documents en classe, la feuille d'émargement qui circule a un bouton « Documents à signer » : chacun touche son nom, coche, signe au doigt et passe le téléphone.",
+    items: [
+      { text: "Cours PEF et ateliers : lisez les trois documents au groupe, ouvrez l'émargement de la séance, puis touchez « Documents à signer » en haut de la feuille qui circule. La liste des inscrits qui doivent encore signer s'affiche.", roles: ALL },
+      { text: "Chacun touche son nom, coche chaque document (« Relire le texte » s'il le souhaite), signe au doigt, puis « Personne suivante ». Ceux qui ont tout signé sont grisés. Le PDF signé va dans le dossier de chacun, comme avant.", roles: ALL },
+      { text: "Même lien que l'émargement, valable tant que la feuille est ouverte. La carte d'émargement de la séance a aussi le bouton « Documents à signer ». Pour une personne seule, la fiche du groupe garde « Faire signer ici » et « Lien WhatsApp ».", roles: ALL },
+    ],
+    training: [{ moduleId: "f2-emargement", lessonId: "ouvrir", label: "Ouvrir la feuille et faire signer" }],
+  },
+  {
     id: "2026-11-02-inviter-groupe-whatsapp",
     date: "2026-11-02",
     title: "Groupe WhatsApp de la classe : inviter tous les inscrits, un par un",

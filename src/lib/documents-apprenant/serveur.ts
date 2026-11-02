@@ -30,6 +30,7 @@ import {
 import { documentText, learnerFullName, learnerIdentityLines, type DocumentText, type GroupForText, type LearnerForText } from "./textes";
 import { buildSignedDocumentPdf, sha256 } from "./pdf";
 import { loadAssociationSignature } from "@/lib/signature-association";
+import { findOpenAttendanceSession } from "@/lib/emargement/open-session";
 
 // Accès base des documents de l'apprenant. Toujours appelé avec le client service_role
 // (page publique à jeton, ou action serveur APRÈS contrôle des droits) : chaque requête est
@@ -340,7 +341,7 @@ export async function isGroupTrainer(admin: SupabaseClient, orgId: string, group
   return ids.includes(mine);
 }
 
-export type GroupDocsLine = LearnerDocsLine & { firstName: string; phone: string | null };
+export type GroupDocsLine = LearnerDocsLine & { firstName: string; phone: string | null; photoUrl: string | null };
 
 /** Inscrits actifs d'un groupe concerné, avec l'état de leurs documents et de leur cotisation. */
 export async function loadGroupDocumentLines(
@@ -351,7 +352,7 @@ export async function loadGroupDocumentLines(
 ): Promise<{ available: boolean; lines: GroupDocsLine[] }> {
   const { data: enrollments } = await admin
     .from("enrollments")
-    .select("learner_id, learners(first_name, last_name, phone)")
+    .select("learner_id, learners(first_name, last_name, phone, photo_url)")
     .eq("group_id", groupId)
     .eq("org_id", orgId)
     .eq("status", "inscrit");
@@ -369,13 +370,14 @@ export async function loadGroupDocumentLines(
   for (const d of (docs.data ?? []) as DocRowDb[]) docsBy.set(d.learner_id!, [...(docsBy.get(d.learner_id!) ?? []), toDocRow(d)]);
   const memBy = new Map(((memberships.data ?? []) as MembershipDb[]).map((m) => [m.learner_id!, toMembership(m)]));
   const lines = (enrollments ?? []).map((e) => {
-    const l = e.learners as unknown as { first_name: string; last_name: string; phone: string | null } | null;
+    const l = e.learners as unknown as { first_name: string; last_name: string; phone: string | null; photo_url?: string | null } | null;
     const id = e.learner_id as string;
     return {
       learnerId: id,
       name: l ? learnerFullName({ firstName: l.first_name, lastName: l.last_name }) : "—",
       firstName: l?.first_name === "?" ? "" : (l?.first_name ?? ""),
       phone: l?.phone ?? null,
+      photoUrl: l?.photo_url ?? null,
       states: documentStates(docsBy.get(id) ?? [], { groupId, year }),
       membership: memBy.get(id) ?? null,
     };
@@ -423,7 +425,7 @@ export type CreateLinkResult = { ok: true; token: string; groupName: string; lea
 /** Crée le lien personnel (WhatsApp, 30 jours) ou la session tablette (2 heures), après vérification. */
 export async function createSigningLink(
   admin: SupabaseClient,
-  input: { orgId: string; learnerId: string; groupId: string; channel: SigningChannel; userId: string; now?: Date },
+  input: { orgId: string; learnerId: string; groupId: string; channel: SigningChannel; userId: string | null; now?: Date },
 ): Promise<CreateLinkResult> {
   const now = input.now ?? new Date();
   const [{ data: learner }, { data: group }, { data: enrollment }] = await Promise.all([
@@ -491,4 +493,58 @@ export async function loadGroupDocumentsCard(
   const year = membershipYearFor(today, g.starts_on);
   const { available, lines } = await loadGroupDocumentLines(admin, user.orgId, groupId, year);
   return { year, perms, available, rows: perms.recordPayment ? lines : lines.map((l) => ({ ...l, membership: null })) };
+}
+
+// ── Signature en classe (même lien et même téléphone que l'émargement) ─────────
+// Les documents sont lus en classe ; la feuille d'émargement de la séance circule, puis la page
+// « Documents à signer » du même jeton : chacun touche son nom, coche, signe au doigt et passe le
+// téléphone. Le jeton d'émargement ouvert est le secret ; chaque signature passe par une session
+// tablette personnelle (sur place, 2 heures), refermée dès la signature.
+
+export type ClassSigningLearner = { learnerId: string; name: string; photoUrl: string | null; pending: SignedDocumentKind[] };
+export type ClassSigning =
+  | { ok: true; orgId: string; groupId: string; groupName: string; startsAt: string; endsAt: string; learners: ClassSigningLearner[] }
+  | { ok: false; reason: "introuvable" | "non_concerne" | "indisponible" };
+
+export const CLASS_SIGNING_ERRORS: Record<Extract<ClassSigning, { ok: false }>["reason"], string> = {
+  introuvable: "Ce lien est invalide, expiré, ou la feuille d'émargement a été clôturée. Rapprochez-vous de votre formatrice.",
+  non_concerne: "Aucun document à signer pour ce groupe.",
+  indisponible: "La signature des documents n'est pas encore ouverte. Parlez-en à l'équipe.",
+};
+
+/** Inscrits du groupe de la séance (feuille d'émargement ouverte), avec les documents qu'il leur reste à signer. */
+export async function loadClassSigning(admin: SupabaseClient, attendanceToken: string, now: Date = new Date()): Promise<ClassSigning> {
+  const session = await findOpenAttendanceSession(admin, attendanceToken, now);
+  if (!session) return { ok: false, reason: "introuvable" };
+  const { data: group } = await admin.from("groups").select(GROUP_SELECT).eq("id", session.group_id).eq("org_id", session.org_id).maybeSingle();
+  const g = group as unknown as GroupRow | null;
+  if (!g || !learnerDocumentsRequired(groupRuleOf(g))) return { ok: false, reason: "non_concerne" };
+  const year = membershipYearFor(parisDay(now), g.starts_on);
+  const { available, lines } = await loadGroupDocumentLines(admin, session.org_id, g.id, year);
+  if (!available) return { ok: false, reason: "indisponible" };
+  return {
+    ok: true,
+    orgId: session.org_id,
+    groupId: g.id,
+    groupName: g.name,
+    startsAt: session.starts_at,
+    endsAt: session.ends_at,
+    learners: lines.map((l) => ({ learnerId: l.learnerId, name: l.name, photoUrl: l.photoUrl, pending: pendingKinds(l.states) })),
+  };
+}
+
+/** Un nom touché sur la page de la classe : session tablette personnelle, si la personne a encore à signer. */
+export async function startClassSigning(
+  admin: SupabaseClient,
+  attendanceToken: string,
+  learnerId: string,
+  now: Date = new Date(),
+): Promise<{ ok: true; token: string } | { ok: false; error: string }> {
+  const cls = await loadClassSigning(admin, attendanceToken, now);
+  if (!cls.ok) return { ok: false, error: CLASS_SIGNING_ERRORS[cls.reason] };
+  const learner = cls.learners.find((l) => l.learnerId === learnerId);
+  if (!learner) return { ok: false, error: "Cette personne n'est pas inscrite dans ce groupe." };
+  if (!learner.pending.length) return { ok: false, error: "Tout est déjà signé pour cette personne." };
+  const link = await createSigningLink(admin, { orgId: cls.orgId, learnerId, groupId: cls.groupId, channel: "sur_place", userId: null, now });
+  return link.ok ? { ok: true, token: link.token } : link;
 }

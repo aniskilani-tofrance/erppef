@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { headers } from "next/headers";
 import QRCode from "qrcode";
+import { groupRuleOf } from "@/lib/documents-apprenant/serveur";
+import { learnerDocumentsRequired } from "@/lib/documents-apprenant/regles";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { AttendanceManager } from "@/components/emargement/attendance-manager";
@@ -56,7 +58,7 @@ export default async function EmargementSeancePage({ params }: { params: Promise
   const { data: session } = await supabase
     .from("sessions")
     .select(
-      "id, group_id, trainer_id, co_trainer_id, starts_at, ends_at, status, attendance_token, attendance_opened_at, attendance_closed_at, trainer_signature, groups(name), trainers:trainer_id(first_name, last_name), rooms:room_id(name)",
+      "id, group_id, trainer_id, co_trainer_id, starts_at, ends_at, status, attendance_token, attendance_opened_at, attendance_closed_at, trainer_signature, groups(name, funders(code), programs(code, name, default_funder:default_funder_id(code))), trainers:trainer_id(first_name, last_name), rooms:room_id(name)",
     )
     .eq("id", id)
     .single();
@@ -98,10 +100,14 @@ export default async function EmargementSeancePage({ params }: { params: Promise
   // URL publique de la tablette, reconstruite depuis la requête (fonctionne en local et sur Vercel).
   let publicUrl: string | null = null;
   let qrDataUrl: string | null = null;
+  // Cours PEF et ateliers : la même feuille ouverte sert à signer adhésion, contrat et règlement.
+  let documentsUrl: string | null = null;
   if (session.attendance_token && !session.attendance_closed_at) {
     const h = await headers();
     const proto = h.get("x-forwarded-proto") ?? "https";
     publicUrl = `${proto}://${h.get("host")}/emargement/${session.attendance_token}`;
+    const g = session.groups as unknown as Parameters<typeof groupRuleOf>[0] | null;
+    if (g && learnerDocumentsRequired(groupRuleOf(g))) documentsUrl = `${proto}://${h.get("host")}/signer/classe/${session.attendance_token}`;
     qrDataUrl = await QRCode.toDataURL(publicUrl, { width: 280, margin: 1 });
   }
 
@@ -141,6 +147,7 @@ export default async function EmargementSeancePage({ params }: { params: Promise
         canExcuseClosed={role === "admin" || role === "coordinator"}
         excuseAvailable={excuseAvailable}
         publicUrl={publicUrl}
+        documentsUrl={documentsUrl}
         qrDataUrl={qrDataUrl}
       />
 

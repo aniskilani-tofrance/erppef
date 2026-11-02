@@ -1,4 +1,5 @@
 import { fetchSheet } from "./actions";
+import { fetchClassSheet } from "@/app/signer/classe/[token]/actions";
 import { SignSheet } from "@/components/emargement/sign-sheet";
 import { utcToLocalTime } from "@/lib/dates";
 
@@ -8,6 +9,9 @@ export const metadata = { title: "Émargement — PEF" };
 export default async function EmargementPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   const sheet = await fetchSheet(token);
+  // Cours PEF et ateliers : adhésion, contrat et règlement se signent avec la même feuille.
+  const docs = sheet ? await fetchClassSheet(token) : null;
+  const docsPending = docs?.ok ? docs.learners.filter((l) => l.pending > 0).length : 0;
 
   if (!sheet) {
     return (
@@ -33,6 +37,14 @@ export default async function EmargementPage({ params }: { params: Promise<{ tok
         </p>
         <p className="text-sm">Touchez votre nom puis signez pour confirmer votre présence.</p>
       </header>
+      {docsPending > 0 && (
+        <a
+          href={`/signer/classe/${token}`}
+          className="block rounded-lg border-2 border-[#00504E] bg-[#E8F6F0] px-4 py-3 text-center font-semibold text-[#00504E]"
+        >
+          Documents à signer (adhésion, contrat, règlement) · {docsPending} personne{docsPending > 1 ? "s" : ""}
+        </a>
+      )}
       <SignSheet token={token} learners={sheet.learners} />
     </main>
   );
