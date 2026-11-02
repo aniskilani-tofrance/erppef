@@ -62,6 +62,11 @@ export function GroupDocumentsCard({
           {perms.recordPayment && o.unpaid.length > 0 ? ` Non payé : ${o.unpaid.map((l) => l.name).join(", ")}.` : ""}
         </p>
       )}
+      {o.unsigned.length > 0 && perms.signHere && (
+        <p className="rounded-md bg-muted/60 px-3 py-2 text-xs">
+          En classe, comme l&apos;émargement : lisez les documents au groupe, ouvrez l&apos;émargement de la séance, puis touchez « Documents à signer » sur la feuille qui circule. Chacun touche son nom, coche, signe au doigt et passe le téléphone.
+        </p>
+      )}
       <ul className="divide-y rounded-md border text-sm">
         {shown.map((r) => {
           const todo = pendingKinds(r.states).length > 0;

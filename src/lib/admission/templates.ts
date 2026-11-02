@@ -208,6 +208,25 @@ Merci d'arriver 10 minutes avant. Si vous ne pouvez pas venir un jour, prévenez
 {signature}`,
   },
   {
+    code: "invitation_groupe_whatsapp",
+    label: "Invitation au groupe WhatsApp de la classe",
+    when: "Fiche du groupe → carte « Groupe WhatsApp de la classe » → « Inviter tout le groupe » : le lien du groupe à chaque inscrit, un par un (jamais à ceux qui ont refusé).",
+    variables: ["prenom", "signature", "organisme", "groupe", "lien_whatsapp"],
+    text: `Bonjour {prenom},
+
+Votre classe de français ({groupe}) a un groupe WhatsApp avec {organisme}.
+
+Dans le groupe : les rappels des cours, la salle, les consignes.
+
+Pour entrer dans le groupe, touchez ce lien :
+{lien_whatsapp}
+
+Vous ne voulez pas entrer dans le groupe ? Répondez NON à ce message.
+
+À bientôt,
+{signature}`,
+  },
+  {
     code: "porte_ouverte",
     label: "Porte ouverte (sans suite)",
     when: "Statut « Sans suite » : la personne n'a pas donné suite, on laisse la porte ouverte.",

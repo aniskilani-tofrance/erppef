@@ -1,7 +1,10 @@
 // Groupe WhatsApp de la classe. PUR : la page charge, ce module décide.
 //   - lien d'invitation : seul un lien chat.whatsapp.com est accepté ;
 //   - qui ajouter / retirer : d'après l'inscription ET le consentement de chaque personne ;
-//   - texte pour le groupe : le français puis chaque traduction, à coller dans le groupe d'annonces.
+//   - texte pour le groupe : le français puis chaque traduction, à coller dans le groupe d'annonces ;
+//   - invitation de tout le groupe : à qui envoyer le lien, un par un.
+
+import { toWhatsAppNumber } from "@/lib/admission/phone";
 
 const INVITE_RE = /^https:\/\/chat\.whatsapp\.com\/[A-Za-z0-9_-]{8,}$/;
 
@@ -40,6 +43,61 @@ export function whatsappGroupRoster(members: RosterMember[]): WhatsAppRoster {
     refused: members.filter((m) => m.status === "inscrit" && m.consent === false).sort(byName),
     notAsked: members.filter((m) => m.status === "inscrit" && m.consent === null).sort(byName),
   };
+}
+
+// ── « Inviter tout le groupe » : le lien du groupe à chaque inscrit, un par un ─────
+// Destinataires : les inscrits, sauf ceux qui ont refusé le groupe. Une invitation déjà envoyée
+// pour CE groupe (note au journal) est signalée et décochée. Ordre alphabétique.
+
+export const GROUP_INVITE_NOTE_PREFIX = "Invitation au groupe WhatsApp de la classe envoyée";
+
+export function groupInviteNote(groupName: string, channel: "whatsapp" | "sms"): string {
+  return `${GROUP_INVITE_NOTE_PREFIX} (${channel === "sms" ? "SMS" : "WhatsApp"}) — ${groupName}`;
+}
+
+/** SMS court, sans emoji (un SMS avec emoji se découpe en nombreux morceaux). */
+export function buildGroupInviteSms(groupName: string, url: string): string {
+  return `ParlerEmploi : le groupe WhatsApp de votre classe de français (${groupName}). Pour entrer dans le groupe, touchez ce lien : ${url}`;
+}
+
+export type InviteMember = RosterMember & { firstName: string | null };
+export type InviteContact = { learner_id: string; contacted_at: string; note: string | null };
+export type InviteTarget = {
+  learnerId: string;
+  name: string;
+  firstName: string | null;
+  phone: string | null;
+  phoneOk: boolean;
+  consent: boolean | null;
+  alreadySentAt: string | null;
+};
+
+export function pickGroupInviteQueue(
+  members: readonly InviteMember[],
+  contacts: readonly InviteContact[],
+  groupName: string,
+): { targets: InviteTarget[]; refused: number } {
+  const lastSent = new Map<string, string>();
+  for (const c of contacts) {
+    const note = c.note ?? "";
+    if (!note.startsWith(GROUP_INVITE_NOTE_PREFIX) || !note.endsWith(`— ${groupName}`)) continue;
+    const prev = lastSent.get(c.learner_id);
+    if (!prev || c.contacted_at > prev) lastSent.set(c.learner_id, c.contacted_at);
+  }
+  const enrolled = members.filter((m) => m.status === "inscrit");
+  const targets = enrolled
+    .filter((m) => m.consent !== false)
+    .map((m) => ({
+      learnerId: m.learnerId,
+      name: m.name,
+      firstName: m.firstName,
+      phone: m.phone,
+      phoneOk: Boolean(toWhatsAppNumber(m.phone)),
+      consent: m.consent,
+      alreadySentAt: lastSent.get(m.learnerId) ?? null,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name, "fr"));
+  return { targets, refused: enrolled.length - targets.length };
 }
 
 // Message collectif : français d'abord, puis chaque traduction (une seule fois par langue).

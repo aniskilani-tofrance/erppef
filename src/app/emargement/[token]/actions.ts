@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { EXCUSE_CLEARED } from "@/lib/emargement/excuse";
+import { findOpenAttendanceSession } from "@/lib/emargement/open-session";
 
 // Page PUBLIQUE : aucune session Supabase. Le token d'émargement est le secret ;
 // chaque action le revalide avant de toucher la base (client service_role).
@@ -25,23 +26,9 @@ export type Sheet = {
   learners: SheetLearner[];
 };
 
-const uuid = z.string().uuid();
-
-// Séance ouverte à l'émargement pour ce token, dans la fenêtre de validité
-// (jusqu'à 24 h après la fin : couvre les retards sans laisser traîner le lien).
-async function findOpenSession(token: string) {
-  if (!uuid.safeParse(token).success) return null;
-  const supabase = createAdminClient();
-
-  const { data: session } = await supabase
-    .from("sessions")
-    .select("id, org_id, group_id, starts_at, ends_at, attendance_closed_at, groups(name)")
-    .eq("attendance_token", token)
-    .single();
-
-  if (!session || session.attendance_closed_at) return null;
-  if (Date.now() > new Date(session.ends_at).getTime() + 24 * 3600 * 1000) return null;
-  return session;
+// Séance ouverte à l'émargement pour ce token (fenêtre de validité : lib/emargement/open-session).
+function findOpenSession(token: string) {
+  return findOpenAttendanceSession(createAdminClient(), token);
 }
 
 export async function fetchSheet(token: string): Promise<Sheet | null> {

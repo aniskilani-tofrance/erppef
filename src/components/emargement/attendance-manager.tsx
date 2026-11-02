@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { CheckCircle2, CloudUpload, Copy, FileDown, RefreshCw } from "lucide-react";
+import { CheckCircle2, CloudUpload, Copy, FileDown, FileSignature, RefreshCw } from "lucide-react";
 import {
   closeAttendanceSheet,
   depositSheetToDrive,
@@ -47,6 +47,7 @@ export function AttendanceManager({
   canExcuseClosed = false,
   excuseAvailable = true,
   publicUrl,
+  documentsUrl = null,
   qrDataUrl,
 }: {
   sessionId: string;
@@ -58,6 +59,7 @@ export function AttendanceManager({
   canExcuseClosed?: boolean; // admin et coordination : excuser une absence après la clôture
   excuseAvailable?: boolean; // false tant que la base n'a pas le statut « Excusé »
   publicUrl: string | null;
+  documentsUrl?: string | null; // cours PEF et ateliers : adhésion, contrat, règlement à signer sur la même feuille
   qrDataUrl: string | null;
 }) {
   const router = useRouter();
@@ -160,6 +162,19 @@ export function AttendanceManager({
               <p className="text-xs text-muted-foreground">
                 Le lien reste valable jusqu&apos;à la clôture (au plus tard 24 h après la fin de séance).
               </p>
+              {documentsUrl && (
+                <div className="space-y-1 rounded-md border border-dashed p-2">
+                  <Button variant="outline" size="sm" asChild>
+                    <a href={documentsUrl}>
+                      <FileSignature className="mr-2 h-3.5 w-3.5" />
+                      Documents à signer (adhésion, contrat, règlement)
+                    </a>
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    Après la lecture en classe : sur la tablette, la feuille d&apos;émargement a le bouton « Documents à signer ». Chacun touche son nom, coche, signe au doigt, puis passe le téléphone.
+                  </p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

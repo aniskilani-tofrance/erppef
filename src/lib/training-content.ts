@@ -156,7 +156,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
           "Un QR code s'affiche : scannez-le avec la tablette (ou votre téléphone) — la liste des apprenants apparaît, avec leurs photos.",
           "Faites circuler la tablette : chacun touche son nom, signe au doigt, valide. La ligne se verrouille (coche verte).",
           "Sur votre écran, la liste se met à jour toute seule : vous voyez qui a signé en temps réel.",
-          "Cours PEF et ateliers : à la première séance, chaque nouvel inscrit signe aussi l'adhésion, le contrat et le règlement. Fiche du groupe → carte « Adhésion, contrat et règlement intérieur » → « Faire signer ici » : sa page s'ouvre sur la tablette, il lit, coche, signe au doigt, puis vous revenez à la fiche pour le suivant.",
+          "Cours PEF et ateliers : à la première séance, chaque nouvel inscrit signe aussi l'adhésion, le contrat et le règlement, avec la même feuille. Lisez les trois documents au groupe, puis touchez « Documents à signer » en haut de la feuille d'émargement : chacun touche son nom, coche chaque document, signe au doigt et passe le téléphone. Pour une personne seule (arrivée en cours de route), la fiche du groupe garde « Faire signer ici » et « Lien WhatsApp ».",
         ],
         tip: "Les photos des apprenants rendent la liste très rapide à utiliser, même avec un public peu à l'aise en lecture.",
       },
@@ -678,6 +678,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
         steps: [
           "Les groupes vivent dans la Communauté WhatsApp de l'organisme, un par classe, créés depuis le téléphone de l'organisme. Dans un groupe de classe, les membres voient les numéros des autres (seul le groupe d'annonces commun de la Communauté les cache) : on n'ajoute donc que les personnes qui ont dit oui. Réglez « Seuls les admins peuvent envoyer des messages » si vous voulez que seules la coordination et la formatrice écrivent.",
           "Fiche du groupe → « Modifier » → collez le lien d'invitation (chat.whatsapp.com/…). La carte « Groupe WhatsApp de la classe » affiche le QR code à montrer au premier cours et le lien à copier ; le message « Planning » envoyé aux inscrits le contient aussi (sauf refus).",
+          "Pour inviter toute la classe à distance : « Inviter tout le groupe » sur la même carte. Un toucher par personne : WhatsApp s'ouvre avec le message et le lien, vous appuyez sur Envoyer, vous revenez au suivant. Ceux qui ont refusé ne sont jamais dans la liste ; ceux déjà invités sont décochés. Comptez 2 minutes pour 15 personnes.",
           "Fiche apprenant → « Parcours d'admission » → « Groupe WhatsApp de la classe » : accepte / refuse / pas encore demandé. Posez la question à l'admission ou au premier cours ; la date de l'accord est conservée.",
           "La carte du groupe dit qui ajouter (avec le numéro), qui n'a pas répondu, qui a refusé, et qui retirer (abandon, fin de parcours). Ajouts et retraits se font depuis le téléphone : l'ERP ne peut pas écrire dans un groupe WhatsApp.",
           "« Prévenir le groupe » → « Copier pour le groupe » : le français puis chaque langue en un seul texte, à coller dans le groupe d'annonces. Gardez l'envoi individuel pour ceux qui n'y sont pas.",
