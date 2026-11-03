@@ -50,6 +50,8 @@ export async function proxy(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/api/cron") ||
     // Webhook des leads restaurateurs (Brevo, Make/Meta, Calendly) : jeton d'organisation dans la route.
     request.nextUrl.pathname.startsWith("/api/leads/inbound") ||
+    // Webhook lemlist (prospection sortante) : secret LEMLIST_WEBHOOK_SECRET vérifié dans la route.
+    request.nextUrl.pathname === "/api/prospection/lemlist" ||
     // API de veille Qualiopi (collecteur Manus) : jeton de service Bearer vérifié dans chaque route.
     request.nextUrl.pathname.startsWith("/api/veille");
 
