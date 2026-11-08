@@ -22,6 +22,7 @@ import { buildMeetingInvitationMessage, formatMeetingPlace, textToHtml } from "@
 import { loadTemplates } from "@/lib/admission/load-templates";
 import { DEFAULT_TEMPLATES, MESSAGE_STAGES, type Templates } from "@/lib/admission/templates";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { parseSpreadsheetId, setWaitlistSheet, syncWaitlistSheet } from "@/lib/admission/waitlist-sheet";
 import { LEVELS } from "@/lib/referentiels";
 import { aiConfigured } from "@/lib/ai/client";
 import { hasReminderCue } from "@/lib/ai/prompts";
@@ -1028,4 +1029,35 @@ export async function prepareBulkPlacementTests(): Promise<BulkTestResult> {
     revalidatePath("/apprenants");
   }
   return { ok: true, targets, created, skippedDone };
+}
+
+// ── Liste d'attente → Google Sheet (onglet « Liste d'attente (ERP) ») ─────────────
+// Admin et coordination. Le réglage vit dans organizations.settings (RLS admin-only en
+// écriture) : client service_role après requireRole, sur la seule clé waitlist_sheet.
+
+export type WaitlistSheetResult = { ok: true; rows: number | null; message: string } | { ok: false; error: string };
+
+/** Relie le Google Sheet (lien collé) puis le met à jour tout de suite ; lien vide = délier. */
+export async function saveWaitlistSheet(link: string): Promise<WaitlistSheetResult> {
+  const { orgId } = await requireRole(["admin", "coordinator"]);
+  const admin = createAdminClient();
+  if (!link.trim()) {
+    await setWaitlistSheet(admin, orgId, null);
+    revalidateAdmission();
+    return { ok: true, rows: null, message: "Google Sheet délié : plus de mise à jour automatique." };
+  }
+  const id = parseSpreadsheetId(link);
+  if (!id) return { ok: false, error: "Lien non reconnu : collez le lien du Google Sheet (docs.google.com/spreadsheets/d/…)." };
+  await setWaitlistSheet(admin, orgId, id);
+  const r = await syncWaitlistSheet(admin, orgId);
+  revalidateAdmission();
+  return r.ok ? { ok: true, rows: r.rows, message: `Google Sheet relié et mis à jour : ${r.rows} personne${r.rows > 1 ? "s" : ""}.` } : { ok: false, error: r.error };
+}
+
+/** « Mettre à jour maintenant » : réécrit l'onglet du Google Sheet relié. */
+export async function syncWaitlistSheetNow(): Promise<WaitlistSheetResult> {
+  const { orgId } = await requireRole(["admin", "coordinator"]);
+  const r = await syncWaitlistSheet(createAdminClient(), orgId);
+  revalidateAdmission();
+  return r.ok ? { ok: true, rows: r.rows, message: `Google Sheet mis à jour : ${r.rows} personne${r.rows > 1 ? "s" : ""}.` } : { ok: false, error: r.error };
 }

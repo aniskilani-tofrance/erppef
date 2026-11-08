@@ -27,6 +27,8 @@ import { MessageTemplatesDialog } from "@/components/admission/message-templates
 import { SignupLinkButton } from "@/components/admission/signup-link-button";
 import { BulkTestButton } from "@/components/admission/bulk-test-button";
 import { formatPhone } from "@/lib/admission/phone";
+import { readWaitlistSheetState, spreadsheetUrl } from "@/lib/admission/waitlist-sheet";
+import { WaitlistSheetControls } from "@/components/admission/waitlist-sheet-controls";
 import { ADMISSION_STATUSES, admissionBadgeClass, reasonFits, reasonLabel } from "@/lib/admission/status";
 import { learnerRef } from "@/lib/refs";
 import { ProposePoeiButton } from "@/components/poei-candidates/candidate-controls";
@@ -318,7 +320,7 @@ function AppointmentsCard({
 }
 
 export default async function AdmissionPage() {
-  const { userId } = await requireRole(["admin", "coordinator"]);
+  const { userId, orgId } = await requireRole(["admin", "coordinator"]);
   const supabase = await createClient();
   const assistant = aiConfigured();
 
@@ -355,6 +357,10 @@ export default async function AdmissionPage() {
   const { data: poeiRows } = await supabase.from("poei_candidates").select("id, learner_id").not("learner_id", "is", null);
   const poeiByLearner = new Map((poeiRows ?? []).map((r) => [r.learner_id as string, r.id as string]));
   const senderFirstName = profile?.full_name?.trim().split(/\s+/)[0] ?? null;
+  // Google Sheet relié à la liste d'attente (onglet réécrit chaque lundi)
+  const { data: orgRow } = await supabase.from("organizations").select("settings").eq("id", orgId).maybeSingle();
+  const sheetState = readWaitlistSheetState(orgRow?.settings ?? null);
+  const waitlistSheet = sheetState ? { url: spreadsheetUrl(sheetState.id), syncedAt: sheetState.syncedAt, rows: sheetState.rows, error: sheetState.error } : null;
   const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host") ?? "pef-erp.vercel.app"}`;
   const pendingTestUrl = new Map<string, string>();
   for (const t of pendingTests ?? []) if (!pendingTestUrl.has(t.learner_id)) pendingTestUrl.set(t.learner_id, `${origin}/test/${t.token}`);
@@ -679,6 +685,7 @@ export default async function AdmissionPage() {
           <p className="text-xs text-muted-foreground">
             Classée par <b>ordre d&apos;arrivée</b>. La personne <b>veut venir</b>, mais la place proposée ne convenait pas (horaire, garde d&apos;enfant…) ou aucun groupe compatible n&apos;existe. Dès qu&apos;une place se libère, inscrivez-la depuis la fiche du groupe : elle passe « Inscrit » toute seule. À ne pas confondre avec « Sans suite » plus bas.
           </p>
+          <WaitlistSheetControls sheet={waitlistSheet} serviceEmail={process.env.GDRIVE_SERVICE_ACCOUNT_EMAIL ?? null} />
         </CardHeader>
         <CardContent>
           <LearnerRows rows={waiting} senderFirstName={senderFirstName} history={historyByLearner} groupsOf={groupsByLearnerMap} templates={templates} pendingTestUrl={pendingTestUrl} poeiByLearner={poeiByLearner} assistant={assistant} appointments={appointmentByLearner} showReason empty="Personne en liste d'attente." />

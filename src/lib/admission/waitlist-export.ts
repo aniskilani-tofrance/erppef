@@ -47,12 +47,13 @@ function cell(value: string | null | undefined): string {
   return /[";]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
 }
 
-export function buildWaitlistCsv(learners: readonly WaitlistLearner[], contacts: readonly WaitlistContact[]): string {
+/** Les lignes de la liste d'attente (valeurs brutes, colonnes WAITLIST_COLUMNS) : CSV et Google Sheet. */
+export function waitlistTable(learners: readonly WaitlistLearner[], contacts: readonly WaitlistContact[]): string[][] {
   const byLearner = new Map<string, WaitlistContact[]>();
   for (const c of contacts) byLearner.set(c.learner_id, [...(byLearner.get(c.learner_id) ?? []), c]);
   for (const list of byLearner.values()) list.sort((a, b) => b.contacted_at.localeCompare(a.contacted_at));
 
-  const rows = [...learners]
+  return [...learners]
     .sort((a, b) => a.created_at.localeCompare(b.created_at))
     .map((l, i) => {
       const history = byLearner.get(l.id) ?? [];
@@ -61,19 +62,21 @@ export function buildWaitlistCsv(learners: readonly WaitlistLearner[], contacts:
       return [
         String(i + 1),
         learnerRef(l.learner_no),
-        l.first_name,
-        l.last_name,
+        l.first_name ?? "",
+        l.last_name ?? "",
         l.phone ? formatPhone(l.phone) : "",
-        l.email,
-        l.level_assessed,
+        l.email ?? "",
+        l.level_assessed ?? "",
         dayFr(l.created_at),
         reasonLabel(reason) ?? "non renseigné",
         history[0] ? dayFr(history[0].contacted_at) : "",
         resolveProvenance(l).text,
-      ]
-        .map(cell)
-        .join(";");
+      ];
     });
+}
+
+export function buildWaitlistCsv(learners: readonly WaitlistLearner[], contacts: readonly WaitlistContact[]): string {
+  const rows = waitlistTable(learners, contacts).map((r) => r.map(cell).join(";"));
   return "﻿" + [WAITLIST_COLUMNS.join(";"), ...rows].join("\r\n");
 }
 
