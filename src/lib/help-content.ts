@@ -841,6 +841,17 @@ export const HELP_SECTIONS: HelpSection[] = [
         ],
       },
       {
+        title: "Prospection sortante : liste d'appels importée, retours lemlist, API Leads",
+        steps: [
+          "Les restaurants qu'on démarche sans qu'ils aient rien demandé sont dans « Prospection », une liste par campagne (ex. « POEI resto — prospection sortante nov. 2026 »). Ils ne deviennent des leads que lorsqu'ils sont intéressés.",
+          "Les listes peuvent arriver par l'API Leads (import en lot) : un restaurant déjà connu, même SIREN ou même téléphone, n'est jamais recréé. Relancer le même import ne crée rien de plus.",
+          "lemlist envoie ses événements à l'ERP : réponse ou « intéressé » → lead « Contacté » à classer le jour même ; RDV pris (lemcal) → lead « RDV pris » à la date du rendez-vous ; « pas intéressé » → prospect « Pas de besoin » et lead « Perdu » ; STOP ou désinscription → « Ne plus appeler », lead « Perdu » pour opposition, numéro et e-mail bloqués dans lemlist ; rebond → note.",
+          "Tous ces leads ont la source « Prospection » : aucun e-mail ni SMS automatique ne part vers eux, même avec les envois automatiques activés. Seul ce que vous envoyez vous-même part.",
+          "Les agents Claude du QG (Commercial et Bras droit du centre de formation) lisent les leads et les prospects modifiés, et peuvent créer des fiches, par cette même API. Ils n'ont jamais la clé de la base.",
+          "Pour les techniciens : contrat de l'API dans docs/integrations/api-leads.md, webhook lemlist dans docs/integrations/lemlist-prospection.md.",
+        ],
+      },
+      {
         title: "Meta : apprendre à la publicité quels leads sont les bons (API Conversions)",
         steps: [
           "L'ERP envoie trois signaux à Meta, côté serveur : « Lead » à la réception du formulaire, « Lead qualifié » quand la fiche passe « Qualifié » (ou directement « RDV pris »), « RDV pris » quand le rendez-vous avec la direction est posé (bouton « Poser le RDV », changement de statut ou Calendly de direction). Dans le Gestionnaire d'événements, « LeadQualifie » et « RdvPris » apparaissent comme événements personnalisés : on peut en faire des conversions personnalisées et y optimiser la campagne.",

@@ -23,6 +23,7 @@ import {
   type LeadForBrevo,
 } from "@/lib/leads/brevo";
 import { dispatchTwilioLeadSms } from "@/lib/leads/twilio";
+import { blocklistValues, isOppositionReason, lemlistUnsubscribe } from "@/lib/prospection/lemlist";
 import { loadLeadSettings } from "@/lib/leads/queries";
 import { dispatchMetaStatusEvents, metaEventsForStatus, type LeadForMeta } from "@/lib/leads/meta-capi";
 
@@ -201,6 +202,13 @@ const eventSchema = z.object({
   nextActionOn: day.nullable().optional(),
 });
 
+/** Lead perdu pour opposition : e-mail et téléphone vont aussi dans la liste de blocage lemlist. */
+function blockInLemlistIfOpposed(status: string | null | undefined, lostReason: string | null | undefined, lead: { email?: string | null; phone?: string | null } | null) {
+  if (status !== "perdu" || !isOppositionReason(lostReason) || !lead) return;
+  const values = blocklistValues({ email: lead.email, phone: lead.phone });
+  if (values.length) after(async () => { await lemlistUnsubscribe(values); });
+}
+
 export async function logLeadEvent(raw: z.infer<typeof eventSchema>): Promise<ActionResult> {
   const parsed = eventSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "Données invalides" };
@@ -235,6 +243,7 @@ export async function logLeadEvent(raw: z.infer<typeof eventSchema>): Promise<Ac
     if (e2) return { ok: false, error: translatePgError(e2) };
     if (d.status) await dispatchStatusEmail(supabase, orgId, updated as LeadForBrevo | null, d.status);
     if (d.status) signalMetaStatus(orgId, updated, d.status);
+    blockInLemlistIfOpposed(d.status, d.lostReason, updated);
     if (updated) await dispatchCallOutcomeSms(supabase, orgId, userId, updated as LeadForBrevo, d.outcome);
   } else if (d.kind === "appel") {
     const current = await supabase.from("employer_leads").select("*").eq("id", d.leadId).eq("org_id", orgId).maybeSingle();
@@ -313,6 +322,7 @@ export async function setLeadStatus(raw: { leadId: string; status: string; lostR
   });
   await dispatchStatusEmail(supabase, orgId, updated as LeadForBrevo | null, d.status);
   signalMetaStatus(orgId, updated, d.status);
+  blockInLemlistIfOpposed(d.status, d.lostReason, updated);
   if (d.status === "perdu" && /injoignable/i.test(d.lostReason ?? "") && updated) {
     const settings = await loadLeadSettings(supabase, orgId);
     await dispatchBrevoLeadEvent(supabase, {

@@ -242,6 +242,7 @@ export const LOST_REASONS = [
   "A choisi un autre organisme",
   "Refus du dispositif",
   "Établissement fermé / en liquidation",
+  "Opposition — ne plus contacter",
   "Autre",
 ] as const;
 
