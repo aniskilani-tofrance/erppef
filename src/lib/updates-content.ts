@@ -26,6 +26,17 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-11-08-liste-attente-google-sheet",
+    date: "2026-11-08",
+    title: "Liste d'attente : un Google Sheet mis à jour chaque lundi",
+    summary: "La carte « Liste d'attente » peut être reliée à un Google Sheet : l'ERP réécrit chaque lundi matin l'onglet « Liste d'attente (ERP) », et « Mettre à jour le Google Sheet » le fait tout de suite.",
+    items: [
+      { text: "Apprenants → Admission → carte « Liste d'attente » → « Relier un Google Sheet » : partage « Limité », le compte de l'ERP en Éditeur, puis le lien. L'onglet « Liste d'attente (ERP) » est créé et réécrit chaque lundi matin.", roles: TEAM },
+      { text: "N'écrivez rien dans l'onglet de l'ERP : vos notes vont dans un autre onglet du même Sheet. Les motifs se corrigent dans l'ERP (« Noter un contact »).", roles: TEAM },
+    ],
+    training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "Le parcours d'admission" }],
+  },
+  {
     id: "2026-11-08-liste-attente-tableur",
     date: "2026-11-08",
     title: "Liste d'attente : export vers Google Sheets ou Excel",

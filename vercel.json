@@ -26,6 +26,10 @@
     {
       "path": "/api/cron/relance-emargement",
       "schedule": "30 17 * * 1-6"
+    },
+    {
+      "path": "/api/cron/liste-attente-sheet",
+      "schedule": "0 6 * * 1"
     }
   ],
   "git": {
