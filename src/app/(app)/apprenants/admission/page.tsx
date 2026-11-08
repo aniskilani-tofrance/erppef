@@ -2,7 +2,9 @@ import { Fragment } from "react";
 import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -662,7 +664,18 @@ export default async function AdmissionPage() {
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Liste d&apos;attente — à reproposer ({waiting.length})</CardTitle>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardTitle className="text-base">Liste d&apos;attente — à reproposer ({waiting.length})</CardTitle>
+            {waiting.length > 0 && (
+              <Button variant="outline" size="sm" className="h-8" asChild>
+                {/* Route de téléchargement (CSV) : lien simple, pas de navigation client */}
+                <a href="/apprenants/admission/liste-attente" download title="Télécharger la liste d'attente, à ouvrir dans Google Sheets ou Excel">
+                  <Download className="mr-1 h-3.5 w-3.5" />
+                  Exporter (tableur)
+                </a>
+              </Button>
+            )}
+          </div>
           <p className="text-xs text-muted-foreground">
             Classée par <b>ordre d&apos;arrivée</b>. La personne <b>veut venir</b>, mais la place proposée ne convenait pas (horaire, garde d&apos;enfant…) ou aucun groupe compatible n&apos;existe. Dès qu&apos;une place se libère, inscrivez-la depuis la fiche du groupe : elle passe « Inscrit » toute seule. À ne pas confondre avec « Sans suite » plus bas.
           </p>
