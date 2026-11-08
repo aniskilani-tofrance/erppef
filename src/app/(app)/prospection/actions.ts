@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -9,6 +10,7 @@ import { todayParis } from "@/lib/leads/queries";
 import { CALL_OUTCOME_CODES, transitionFor } from "@/lib/prospection/status";
 import { upsertLead, type LeadInput, type LeadResult } from "@/app/(app)/leads/actions";
 import { qualifiedLeadStatus } from "@/lib/prospection/qualification";
+import { blocklistValues, lemlistUnsubscribe } from "@/lib/prospection/lemlist";
 
 // Rôles autorisés : les mêmes que pour les leads (direction + setter).
 const ROLES = ["admin", "coordinator", "setter"] as const;
@@ -198,6 +200,12 @@ export async function logProspectCall(raw: z.input<typeof callSchema>): Promise<
     .eq("id", p.id);
   if (updateError) return { ok: false, error: translatePgError(updateError) };
 
+  // Opposition : liste de blocage lemlist aussi (e-mail et téléphone), après la réponse à l'écran.
+  if (d.outcome === "ne_plus_appeler") {
+    const values = blocklistValues({ email: p.email as string | null, phone: p.phone as string | null });
+    if (values.length) after(async () => { await lemlistUnsubscribe(values); });
+  }
+
   revalidatePath("/prospection");
   revalidatePath(`/prospection/${p.list_id}`);
   if (leadId) revalidatePath("/leads");
@@ -241,6 +249,14 @@ export async function deleteProspectList(raw: { listId: string }): Promise<Actio
     .eq("list_id", parsed.data.listId)
     .gt("attempts", 0);
   if (count) return { ok: false, error: `Impossible : ${count} restaurant${count > 1 ? "s ont" : " a"} déjà été appelé${count > 1 ? "s" : ""} dans cette liste.` };
+  // Une opposition est définitive : la liste qui la porte ne se supprime pas (sinon le restaurant
+  // pourrait être réimporté).
+  const { count: opposed } = await supabase
+    .from("prospects")
+    .select("id", { count: "exact", head: true })
+    .eq("list_id", parsed.data.listId)
+    .eq("status", "ne_plus_appeler");
+  if (opposed) return { ok: false, error: `Impossible : cette liste contient ${opposed} restaurant${opposed > 1 ? "s" : ""} « Ne plus appeler ».` };
   const { error } = await supabase.from("prospect_lists").delete().eq("id", parsed.data.listId);
   if (error) return { ok: false, error: translatePgError(error) };
   revalidatePath("/prospection");
