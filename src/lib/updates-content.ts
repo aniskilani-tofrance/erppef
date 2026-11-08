@@ -26,6 +26,17 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-11-08-liste-attente-tableur",
+    date: "2026-11-08",
+    title: "Liste d'attente : export vers Google Sheets ou Excel",
+    summary: "Admission → carte « Liste d'attente » → « Exporter (tableur) » : la liste d'attente dans un fichier, dans l'ordre d'arrivée, avec le motif et le dernier contact.",
+    items: [
+      { text: "Apprenants → Admission → carte « Liste d'attente — à reproposer » → « Exporter (tableur) ». Colonnes : rang, N°, prénom, nom, téléphone, e-mail, niveau évalué, date d'arrivée, motif de l'attente, dernier contact, provenance.", roles: TEAM },
+      { text: "Google Sheets : Fichier → Importer → Importer le fichier. Excel : double-clic. C'est une photo du moment : réexportez pour une liste à jour. Données personnelles : à garder dans l'équipe.", roles: TEAM },
+    ],
+    training: [{ moduleId: "c3-equipe", lessonId: "admission", label: "Le parcours d'admission" }],
+  },
+  {
     id: "2026-11-02-documents-signes-en-classe",
     date: "2026-11-02",
     title: "Adhésion, contrat et règlement : signés en classe, comme l'émargement",
