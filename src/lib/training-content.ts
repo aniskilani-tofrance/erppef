@@ -950,6 +950,21 @@ export const TRAINING_MODULES: TrainingModule[] = [
         practice: { instruction: "Sur un lead « À rappeler », notez un appel « Messagerie » et regardez la prochaine action proposée : elle doit être « J1 — rappeler à un autre créneau ».", href: "/leads?statut=a_rappeler", hrefLabel: "Leads à rappeler" },
       },
       {
+        id: "prospection",
+        title: "Prospection : appeler la liste des restaurants et suivre les retours lemlist",
+        intro: "Un prospect est un restaurant qu'on appelle sans qu'il ait rien demandé. Il reste dans « Prospection » tant qu'il n'est pas intéressé ; il devient un lead quand il dit oui.",
+        steps: [
+          "Menu « Prospection » : ouvrez la liste « POEI resto — prospection sortante nov. 2026 » puis « Appeler ». L'écran donne un restaurant à la fois, avec son téléphone, la fiche Google et le contact dans les notes.",
+          "Appelez entre 14 h 30 et 17 h 30, jamais pendant le service. Notez chaque appel : Pas de réponse, Barrage, Rappeler (avec la date), Intéressé, Pas de besoin, Ne plus appeler.",
+          "Ce qu'on dit : 2 jours par semaine en entreprise et 3 jours de formation chez nous, pendant 3 mois ; le stagiaire est indemnisé par France Travail ; la formation peut être entièrement financée, sous conditions.",
+          "« Intéressé » ouvre la fiche de qualification et crée le lead (source « Prospection »). Ensuite, tout se passe dans « Leads resto » comme d'habitude.",
+          "Les retours de lemlist arrivent tout seuls : une réponse ou un « intéressé » crée le lead à classer le jour même ; un RDV pris par lemcal passe le lead « RDV pris » ; « pas intéressé » passe le prospect « Pas de besoin » ; un STOP ou une désinscription passe le prospect « Ne plus appeler ».",
+          "Aucun e-mail ni SMS automatique ne part vers ces restaurants : tout message vient de vous. SMS seulement après le 3e appel manqué, avec STOP dans le texte.",
+        ],
+        tip: "« Ne plus appeler » est définitif : la personne a refusé. Le numéro part aussi dans la liste de blocage lemlist, et un nouvel import ne le reprend jamais.",
+        practice: { instruction: "Ouvrez « Prospection », choisissez la liste POEI et lancez « Appeler » : notez un premier appel.", href: "/prospection", hrefLabel: "Ouvrir la Prospection" },
+      },
+      {
         id: "candidats",
         title: "Candidats POEI : les personnes à placer",
         intro: "Un lead resto est un EMPLOYEUR. Un candidat POEI est une PERSONNE qui cherche un emploi en restauration. Les deux se rejoignent quand on présente un candidat à un restaurateur.",

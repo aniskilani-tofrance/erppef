@@ -38,10 +38,15 @@ export type LemlistEvent = {
   lastName: string | null;
   companyName: string | null;
   siret: string | null;
+  /** SIREN (9 chiffres) : variable personnalisée « siren » des listes de restaurants, ou début du SIRET. */
+  siren: string | null;
   city: string | null;
   postalCode: string | null;
   text: string | null;
   at: string | null;
+  /** Rendez-vous pris (lemcal, événement meetingBooked). */
+  meetingDate: string | null;
+  meetingType: string | null;
   secret: string | null;
 };
 
@@ -72,6 +77,9 @@ export function parseLemlistEvent(body: unknown): LemlistEvent | null {
   const text = str(b.text) ?? str(b.message) ?? str(b.body) ?? str(b.snippet) ?? str(b.messagePreview) ?? (html ? stripHtml(html) : null);
   const email = (str(b.leadEmail) ?? str(b.email))?.toLowerCase() ?? null;
   const siret = (str(b.siret) ?? "").replace(/\s/g, "");
+  const sirenRaw = (str(b.siren) ?? "").replace(/\s/g, "");
+  const siren = /^\d{9}$/.test(sirenRaw) ? sirenRaw : /^\d{14}$/.test(siret) ? siret.slice(0, 9) : null;
+  const meetingRaw = str(b.meetingDate);
   return {
     activityId: str(b._id) ?? str(b.id),
     type,
@@ -83,10 +91,13 @@ export function parseLemlistEvent(body: unknown): LemlistEvent | null {
     lastName: str(b.leadLastName) ?? str(b.lastName),
     companyName: str(b.leadCompanyName) ?? str(b.companyName),
     siret: /^\d{14}$/.test(siret) ? siret : null,
+    siren,
     city: str(b.city) ?? str(b.ville),
     postalCode: str(b.postalCode) ?? str(b.codePostal),
     text: text ? text.slice(0, 2000) : null,
     at: str(b.createdAt),
+    meetingDate: meetingRaw && !Number.isNaN(Date.parse(meetingRaw)) ? new Date(meetingRaw).toISOString() : null,
+    meetingType: str(b.meetingType),
     secret: str(b.secret),
   };
 }
@@ -104,11 +115,13 @@ export function isOutOfOffice(text: string | null | undefined): boolean {
   return Boolean(text && ABSENCE.test(text));
 }
 
-export type LemlistAction = "opposition" | "reply" | "interested" | "bounce" | "absence" | "ignore";
+export type LemlistAction = "opposition" | "reply" | "interested" | "not_interested" | "meeting" | "bounce" | "absence" | "ignore";
 
-const UNSUBSCRIBE_TYPES = new Set(["emailsUnsubscribed", "entityUnsubscribed", "variableUnsubscribed"]);
+const UNSUBSCRIBE_TYPES = new Set(["emailsUnsubscribed", "entityUnsubscribed", "variableUnsubscribed", "apiUnsubscribed"]);
 const REPLY_TYPES = new Set(["emailsReplied", "linkedinReplied", "smsReplied", "whatsappReplied"]);
 const INTERESTED_TYPES = new Set(["interested", "emailsInterested", "linkedinInterested", "aircallInterested", "apiInterested", "manualInterested"]);
+const NOT_INTERESTED_TYPES = new Set(["notInterested", "emailsNotInterested", "linkedinNotInterested", "aircallNotInterested", "apiNotInterested", "manualNotInterested"]);
+const MEETING_TYPES = new Set(["meetingBooked"]);
 const BOUNCE_TYPES = new Set(["emailsBounced"]);
 
 /** Ce que le pont fait d'un événement. Tout le reste (envois, ouvertures, clics…) est ignoré. */
@@ -120,17 +133,21 @@ export function actionFor(e: Pick<LemlistEvent, "type" | "text">): LemlistAction
     return "reply";
   }
   if (INTERESTED_TYPES.has(e.type)) return "interested";
+  if (NOT_INTERESTED_TYPES.has(e.type)) return "not_interested";
+  if (MEETING_TYPES.has(e.type)) return "meeting";
   if (BOUNCE_TYPES.has(e.type)) return "bounce";
   return "ignore";
 }
 
-export function channelOf(type: string): { label: string; kind: "email" | "sms" | "whatsapp" | "appel" | "note" } {
+export function channelOf(type: string): { label: string; kind: "email" | "sms" | "whatsapp" | "appel" | "rdv" | "note" } {
   if (type.startsWith("emails")) return { label: "e-mail", kind: "email" };
   if (type.startsWith("linkedin")) return { label: "LinkedIn", kind: "note" };
   if (type.startsWith("sms")) return { label: "SMS", kind: "sms" };
   if (type.startsWith("whatsapp")) return { label: "WhatsApp", kind: "whatsapp" };
   if (type.startsWith("aircall")) return { label: "appel", kind: "appel" };
+  if (type === "apiUnsubscribed") return { label: "lemlist (désinscription)", kind: "note" };
   if (type.endsWith("Unsubscribed")) return { label: "lien de désinscription", kind: "email" };
+  if (type === "meetingBooked") return { label: "lemcal", kind: "rdv" };
   return { label: "lemlist", kind: "note" };
 }
 

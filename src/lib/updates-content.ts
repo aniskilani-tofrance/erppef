@@ -26,6 +26,18 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-11-08-prospection-api-lemlist",
+    date: "2026-11-08",
+    title: "Prospection : la liste des restaurants à appeler, et lemlist branché sur l'ERP",
+    summary: "Les restaurants de la prospection POEI arrivent dans « Prospection », sans doublon, et les réponses de lemlist (intéressé, RDV, pas intéressé, STOP) se notent toutes seules dans l'ERP.",
+    items: [
+      { text: "Menu « Prospection » : la liste « POEI resto — prospection sortante nov. 2026 » est prête. « Appeler » donne un restaurant à la fois, avec la fiche Google et le contact dans les notes. Appels entre 14 h 30 et 17 h 30.", roles: LEADS },
+      { text: "lemlist écrit dans l'ERP : une réponse ou un « intéressé » crée le lead à classer le jour même ; un RDV pris passe le lead « RDV pris » ; « pas intéressé » ou STOP met fin au suivi. Rien n'est envoyé automatiquement à ces restaurants.", roles: LEADS },
+      { text: "Les agents Claude du QG peuvent lire et créer des leads et des prospects par une API protégée, sans jamais voir la clé de la base.", roles: TEAM },
+    ],
+    training: [{ moduleId: "m1-leads", lessonId: "prospection", label: "Prospection : appeler la liste et suivre lemlist" }],
+  },
+  {
     id: "2026-11-08-liste-attente-tableur",
     date: "2026-11-08",
     title: "Liste d'attente : export vers Google Sheets ou Excel",

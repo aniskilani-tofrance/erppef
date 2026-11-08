@@ -52,6 +52,10 @@ export async function proxy(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/api/leads/inbound") ||
     // Webhook lemlist (prospection sortante) : secret LEMLIST_WEBHOOK_SECRET vérifié dans la route.
     request.nextUrl.pathname === "/api/prospection/lemlist" ||
+    request.nextUrl.pathname === "/api/leads/lemlist-webhook" ||
+    // API Leads (agents du QG, imports) : jeton de service Bearer PEF_LEADS_API_TOKEN vérifié dans chaque route.
+    request.nextUrl.pathname === "/api/leads" ||
+    request.nextUrl.pathname === "/api/leads/import" ||
     // API de veille Qualiopi (collecteur Manus) : jeton de service Bearer vérifié dans chaque route.
     request.nextUrl.pathname.startsWith("/api/veille");
 

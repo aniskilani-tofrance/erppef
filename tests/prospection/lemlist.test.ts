@@ -41,10 +41,10 @@ function memoryStore(seed: { prospects?: (ProspectRow & { org_id: string; siret?
         .some(([o, note]) => o === orgId && String(note ?? "").includes(marker));
     },
     async findProspect(orgId, by) {
-      return prospects.find((p) => p.org_id === orgId && ((by.siret && p.siret === by.siret) || (by.email && p.email?.toLowerCase() === by.email))) ?? null;
+      return prospects.find((p) => p.org_id === orgId && ((by.siret && p.siret === by.siret) || (by.siren && (p.siret?.startsWith(by.siren) || String(p.notes ?? "").includes(`SIREN ${by.siren}`))) || (by.email && p.email?.toLowerCase() === by.email) || (by.phone && p.phone === by.phone))) ?? null;
     },
     async findLead(orgId, by) {
-      const l = leads.find((x) => x.org_id === orgId && ((by.id && x.id === by.id) || (by.email && String(x.email ?? "").toLowerCase() === by.email)));
+      const l = leads.find((x) => x.org_id === orgId && ((by.id && x.id === by.id) || (by.siren && String(x.notes ?? "").includes(`SIREN ${by.siren}`)) || (by.email && String(x.email ?? "").toLowerCase() === by.email) || (by.phone && x.phone === by.phone)));
       return (l as LeadRow | undefined) ?? null;
     },
     async defaultOwner() { return "setter-1"; },
@@ -236,5 +236,70 @@ describe("lemlist → ERP : application des règles", () => {
     const m = memoryStore({ prospects: [prospect()] });
     expect((await applyLemlistEvent(m.store, ORG, event({ type: "emailsOpened" }), deps())).action).toBe("ignore");
     expect(m.prospectNotes).toHaveLength(0);
+  });
+});
+
+describe("lemlist → ERP : restaurants sans e-mail, pas intéressé, RDV pris (04/11)", () => {
+  it("lit le SIREN (variable « siren ») et la date du RDV lemcal", () => {
+    const e = event({ type: "meetingBooked", siren: "111 222 333", meetingDate: "2026-11-10T14:00:00.000Z", meetingType: "Découverte POEI" });
+    expect(e).toMatchObject({ siren: "111222333", meetingDate: "2026-11-10T14:00:00.000Z", meetingType: "Découverte POEI" });
+    expect(event({ siret: "44455566600011" }).siren).toBe("444555666");
+  });
+
+  it("classe « pas intéressé », RDV pris et désinscription par l'API", () => {
+    for (const type of ["emailsNotInterested", "linkedinNotInterested", "manualNotInterested", "aircallNotInterested", "apiNotInterested"]) {
+      expect(actionFor({ type, text: null }), type).toBe("not_interested");
+    }
+    expect(actionFor({ type: "meetingBooked", text: null })).toBe("meeting");
+    expect(actionFor({ type: "apiUnsubscribed", text: null })).toBe("opposition");
+  });
+
+  it("retrouve un restaurant sans e-mail par son téléphone", async () => {
+    const m = memoryStore({ prospects: [prospect({ email: null, siret: null })] });
+    const r = await applyLemlistEvent(m.store, ORG, event({ _id: "act_20", leadEmail: null, leadPhone: "01 42 36 07 42", text: "Rappelez-moi" }), deps());
+    expect(r).toMatchObject({ action: "reply", prospectId: "p1", createdLead: true });
+    expect(m.leads[0]).toMatchObject({ phone: "01 42 36 07 42", source: "prospection" });
+  });
+
+  it("retrouve un restaurant par son SIREN noté à l'import", async () => {
+    const m = memoryStore({ prospects: [{ ...prospect({ email: null, phone: null, siret: null }) }] });
+    m.prospects[0].notes = "Contact : X · SIREN 111222333";
+    const r = await applyLemlistEvent(m.store, ORG, event({ _id: "act_21", leadEmail: null, siren: "111222333", type: "emailsInterested" }), deps());
+    expect(r.prospectId).toBe("p1");
+    expect(m.prospects[0].status).toBe("interesse");
+  });
+
+  it("« pas intéressé » : prospect « Pas de besoin », lead « Perdu », sans liste de blocage", async () => {
+    const m = memoryStore({
+      prospects: [prospect({ lead_id: "L1" })],
+      leads: [{ id: "L1", org_id: ORG, status: "contacte", source: "prospection", email: "gerant@resto-test.fr" }],
+    });
+    const d = deps();
+    const r = await applyLemlistEvent(m.store, ORG, event({ _id: "act_22", type: "manualNotInterested" }), d);
+    expect(r.action).toBe("not_interested");
+    expect(m.prospects[0].status).toBe("pas_de_besoin");
+    expect(m.leads[0]).toMatchObject({ status: "perdu", lost_reason: expect.stringContaining("Pas intéressé") });
+    expect(m.leadEvents[0]).toMatchObject({ kind: "statut", outcome: "refus" });
+    expect(d.unsubscribe).not.toHaveBeenCalled();
+  });
+
+  it("« pas intéressé » ne défait pas un RDV déjà pris, ni ne crée de lead", async () => {
+    const m = memoryStore({ leads: [{ id: "L1", org_id: ORG, status: "rdv_pris", source: "prospection", email: "gerant@resto-test.fr" }] });
+    await applyLemlistEvent(m.store, ORG, event({ _id: "act_23", type: "emailsNotInterested" }), deps());
+    expect(m.leads[0].status).toBe("rdv_pris");
+    expect(m.leadEvents[0].note).toContain("à vérifier");
+    const vide = memoryStore({ prospects: [prospect()] });
+    await applyLemlistEvent(vide.store, ORG, event({ _id: "act_24", type: "emailsNotInterested" }), deps());
+    expect(vide.leads).toHaveLength(0);
+  });
+
+  it("RDV pris (lemcal) : lead « RDV pris » à la bonne date, source « prospection », prospect « Intéressé »", async () => {
+    const m = memoryStore({ prospects: [prospect()] });
+    const r = await applyLemlistEvent(m.store, ORG, event({ _id: "act_25", type: "meetingBooked", meetingDate: "2026-11-10T14:00:00.000Z" }), deps());
+    expect(r).toMatchObject({ action: "meeting", createdLead: true });
+    expect(m.leads[0]).toMatchObject({ status: "rdv_pris", rdv_at: "2026-11-10T14:00:00.000Z", rdv_outcome: "a_venir", source: "prospection" });
+    expect(manualOnlyLead(m.leads[0] as { source: string })).toBe(true);
+    expect(m.leadEvents[0]).toMatchObject({ kind: "rdv", outcome: "rdv_pose" });
+    expect(m.prospects[0].status).toBe("interesse");
   });
 });

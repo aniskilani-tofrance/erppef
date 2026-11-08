@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { resolveLeadSettings } from "@/lib/leads/templates";
+import { phoneFromCell } from "@/lib/prospection/import";
 import {
   OPPOSITION_LIST_NAME,
   actionFor,
@@ -19,11 +20,12 @@ import {
 
 export type ProspectRow = { id: string; list_id: string; company: string; status: string; phone: string | null; email: string | null; lead_id: string | null; city: string | null; postal_code: string | null };
 export type LeadRow = { id: string; status: string; source: string };
+export type FindBy = { email: string | null; siret: string | null; siren: string | null; phone: string | null };
 
 export interface LemlistStore {
   alreadySeen(orgId: string, marker: string): Promise<boolean>;
-  findProspect(orgId: string, by: { email: string | null; siret: string | null }): Promise<ProspectRow | null>;
-  findLead(orgId: string, by: { id: string | null; email: string | null }): Promise<LeadRow | null>;
+  findProspect(orgId: string, by: FindBy): Promise<ProspectRow | null>;
+  findLead(orgId: string, by: FindBy & { id: string | null }): Promise<LeadRow | null>;
   defaultOwner(orgId: string): Promise<string | null>;
   insertLead(row: Record<string, unknown>): Promise<string>;
   updateLead(orgId: string, id: string, patch: Record<string, unknown>): Promise<void>;
@@ -70,8 +72,9 @@ export async function applyLemlistEvent(store: LemlistStore, orgId: string, e: L
   const today = parisDay(now);
   const channel = channelOf(e.type);
   const tag = marker ? ` ${marker}` : "";
-  const prospect = await store.findProspect(orgId, { email: e.email, siret: e.siret });
-  const lead = await store.findLead(orgId, { id: prospect?.lead_id ?? null, email: e.email });
+  const by: FindBy = { email: e.email, siret: e.siret, siren: e.siren, phone: phoneFromCell(e.phone) };
+  const prospect = await store.findProspect(orgId, by);
+  const lead = await store.findLead(orgId, { ...by, id: prospect?.lead_id ?? null });
 
   // ── Stop / désinscription : définitif, sur tous les canaux ──
   if (action === "opposition") {
@@ -120,6 +123,25 @@ export async function applyLemlistEvent(store: LemlistStore, orgId: string, e: L
     return { action, leadId: lead?.id ?? null, prospectId: prospect?.id ?? null };
   }
 
+  // ── Marqué « pas intéressé » dans lemlist : on arrête, sans opposition (pas de liste de blocage) ──
+  if (action === "not_interested") {
+    const reason = `Pas intéressé — lemlist (${frDate(e.at, now)}, ${channel.label})`;
+    const note = `Marqué « pas intéressé » dans lemlist (${channel.label})${e.campaignName ? ` — campagne « ${e.campaignName} »` : ""}.${tag}`;
+    if (prospect) {
+      if (!["ne_plus_appeler", "interesse"].includes(prospect.status)) await store.updateProspect(orgId, prospect.id, { status: "pas_de_besoin", callback_on: null });
+      await store.insertProspectNote(orgId, prospect.id, note);
+    }
+    if (lead) {
+      if (!FINAL.includes(lead.status) && !["rdv_pris", "rdv_tenu", "proposition"].includes(lead.status)) {
+        await store.updateLead(orgId, lead.id, { status: "perdu", lost_reason: reason, next_action: null, next_action_on: null });
+        await store.insertLeadEvent({ org_id: orgId, lead_id: lead.id, kind: "statut", outcome: "refus", note: `Statut → perdu (${reason}). ${note}` });
+      } else {
+        await store.insertLeadEvent({ org_id: orgId, lead_id: lead.id, kind: "note", outcome: "refus", note: `${note} Statut inchangé (${lead.status}) : à vérifier.` });
+      }
+    }
+    return { action, leadId: lead?.id ?? null, prospectId: prospect?.id ?? null };
+  }
+
   // ── Message d'absence : pas une réponse, aucun statut ──
   if (action === "absence") {
     const note = `Message d'absence reçu (${channel.label}) : décaler la séquence lemlist à son retour. « ${excerpt(e.text)} »${tag}`;
@@ -129,10 +151,17 @@ export async function applyLemlistEvent(store: LemlistStore, orgId: string, e: L
   }
 
   // ── Réponse humaine ou « intéressé » : un lead à suivre, classé le jour même ──
-  const nextAction = action === "interested"
-    ? "Intéressé (lemlist) : envoyer le lien Calendly, appel de Shahzad sous 24 h"
-    : "Classer la réponse lemlist le jour même (grille du 02/11) et préparer la réponse";
-  const what = action === "interested" ? `Marqué intéressé dans lemlist (${channel.label})` : `Réponse reçue par ${channel.label} via lemlist`;
+  const meeting = action === "meeting";
+  const rdvLabel = e.meetingDate ? new Date(e.meetingDate).toLocaleString("fr-FR", { timeZone: "Europe/Paris", dateStyle: "short", timeStyle: "short" }) : null;
+  const nextAction = meeting
+    ? `RDV pris par lemcal${rdvLabel ? ` le ${rdvLabel}` : ""} : préparer le rendez-vous de la direction`
+    : action === "interested"
+      ? "Intéressé (lemlist) : envoyer le lien Calendly, appel de Shahzad sous 24 h"
+      : "Classer la réponse lemlist le jour même (grille du 02/11) et préparer la réponse";
+  const what = meeting
+    ? `Rendez-vous pris via lemcal${rdvLabel ? ` pour le ${rdvLabel}` : ""}${e.meetingType ? ` (« ${e.meetingType} »)` : ""}`
+    : action === "interested" ? `Marqué intéressé dans lemlist (${channel.label})` : `Réponse reçue par ${channel.label} via lemlist`;
+  const rdvPatch: Record<string, unknown> = meeting ? { status: "rdv_pris", rdv_outcome: "a_venir", ...(e.meetingDate ? { rdv_at: e.meetingDate } : {}) } : {};
   const note = `${what}${e.campaignName ? ` — campagne lemlist « ${e.campaignName} »` : ""}${e.text ? ` : « ${excerpt(e.text)} »` : "."}${tag}`;
 
   let leadId: string;
@@ -141,6 +170,7 @@ export async function applyLemlistEvent(store: LemlistStore, orgId: string, e: L
     leadId = lead.id;
     const patch: Record<string, unknown> = { next_action: nextAction, next_action_on: today };
     if (lead.status === "nouveau") patch.status = "contacte";
+    if (meeting && !["rdv_tenu", "proposition"].includes(lead.status)) Object.assign(patch, rdvPatch);
     if (!FINAL.includes(lead.status)) await store.updateLead(orgId, lead.id, patch);
   } else {
     const campaign = deps.campaign ?? bridgeCampaign();
@@ -157,18 +187,19 @@ export async function applyLemlistEvent(store: LemlistStore, orgId: string, e: L
       city: e.city ?? prospect?.city ?? null,
       postal_code: e.postalCode ?? prospect?.postal_code ?? null,
       status: "contacte",
+      ...rdvPatch,
       owner_user_id: await store.defaultOwner(orgId),
       next_action: nextAction,
       next_action_on: today,
-      notes: `Issu de la prospection sortante (lemlist)${e.siret ? `. SIRET : ${e.siret}` : ""}.`,
+      notes: `Issu de la prospection sortante (lemlist)${e.siret ? `. SIRET : ${e.siret}` : e.siren ? `. SIREN ${e.siren}` : ""}.`,
     });
     createdLead = true;
   }
-  await store.insertLeadEvent({ org_id: orgId, lead_id: leadId, kind: channel.kind, outcome: null, note });
+  await store.insertLeadEvent({ org_id: orgId, lead_id: leadId, kind: channel.kind, outcome: meeting ? "rdv_pose" : null, note });
 
   if (prospect) {
     const patch: Record<string, unknown> = { lead_id: leadId };
-    if (action === "interested" && prospect.status !== "ne_plus_appeler") {
+    if ((action === "interested" || meeting) && prospect.status !== "ne_plus_appeler") {
       patch.status = "interesse";
       patch.callback_on = null;
     }
@@ -184,6 +215,13 @@ type Admin = SupabaseClient;
 function must<T>(r: { data: T | null; error: { message: string } | null }, what: string): T {
   if (r.error) throw new Error(`${what} : ${r.error.message}`);
   return r.data as T;
+}
+
+/** Identifiant de la ligne créée (insert … select("id").single()). */
+function idOf(r: { data: unknown; error: { message: string } | null }, what: string): string {
+  const row = must(r, what) as { id?: string } | null;
+  if (!row?.id) throw new Error(`${what} : aucune ligne renvoyée`);
+  return row.id;
 }
 
 export function supabaseLemlistStore(admin: Admin): LemlistStore {
@@ -203,10 +241,17 @@ export function supabaseLemlistStore(admin: Admin): LemlistStore {
         const r = await admin.from("prospects").select(PROSPECT_COLS).eq("org_id", orgId).eq("siret", by.siret).maybeSingle();
         if (r.data) return r.data as ProspectRow;
       }
-      if (by.email) {
-        const r = await admin.from("prospects").select(PROSPECT_COLS).eq("org_id", orgId).ilike("email", by.email).order("created_at", { ascending: false }).limit(1);
-        if (r.data?.[0]) return r.data[0] as ProspectRow;
+      const first = async (q: PromiseLike<{ data: unknown[] | null }>) => ((await q).data?.[0] as ProspectRow | undefined) ?? null;
+      const base = () => admin.from("prospects").select(PROSPECT_COLS).eq("org_id", orgId).order("created_at", { ascending: false }).limit(1);
+      if (by.siren) {
+        const hit = (await first(base().like("siret", `${by.siren}%`))) ?? (await first(base().ilike("notes", `%SIREN%${by.siren}%`)));
+        if (hit) return hit;
       }
+      if (by.email) {
+        const hit = await first(base().ilike("email", by.email));
+        if (hit) return hit;
+      }
+      if (by.phone) return first(base().eq("phone", by.phone));
       return null;
     },
     async findLead(orgId, by) {
@@ -214,10 +259,17 @@ export function supabaseLemlistStore(admin: Admin): LemlistStore {
         const r = await admin.from("employer_leads").select("id, status, source").eq("org_id", orgId).eq("id", by.id).maybeSingle();
         if (r.data) return r.data as LeadRow;
       }
-      if (by.email) {
-        const r = await admin.from("employer_leads").select("id, status, source").eq("org_id", orgId).ilike("email", by.email).order("received_at", { ascending: false }).limit(1);
-        if (r.data?.[0]) return r.data[0] as LeadRow;
+      const first = async (q: PromiseLike<{ data: unknown[] | null }>) => ((await q).data?.[0] as LeadRow | undefined) ?? null;
+      const base = () => admin.from("employer_leads").select("id, status, source").eq("org_id", orgId).order("received_at", { ascending: false }).limit(1);
+      if (by.siren) {
+        const hit = await first(base().ilike("notes", `%SIREN%${by.siren}%`));
+        if (hit) return hit;
       }
+      if (by.email) {
+        const hit = await first(base().ilike("email", by.email));
+        if (hit) return hit;
+      }
+      if (by.phone) return first(base().eq("phone", by.phone));
       return null;
     },
     async defaultOwner(orgId) {
@@ -225,7 +277,7 @@ export function supabaseLemlistStore(admin: Admin): LemlistStore {
       return resolveLeadSettings(r.data?.settings).defaultOwnerUserId || null;
     },
     async insertLead(row) {
-      return must(await admin.from("employer_leads").insert(row).select("id").single(), "Création du lead").id as string;
+      return idOf(await admin.from("employer_leads").insert(row).select("id").single(), "Création du lead");
     },
     async updateLead(orgId, id, patch) {
       must(await admin.from("employer_leads").update(patch).eq("id", id).eq("org_id", orgId), "Mise à jour du lead");
@@ -243,13 +295,13 @@ export function supabaseLemlistStore(admin: Admin): LemlistStore {
     async oppositionListId(orgId) {
       const r = await admin.from("prospect_lists").select("id").eq("org_id", orgId).eq("name", OPPOSITION_LIST_NAME).limit(1);
       if (r.data?.[0]) return r.data[0].id as string;
-      return must(
+      return idOf(
         await admin.from("prospect_lists").insert({ org_id: orgId, name: OPPOSITION_LIST_NAME, description: "Créée par le pont lemlist : oppositions reçues hors listes d'appel. À ne jamais supprimer." }).select("id").single(),
         "Liste des oppositions",
-      ).id as string;
+      );
     },
     async insertProspect(row) {
-      return must(await admin.from("prospects").insert(row).select("id").single(), "Création du prospect").id as string;
+      return idOf(await admin.from("prospects").insert(row).select("id").single(), "Création du prospect");
     },
   };
 }
