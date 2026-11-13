@@ -395,10 +395,12 @@ async function sendSessionReminders(
 
   const { data: sessions } = await supabase
     .from("sessions")
-    .select("group_id, starts_at, ends_at, groups!inner(name, reminders_enabled), rooms:room_id(name)")
+    .select("group_id, starts_at, ends_at, groups!inner(name, reminders_enabled, status), rooms:room_id(name)")
     .in("org_id", orgIds)
     .eq("status", "planifiee")
     .eq("groups.reminders_enabled", true)
+    // Groupe annulé ou terminé : plus jamais de rappel, même si des séances sont restées prévues
+    .not("groups.status", "in", "(annule,termine)")
     .gte("starts_at", localToUtc(tomorrow, "00:00"))
     .lt("starts_at", localToUtc(dayAfter, "00:00"));
   if (!sessions?.length) return { sent: 0, skippedNoEmail: 0 };

@@ -26,6 +26,17 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-11-13-annulation-previent-apprenants",
+    date: "2026-11-13",
+    title: "Séance annulée au dernier moment : les apprenants sont prévenus par e-mail",
+    summary: "Si le rappel de la veille est déjà parti, annuler une séance envoie tout seul un e-mail « Cours annulé » aux inscrits ; un groupe annulé ne déclenche plus de rappels.",
+    items: [
+      { text: "Planning → séance → « Annuler la séance » : si le rappel de la veille est déjà parti (groupe avec rappels), les inscrits qui ont un e-mail reçoivent « Cours annulé — ne venez pas », noté dans leur carnet. Le message de confirmation dit combien ont été prévenus.", roles: TEAM },
+      { text: "Pensez au WhatsApp pour ceux qui n'ont pas d'e-mail. Un groupe passé en « Annulé » ou « Terminé » ne déclenche plus aucun rappel, même s'il lui reste des séances prévues.", roles: TEAM },
+    ],
+    training: [{ moduleId: "c5-vie-quotidienne", lessonId: "ajustements", label: "Ajuster le planning" }],
+  },
+  {
     id: "2026-11-08-liste-attente-google-sheet",
     date: "2026-11-08",
     title: "Liste d'attente : un Google Sheet mis à jour chaque lundi",
