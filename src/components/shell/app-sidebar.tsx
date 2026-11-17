@@ -14,6 +14,7 @@ import {
   CircleUser,
   DoorOpen,
   GraduationCap,
+  HandCoins,
   LayoutDashboard,
   LogOut,
   Settings,
@@ -41,6 +42,7 @@ const NAV = [
   { href: "/salles", label: "Salles", icon: DoorOpen, roles: ["admin", "coordinator"] },
   { href: "/qualite", label: "Qualité", icon: BadgeCheck, roles: ["admin", "coordinator"] },
   { href: "/rapports", label: "Rapports", icon: FileBarChart, roles: ["admin", "coordinator"] },
+  { href: "/financements", label: "Financements", icon: HandCoins, roles: ["admin", "coordinator"] },
   { href: "/leads", label: "Leads resto", icon: UtensilsCrossed, roles: ["admin", "coordinator", "setter"] },
   { href: "/prospection", label: "Prospection", icon: PhoneOutgoing, roles: ["admin", "coordinator", "setter"] },
   { href: "/candidats-poei", label: "Candidats POEI", icon: BriefcaseBusiness, roles: ["admin", "coordinator", "setter"] },
@@ -88,7 +90,8 @@ export function AppSidebar({ role, orgName }: { role: AppRole; orgName: string }
     <nav className="flex flex-1 flex-col gap-1 p-3">
       {(role === "admin" || role === "coordinator") && <GlobalSearch />}
       {items.map((item) => {
-        const active = pathname.startsWith(item.href);
+        // Préfixe + « / » : « /financements » ne doit pas allumer « /finance ».
+        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
         return (
           <Link
             key={item.href}

@@ -57,7 +57,9 @@ export async function proxy(request: NextRequest) {
     request.nextUrl.pathname === "/api/leads" ||
     request.nextUrl.pathname === "/api/leads/import" ||
     // API de veille Qualiopi (collecteur Manus) : jeton de service Bearer vérifié dans chaque route.
-    request.nextUrl.pathname.startsWith("/api/veille");
+    request.nextUrl.pathname.startsWith("/api/veille") ||
+    // API du collecteur de veille des financements : même jeton de service, vérifié dans la route.
+    request.nextUrl.pathname.startsWith("/api/financements/opportunites");
 
   if (!user && !isAuthRoute) {
     const url = request.nextUrl.clone();
