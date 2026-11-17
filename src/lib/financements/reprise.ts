@@ -100,7 +100,7 @@ export function slug(v: string): string {
 // Couleurs (planning) des financeurs créés par la reprise : palette sobre, stable.
 const PALETTE = ["#0f766e", "#7c3aed", "#b45309", "#be123c", "#1d4ed8", "#4d7c0f", "#a21caf", "#475569"];
 
-// « PREFD93-26-0214 du 21/10/2026 » → 2026-10-21 (date de l'acte d'attribution).
+// « PREFD93-26-0000 du 21/10/2026 » → 2026-10-21 (date de l'acte d'attribution).
 export function acteDate(acte: string | undefined): string | null {
   const m = acte ? /(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(acte) : null;
   if (!m) return null;
@@ -233,6 +233,38 @@ export function planImport(raw: unknown): ImportPlan {
   });
 
   return { funders, opportunities, applications, deadlines, warnings };
+}
+
+// Correspondance « code du fichier → code d'un financeur déjà présent dans l'ERP ».
+// Un même financeur peut exister sous un autre code (créé à la main avant le module) :
+// on complète alors sa fiche au lieu d'en créer une seconde. « A=B,C=D » → { A: "B", C: "D" }.
+export function parseFunderAliases(raw: string | null | undefined): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const part of (raw ?? "").split(",")) {
+    const p = part.trim();
+    if (!p) continue;
+    const [from, to, ...rest] = p.split("=").map((x) => x.trim());
+    if (!from || !to || rest.length) throw new Error(`Correspondance illisible : « ${p} » (attendu CODE_DU_FICHIER=CODE_EXISTANT).`);
+    out[from] = to;
+  }
+  return out;
+}
+
+// Applique la correspondance au plan. Les clés de reprise (import_key, dedupe_key) ne
+// changent pas : l'import reste relançable, avec ou sans correspondance.
+export function applyFunderAliases(plan: ImportPlan, aliases: Record<string, string>): ImportPlan {
+  const known = new Set(plan.funders.map((f) => f.code));
+  for (const from of Object.keys(aliases)) {
+    if (!known.has(from)) throw new Error(`Correspondance : le financeur « ${from} » n'est pas dans le fichier de reprise.`);
+  }
+  const map = (code: string | null) => (code && aliases[code] ? aliases[code] : code);
+  return {
+    ...plan,
+    funders: plan.funders.map((f) => (aliases[f.code] ? { ...f, code: aliases[f.code], insert: { ...f.insert, code: aliases[f.code] } } : f)),
+    opportunities: plan.opportunities.map((o) => ({ ...o, funder_code: map(o.funder_code) })),
+    applications: plan.applications.map((a) => ({ ...a, funder_code: map(a.funder_code) as string })),
+    deadlines: plan.deadlines.map((d) => ({ ...d, funder_code: map(d.funder_code) })),
+  };
 }
 
 // Une échéance « dépôt » du fichier qui tombe le même jour que l'échéance automatique du

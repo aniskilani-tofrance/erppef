@@ -8,6 +8,8 @@
 //   --fichier <chemin>      fichier JSON préparé par le bureau Financements (obligatoire)
 //   --responsable <email>   compte responsable des dossiers repris (sinon : recherche du
 //                           prénom indiqué dans le fichier parmi les admins de l'organisation)
+//   --correspondance A=B,…  le financeur de code A dans le fichier existe déjà dans l'ERP sous
+//                           le code B : sa fiche est complétée, aucun doublon n'est créé
 //   --essai                 contrôle le fichier et affiche le plan, sans rien écrire
 //   --production            obligatoire pour toute organisation autre que le bac à sable
 //
@@ -17,7 +19,7 @@
 // Lit .env.local (NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY), comme seed-sandbox.
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { existsSync, readFileSync } from "node:fs";
-import { missingEnrichment, planImport, sameDepositDay, type ImportPlan } from "../src/lib/financements/reprise";
+import { applyFunderAliases, missingEnrichment, parseFunderAliases, planImport, sameDepositDay, type ImportPlan } from "../src/lib/financements/reprise";
 
 const SANDBOX_SLUG = "bac-a-sable";
 
@@ -37,11 +39,14 @@ if (!orgArg || !file) die("Usage : npx tsx scripts/import-financements.mts --org
 if (!existsSync(file)) die(`Fichier introuvable : ${file}`);
 
 let plan: ImportPlan;
+let aliases: Record<string, string> = {};
 try {
-  plan = planImport(JSON.parse(readFileSync(file, "utf8")));
+  aliases = parseFunderAliases(arg("correspondance"));
+  plan = applyFunderAliases(planImport(JSON.parse(readFileSync(file, "utf8"))), aliases);
 } catch (e) {
   die(e instanceof Error ? e.message : String(e));
 }
+for (const [from, to] of Object.entries(aliases)) console.log(`Correspondance : « ${from} » du fichier = « ${to} » déjà dans l'ERP.`);
 console.log(`Plan : ${plan.funders.length} financeurs, ${plan.opportunities.length} opportunités, ${plan.applications.length} dossiers, ${plan.deadlines.length} échéances.`);
 for (const w of plan.warnings) console.warn(`  ! ${w}`);
 if (flag("essai")) {
@@ -72,6 +77,9 @@ const { data: existingFunders, error: fErr } = await s
   .eq("org_id", orgId);
 if (fErr) die(`financeurs : ${fErr.message}`);
 const funderByCode = new Map((existingFunders ?? []).map((f) => [String(f.code), f]));
+for (const to of Object.values(aliases)) {
+  if (!funderByCode.has(to)) die(`--correspondance : aucun financeur de code « ${to} » dans « ${org.name} ».`);
+}
 for (const f of plan.funders) {
   const cur = funderByCode.get(f.code);
   if (cur) {

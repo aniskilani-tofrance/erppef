@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { acteDate, missingEnrichment, planImport, sameDepositDay } from "@/lib/financements/reprise";
+import { acteDate, applyFunderAliases, missingEnrichment, parseFunderAliases, planImport, sameDepositDay } from "@/lib/financements/reprise";
 
 // Fichier réel du bureau Financements (hors dépôt) : testé s'il est présent sur la machine.
 const REAL = "/home/anis/agences/asso-pef/travaux/module-financements-erp/reprise-lot-1.json";
@@ -20,7 +20,7 @@ const fixture = {
     { opportunity_key: "pdv-2027", funder_code: "PREF93-PV", title: "Agir pour l'emploi par les mots 2027", stage: "en_redaction", owner: "Anis", amount_requested: 6000, portal: "dauphin" },
   ],
   subventions_en_cours: [
-    { funder_code: "PREF93-PV", title: "Agir pour l'emploi par les mots 2026", portal_ref: "00376679", amount_granted: 3000, acte: "PREFD93-26-0214 du 21/10/2026", stage: "accorde" },
+    { funder_code: "PREF93-PV", title: "Agir pour l'emploi par les mots 2026", portal_ref: "00123456", amount_granted: 3000, acte: "PREFD93-26-0000 du 21/10/2026", stage: "accorde" },
     { funder_code: "CD93", title: "Agir In 2026", amount_granted: 3000, stage: "accorde" },
   ],
   echeances: [
@@ -49,7 +49,7 @@ describe("Reprise — plan d'import", () => {
 
   it("subventions accordées : montant, n° de portail, date de l'acte quand elle est écrite", () => {
     const [, pdv2026, agirIn] = planImport(fixture).applications;
-    expect(pdv2026).toMatchObject({ stage: "accorde", amount_granted: 3000, portal_ref: "00376679", granted_on: "2026-10-21", notes: "Acte : PREFD93-26-0214 du 21/10/2026" });
+    expect(pdv2026).toMatchObject({ stage: "accorde", amount_granted: 3000, portal_ref: "00123456", granted_on: "2026-10-21", notes: "Acte : PREFD93-26-0000 du 21/10/2026" });
     expect(agirIn.granted_on).toBeNull();
     expect(acteDate("Convention 2026 E11 26 6076")).toBeNull();
   });
@@ -87,6 +87,38 @@ describe("Reprise — sans écraser le travail fait", () => {
     expect(sameDepositDay({ kind: "depot", due_at: "2026-12-01T22:59:00Z" }, { due_at: "2026-12-02T10:00:00Z" })).toBe(false);
     expect(sameDepositDay({ kind: "autre", due_at: "2026-12-01T22:59:00Z" }, { due_at: "2026-12-01T22:59:00Z" })).toBe(false);
     expect(sameDepositDay({ kind: "depot", due_at: "2026-12-01T22:59:00Z" }, null)).toBe(false);
+  });
+});
+
+describe("Reprise — correspondance avec des financeurs déjà dans l'ERP", () => {
+  it("lit « A=B,C=D » et refuse une écriture illisible", () => {
+    expect(parseFunderAliases(" PREF93-PV=PDV , CD93 = DEP93 ")).toEqual({ "PREF93-PV": "PDV", CD93: "DEP93" });
+    expect(parseFunderAliases(null)).toEqual({});
+    expect(parseFunderAliases("")).toEqual({});
+    expect(() => parseFunderAliases("PREF93-PV")).toThrow("illisible");
+    expect(() => parseFunderAliases("A=B=C")).toThrow("illisible");
+  });
+
+  it("remplace le code partout, sans changer les clés de reprise", () => {
+    const base = planImport(fixture);
+    const p = applyFunderAliases(base, { "PREF93-PV": "PDV" });
+    expect(p.funders.map((f) => f.code)).toEqual(["PDV", "CD93"]);
+    expect(p.funders[0].insert.code).toBe("PDV");
+    expect(p.opportunities.map((o) => o.funder_code)).toEqual(["PDV", null, "PDV"]);
+    expect(p.applications.map((a) => a.funder_code)).toEqual(["PDV", "PDV", "CD93"]);
+    expect(p.deadlines.map((d) => d.funder_code)).toEqual(base.deadlines.map((d) => d.funder_code));
+    // Relançable avec ou sans correspondance : les clés ne bougent pas.
+    expect(p.applications.map((a) => a.import_key)).toEqual(base.applications.map((a) => a.import_key));
+    expect(p.opportunities.map((o) => o.dedupe_key)).toEqual(base.opportunities.map((o) => o.dedupe_key));
+    expect(p.deadlines.map((d) => d.import_key)).toEqual(base.deadlines.map((d) => d.import_key));
+    // Le plan d'origine n'est pas modifié.
+    expect(base.funders[0].code).toBe("PREF93-PV");
+  });
+
+  it("refuse un code absent du fichier ; sans correspondance, rien ne change", () => {
+    const base = planImport(fixture);
+    expect(() => applyFunderAliases(base, { INCONNU: "PDV" })).toThrow("n'est pas dans le fichier");
+    expect(applyFunderAliases(base, {})).toEqual(base);
   });
 });
 
