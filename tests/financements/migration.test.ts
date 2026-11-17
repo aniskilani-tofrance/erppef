@@ -3,10 +3,10 @@ import { describe, expect, it } from "vitest";
 import { DEADLINE_KINDS, FAMILIES, FUNDER_KINDS, PORTALS, STAGES, WATCH_STATUSES } from "@/lib/financements/constants";
 
 // Pas de base locale (règle de la NucBox) : la migration est vérifiée à la lecture.
-const sql = readFileSync("supabase/migrations/20261117000049_financements.sql", "utf8");
+const sql = readFileSync("supabase/migrations/20261117000060_financements.sql", "utf8");
 const TABLES = ["funding_opportunities", "funding_applications", "funding_application_events", "funding_deadlines"];
 
-describe("Migration 0049 — module Financements", () => {
+describe("Migration 0060 — module Financements", () => {
   it("est additive : funders garde code et color, rien n'est supprimé", () => {
     expect(sql).not.toMatch(/drop\s+table/i);
     expect(sql).not.toMatch(/drop\s+column/i);

@@ -5,7 +5,7 @@ import { FINANCEMENTS_ROLES, type Portal } from "./constants";
 
 // Pages du module : réservées à l'administration et à la coordination. Un autre rôle
 // (formateur, lecture seule, setter, stagiaire) est renvoyé vers le tableau de bord ;
-// la base le refuse de toute façon (RLS de la migration 0049).
+// la base le refuse de toute façon (RLS de la migration 0060).
 export async function requireFinancements(): Promise<SessionContext> {
   const ctx = await requireSession();
   if (!(FINANCEMENTS_ROLES as readonly string[]).includes(ctx.role)) redirect("/dashboard");

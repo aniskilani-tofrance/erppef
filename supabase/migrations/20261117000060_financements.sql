@@ -1,4 +1,4 @@
--- 0049 · Module « Financements », lot 1 (le socle).
+-- 0060 · Module « Financements », lot 1 (le socle).
 -- Veille des appels (opportunités), dossiers de demande, échéances et rappels, fiche
 -- enrichie des financeurs. Spécification : bureau Financements de l'Asso PEF, 17/11/2026.
 --

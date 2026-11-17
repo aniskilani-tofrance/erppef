@@ -1,5 +1,5 @@
 // Module « Financements » (lot 1) : valeurs fermées et libellés en français.
-// Les codes sont ceux des contraintes check de la migration 0049.
+// Les codes sont ceux des contraintes check de la migration 0060.
 
 export const FAMILIES = ["aap", "appel_offres", "mecenat"] as const;
 export type Family = (typeof FAMILIES)[number];
