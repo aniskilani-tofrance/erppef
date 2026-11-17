@@ -36,8 +36,8 @@ describe("Formulaires — dossier, échéance, financeur", () => {
   it("dossier : financeur obligatoire, lien Drive vérifié", () => {
     expect(() => applicationRowFromForm({ title: "x", funder_id: "" })).toThrow("financeur");
     expect(() => applicationRowFromForm({ title: "x", funder_id: ID, drive_url: "docs" })).toThrow("Word");
-    expect(applicationRowFromForm({ title: "x", funder_id: ID, amount_requested: "6000", portal: "dauphin", portal_ref: " 00331067 " }))
-      .toMatchObject({ amount_requested: 6000, portal: "dauphin", portal_ref: "00331067", owner_id: null });
+    expect(applicationRowFromForm({ title: "x", funder_id: ID, amount_requested: "6000", portal: "dauphin", portal_ref: " 00123456 " }))
+      .toMatchObject({ amount_requested: 6000, portal: "dauphin", portal_ref: "00123456", owner_id: null });
   });
   it("échéance : rattachée à quelque chose, rappels triés sans doublon", () => {
     expect(() => deadlineRowFromForm({ kind: "autre", title: "x", due_day: "2026-12-15" })).toThrow("Rattachez");

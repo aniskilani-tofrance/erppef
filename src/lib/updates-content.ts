@@ -26,6 +26,19 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-11-18-financements",
+    date: "2026-11-18",
+    title: "Nouveau menu « Financements » : veille, dossiers, échéances et financeurs au même endroit",
+    summary: "Les appels à projets, les dossiers de subvention, leurs échéances et les fiches des financeurs sont réunis dans le menu « Financements ». Il remplace le mail de veille du lundi et les tableaux de suivi.",
+    items: [
+      { text: "Financements → « Ma semaine » : les échéances des 30 prochains jours (rouge à moins de 15 jours), les nouveautés de la veille « À trier » et vos prochaines étapes. À ouvrir au début de la réunion du lundi.", roles: TEAM },
+      { text: "« Veille » : « Ajouter » une opportunité (le titre suffit), puis « Créer le dossier » : il s'ouvre déjà rempli. « Dossiers » : glissez la carte d'une colonne à l'autre, de « On y va » à « Bilan rendu ».", roles: TEAM },
+      { text: "« Calendrier » : dépôts, bilans, versements, rendez-vous. Un e-mail vous prévient 30, 15 et 3 jours avant ; cochez l'échéance quand elle est faite.", roles: TEAM },
+      { text: "« Financeurs » : portail, numéros de dossier, règles habituelles et contacts professionnels de chaque financeur. Les dossiers Word restent dans le Drive ; aucune donnée d'apprenant dans ce module.", roles: TEAM },
+    ],
+    training: [{ moduleId: "c6-pilotage", lessonId: "financements", label: "Suivre les financements" }],
+  },
+  {
     id: "2026-11-08-liste-attente-google-sheet",
     date: "2026-11-08",
     title: "Liste d'attente : un Google Sheet mis à jour chaque lundi",

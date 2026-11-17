@@ -56,6 +56,36 @@ export function formatNewOpportunity(o: NewOpportunity): string {
   return `${o.title} (${FAMILY_LABELS[o.family].toLowerCase()}${when})${who} — ${BASE_URL}/financements/veille/${o.id}`;
 }
 
+// Destinataires du message « Financements » : les comptes administration et coordination
+// de l'organisation. On retire l'adresse du résumé du matin (elle a déjà le bloc), les
+// adresses fictives (.invalid) et les doublons.
+export function teamRecipients(memberEmails: (string | null | undefined)[], alertsEmail?: string | null): string[] {
+  const skip = (alertsEmail ?? "").trim().toLowerCase();
+  const out = new Set<string>();
+  for (const e of memberEmails) {
+    const email = (e ?? "").trim().toLowerCase();
+    if (!email || email.endsWith(".invalid") || email === skip) continue;
+    out.add(email);
+  }
+  return [...out].sort();
+}
+
+export function financementsMailSubject(lines: string[]): string {
+  const n = lines.filter((l) => l.startsWith("  • ")).length;
+  return `ERP PEF — Financements : ${n} point${n > 1 ? "s" : ""} à regarder`;
+}
+
+// Le bloc texte du résumé du matin, en HTML simple (liens cliquables).
+export function financementsMailHtml(lines: string[]): string {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const body = lines.map((l) => esc(l).replace(/(https:\/\/[^\s<]+)/g, '<a href="$1">$1</a>')).join("<br>");
+  return (
+    `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#0E271B">${body}` +
+    `<p style="color:#666;font-size:12px">Message automatique de l'ERP PEF, envoyé aux comptes administration et coordination. ` +
+    `Pour arrêter un rappel : cochez l'échéance « faite » dans Financements → Calendrier.</p></div>`
+  );
+}
+
 // Bloc « Financements » du résumé du matin. Vide si rien à signaler.
 export function financementsAlertLines(input: {
   reminders: (ReminderDeadline & { days: number })[];

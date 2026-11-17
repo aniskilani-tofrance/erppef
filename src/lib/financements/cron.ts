@@ -1,7 +1,47 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Family } from "./constants";
 import { addDays, parisDay } from "./echeances";
-import { deadlinesToRemind, financementsAlertLines, isMondayParis, type ReminderDeadline } from "./rappels";
+import {
+  deadlinesToRemind,
+  financementsAlertLines,
+  financementsMailHtml,
+  financementsMailSubject,
+  isMondayParis,
+  teamRecipients,
+  type ReminderDeadline,
+} from "./rappels";
+import { mailerConfigured, sendMail } from "@/lib/mailer";
+
+// Le même bloc, envoyé par e-mail aux comptes administration et coordination de chaque
+// organisation réelle : le résumé du matin ne part qu'à une adresse (ALERTS_EMAIL), la
+// coordinatrice ne le reçoit pas. L'adresse du résumé est retirée (pas de doublon).
+// `supabase` doit être le client de service (lecture des adresses des comptes).
+export async function sendFinancementsReminders(supabase: SupabaseClient, orgIds: string[], now: Date = new Date()): Promise<number> {
+  if (!orgIds.length || !mailerConfigured()) return 0;
+  const { data: members, error } = await supabase
+    .from("memberships")
+    .select("org_id, user_id")
+    .in("org_id", orgIds)
+    .in("role", ["admin", "coordinator"]);
+  if (error) throw new Error(`comptes : ${error.message}`);
+  if (!members?.length) return 0;
+  const { data: users } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  const emailById = new Map((users?.users ?? []).map((u) => [u.id, u.email ?? null]));
+
+  let sent = 0;
+  for (const orgId of orgIds) {
+    const lines = await financementsAlerts(supabase, [orgId], now);
+    if (!lines.length) continue;
+    const to = teamRecipients(
+      members.filter((m) => m.org_id === orgId).map((m) => emailById.get(m.user_id as string)),
+      process.env.ALERTS_EMAIL,
+    );
+    for (const email of to) {
+      if (await sendMail({ to: email, subject: financementsMailSubject(lines), html: financementsMailHtml(lines) })) sent++;
+    }
+  }
+  return sent;
+}
 
 // Bloc « Financements » du résumé du matin (/api/cron/alertes). Lit UNIQUEMENT les
 // organisations passées (productionOrgIds : jamais le bac à sable).

@@ -88,7 +88,7 @@ export function FunderFormDialog({ initial }: { initial?: FunderInitial }) {
             </Field>
           </div>
           <Field label="Compte ou numéros sur le portail">
-            <Input value={f.portal_account_ref} onChange={(e) => set("portal_account_ref", e.target.value)} placeholder="Tiers n° 31812" maxLength={300} />
+            <Input value={f.portal_account_ref} onChange={(e) => set("portal_account_ref", e.target.value)} placeholder="Tiers n° 12345" maxLength={300} />
           </Field>
           <Field label="Site">
             <Input type="url" inputMode="url" value={f.website} onChange={(e) => set("website", e.target.value)} placeholder="https://…" />

@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { deadlinesToRemind, financementsAlertLines, formatDeadlineReminder, isMondayParis, type ReminderDeadline } from "@/lib/financements/rappels";
+import {
+  deadlinesToRemind,
+  financementsAlertLines,
+  financementsMailHtml,
+  financementsMailSubject,
+  formatDeadlineReminder,
+  isMondayParis,
+  teamRecipients,
+  type ReminderDeadline,
+} from "@/lib/financements/rappels";
 import { financementsAlerts } from "@/lib/financements/cron";
 
 const NOW = new Date("2026-11-16T05:30:00Z"); // lundi 16 novembre 2026, 6h30 à Paris (heure du cron)
@@ -104,5 +113,28 @@ describe("Financements — cron : jamais le bac à sable", () => {
     const { client, calls } = fakeSupabase({});
     expect(await financementsAlerts(client, [], NOW)).toEqual([]);
     expect(calls).toEqual([]);
+  });
+});
+
+describe("Financements — e-mail des rappels à l'équipe", () => {
+  it("destinataires : sans l'adresse du résumé du matin, sans adresse fictive, sans doublon", () => {
+    expect(
+      teamRecipients(
+        ["Marie@exemple.org", "direction@exemple.org", null, undefined, "", "demo@exemple.invalid", "marie@exemple.org "],
+        "Direction@exemple.org",
+      ),
+    ).toEqual(["marie@exemple.org"]);
+    expect(teamRecipients(["a@exemple.org"], null)).toEqual(["a@exemple.org"]);
+    expect(teamRecipients([], "a@exemple.org")).toEqual([]);
+  });
+
+  it("objet : compte les lignes à puce ; corps : liens cliquables et texte échappé", () => {
+    const lines = ["💶 Financements — échéances :", "  • J-3 · Dépôt : A <b> & C — https://pef-erp.vercel.app/financements/dossiers/1", ""];
+    expect(financementsMailSubject(lines)).toBe("ERP PEF — Financements : 1 point à regarder");
+    expect(financementsMailSubject([...lines, "  • autre"])).toContain("2 points");
+    const html = financementsMailHtml(lines);
+    expect(html).toContain('<a href="https://pef-erp.vercel.app/financements/dossiers/1">');
+    expect(html).toContain("A &lt;b&gt; &amp; C");
+    expect(html).not.toContain("<b>");
   });
 });

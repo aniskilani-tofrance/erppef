@@ -12,7 +12,7 @@ import { announceUpdatesEverywhere, type AnnounceResult } from "@/lib/updates-an
 import { sendTrainerRelances } from "@/lib/emargement/relances";
 import { sendEvaluationReminders } from "@/lib/evaluations/reminders";
 import { productionOrgIds } from "@/lib/production-orgs";
-import { financementsAlerts } from "@/lib/financements/cron";
+import { financementsAlerts, sendFinancementsReminders } from "@/lib/financements/cron";
 import { scheduleBrevoAppointmentReminders, type AppointmentReminderKind, type LeadForBrevo } from "@/lib/leads/brevo";
 import { resolveLeadSettings } from "@/lib/leads/templates";
 import {
@@ -186,6 +186,14 @@ export async function GET(request: Request) {
     console.error("[financements]", e instanceof Error ? e.message : e);
     return [] as string[];
   });
+  // Le même bloc part aussi aux comptes administration et coordination : le résumé du
+  // matin n'a qu'un destinataire, la coordinatrice ne le reçoit pas. Jamais bloquant.
+  const fundingMails = fundingLines.length
+    ? await sendFinancementsReminders(supabase, orgIds, now).catch((e) => {
+        console.error("[financements e-mail]", e instanceof Error ? e.message : e);
+        return 0;
+      })
+    : 0;
 
   const stats = computeLearnerStats(
     (attendanceRows ?? []).map((a) => ({
@@ -227,7 +235,7 @@ export async function GET(request: Request) {
   const alertCount = atRisk.length + sheets.length + admissionLines.length + (leaveLine ? 1 : 0) + fundingCount;
 
   if (!process.env.RESEND_API_KEY || !process.env.ALERTS_EMAIL) {
-    return Response.json({ sent: false, reason: "email non configuré", alerts: lines });
+    return Response.json({ sent: false, reason: "email non configuré", alerts: lines, financementsMails: fundingMails });
   }
 
   const res = await fetch("https://api.resend.com/emails", {
@@ -247,7 +255,7 @@ export async function GET(request: Request) {
   if (!res.ok) {
     return Response.json({ sent: false, error: await res.text() }, { status: 500 });
   }
-  return Response.json({ sent: true, atRisk: atRisk.length, unclosedSheets: sheets.length, admission: admissionLines.length, financements: fundingCount, reminders, meetingReminders, leadRdvEmails, trainerRelances, evaluationReminders, updatesAnnounced });
+  return Response.json({ sent: true, atRisk: atRisk.length, unclosedSheets: sheets.length, admission: admissionLines.length, financements: fundingCount, financementsMails: fundingMails, reminders, meetingReminders, leadRdvEmails, trainerRelances, evaluationReminders, updatesAnnounced });
 }
 
 // Brevo ne permet de programmer un message transactionnel que dans les 72 heures.

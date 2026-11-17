@@ -1,7 +1,7 @@
 // Reprise des données du module Financements (lot 1) dans UNE organisation.
 //
-//   npx tsx scripts/import-financements.ts --org bac-a-sable --fichier chemin/reprise-lot-1.json
-//   npx tsx scripts/import-financements.ts --org pef --fichier … --production   (accord d'Anis)
+//   npx tsx scripts/import-financements.mts --org bac-a-sable --fichier chemin/reprise-lot-1.json
+//   npx tsx scripts/import-financements.mts --org pef --fichier … --production   (accord d'Anis)
 //
 // Options :
 //   --org <slug|uuid>       organisation cible (obligatoire) ; jamais plusieurs à la fois
@@ -33,7 +33,7 @@ function die(msg: string): never {
 
 const orgArg = arg("org");
 const file = arg("fichier");
-if (!orgArg || !file) die("Usage : npx tsx scripts/import-financements.ts --org <slug|uuid> --fichier <reprise.json> [--responsable email] [--essai] [--production]");
+if (!orgArg || !file) die("Usage : npx tsx scripts/import-financements.mts --org <slug|uuid> --fichier <reprise.json> [--responsable email] [--essai] [--production]");
 if (!existsSync(file)) die(`Fichier introuvable : ${file}`);
 
 let plan: ImportPlan;

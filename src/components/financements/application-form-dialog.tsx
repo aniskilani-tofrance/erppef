@@ -144,7 +144,7 @@ export function ApplicationFormDialog({
               <OptionSelect value={f.portal} onChange={(v) => set("portal", v as Portal | "")} options={PORTALS} labels={PORTAL_LABELS} allowNone ariaLabel="Portail" />
             </Field>
             <Field label="N° de dossier sur le portail">
-              <Input value={f.portal_ref} onChange={(e) => set("portal_ref", e.target.value)} placeholder="00331067" maxLength={100} />
+              <Input value={f.portal_ref} onChange={(e) => set("portal_ref", e.target.value)} placeholder="00123456" maxLength={100} />
             </Field>
           </div>
           <Field label="Lien du Word (Drive)">

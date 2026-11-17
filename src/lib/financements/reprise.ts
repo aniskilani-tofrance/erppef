@@ -4,7 +4,7 @@ import { normalizeDeadline } from "./api";
 import { parisDay } from "./echeances";
 import { cleanContacts } from "./regles";
 
-// Reprise des données existantes (scripts/import-financements.ts) : lecture et contrôle du
+// Reprise des données existantes (scripts/import-financements.mts) : lecture et contrôle du
 // fichier préparé par le bureau Financements, puis plan d'import PUR (aucune écriture ici).
 // Relançable : chaque ligne porte une clé stable (code du financeur, dedupe_key de
 // l'opportunité, import_key du dossier et de l'échéance) ; ce qui existe déjà n'est jamais
