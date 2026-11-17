@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -31,11 +31,12 @@ export type PipelineCard = {
 // (souris ou clavier). Sur téléphone, les colonnes s'empilent et chaque carte a son menu
 // « Changer de statut ». La base historise chaque changement.
 export function PipelineBoard({ cards: initial }: { cards: PipelineCard[] }) {
-  const [cards, setCards] = useState(initial);
+  // Déplacements optimistes (affichés tout de suite), par-dessus les données du serveur.
+  const [moved, setMoved] = useState<Record<string, Stage>>({});
+  const cards = initial.map((c) => (moved[c.id] ? { ...c, stage: moved[c.id] } : c));
   const [dragging, setDragging] = useState<Stage | null>(null);
   const [, startTransition] = useTransition();
   const router = useRouter();
-  useEffect(() => setCards(initial), [initial]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -54,11 +55,11 @@ export function PipelineBoard({ cards: initial }: { cards: PipelineCard[] }) {
       return;
     }
     const from = card.stage;
-    setCards((cs) => cs.map((c) => (c.id === id ? { ...c, stage: to } : c)));
+    setMoved((m) => ({ ...m, [id]: to }));
     startTransition(async () => {
       const r = await moveApplicationStage({ id, to });
       if (!r.ok) {
-        setCards((cs) => cs.map((c) => (c.id === id ? { ...c, stage: from } : c)));
+        setMoved((m) => ({ ...m, [id]: from }));
         toast.error(r.error);
         return;
       }
