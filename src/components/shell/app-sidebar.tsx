@@ -31,6 +31,7 @@ import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { GlobalSearch } from "@/components/shell/global-search";
 import type { AppRole } from "@/lib/auth";
+import { moduleOfPath, type ModuleKey } from "@/lib/modules";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "coordinator", "trainer", "viewer", "setter", "stagiaire"] },
@@ -52,7 +53,7 @@ const NAV = [
   { href: "/parametres", label: "Paramètres", icon: Settings, roles: ["admin"] },
 ] as const;
 
-export function AppSidebar({ role, orgName }: { role: AppRole; orgName: string }) {
+export function AppSidebar({ role, orgName, deniedModules = [] }: { role: AppRole; orgName: string; deniedModules?: ModuleKey[] }) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -63,7 +64,12 @@ export function AppSidebar({ role, orgName }: { role: AppRole; orgName: string }
     router.refresh();
   }
 
-  const items = NAV.filter((item) => (item.roles as readonly string[]).includes(role));
+  // Le rôle d'abord, puis les modules retirés à cette personne (Paramètres → Utilisateurs).
+  const items = NAV.filter((item) => {
+    if (!(item.roles as readonly string[]).includes(role)) return false;
+    const moduleKey = moduleOfPath(item.href);
+    return !moduleKey || !deniedModules.includes(moduleKey);
+  });
 
   const footer = (
     <div className="space-y-1 border-t p-3">

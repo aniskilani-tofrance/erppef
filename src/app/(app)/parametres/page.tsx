@@ -11,6 +11,7 @@ import { ClosureManager } from "@/components/parametres/closure-manager";
 import { GcalSyncCard } from "@/components/parametres/gcal-sync-card";
 import { DeleteProgramButton } from "@/components/parametres/delete-program-button";
 import { UsersManager, type Member } from "@/components/parametres/users-manager";
+import { cleanDeniedModules } from "@/lib/modules";
 import { SendUpdatesButton } from "@/components/parametres/updates-card";
 import { APP_UPDATES, formatUpdateDate } from "@/lib/updates-content";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -29,7 +30,7 @@ export default async function ParametresPage() {
       supabase.from("organizations").select("*").single(),
       supabase.from("funders").select("*").order("name"),
       supabase.from("programs").select("*, funders(name)").order("name"),
-      supabase.from("memberships").select("id, user_id, role, trainer_id, profiles(full_name)"),
+      supabase.from("memberships").select("id, user_id, role, trainer_id, denied_modules, profiles(full_name)"),
       supabase.from("groups").select("program_id"),
       supabase.from("trainers").select("id, first_name, last_name").eq("is_active", true).order("priority"),
       supabase
@@ -59,6 +60,7 @@ export default async function ParametresPage() {
       role: m.role as Member["role"],
       isSelf: m.user_id === userId,
       trainerLinked: Boolean(m.trainer_id),
+      deniedModules: cleanDeniedModules(m.denied_modules),
       internGroups: m.role === "stagiaire" ? internGroupCount.get(m.user_id) ?? 0 : null,
       lastSignInAt: authById.get(m.user_id)?.lastSignInAt ?? null,
     }))

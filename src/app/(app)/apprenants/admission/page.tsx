@@ -1,6 +1,7 @@
 import { Fragment } from "react";
 import Link from "next/link";
 import { requireRole } from "@/lib/auth";
+import { loadDeniedModules } from "@/lib/module-access";
 import { createClient } from "@/lib/supabase/server";
 import { Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -114,7 +115,7 @@ function LearnerRows({
   history: Map<string, ContactEntry[]>;
   templates: Templates;
   pendingTestUrl: Map<string, string>;
-  poeiByLearner: Map<string, string>;
+  poeiByLearner: Map<string, string> | null; // null = module Candidats POEI retiré à cette personne
   groupsOf: Map<string, GroupRef[]>;
   assistant: boolean;
   appointments: Map<string, AppointmentView>;
@@ -193,7 +194,7 @@ function LearnerRows({
                   nextAppointment={appointments.get(l.id) ?? null}
                 />
                 {assistant && <BriefButton learnerId={l.id} learnerName={`${l.first_name} ${l.last_name}`} />}
-                <ProposePoeiButton learnerId={l.id} candidateId={poeiByLearner.get(l.id) ?? null} />
+                {poeiByLearner && <ProposePoeiButton learnerId={l.id} candidateId={poeiByLearner.get(l.id) ?? null} />}
               </span>
             </TableCell>
           </TableRow>
@@ -355,7 +356,8 @@ export default async function AdmissionPage() {
   );
   // Apprenants déjà proposés en POEI restauration (bouton « POEI » → leur fiche candidat)
   const { data: poeiRows } = await supabase.from("poei_candidates").select("id, learner_id").not("learner_id", "is", null);
-  const poeiByLearner = new Map((poeiRows ?? []).map((r) => [r.learner_id as string, r.id as string]));
+  const poeiDenied = (await loadDeniedModules(userId, orgId)).includes("candidats_poei");
+  const poeiByLearner = poeiDenied ? null : new Map((poeiRows ?? []).map((r) => [r.learner_id as string, r.id as string]));
   const senderFirstName = profile?.full_name?.trim().split(/\s+/)[0] ?? null;
   // Google Sheet relié à la liste d'attente (onglet réécrit chaque lundi)
   const { data: orgRow } = await supabase.from("organizations").select("settings").eq("id", orgId).maybeSingle();
