@@ -30,6 +30,18 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-11-18-ruptures-de-parcours",
+    date: "2026-11-18",
+    title: "Abandons : motif obligatoire et registre des ruptures de parcours (Qualiopi)",
+    summary: "Un abandon demande maintenant un motif ; la fiche du groupe montre les relances faites avant la sortie, et la page Qualité tient le registre des ruptures de parcours, exportable pour l'auditeur.",
+    items: [
+      { text: "Fiche du groupe → menu ⋯ → « Marquer en abandon » : choisissez le motif (emploi trouvé, autre formation, déménagement, santé, garde d'enfant, horaires, niveau, injoignable après relances, autre). Sous le nom : motif, absences de suite, relances avec leurs dates, dernière présence.", roles: TEAM },
+      { text: "Après 3 absences de suite et 2 relances sans retour, l'ERP propose « passer en abandon ? » avec le motif « Injoignable après relances » déjà choisi.", roles: TEAM },
+      { text: "Page Qualité → « Registre des ruptures de parcours » : abandons depuis le 1er septembre, motif, suivi avant la sortie, taux d'abandon par groupe ; « Exporter (tableur) » pour l'audit Qualiopi.", roles: TEAM },
+    ],
+    training: [{ moduleId: "c5-vie-quotidienne", lessonId: "qualite", label: "Qualité (Qualiopi)" }, { moduleId: "c6-pilotage", lessonId: "groupes-niveau", label: "Groupes et sorties de parcours" }],
+  },
+  {
     id: "2026-11-13-annulation-previent-apprenants",
     date: "2026-11-13",
     title: "Séance annulée au dernier moment : les apprenants sont prévenus par e-mail",
