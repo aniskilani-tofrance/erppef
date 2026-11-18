@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { isDenied, moduleOfPath } from "@/lib/modules";
 import { stagiairePathAllowed } from "@/lib/stagiaire-paths";
 
 // Rafraîchit la session Supabase (cookies) et redirige les non-connectés vers /login.
@@ -81,17 +82,41 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // Module retiré à cette personne (Paramètres → Utilisateurs) : ses pages, ses exports et
+  // les actions lancées depuis ses pages sont refusés. La base refuse aussi (migration 0062).
+  const moduleKey = user && !isAuthRoute ? moduleOfPath(request.nextUrl.pathname) : null;
+  if (user && moduleKey) {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const orgId = jwtClaim(session?.access_token, "org_id");
+    if (orgId) {
+      const { data: membership } = await supabase.from("memberships").select("denied_modules").eq("user_id", user.id).eq("org_id", orgId).maybeSingle();
+      if (isDenied(membership?.denied_modules as string[] | null | undefined, moduleKey)) {
+        if (request.method !== "GET") return new NextResponse("Accès refusé à ce module.", { status: 403 });
+        const url = request.nextUrl.clone();
+        url.pathname = "/dashboard";
+        url.search = "";
+        return NextResponse.redirect(url);
+      }
+    }
+  }
+
   return response;
 }
 
-function jwtRole(token: string | undefined): string | null {
+function jwtClaim(token: string | undefined, key: "app_role" | "org_id"): string | null {
   if (!token) return null;
   try {
     const payload = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
-    return (JSON.parse(atob(payload)) as { app_role?: string }).app_role ?? null;
+    return (JSON.parse(atob(payload)) as Record<string, string | undefined>)[key] ?? null;
   } catch {
     return null;
   }
+}
+
+function jwtRole(token: string | undefined): string | null {
+  return jwtClaim(token, "app_role");
 }
 
 export const config = {

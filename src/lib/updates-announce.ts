@@ -1,3 +1,4 @@
+import { cleanDeniedModules } from "@/lib/modules";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { SANDBOX_SLUG } from "@/lib/production-orgs";
 import type { AppRole } from "@/lib/auth";
@@ -12,13 +13,13 @@ import { APP_UPDATES, formatUpdateDate, updatesForRole } from "@/lib/updates-con
 const BASE_URL = "https://pef-erp.vercel.app";
 const ROLE_RANK: Record<AppRole, number> = { admin: 3, coordinator: 2, trainer: 1, viewer: 0, setter: 0, stagiaire: 0 };
 
-type Recipient = { email: string; firstName: string; role: AppRole };
+type Recipient = { email: string; firstName: string; role: AppRole; denied: string[] };
 
 export type AnnounceResult = { updates: number; recipients: number; sent: number; skipped: string[] };
 
 async function recipientsOf(admin: SupabaseClient, orgId: string): Promise<Recipient[]> {
   const [{ data: members }, { data: trainers }, { data: users }] = await Promise.all([
-    admin.from("memberships").select("user_id, role, profiles(full_name)").eq("org_id", orgId),
+    admin.from("memberships").select("user_id, role, denied_modules, profiles(full_name)").eq("org_id", orgId),
     admin.from("trainers").select("first_name, email").eq("org_id", orgId).eq("is_active", true).not("email", "is", null),
     admin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
   ]);
@@ -35,10 +36,10 @@ async function recipientsOf(admin: SupabaseClient, orgId: string): Promise<Recip
     const role = m.role as AppRole;
     if (!email || role === "viewer") continue;
     const name = (m.profiles as unknown as { full_name: string | null } | null)?.full_name?.trim().split(/\s+/)[0] ?? "";
-    add({ email, firstName: name, role });
+    add({ email, firstName: name, role, denied: cleanDeniedModules(m.denied_modules) });
   }
   // Formatrices sans compte : elles reçoivent quand même les nouveautés qui les concernent.
-  for (const t of trainers ?? []) if (t.email) add({ email: t.email, firstName: t.first_name, role: "trainer" });
+  for (const t of trainers ?? []) if (t.email) add({ email: t.email, firstName: t.first_name, role: "trainer", denied: [] });
   return [...byEmail.values()];
 }
 
@@ -47,7 +48,7 @@ function escape(s: string): string {
 }
 
 function emailFor(r: Recipient, updateIds: Set<string>): { subject: string; html: string } | null {
-  const updates = updatesForRole(r.role).filter((u) => updateIds.has(u.id));
+  const updates = updatesForRole(r.role, r.denied).filter((u) => updateIds.has(u.id));
   if (!updates.length) return null;
   const blocks = updates.map((u) => {
     const items = u.items.map((i) => `<li>${escape(i.text)}</li>`).join("");

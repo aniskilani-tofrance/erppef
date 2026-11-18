@@ -324,6 +324,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
           "Coordinateur : tout le quotidien (groupes, planning, apprenants, émargements, qualité) sauf les Paramètres.",
           "Formateur : SON planning, SES feuilles d'émargement, son compte. Il ne voit ni les coûts ni les autres formateurs.",
           "Lecture seule : consultation générale sans modification (partenaire, direction).",
+          "En plus du rôle, vous pouvez retirer un module à une personne précise (Financements, Leads resto, Prospection, Candidats POEI) : Paramètres → Utilisateurs → menu ⋯ → « Modules retirés… ». Le menu, les pages, les données et les e-mails du module lui sont alors retirés.",
         ],
         tip: "Un changement de rôle s'applique à la prochaine connexion de la personne.",
       },

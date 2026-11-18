@@ -20,7 +20,7 @@ export async function sendFinancementsReminders(supabase: SupabaseClient, orgIds
   if (!orgIds.length || !mailerConfigured()) return 0;
   const { data: members, error } = await supabase
     .from("memberships")
-    .select("org_id, user_id")
+    .select("org_id, user_id, denied_modules")
     .in("org_id", orgIds)
     .in("role", ["admin", "coordinator"]);
   if (error) throw new Error(`comptes : ${error.message}`);
@@ -33,7 +33,10 @@ export async function sendFinancementsReminders(supabase: SupabaseClient, orgIds
     const lines = await financementsAlerts(supabase, [orgId], now);
     if (!lines.length) continue;
     const to = teamRecipients(
-      members.filter((m) => m.org_id === orgId).map((m) => emailById.get(m.user_id as string)),
+      // Jamais à une personne à qui le module Financements a été retiré.
+      members
+        .filter((m) => m.org_id === orgId && !((m.denied_modules as string[] | null) ?? []).includes("financements"))
+        .map((m) => emailById.get(m.user_id as string)),
       process.env.ALERTS_EMAIL,
     );
     for (const email of to) {

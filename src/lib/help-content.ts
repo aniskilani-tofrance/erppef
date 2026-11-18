@@ -1,4 +1,5 @@
 import type { AppRole } from "@/lib/auth";
+import type { ModuleKey } from "@/lib/modules";
 
 // Contenu du manuel et de la FAQ. Chaque section/question déclare les rôles
 // concernés : la page Aide ne montre à chacun que ce qui le concerne.
@@ -12,6 +13,7 @@ export type HelpSection = {
   id: string;
   title: string;
   roles: AppRole[]; // rôles qui voient la section
+  module?: ModuleKey; // section masquée pour une personne à qui ce module a été retiré
   articles: HelpArticle[];
 };
 
@@ -196,6 +198,15 @@ export const HELP_SECTIONS: HelpSection[] = [
     title: "Paramétrer l'organisme",
     roles: TEAM,
     articles: [
+      {
+        title: "Retirer un module à une personne",
+        steps: [
+          "Le rôle dit ce qu'un type de compte peut faire. Vous pouvez en plus retirer un module précis à une personne : Financements, Leads resto, Prospection, Candidats POEI.",
+          "Paramètres → Utilisateurs → menu ⋯ de la personne → « Modules retirés… » : cochez les modules à lui retirer, puis « Enregistrer ». Un repère orange « N modules retirés » apparaît sur sa ligne.",
+          "Effet immédiat : le module disparaît de son menu, ses pages renvoient au tableau de bord, la base lui refuse les données, et elle ne reçoit plus les e-mails de ce module (nouveautés, rappels d'échéances).",
+          "Pour rendre l'accès : décochez. Vous ne pouvez pas vous retirer un module à vous-même.",
+        ],
+      },
       {
         title: "Le socle : dispositifs, financeurs, salles, fermetures",
         steps: [
@@ -749,6 +760,7 @@ export const HELP_SECTIONS: HelpSection[] = [
     id: "financements",
     title: "Financements : veille, dossiers, échéances",
     roles: TEAM,
+    module: "financements",
     articles: [
       {
         title: "Ma semaine : ce qui presse, en un coup d'œil",
@@ -838,6 +850,7 @@ export const HELP_SECTIONS: HelpSection[] = [
     id: "leads",
     title: "Leads restaurateurs (mini-CRM)",
     roles: ["admin", "coordinator", "setter"],
+    module: "leads",
     articles: [
       {
         title: "Rappeler un nouveau lead sous 24 h",
@@ -976,23 +989,26 @@ export const HELP_SECTIONS: HelpSection[] = [
   },
 ];
 
-export type FaqItem = { q: string; a: string; roles: AppRole[] };
+export type FaqItem = { q: string; a: string; roles: AppRole[]; module?: ModuleKey };
 
 export const FAQ: FaqItem[] = [
   {
     q: "Qui voit le menu « Financements » ? Y trouve-t-on des données d'apprenants ?",
-    a: "Seuls les comptes administration et coordination voient le menu et ses pages ; pour les autres rôles, la base refuse aussi les données. Le module ne contient aucune donnée d'apprenant : des appels publics, les dossiers de l'association, des échéances et des contacts professionnels de financeurs.",
+    a: "Seuls les comptes administration et coordination voient le menu et ses pages ; pour les autres rôles, la base refuse aussi les données. L'administration peut aussi retirer ce module à une personne précise (Paramètres → Utilisateurs → « Modules retirés… »). Le module ne contient aucune donnée d'apprenant : des appels publics, les dossiers de l'association, des échéances et des contacts professionnels de financeurs.",
     roles: TEAM,
+    module: "financements",
   },
   {
     q: "L'IA de l'atelier de rédaction peut-elle inventer des chiffres ou envoyer des données d'apprenants ?",
     a: "Elle ne reçoit que ce que vous lui donnez : les rubriques du dossier, les textes de la bibliothèque que vous cochez, les critères de l'appel et des totaux de l'ERP (jamais de nom, jamais de RQTH). Sa consigne lui interdit d'inventer un fait ou un chiffre : quand une information manque, elle le signale en orange sous la proposition. Relisez toujours : c'est vous qui reprenez le texte, et c'est vous qui le déposez.",
     roles: TEAM,
+    module: "financements",
   },
   {
     q: "Je ne reçois plus le mail de veille du lundi : où sont les nouveaux appels à projets ?",
     a: "Dans Financements → « Ma semaine », bloc « À trier ». Le lundi matin, un e-mail de l'ERP liste aussi les nouvelles opportunités de la semaine, avec les échéances à 30, 15 et 3 jours. Triez chaque ligne : « Écarter », « À surveiller » ou « Évaluer ».",
     roles: TEAM,
+    module: "financements",
   },
   {
     q: "L'assistant IA envoie-t-il des données personnelles à l'extérieur ? Peut-il écrire dans l'ERP sans moi ?",

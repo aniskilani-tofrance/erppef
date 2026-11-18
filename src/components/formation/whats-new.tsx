@@ -6,8 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 // « Quoi de neuf » : les dernières mises à jour qui concernent ce rôle, avec le lien
 // vers la leçon de la Formation où c'est expliqué. Même contenu que l'email du matin.
-export function WhatsNew({ role, limit = 4 }: { role: AppRole; limit?: number }) {
-  const updates = updatesForRole(role).slice(0, limit);
+export function WhatsNew({ role, limit = 4, deniedModules = [] }: { role: AppRole; limit?: number; deniedModules?: readonly string[] }) {
+  const updates = updatesForRole(role, deniedModules).slice(0, limit);
   if (!updates.length) return null;
   return (
     <Card className="border-primary/30">

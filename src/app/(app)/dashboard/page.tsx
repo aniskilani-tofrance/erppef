@@ -1,4 +1,5 @@
 import { requireSession } from "@/lib/auth";
+import { loadDeniedModules } from "@/lib/module-access";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -37,7 +38,7 @@ const RATE_ALERT_THRESHOLD = 70;
 export default async function DashboardPage() {
   const { role, userId, orgId } = await requireSession();
   // Bandeau « Nouveau » : les dernières mises à jour qui concernent ce rôle, dès la connexion
-  const ticker = <NewsTicker items={tickerItemsForRole(role)} />;
+  const ticker = <NewsTicker items={tickerItemsForRole(role, 3, await loadDeniedModules(userId, orgId))} />;
   if (role === "trainer") {
     return (
       <>

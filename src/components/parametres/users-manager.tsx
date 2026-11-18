@@ -8,8 +8,11 @@ import {
   removeMember,
   renameMember,
   sendPasswordLink,
+  updateMemberModules,
   updateMemberRole,
 } from "@/app/(app)/parametres/actions";
+import { Checkbox } from "@/components/ui/checkbox";
+import { MODULE_LABELS, RESTRICTABLE_MODULES, type ModuleKey } from "@/lib/modules";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +34,7 @@ export type Member = {
   role: "admin" | "coordinator" | "trainer" | "viewer" | "setter" | "stagiaire";
   isSelf: boolean;
   trainerLinked: boolean;
+  deniedModules: ModuleKey[]; // modules retirés à cette personne, en plus de son rôle
   internGroups: number | null; // stagiaire : nombre de groupes rattachés (null pour les autres rôles)
   lastSignInAt: string | null; // null = jamais connecté
 };
@@ -57,6 +61,8 @@ export function UsersManager({ members }: { members: Member[] }) {
   const [renaming, setRenaming] = useState<Member | null>(null);
   const [removing, setRemoving] = useState<Member | null>(null);
   const [newName, setNewName] = useState("");
+  const [restricting, setRestricting] = useState<Member | null>(null);
+  const [denied, setDenied] = useState<ModuleKey[]>([]);
 
   function run(action: () => Promise<{ ok: true } | { ok: false; error: string }>, success: string) {
     startTransition(async () => {
@@ -68,6 +74,7 @@ export function UsersManager({ members }: { members: Member[] }) {
       toast.success(success);
       setRenaming(null);
       setRemoving(null);
+      setRestricting(null);
     });
   }
 
@@ -90,6 +97,11 @@ export function UsersManager({ members }: { members: Member[] }) {
             </div>
             {!m.lastSignInAt && <Badge variant="outline">Jamais connecté</Badge>}
             {m.trainerLinked && <Badge variant="outline">Fiche formateur</Badge>}
+            {m.deniedModules.length > 0 && (
+              <Badge variant="outline" className="border-amber-300 text-amber-800" title={m.deniedModules.map((k) => MODULE_LABELS[k]).join(", ")}>
+                {m.deniedModules.length} module{m.deniedModules.length > 1 ? "s" : ""} retiré{m.deniedModules.length > 1 ? "s" : ""}
+              </Badge>
+            )}
             {m.internGroups !== null && (
               <Badge variant="outline" className={m.internGroups === 0 ? "border-amber-300 text-amber-800" : undefined}>
                 {m.internGroups === 0 ? "Aucun groupe rattaché" : `${m.internGroups} groupe${m.internGroups > 1 ? "s" : ""}`}
@@ -143,6 +155,16 @@ export function UsersManager({ members }: { members: Member[] }) {
                     Renommer
                   </DropdownMenuItem>
                   {!m.isSelf && (
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setDenied(m.deniedModules);
+                        setRestricting(m);
+                      }}
+                    >
+                      Modules retirés…
+                    </DropdownMenuItem>
+                  )}
+                  {!m.isSelf && (
                     <DropdownMenuItem className="text-destructive" onClick={() => setRemoving(m)}>
                       Retirer l&apos;accès
                     </DropdownMenuItem>
@@ -175,6 +197,47 @@ export function UsersManager({ members }: { members: Member[] }) {
                   run(
                     () => renameMember({ membershipId: renaming!.membershipId, fullName: newName }),
                     "Nom mis à jour.",
+                  )
+                }
+              >
+                Enregistrer
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modules retirés à cette personne */}
+      <Dialog open={restricting !== null} onOpenChange={(o) => !o && setRestricting(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Modules retirés à {restricting?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Cochez les modules que cette personne ne doit pas voir, quel que soit son rôle. Le menu, les pages,
+              les données et les e-mails du module lui sont retirés dès son prochain clic.
+            </p>
+            <div className="space-y-2">
+              {RESTRICTABLE_MODULES.map((k) => (
+                <label key={k} className="flex cursor-pointer items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={denied.includes(k)}
+                    disabled={pending}
+                    onCheckedChange={(v) => setDenied((prev) => (v === true ? [...prev, k] : prev.filter((x) => x !== k)))}
+                  />
+                  {MODULE_LABELS[k]}
+                </label>
+              ))}
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setRestricting(null)} disabled={pending}>Annuler</Button>
+              <Button
+                disabled={pending}
+                onClick={() =>
+                  run(
+                    () => updateMemberModules({ membershipId: restricting!.membershipId, denied }),
+                    denied.length ? "Modules retirés enregistrés." : "Tous les modules de son rôle lui sont rendus.",
                   )
                 }
               >
