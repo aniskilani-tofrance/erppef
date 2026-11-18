@@ -8,6 +8,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { translatePgError } from "@/lib/pg-errors";
 import { KIT_BUCKET, kitStoragePath, planKitShift } from "@/lib/kits";
 import { CANCEL_REASONS } from "@/lib/sessions/cancellation";
+import { cancellationContactNote, cancellationEmail, reminderAlreadySent } from "@/lib/sessions/cancel-notice";
+import { mailerConfigured, sendMail } from "@/lib/mailer";
 
 export type CalendarSession = {
   id: string;
@@ -165,7 +167,8 @@ const cancelSchema = z.object({
 export type CancelResult = { ok: true; message: string } | { ok: false; error: string };
 
 // Annulation avec motif. La séance n'a pas eu lieu : si demandé, son kit glisse sur la
-// séance suivante du groupe, et les kits suivants d'autant (voir planKitShift).
+// séance suivante du groupe, et les kits suivants d'autant (voir planKitShift). Si le rappel
+// de la veille est déjà parti, les inscrits qui ont un e-mail sont prévenus de l'annulation.
 export async function cancelSession(raw: z.infer<typeof cancelSchema>): Promise<CancelResult> {
   const parsed = cancelSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "Choisissez un motif d'annulation." };
@@ -177,7 +180,7 @@ export async function cancelSession(raw: z.infer<typeof cancelSchema>): Promise<
   const supabase = await createClient();
   const { data: session } = await supabase
     .from("sessions")
-    .select("id, group_id, starts_at, status")
+    .select("id, group_id, starts_at, ends_at, status, groups(name, reminders_enabled), rooms:room_id(name)")
     .eq("id", sessionId)
     .eq("org_id", orgId)
     .maybeSingle();
@@ -193,10 +196,40 @@ export async function cancelSession(raw: z.infer<typeof cancelSchema>): Promise<
 
   revalidatePath("/planning");
   revalidatePath(`/groupes/${session.group_id}`);
-  if (!shiftKits) return { ok: true, message: "Séance annulée." };
+  const notified = await notifyLateCancellation(orgId, userId, session);
+  const done = notified ? `Séance annulée. ${notified} apprenant${notified > 1 ? "s" : ""} prévenu${notified > 1 ? "s" : ""} par e-mail (le rappel de la veille était déjà parti).` : "Séance annulée.";
+  if (!shiftKits) return { ok: true, message: done };
 
   const shift = await shiftKitsAfter(orgId, session.group_id, session.id, session.starts_at);
-  return { ok: true, message: `Séance annulée. ${shift}` };
+  return { ok: true, message: `${done} ${shift}` };
+}
+
+type CancelledSession = { id: string; group_id: string; starts_at: string; ends_at: string; groups: unknown; rooms: unknown };
+
+// Rappel déjà reçu (« vous avez cours demain ») : un e-mail « cours annulé » à chaque inscrit
+// qui a une adresse, noté au carnet. Rien si le groupe n'envoie pas de rappels ou si le rappel
+// n'est pas encore parti (annulation plus d'un jour avant) : l'apprenant n'a rien reçu.
+async function notifyLateCancellation(orgId: string, userId: string, session: CancelledSession): Promise<number> {
+  const group = session.groups as { name: string; reminders_enabled: boolean } | null;
+  if (!group?.reminders_enabled || !reminderAlreadySent(session.starts_at) || !mailerConfigured()) return 0;
+  const supabase = await createClient();
+  const { data: enrollments } = await supabase
+    .from("enrollments")
+    .select("learners(id, first_name, email)")
+    .eq("org_id", orgId)
+    .eq("group_id", session.group_id)
+    .eq("status", "inscrit");
+  const room = (session.rooms as { name: string } | null)?.name ?? null;
+  let sent = 0;
+  for (const e of enrollments ?? []) {
+    const l = e.learners as unknown as { id: string; first_name: string | null; email: string | null } | null;
+    if (!l?.email) continue;
+    const mail = cancellationEmail({ firstName: l.first_name, startsAt: session.starts_at, endsAt: session.ends_at, groupName: group.name, roomName: room });
+    if (!(await sendMail({ to: l.email, ...mail }))) continue;
+    sent += 1;
+    await supabase.from("learner_contacts").insert({ org_id: orgId, learner_id: l.id, channel: "email", outcome: "message_envoye", note: cancellationContactNote(session.starts_at), created_by: userId });
+  }
+  return sent;
 }
 
 async function shiftKitsAfter(orgId: string, groupId: string, cancelledId: string, startsAt: string): Promise<string> {

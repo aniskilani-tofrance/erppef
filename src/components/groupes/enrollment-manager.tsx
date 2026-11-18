@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   enrollLearner,
@@ -16,6 +16,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal } from "lucide-react";
 import { excusedShortLabel } from "@/lib/attendance-status";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { LEAVE_REASONS, describeLeaveReason, type LeaveReasonCode } from "@/lib/parcours/sortie";
 
 export type Enrolled = {
   enrollmentId: string;
@@ -24,6 +27,10 @@ export type Enrolled = {
   level: string | null;
   status: "inscrit" | "abandon" | "termine";
   leftOn: string | null;
+  leaveReason?: string | null; // motif de l'abandon (code ou « autre : précision »)
+  // Trace Qualiopi : sur un abandon, « 3 absences de suite · 2 relances (…) · dernière présence… » ;
+  // sur un inscrit, suggestion « passer en abandon » si injoignable après relances.
+  exit?: { trace: string | null; suggestDropout: boolean; relances: number } | null;
   stats?: {
     rate: number;
     total: number;
@@ -55,6 +62,16 @@ export function EnrollmentManager({
   suggestedLevel?: string | null;
 }) {
   const [pending, startTransition] = useTransition();
+  // Abandon : motif obligatoire (fenêtre), pré-rempli « injoignable » depuis la suggestion
+  const [dropout, setDropout] = useState<Enrolled | null>(null);
+  const [reason, setReason] = useState<LeaveReasonCode | null>(null);
+  const [detail, setDetail] = useState("");
+
+  function openDropout(e: Enrolled, preset: LeaveReasonCode | null = null) {
+    setDropout(e);
+    setReason(preset);
+    setDetail("");
+  }
 
   function remove(e: Enrolled) {
     startTransition(async () => {
@@ -77,18 +94,20 @@ export function EnrollmentManager({
   }
 
   // Sortie de parcours : statut daté, conservé dans les bilans financeurs.
-  function setStatus(e: Enrolled, status: "inscrit" | "abandon" | "termine") {
+  function setStatus(e: Enrolled, status: "inscrit" | "abandon" | "termine", leave: { reason: LeaveReasonCode; detail: string } | null = null) {
     startTransition(async () => {
       const result = await updateEnrollmentStatus({
         enrollmentId: e.enrollmentId,
         status,
         leftOn: null, // date du jour côté serveur
-        leaveReason: null,
+        leaveReason: leave?.reason ?? null,
+        leaveDetail: leave?.detail || null,
       });
       if (!result.ok) {
         toast.error(result.error);
         return;
       }
+      setDropout(null);
       toast.success(
         status === "inscrit"
           ? `${e.name} réinscrit dans le parcours.`
@@ -125,6 +144,23 @@ export function EnrollmentManager({
                     {e.stats.consecutiveAbsences} absences de suite
                   </span>
                 )}
+                {e.status === "inscrit" && e.exit?.suggestDropout && (
+                  <button
+                    type="button"
+                    className="ml-2 rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-900 hover:bg-amber-100"
+                    onClick={() => openDropout(e, "injoignable")}
+                    disabled={pending}
+                    title="Absences de suite et relances sans retour : passer l'inscription en abandon, motif « Injoignable après relances »"
+                  >
+                    {e.exit.relances} relances sans retour : passer en abandon ?
+                  </button>
+                )}
+                {e.status === "abandon" && (
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    Motif : {describeLeaveReason(e.leaveReason)}
+                    {e.exit?.trace ? ` · ${e.exit.trace}` : ""}
+                  </span>
+                )}
               </span>
               <span className="flex items-center gap-2">
                 {e.stats && e.stats.total > 0 && (
@@ -149,7 +185,7 @@ export function EnrollmentManager({
                       </DropdownMenuItem>
                     )}
                     {e.status !== "abandon" && (
-                      <DropdownMenuItem onClick={() => setStatus(e, "abandon")}>
+                      <DropdownMenuItem onClick={() => openDropout(e)}>
                         Marquer en abandon
                       </DropdownMenuItem>
                     )}
@@ -171,6 +207,43 @@ export function EnrollmentManager({
       ) : (
         <p className="text-sm text-muted-foreground">Aucun apprenant inscrit pour l&apos;instant.</p>
       )}
+
+      <Dialog open={dropout !== null} onOpenChange={(o) => !o && setDropout(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Abandon — {dropout?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <p className="text-muted-foreground">
+              Le motif est gardé avec la date de sortie (preuve Qualiopi des ruptures de parcours). Notez aussi au carnet ce qui a été proposé à la personne.
+            </p>
+            <div className="space-y-1.5" role="radiogroup" aria-label="Motif de l'abandon">
+              {LEAVE_REASONS.map((r) => (
+                <label key={r.code} className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-1.5 has-[:checked]:border-primary has-[:checked]:bg-muted">
+                  <input type="radio" name="motif-abandon" checked={reason === r.code} onChange={() => setReason(r.code)} />
+                  {r.label}
+                </label>
+              ))}
+            </div>
+            <Input
+              value={detail}
+              onChange={(ev) => setDetail(ev.target.value)}
+              maxLength={200}
+              placeholder={reason === "autre" ? "Précisez le motif (obligatoire)" : "Précision (facultatif)"}
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setDropout(null)} disabled={pending}>Annuler</Button>
+              <Button
+                variant="destructive"
+                disabled={pending || !reason || (reason === "autre" && !detail.trim())}
+                onClick={() => dropout && reason && setStatus(dropout, "abandon", { reason, detail: detail.trim() })}
+              >
+                Marquer en abandon
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="flex flex-wrap items-center gap-2">
         <EnrollmentPicker groupId={groupId} available={available} suggestedLevel={suggestedLevel} />

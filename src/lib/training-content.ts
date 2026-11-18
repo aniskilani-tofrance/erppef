@@ -653,6 +653,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
           "Déplacer une séance : glisser-déposer dans le planning. En cas de conflit, elle revient avec l'explication.",
           "Séance ponctuelle (rattrapage isolé) : sélectionnez un créneau vide dans la vue semaine.",
           "Annuler une séance : cliquez-la dans le planning → « Annuler la séance » → un motif obligatoire (absence imprévue du formateur, fermeture du lieu, effectif insuffisant, autre). « Décaler les kits » (cochée par défaut) fait glisser son kit sur la séance suivante, et les kits suivants d'autant : le groupe reprend là où il s'était arrêté. Erreur ? « Rétablir » sur la fiche du groupe.",
+          "Annulation le jour même ou la veille : les inscrits ont déjà reçu le rappel. L'ERP leur envoie alors un e-mail « Cours annulé » (si le groupe a les rappels activés) ; prévenez sur WhatsApp ceux qui n'ont pas d'e-mail.",
           "Séances annulées : la fiche du groupe affiche un bandeau « X h manquantes » — « Replanifier automatiquement » ajoute les rattrapages à la suite du planning.",
           "Fin de parcours : fiche du groupe → « Modifier » → statut « Terminé ».",
           "Formatrice absente : Planning → « Remplacements » (ou la ligne « séances à remplacer » de « À faire aujourd'hui »). Chaque séance des 3 prochaines semaines dont la formatrice a un congé validé (ou une demande encore à valider), et chaque séance sans formateur, avec les personnes libres sur le créneau, classées comme le fait le moteur (salariées d'abord, stagiaires et bénévoles en dernier). « Confier à … » change la formatrice et la prévient par email ; son agenda se met à jour la nuit. Personne de libre ? Déplacez ou annulez la séance dans le Planning.",
@@ -694,6 +695,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
         id: "qualite",
         title: "Assiduité et audit Qualiopi",
         steps: [
+          "Registre des ruptures de parcours (preuve de l'indicateur sur l'engagement et la prévention des ruptures) : chaque abandon depuis le 1er septembre avec son motif, les absences et relances qui l'ont précédé, la dernière présence ; « Exporter (tableur) » pour l'auditeur.",
           "Le Dashboard affiche le taux de présence global et les apprenants en alerte (moins de 70 % ou 3 absences de suite) : appelez-les, notez l'action dans leur fiche.",
           "« Absents à relancer » (Dashboard) : chaque apprenant absent à son dernier cours émargé et pas encore contacté depuis. « WhatsApp » ouvre un message prêt (le cours manqué, le prochain cours et sa salle) à relire puis envoyer ; « Appelé(e) » note un appel. La relance est tracée dans son carnet de contact et la personne sort de la liste ; elle y revient si elle manque encore un cours. Relancer dès la première absence est le meilleur moyen d'éviter le décrochage.",
           "Elle avait prévenu ? « Excuser » sur sa ligne (motif facultatif) : l'absence devient « Excusé » sur la feuille, sans la rouvrir, et ne se relance plus. Même geste sur la feuille d'une séance clôturée (« Excuser » sur une ligne « Absent », « Remettre « Absent » » pour annuler). Réservé à l'admin et à la coordination ; jamais sur une ligne présente (il faut rouvrir la feuille). Une absence excusée ne compte ni dans les séries ni dans les alertes, mais reste une absence pour les heures : « dont X absences justifiées » dans les bilans.",
@@ -807,6 +809,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
           "À la création d'un groupe dont le dispositif a un niveau d'entrée, l'encadré « Groupe de niveau » liste les apprenants de ce niveau sans groupe actif, tous cochés : décochez au besoin, ils seront inscrits avec le planning.",
           "Sur une fiche de groupe, « Inscrire des apprenants… » ouvre le sélecteur filtré : recherche + filtres niveau, langue, quartier, commune, QPV, sexe, âge, situation, scolarisation, prescripteur — cochez, inscrivez en lot.",
           "Sorties de parcours : menu ⋯ d'un inscrit → « Marquer en abandon » ou « terminé » (daté, compté dans les bilans). Ne supprimez une inscription QUE pour une erreur de saisie.",
+          "Un abandon demande un motif (liste) : c'est la preuve Qualiopi, avec les relances notées au carnet. Le registre complet est sur la page Qualité (« Registre des ruptures de parcours », exportable).",
           "« Reconduire » (fiche du groupe) : la session suivante à l'identique, planning régénéré depuis la nouvelle date, vacances sautées.",
         ],
         tip: "Le niveau vient du test de positionnement : plus vos apprenants sont testés, plus les groupes de niveau se composent tout seuls.",

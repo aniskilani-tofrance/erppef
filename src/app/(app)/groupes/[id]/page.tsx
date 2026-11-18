@@ -10,7 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { utcToLocalTime } from "@/lib/dates";
+import { localToUtc, utcToLocalTime } from "@/lib/dates";
 import { groupRef } from "@/lib/refs";
 import { EnrollmentManager } from "@/components/groupes/enrollment-manager";
 import { GroupEditDialog } from "@/components/groupes/group-edit-dialog";
@@ -54,6 +54,7 @@ import { GroupBroadcastDialog } from "@/components/assistant/group-broadcast-dia
 import { FreeSeatsCard, type SeatCandidateRow } from "@/components/assistant/free-seats-card";
 import { freeSeats, matchSeatCandidates, type Slot } from "@/lib/groupes/free-seats";
 import { whatsappGroupRoster, type RosterMember } from "@/lib/groupes/whatsapp-group";
+import { describeTrace, exitTrace, suggestDropout } from "@/lib/parcours/sortie";
 import { WhatsAppGroupCard } from "@/components/groupes/whatsapp-group-card";
 import { GroupInternsCard, type InternOption } from "@/components/groupes/group-interns-card";
 import { GroupContactsCard } from "@/components/groupes/group-contacts-card";
@@ -85,7 +86,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
       supabase.from("v_group_hours").select("*").eq("group_id", id).single(),
       supabase
         .from("enrollments")
-        .select("id, learner_id, status, left_on, learners(first_name, last_name, level_assessed, phone, email, whatsapp_group_consent)")
+        .select("id, learner_id, status, left_on, leave_reason, learners(first_name, last_name, level_assessed, phone, email, whatsapp_group_consent)")
         .eq("group_id", id)
         .order("status"), // abandons et terminés restent visibles (badges + bilans)
       supabase.from("learners").select("id, first_name, last_name, learner_no, level_assessed, first_language, city, district, qpv, gender, activity_status, education_level, prescriber, birth_date, contact_source, contact_source_detail, admission_status, phone, created_at").order("last_name"),
@@ -293,6 +294,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
       level: l?.level_assessed ?? null,
       status: e.status as "inscrit" | "abandon" | "termine",
       leftOn: e.left_on ?? null,
+      leaveReason: (e.leave_reason as string | null) ?? null,
     };
   });
   const enrolledIds = new Set(enrolled.map((e) => e.learnerId));
@@ -393,6 +395,24 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
     };
   });
   const attendanceStats = computeLearnerStats(records);
+  // Ruptures de parcours (Qualiopi) : pour chaque inscription, dernière présence, absences de
+  // suite et relances notées au carnet — sur une sortie (motif + trace) et pour suggérer
+  // « passer en abandon » à un inscrit injoignable après relances.
+  const { data: carnet } = enrolled.length
+    ? await supabase.from("learner_contacts").select("learner_id, contacted_at").in("learner_id", enrolled.map((e) => e.learnerId)).gte("contacted_at", localToUtc(group.starts_on, "00:00"))
+    : { data: [] as { learner_id: string; contacted_at: string }[] };
+  const traceOf = (learnerId: string, until: string | null) =>
+    exitTrace(
+      records.filter((r) => r.learnerId === learnerId).map((r) => ({ startsAt: r.startsAt, status: r.status })),
+      (carnet ?? []).filter((c) => c.learner_id === learnerId).map((c) => ({ contactedAt: c.contacted_at })),
+      until,
+    );
+  const exitInfo = new Map(
+    enrolled.map((e) => {
+      const t = traceOf(e.learnerId, e.status === "inscrit" ? null : e.leftOn);
+      return [e.learnerId, { trace: e.status === "abandon" ? describeTrace(t) : null, suggestDropout: e.status === "inscrit" && suggestDropout(t), relances: t.relances.length }] as const;
+    }),
+  );
 
   const done = hours ? Number(hours.hours_done) : 0;
   const scheduled = hours ? Number(hours.hours_scheduled) : 0;
@@ -628,7 +648,7 @@ export default async function GroupePage({ params }: { params: Promise<{ id: str
             <EnrollmentManager
               groupId={id}
               groupName={group.name}
-              enrolled={enrolled.map((e) => ({ ...e, stats: attendanceStats.get(e.learnerId) ?? null }))}
+              enrolled={enrolled.map((e) => ({ ...e, stats: attendanceStats.get(e.learnerId) ?? null, exit: exitInfo.get(e.learnerId) ?? null }))}
               available={available}
               suggestedLevel={(group.programs as unknown as { entry_level?: string | null } | null)?.entry_level ?? null}
             />

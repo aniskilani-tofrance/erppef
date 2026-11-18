@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { LEAVE_REASON_CODES, formatLeaveReason } from "@/lib/parcours/sortie";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { translatePgError } from "@/lib/pg-errors";
@@ -326,18 +327,24 @@ const enrollmentStatusSchema = z.object({
   enrollmentId: z.string().uuid(),
   status: z.enum(["inscrit", "abandon", "termine"]),
   leftOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
-  leaveReason: z.string().nullable(),
+  leaveReason: z.enum(LEAVE_REASON_CODES).nullable(),
+  leaveDetail: z.string().max(200).nullable().optional(),
 });
 
 // Sortie de parcours (abandon/terminé) : changement de statut DATÉ, jamais une
 // suppression — les bilans financeurs comptent les sorties. Repasser en « inscrit »
-// efface la date et le motif.
+// efface la date et le motif. Un abandon exige un motif (preuve Qualiopi des ruptures de
+// parcours) ; « Autre » exige une précision.
 export async function updateEnrollmentStatus(
   raw: z.infer<typeof enrollmentStatusSchema>,
 ): Promise<ActionResult> {
   const parsed = enrollmentStatusSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "Données invalides" };
   const d = parsed.data;
+  const leaveReason = d.status === "abandon" && d.leaveReason ? formatLeaveReason(d.leaveReason, d.leaveDetail) : null;
+  if (d.status === "abandon" && !leaveReason) {
+    return { ok: false, error: d.leaveReason === "autre" ? "Précisez le motif de l'abandon en une ligne." : "Choisissez le motif de l'abandon." };
+  }
 
   await requireRole(["admin", "coordinator"]);
   const supabase = await createClient();
@@ -347,7 +354,7 @@ export async function updateEnrollmentStatus(
     .update({
       status: d.status,
       left_on: d.status === "inscrit" ? null : (d.leftOn ?? new Date().toISOString().slice(0, 10)),
-      leave_reason: d.status === "inscrit" ? null : d.leaveReason,
+      leave_reason: leaveReason,
     })
     .eq("id", d.enrollmentId);
 

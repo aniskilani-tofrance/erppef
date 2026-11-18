@@ -43,6 +43,29 @@ export const APP_UPDATES: AppUpdate[] = [
     training: [{ moduleId: "c6-pilotage", lessonId: "financements", label: "Suivre les financements" }],
   },
   {
+    id: "2026-11-18-ruptures-de-parcours",
+    date: "2026-11-18",
+    title: "Abandons : motif obligatoire et registre des ruptures de parcours (Qualiopi)",
+    summary: "Un abandon demande maintenant un motif ; la fiche du groupe montre les relances faites avant la sortie, et la page Qualité tient le registre des ruptures de parcours, exportable pour l'auditeur.",
+    items: [
+      { text: "Fiche du groupe → menu ⋯ → « Marquer en abandon » : choisissez le motif (emploi trouvé, autre formation, déménagement, santé, garde d'enfant, horaires, niveau, injoignable après relances, autre). Sous le nom : motif, absences de suite, relances avec leurs dates, dernière présence.", roles: TEAM },
+      { text: "Après 3 absences de suite et 2 relances sans retour, l'ERP propose « passer en abandon ? » avec le motif « Injoignable après relances » déjà choisi.", roles: TEAM },
+      { text: "Page Qualité → « Registre des ruptures de parcours » : abandons depuis le 1er septembre, motif, suivi avant la sortie, taux d'abandon par groupe ; « Exporter (tableur) » pour l'audit Qualiopi.", roles: TEAM },
+    ],
+    training: [{ moduleId: "c5-vie-quotidienne", lessonId: "qualite", label: "Qualité (Qualiopi)" }, { moduleId: "c6-pilotage", lessonId: "groupes-niveau", label: "Groupes et sorties de parcours" }],
+  },
+  {
+    id: "2026-11-13-annulation-previent-apprenants",
+    date: "2026-11-13",
+    title: "Séance annulée au dernier moment : les apprenants sont prévenus par e-mail",
+    summary: "Si le rappel de la veille est déjà parti, annuler une séance envoie tout seul un e-mail « Cours annulé » aux inscrits ; un groupe annulé ne déclenche plus de rappels.",
+    items: [
+      { text: "Planning → séance → « Annuler la séance » : si le rappel de la veille est déjà parti (groupe avec rappels), les inscrits qui ont un e-mail reçoivent « Cours annulé — ne venez pas », noté dans leur carnet. Le message de confirmation dit combien ont été prévenus.", roles: TEAM },
+      { text: "Pensez au WhatsApp pour ceux qui n'ont pas d'e-mail. Un groupe passé en « Annulé » ou « Terminé » ne déclenche plus aucun rappel, même s'il lui reste des séances prévues.", roles: TEAM },
+    ],
+    training: [{ moduleId: "c5-vie-quotidienne", lessonId: "ajustements", label: "Ajuster le planning" }],
+  },
+  {
     id: "2026-11-18-modules-retires",
     date: "2026-11-18",
     title: "Utilisateurs : retirer un module à une personne",
