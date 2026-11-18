@@ -41,7 +41,7 @@ const dayFr = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { day: 
 
 // Cellule CSV : guillemets si besoin ; un texte qui commence par = + - @ serait lu comme une
 // formule par le tableur (les noms viennent aussi du formulaire public) → apostrophe devant.
-function cell(value: string | null | undefined): string {
+export function csvCell(value: string | null | undefined): string {
   let v = (value ?? "").replace(/\r?\n/g, " ").trim();
   if (/^[=+\-@]/.test(v)) v = `'${v}`;
   return /[";]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
@@ -76,7 +76,7 @@ export function waitlistTable(learners: readonly WaitlistLearner[], contacts: re
 }
 
 export function buildWaitlistCsv(learners: readonly WaitlistLearner[], contacts: readonly WaitlistContact[]): string {
-  const rows = waitlistTable(learners, contacts).map((r) => r.map(cell).join(";"));
+  const rows = waitlistTable(learners, contacts).map((r) => r.map(csvCell).join(";"));
   return "﻿" + [WAITLIST_COLUMNS.join(";"), ...rows].join("\r\n");
 }
 

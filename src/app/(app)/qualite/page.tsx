@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { loadRuptures, schoolYearStart } from "@/lib/parcours/registre";
+import { describeTrace } from "@/lib/parcours/sortie";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -21,7 +25,7 @@ const INDICATORS: { ind: string; label: string; proof: string; href: string }[] 
   { ind: "4", label: "Analyse du besoin du bénéficiaire", proof: "Bloc « Analyse du besoin » + dossier d'entrée PDF sur chaque fiche apprenant", href: "/apprenants" },
   { ind: "8", label: "Positionnement à l'entrée", proof: "Niveau évalué sur chaque fiche apprenant", href: "/apprenants" },
   { ind: "11", label: "Atteinte des objectifs", proof: "Avancement heures réalisées / prévues par groupe", href: "/groupes" },
-  { ind: "12", label: "Engagement et assiduité", proof: "Émargement électronique, taux d'assiduité, alertes décrochage", href: "/apprenants" },
+  { ind: "12", label: "Engagement et assiduité", proof: "Émargement électronique, taux d'assiduité, relances d'absence au carnet, registre des ruptures de parcours (motif, relances, dernière présence) ci-dessous", href: "/qualite" },
   { ind: "17", label: "Moyens mobilisés", proof: "Salles, capacités, équipements, planning", href: "/salles" },
   { ind: "21-22", label: "Compétences des formateurs", proof: "CV, diplômes et attestations sur chaque fiche formateur", href: "/formateurs" },
   { ind: "23-26", label: "Veille (critère 6)", proof: "Registre de veille ci-dessous (saisies de l'équipe + fiches hebdomadaires du collecteur), exécutions et notes mensuelles", href: "/qualite" },
@@ -32,8 +36,11 @@ const INDICATORS: { ind: string; label: string; proof: string; href: string }[] 
 ];
 
 export default async function QualitePage() {
-  await requireRole(["admin", "coordinator"]);
+  const { orgId } = await requireRole(["admin", "coordinator"]);
   const supabase = await createClient();
+  // Registre des ruptures de parcours depuis le 1er septembre (année de formation en cours)
+  const since = schoolYearStart();
+  const ruptures = await loadRuptures(supabase, orgId, since);
 
   const [{ data: attendanceRows }, { data: hours }, { data: surveys }, { data: complaints }, { data: learners }, { data: watchEntries }, { data: contractors }, { data: contractorDocs }, { data: veilleRuns }, { data: veilleNotes }] =
     await Promise.all([
@@ -116,6 +123,58 @@ export default async function QualitePage() {
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardTitle className="text-base">Registre des ruptures de parcours (ind. 12) — depuis le {since.split("-").reverse().join("/")}</CardTitle>
+            <Button variant="outline" size="sm" className="h-8" asChild>
+              <a href={`/qualite/ruptures?depuis=${since}`} download>
+                <Download className="mr-1 h-3.5 w-3.5" />
+                Exporter (tableur)
+              </a>
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Chaque abandon avec son motif, les absences qui l&apos;ont précédé, les relances notées au carnet et la dernière présence. Le motif se choisit en passant l&apos;inscription en « Abandon » (fiche du groupe) ; les relances viennent de « Absents à relancer » et du carnet.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {ruptures.rows.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Aucun abandon depuis le {since.split("-").reverse().join("/")}.</p>
+          ) : (
+            <>
+              <div className="flex flex-wrap gap-2 text-xs">
+                {ruptures.groups.map((g) => (
+                  <Badge key={g.groupName} variant="outline">{g.groupName} : {g.abandons} abandon{g.abandons > 1 ? "s" : ""} / {g.total} ({g.rate} %)</Badge>
+                ))}
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Sortie</TableHead>
+                    <TableHead>Apprenant</TableHead>
+                    <TableHead>Groupe</TableHead>
+                    <TableHead>Motif</TableHead>
+                    <TableHead>Suivi avant la sortie</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {ruptures.rows.map((r) => (
+                    <TableRow key={`${r.learnerRef}-${r.groupName}-${r.leftOn}`}>
+                      <TableCell className="whitespace-nowrap">{r.leftOn.split("-").reverse().join("/")}</TableCell>
+                      <TableCell>{r.learnerName} <span className="font-mono text-xs text-muted-foreground">{r.learnerRef}</span></TableCell>
+                      <TableCell>{r.groupName}</TableCell>
+                      <TableCell className={r.reason === "motif non renseigné" ? "text-amber-700" : ""}>{r.reason}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{describeTrace(r.trace)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

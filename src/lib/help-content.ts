@@ -736,6 +736,9 @@ export const HELP_SECTIONS: HelpSection[] = [
           "« Bilan PDF » = le document à joindre au compte-rendu ; « Détail CSV » = le nominatif par groupe et par bénéficiaire ; « Déposer sur le Drive » = classement automatique dans « Bilans financeurs ».",
           "La typologie vient des fiches apprenants (section « Typologie ») : plus elle est remplie, moins le bilan affiche de « Non renseigné ». Complétez-la à l'inscription, c'est 30 secondes par personne.",
           "Un abandon se déclare sur la fiche du groupe (menu ⋯ de l'apprenant → « Marquer en abandon ») : il reste compté dans le bilan — ne supprimez jamais une inscription réelle.",
+          "Motif obligatoire : « Marquer en abandon » ouvre une fenêtre avec la liste des motifs (emploi trouvé, autre formation, déménagement, santé, garde d'enfant, horaires, niveau, injoignable après relances, autre + précision). La fiche du groupe affiche ensuite sous le nom : le motif, les absences de suite avant la sortie, les relances notées au carnet (avec leurs dates) et la dernière présence. Notez au carnet ce qui a été proposé à la personne.",
+          "Suggestion « n relances sans retour : passer en abandon ? » : elle apparaît à côté d'un inscrit qui a au moins 3 absences de suite ET au moins 2 relances notées depuis la première de ces absences. Un clic ouvre la fenêtre avec le motif « Injoignable après relances » déjà choisi.",
+          "Qualiopi (engagement, prévention des ruptures de parcours) : page Qualité → « Registre des ruptures de parcours » : tous les abandons depuis le 1er septembre, motif, suivi avant la sortie, taux d'abandon par groupe ; « Exporter (tableur) » pour l'auditeur. Chaque relance compte : passez par « Absents à relancer » (WhatsApp tracé) ou « Noter un contact » pour un appel.",
         ],
       },
       {
