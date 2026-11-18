@@ -24,7 +24,7 @@ export function CopyButton({ value, label = "Copier" }: { value: string; label?:
     }
   }
   return (
-    <Button type="button" size="sm" variant="outline" onClick={copy} aria-label={`${label} ${value}`}>
+    <Button type="button" size="sm" variant="outline" onClick={copy} aria-label={value.length > 60 ? label : `${label} ${value}`}>
       {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
       {label}
     </Button>

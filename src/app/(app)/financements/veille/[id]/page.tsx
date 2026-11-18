@@ -70,6 +70,7 @@ export default async function OpportunityPage({ params }: { params: Promise<{ id
               deadline_day: dl.day, deadline_time: dl.time, opens_on: o.opens_on,
               amount_min: o.amount_min === null ? "" : String(o.amount_min), amount_max: o.amount_max === null ? "" : String(o.amount_max),
               max_rate: o.max_rate === null ? "" : String(o.max_rate), summary: o.summary ?? "", eligibility_notes: o.eligibility_notes,
+              criteria: o.criteria ?? null, required_documents: o.required_documents ?? null,
               next_window_note: o.next_window_note, watch_status: status, discard_reason: o.discard_reason,
             }}
           />
@@ -133,6 +134,8 @@ export default async function OpportunityPage({ params }: { params: Promise<{ id
             <Row label="Taux maximum">{o.max_rate === null ? "—" : `${Number(o.max_rate)} %`}</Row>
             <Row label="Résumé"><span className="whitespace-pre-line">{o.summary || "—"}</span></Row>
             <Row label="Conditions, vigilance"><span className="whitespace-pre-line">{o.eligibility_notes || "—"}</span></Row>
+            {o.criteria && <Row label="Critères de sélection"><span className="whitespace-pre-line">{o.criteria}</span></Row>}
+            {o.required_documents && <Row label="Pièces à joindre"><span className="whitespace-pre-line">{o.required_documents}</span></Row>}
             {status === "ecarte" && <Row label="Raison de l'écart">{o.discard_reason}</Row>}
           </dl>
         </CardContent>

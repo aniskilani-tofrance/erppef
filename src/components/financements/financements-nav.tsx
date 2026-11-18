@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarClock, FolderKanban, Home, Landmark, Radar } from "lucide-react";
+import { CalendarClock, FolderKanban, Home, Landmark, LibraryBig, Radar } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const TABS = [
@@ -11,6 +11,7 @@ const TABS = [
   { href: "/financements/dossiers", label: "Dossiers", icon: FolderKanban },
   { href: "/financements/calendrier", label: "Calendrier", icon: CalendarClock },
   { href: "/financements/financeurs", label: "Financeurs", icon: Landmark },
+  { href: "/financements/bibliotheque", label: "Bibliothèque", icon: LibraryBig },
 ] as const;
 
 // Onglets du module : défilent horizontalement sur téléphone.

@@ -26,6 +26,19 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-11-18-financements-atelier",
+    date: "2026-11-18",
+    title: "Financements : l'atelier de rédaction, pour écrire un dossier sans copier-coller",
+    summary: "Chaque dossier a son atelier : les rubriques du formulaire du financeur dans l'ordre, un compteur de caractères, un bouton « Copier » par rubrique, une bibliothèque de textes, les chiffres de l'ERP et l'IA pour une première version.",
+    items: [
+      { text: "Fiche d'un dossier → « Atelier de rédaction » : choisissez le modèle (Dauphin, Cerfa 12156, Région, fondation), écrivez dans chaque rubrique — le texte s'enregistre tout seul — puis « Copier » et collez dans le portail.", roles: TEAM },
+      { text: "« Écrire avec l'IA » propose un texte à partir de vos textes, des critères de l'appel et des totaux de l'ERP. Vous relisez, puis « Remplacer », « Ajouter à la suite » ou « Abandonner ». Le texte d'avant est toujours gardé.", roles: TEAM },
+      { text: "Onglet « Bibliothèque » : la présentation de l'association, vos actions, vos réponses déjà acceptées, saisies une fois. « Insérer » les place dans une rubrique, avec les chiffres de l'ERP si besoin.", roles: TEAM },
+      { text: "« Exporter en Word » produit le dossier à la charte, pour la relecture et le Drive. Aucun nom d'apprenant ne part à l'IA ni dans un dossier.", roles: TEAM },
+    ],
+    training: [{ moduleId: "c6-pilotage", lessonId: "atelier-ecriture", label: "Écrire un dossier dans l'atelier" }],
+  },
+  {
     id: "2026-11-18-financements",
     date: "2026-11-18",
     title: "Nouveau menu « Financements » : veille, dossiers, échéances et financeurs au même endroit",
