@@ -30,6 +30,19 @@ const LEADS: AppRole[] = ["admin", "coordinator", "setter"]; // le mini-CRM des 
 
 export const APP_UPDATES: AppUpdate[] = [
   {
+    id: "2026-11-18-financements-recherche-automatique",
+    module: "financements",
+    date: "2026-11-18",
+    title: "Financements : l'ERP cherche de nouveaux financements chaque nuit",
+    summary: "Chaque nuit, une recherche sur le web repère des appels à projets, des fondations, du mécénat et des marchés publics qui correspondent à l'association, et les dépose dans « À trier ».",
+    items: [
+      { text: "Financements → « Ma semaine » : les nouveautés trouvées dans la nuit sont dans « À trier ». Chaque fiche donne la page officielle, pourquoi l'appel nous concerne et ce qui reste à vérifier.", roles: TEAM },
+      { text: "Onglet « Veille » → « Recherche automatique » → « Réglages » : décrivez votre profil (public, territoire, actions) pour des trouvailles plus justes. « Chercher maintenant » lance une recherche tout de suite.", roles: TEAM },
+      { text: "Un axe par jour (État, fondations, collectivités, marchés publics, mécénat, Europe). L'ERP écarte les liens morts et les appels déjà connus ; vérifiez toujours la page du financeur avant de décider.", roles: TEAM },
+    ],
+    training: [{ moduleId: "c6-pilotage", lessonId: "financements", label: "Suivre les financements" }],
+  },
+  {
     id: "2026-11-18-ruptures-de-parcours",
     date: "2026-11-18",
     title: "Abandons : motif obligatoire et registre des ruptures de parcours (Qualiopi)",

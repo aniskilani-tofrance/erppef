@@ -7,6 +7,11 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.join(__dirname),
   },
+  // Machine de compilation à mémoire limitée (NucBox) : le contrôle des types intégré à
+  // « next build » peut être coupé par le gardien de mémoire. On peut alors le lancer à part
+  // (npx tsc --noEmit, qui doit passer) puis compiler avec SKIP_BUILD_TYPECHECK=1.
+  // Sans cette variable, rien ne change : la compilation vérifie les types.
+  typescript: { ignoreBuildErrors: process.env.SKIP_BUILD_TYPECHECK === "1" },
   // Inscription rapide intégrable dans le site parleremploiformation.pro (iframe) :
   // seuls le site et Lovable peuvent l'afficher dans un cadre.
   async headers() {

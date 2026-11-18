@@ -835,6 +835,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
         intro: "Le menu « Financements » réunit ce qui était éparpillé : la veille des appels, le suivi des dossiers, les dates et les fiches des financeurs.",
         steps: [
           "« Ma semaine » s'ouvre en premier : les échéances des 30 prochains jours (rouge à moins de 15 jours), les nouveautés « À trier » et vos prochaines étapes.",
+          "Chaque nuit, l'ERP cherche lui-même de nouveaux financements sur le web (un axe par jour : État, fondations, collectivités, marchés publics, mécénat, Europe) et les dépose dans « À trier ». Réglez votre profil dans Veille → « Recherche automatique » → « Réglages ».",
           "Triez chaque nouveauté : « Écarter » (dites pourquoi en une ligne), « À surveiller » ou « Évaluer ». Pour un appel que vous avez repéré vous-même : Veille → « Ajouter », le titre suffit.",
           "Vous y allez ? Sur la fiche de l'opportunité, « Créer le dossier » : il s'ouvre déjà rempli. Indiquez le responsable et la prochaine étape.",
           "Onglet « Dossiers » : glissez la carte d'une colonne à l'autre — On y va, En rédaction, Déposé, Accordé, Bilan rendu. Une étape à la fois ; chaque changement est gardé dans l'historique.",
