@@ -43,6 +43,12 @@ export async function loadWatchBudget(admin: SupabaseClient, orgId: string, now:
   return { spentUsd, capUsd, exceeded: spentUsd >= capUsd };
 }
 
+// Le message d'erreur de l'API arrive enveloppé dans du JSON : on n'en garde que la phrase utile.
+export function apiErrorDetail(message: string): string {
+  const m = /"message":"((?:[^"\\]|\\.)*)"/.exec(message);
+  return (m ? m[1].replace(/\\"/g, '"') : message).slice(0, 200);
+}
+
 // Recherche sur le web par le modèle (outils côté serveur). Rend le compte rendu en texte.
 async function researchOnWeb(user: string): Promise<{ notes: string; usage: AiUsage; searches: number }> {
   const workspaceId = process.env.ANTHROPIC_WORKSPACE_ID;
@@ -75,7 +81,7 @@ async function researchOnWeb(user: string): Promise<{ notes: string; usage: AiUs
       if (e instanceof Anthropic.RateLimitError) throw new AiError("Modèle momentanément saturé : la recherche sera refaite demain.");
       if (e instanceof Anthropic.APIConnectionTimeoutError) throw new AiError("Recherche trop longue : interrompue avant la limite de temps.");
       // Le détail sert au journal de la veille (ex. recherche web non activée sur le compte du modèle).
-      if (e instanceof Anthropic.APIError) throw new AiError(`Recherche indisponible (${e.status ?? "erreur"}) : ${e.message.slice(0, 300)}`);
+      if (e instanceof Anthropic.APIError) throw new AiError(`Recherche indisponible (${e.status ?? "erreur"}) : ${apiErrorDetail(e.message)}`);
       throw new AiError("Modèle injoignable (réseau).");
     }
     usage.model = response.model;

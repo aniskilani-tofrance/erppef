@@ -111,6 +111,15 @@ describe("Veille automatique — consignes", () => {
   });
 });
 
+describe("Veille automatique — message d'erreur lisible", () => {
+  it("ne garde que la phrase utile du refus de l'API", async () => {
+    const { apiErrorDetail } = await import("@/lib/financements/veille-run");
+    expect(apiErrorDetail('400 {"type":"error","error":{"type":"invalid_request_error","message":"anthropic-workspace-id header must be a valid workspace ID."},"request_id":"req_x"}')).toBe("anthropic-workspace-id header must be a valid workspace ID.");
+    expect(apiErrorDetail("Connexion coupée")).toBe("Connexion coupée");
+    expect(apiErrorDetail("x".repeat(500))).toHaveLength(200);
+  });
+});
+
 describe("Veille automatique — réglages et journal", () => {
   it("par défaut : activée, profil générique, journal vide", () => {
     expect(resolveWatchSettings(null)).toEqual({ enabled: true, profile: DEFAULT_WATCH_PROFILE, runs: [] });
