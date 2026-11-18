@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, FileText } from "lucide-react";
+import { ArrowLeft, FileText, PenLine } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { loadFundersLite, loadTeam, requireFinancements } from "@/lib/financements/acces";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PORTAL_LABELS, STAGE_LABELS, type DeadlineKind, type Portal, type Stage } from "@/lib/financements/constants";
+import { applicationProgress } from "@/lib/financements/atelier";
 import { inputFromDeadline } from "@/lib/financements/echeances";
 import { formatDay, formatDueAt, formatEuros } from "@/lib/financements/liens";
 import { DEADLINE_SELECT, DeadlineLine, StageBadge, toDeadlineView, UrgencyDot } from "@/components/financements/affichage";
@@ -34,7 +35,7 @@ export default async function DossierPage({ params }: { params: Promise<{ id: st
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const { orgId } = await requireFinancements();
   const supabase = await createClient();
-  const [{ data: a }, { data: deadlines }, { data: events }, funders, team] = await Promise.all([
+  const [{ data: a }, { data: deadlines }, { data: events }, funders, team, { data: sections }] = await Promise.all([
     supabase
       .from("funding_applications")
       .select("*, funders(id, name), funding_opportunities(id, title, url)")
@@ -50,8 +51,10 @@ export default async function DossierPage({ params }: { params: Promise<{ id: st
       .order("created_at", { ascending: false }),
     loadFundersLite(orgId),
     loadTeam(orgId),
+    supabase.from("funding_application_sections").select("title, content, max_chars").eq("org_id", orgId).eq("application_id", id),
   ]);
   if (!a) notFound();
+  const progress = applicationProgress(sections ?? []);
 
   const stage = a.stage as Stage;
   const funder = a.funders as unknown as { id: string; name: string } | null;
@@ -72,8 +75,11 @@ export default async function DossierPage({ params }: { params: Promise<{ id: st
           {funder && <Link href={`/financements/financeurs/${funder.id}`} className="text-sm text-muted-foreground hover:underline">{funder.name}</Link>}
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button asChild size="sm">
+            <Link href={`/financements/dossiers/${a.id}/atelier`}><PenLine className="h-4 w-4" />Atelier de rédaction</Link>
+          </Button>
           {a.drive_url && (
-            <Button asChild size="sm">
+            <Button asChild size="sm" variant="outline">
               <a href={a.drive_url} target="_blank" rel="noopener noreferrer"><FileText className="h-4 w-4" />Ouvrir le Word</a>
             </Button>
           )}
@@ -124,6 +130,16 @@ export default async function DossierPage({ params }: { params: Promise<{ id: st
                 <Link href={`/financements/veille/${opp.id}`} className="hover:underline">{opp.title}</Link>
               </Row>
             )}
+            <Row label="Rédaction">
+              {progress.total === 0 ? (
+                <Link href={`/financements/dossiers/${a.id}/atelier`} className="text-primary hover:underline">Choisir les rubriques et commencer à écrire</Link>
+              ) : (
+                <Link href={`/financements/dossiers/${a.id}/atelier`} className="hover:underline">
+                  {progress.filled} rubrique{progress.filled > 1 ? "s" : ""} sur {progress.total} rédigée{progress.filled > 1 ? "s" : ""}
+                  {progress.tooLong > 0 && <span className="text-red-700"> · {progress.tooLong} trop longue{progress.tooLong > 1 ? "s" : ""}</span>}
+                </Link>
+              )}
+            </Row>
             <Row label="Notes"><span className="whitespace-pre-line">{a.notes || "—"}</span></Row>
           </dl>
         </CardContent>

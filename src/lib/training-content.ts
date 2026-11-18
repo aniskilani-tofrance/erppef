@@ -784,6 +784,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
       "Composer des groupes de niveau et inscrire en lot avec filtres",
       "Générer un bilan financeur complet en 3 clics",
       "Suivre les financements : veille, dossiers, échéances",
+      "Écrire un dossier de financement dans l'atelier, avec la bibliothèque et l'IA",
     ],
     lessons: [
       {
@@ -843,6 +844,25 @@ export const TRAINING_MODULES: TrainingModule[] = [
           hrefLabel: "Ouvrir Financements",
         },
       },
+      {
+        id: "atelier-ecriture",
+        title: "Écrire un dossier dans l'atelier",
+        intro: "Un dossier se rédige rubrique par rubrique, dans l'ordre du formulaire du financeur, puis se colle dans le portail en un clic par rubrique.",
+        steps: [
+          "Fiche du dossier → « Atelier de rédaction ». Choisissez le modèle qui correspond au portail (Dauphin, Cerfa 12156, Région, fondation) : les rubriques se posent dans l'ordre.",
+          "Recopiez les limites de caractères du formulaire avec le crayon de chaque rubrique. Le compteur vous prévient dès que vous dépassez.",
+          "Écrivez, ou partez de l'existant : « Insérer » ajoute un texte de la bibliothèque ou les chiffres de l'ERP (des totaux, jamais de nom).",
+          "« Écrire avec l'IA » propose une première version ou retravaille votre texte (plus court, plus concret, plus simple). Lisez les remarques en orange, puis décidez : remplacer, ajouter, abandonner.",
+          "Quand une rubrique est prête : « Copier », puis collez-la dans le champ du portail. « Exporter en Word » garde une trace du dossier dans le Drive.",
+          "Alimentez la « Bibliothèque » après chaque dossier accepté : la prochaine réponse sera plus rapide.",
+        ],
+        tip: "L'IA n'invente pas vos chiffres : plus la bibliothèque et l'ERP sont à jour, plus ses propositions sont justes.",
+        practice: {
+          instruction: "Ouvrez la Bibliothèque et ajoutez la présentation de l'association en dix lignes : c'est le texte que tous les dossiers réutilisent.",
+          href: "/financements/bibliotheque",
+          hrefLabel: "Ouvrir la Bibliothèque",
+        },
+      },
     ],
     quiz: [
       {
@@ -890,6 +910,16 @@ export const TRAINING_MODULES: TrainingModule[] = [
         ],
         answerIndex: 2,
         explanation: "« Ma semaine » réunit les échéances, les nouveautés à trier et vos prochaines étapes ; un e-mail vous prévient aussi 30, 15 et 3 jours avant chaque date.",
+      },
+      {
+        question: "L'IA vous propose un texte pour la rubrique « Public visé ». Que faites-vous ?",
+        choices: [
+          "Je lis la proposition et ses remarques en orange, je vérifie les chiffres, puis je choisis de la reprendre ou non",
+          "Je la colle directement dans le portail : l'IA ne se trompe pas",
+          "Je lui demande d'ajouter les noms des apprenants pour faire plus vrai",
+        ],
+        answerIndex: 0,
+        explanation: "L'IA propose, vous décidez : elle signale ce qui manque ou reste à vérifier. Aucun nom d'apprenant ne va dans un dossier.",
       },
     ],
   },

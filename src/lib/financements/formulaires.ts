@@ -48,6 +48,8 @@ export const opportunityFormSchema = z.object({
   max_rate: z.union([z.string(), z.number()]).optional().nullable(),
   summary: s(4000),
   eligibility_notes: s(4000),
+  criteria: s(8000),
+  required_documents: s(4000),
   next_window_note: s(300),
   watch_status: z.enum(WATCH_STATUSES).optional(),
   discard_reason: s(500),
@@ -79,6 +81,8 @@ export function opportunityRowFromForm(raw: unknown): Record<string, unknown> {
     max_rate: rate,
     summary: blank(f.summary) ?? "",
     eligibility_notes: blank(f.eligibility_notes),
+    criteria: blank(f.criteria),
+    required_documents: blank(f.required_documents),
     next_window_note: blank(f.next_window_note),
   };
   if (status) {

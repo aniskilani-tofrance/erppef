@@ -28,6 +28,8 @@ export type OpportunityInitial = {
   max_rate: string;
   summary: string;
   eligibility_notes: string | null;
+  criteria?: string | null;
+  required_documents?: string | null;
   next_window_note: string | null;
   watch_status: WatchStatus;
   discard_reason: string | null;
@@ -41,14 +43,14 @@ export function OpportunityFormDialog({ funders, initial }: { funders: FunderLit
   const router = useRouter();
   const blank = {
     title: "", family: "aap" as Family, url: "", funder: "", funder_name: "", deadline_day: "", deadline_time: "",
-    opens_on: "", amount_min: "", amount_max: "", max_rate: "", summary: "", eligibility_notes: "", next_window_note: "",
+    opens_on: "", amount_min: "", amount_max: "", max_rate: "", summary: "", eligibility_notes: "", criteria: "", required_documents: "", next_window_note: "",
     watch_status: "a_evaluer" as WatchStatus, discard_reason: "",
   };
   const fromInitial = (i: OpportunityInitial) => ({
     title: i.title, family: i.family, url: i.url ?? "", funder: i.funder_id ?? (i.funder_name ? OTHER : ""),
     funder_name: i.funder_name ?? "", deadline_day: i.deadline_day, deadline_time: i.deadline_time, opens_on: i.opens_on ?? "",
     amount_min: i.amount_min, amount_max: i.amount_max, max_rate: i.max_rate, summary: i.summary,
-    eligibility_notes: i.eligibility_notes ?? "", next_window_note: i.next_window_note ?? "",
+    eligibility_notes: i.eligibility_notes ?? "", criteria: i.criteria ?? "", required_documents: i.required_documents ?? "", next_window_note: i.next_window_note ?? "",
     watch_status: i.watch_status, discard_reason: i.discard_reason ?? "",
   });
   const [f, setF] = useState(initial ? fromInitial(initial) : blank);
@@ -70,6 +72,8 @@ export function OpportunityFormDialog({ funders, initial }: { funders: FunderLit
       max_rate: f.max_rate,
       summary: f.summary,
       eligibility_notes: f.eligibility_notes,
+      criteria: f.criteria,
+      required_documents: f.required_documents,
       next_window_note: f.next_window_note,
       ...(edit ? { watch_status: f.watch_status, discard_reason: f.discard_reason } : {}),
     };
@@ -164,6 +168,12 @@ export function OpportunityFormDialog({ funders, initial }: { funders: FunderLit
               </div>
               <Field label="Conditions, points de vigilance">
                 <Textarea value={f.eligibility_notes} onChange={(e) => set("eligibility_notes", e.target.value)} rows={3} maxLength={4000} />
+              </Field>
+              <Field label="Critères de sélection" hint="Recopiez les critères de l'appel : ils guident la rédaction du dossier, et l'IA s'y réfère.">
+                <Textarea value={f.criteria} onChange={(e) => set("criteria", e.target.value)} rows={4} maxLength={8000} />
+              </Field>
+              <Field label="Pièces à joindre">
+                <Textarea value={f.required_documents} onChange={(e) => set("required_documents", e.target.value)} rows={3} maxLength={4000} />
               </Field>
             </div>
           )}

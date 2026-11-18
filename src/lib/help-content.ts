@@ -778,7 +778,39 @@ export const HELP_SECTIONS: HelpSection[] = [
           "Un dossier avance d'une étape à la fois. On peut revenir d'un cran pour corriger, ou abandonner tant que rien n'est décidé. Un passage impossible (par exemple « On y va » vers « Accordé ») est refusé avec les passages possibles.",
           "Sur la fiche du dossier : responsable, prochaine étape et sa date, montants demandé et accordé, portail et numéro de dossier (bouton « Copier »), « Ouvrir le Word » (le lien du document dans le Drive).",
           "« Historique des statuts » : chaque changement, avec son auteur et l'heure. Vous pouvez ajouter un mot au moment du changement.",
-          "Les dossiers eux-mêmes restent des fichiers Word ou PDF dans le Drive : l'ERP les suit, il ne les remplace pas. N'y mettez aucun nom d'apprenant.",
+          "Le dossier se rédige dans l'« Atelier de rédaction » (bouton en haut de la fiche). « Exporter en Word » produit le fichier à relire et à ranger dans le Drive ; collez son lien sur la fiche pour le bouton « Ouvrir le Word ».",
+        ],
+      },
+      {
+        title: "Atelier de rédaction : écrire un dossier rubrique par rubrique",
+        steps: [
+          "Fiche du dossier → « Atelier de rédaction ». La première fois, choisissez un modèle : il pose les rubriques dans l'ordre du formulaire du financeur (Dauphin pour la politique de la ville, Cerfa 12156 pour Le Compte Asso, Région, fondation), ou partez d'un dossier libre.",
+          "Adaptez les rubriques au formulaire réel : « Ajouter une rubrique », le crayon pour le titre, la consigne et la limite de caractères, les flèches pour l'ordre, la poubelle pour supprimer. Les limites ne sont pas préremplies : recopiez celles du portail.",
+          "Écrivez dans chaque rubrique : le texte s'enregistre tout seul (« Enregistré » sous le champ). Le compteur affiche les caractères, espaces comprises ; il passe au rouge avec le nombre de caractères en trop.",
+          "« Copier » met la rubrique dans le presse-papiers : collez-la dans le champ du portail. « Tout copier » prend le dossier entier ; « Exporter en Word » produit le fichier à la charte, pour la relecture à deux et l'archive.",
+          "« Ce que demande l'appel », en haut de l'atelier, rappelle le résumé, les critères de sélection et les pièces saisis sur la fiche de l'opportunité (Veille → fiche → « Modifier »).",
+          "L'horloge d'une rubrique ouvre ses versions gardées : le texte d'avant chaque proposition de l'IA y est conservé, et « Garder le texte actuel » en ajoute une. « Reprendre » revient à une version sans rien perdre.",
+        ],
+      },
+      {
+        title: "Écrire avec l'IA : elle propose, vous décidez",
+        steps: [
+          "Dans une rubrique, « Écrire avec l'IA » : choisissez « Rédiger » pour une première version, ou, à partir de votre texte, « Plus court », « Plus concret », « Adapter à une fondation », « Français plus simple ».",
+          "Donnez-lui de la matière : cochez les textes de la bibliothèque à utiliser, choisissez la période des chiffres de l'ERP, ajoutez une précision (« insister sur les femmes du quartier Cordon »). Elle lit aussi les autres rubriques du dossier et les critères de l'appel.",
+          "La proposition s'affiche avec son nombre de caractères et, en orange, ce qu'il faut vérifier : information manquante, chiffre à contrôler, limite dépassée. Relisez toujours avant de reprendre un texte.",
+          "« Remplacer mon texte », « Ajouter à la suite », « Redemander » ou « Abandonner » : rien ne change sans vous, et le texte d'avant reste dans les versions gardées.",
+          "L'IA n'utilise que ce que vous lui donnez : des textes de l'association et des totaux. Elle ne reçoit aucun nom d'apprenant et ne dépose rien chez le financeur.",
+          "Un plafond mensuel limite la dépense d'IA du module ; le montant utilisé s'affiche en haut de l'atelier. Une fois le plafond atteint, les boutons d'IA attendent le 1er du mois.",
+        ],
+      },
+      {
+        title: "Bibliothèque de textes et chiffres de l'ERP",
+        steps: [
+          "Onglet « Bibliothèque » : les textes qui reviennent dans chaque dossier, saisis une seule fois — présentation de l'association, description des actions, équipe, partenaires, réponses déjà acceptées par un financeur.",
+          "« Ajouter un texte » : un titre, un rangement, le texte. Mettez-le à jour quand il change : la date de mise à jour s'affiche. Aucun nom d'apprenant, aucune donnée de santé ou de séjour.",
+          "Dans l'atelier, « Insérer » ajoute un texte de la bibliothèque à la fin de la rubrique : vous le retouchez ensuite pour ce financeur.",
+          "« Insérer » → « Chiffres de l'ERP » : choisissez la période (année de formation ou année civile). L'ERP écrit les totaux : personnes accompagnées, heures réalisées, présence, répartition par sexe, âge, quartier prioritaire, commune, niveaux atteints.",
+          "Ce sont les mêmes calculs que les bilans financeurs du menu Rapports, pour toute l'association. Les données sensibles (RQTH) n'y figurent jamais.",
         ],
       },
       {
@@ -950,6 +982,11 @@ export const FAQ: FaqItem[] = [
   {
     q: "Qui voit le menu « Financements » ? Y trouve-t-on des données d'apprenants ?",
     a: "Seuls les comptes administration et coordination voient le menu et ses pages ; pour les autres rôles, la base refuse aussi les données. Le module ne contient aucune donnée d'apprenant : des appels publics, les dossiers de l'association, des échéances et des contacts professionnels de financeurs.",
+    roles: TEAM,
+  },
+  {
+    q: "L'IA de l'atelier de rédaction peut-elle inventer des chiffres ou envoyer des données d'apprenants ?",
+    a: "Elle ne reçoit que ce que vous lui donnez : les rubriques du dossier, les textes de la bibliothèque que vous cochez, les critères de l'appel et des totaux de l'ERP (jamais de nom, jamais de RQTH). Sa consigne lui interdit d'inventer un fait ou un chiffre : quand une information manque, elle le signale en orange sous la proposition. Relisez toujours : c'est vous qui reprenez le texte, et c'est vous qui le déposez.",
     roles: TEAM,
   },
   {
