@@ -8,6 +8,10 @@
       "schedule": "0 4 * * *"
     },
     {
+      "path": "/api/cron/veille-financements",
+      "schedule": "0 3 * * *"
+    },
+    {
       "path": "/api/cron/alertes",
       "schedule": "30 5 * * *"
     },

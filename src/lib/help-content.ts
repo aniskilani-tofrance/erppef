@@ -773,6 +773,18 @@ export const HELP_SECTIONS: HelpSection[] = [
         ],
       },
       {
+        title: "Recherche automatique : de nouveaux financements chaque nuit",
+        steps: [
+          "Chaque nuit, l'ERP cherche sur le web des appels à projets, des fondations, du mécénat et des marchés publics qui correspondent au profil de l'association, puis dépose les nouveautés dans « À trier » (Ma semaine).",
+          "Un axe par jour pour couvrir large : lundi l'État et ses services, mardi les fondations, mercredi les collectivités, jeudi les marchés publics, vendredi le mécénat d'entreprise, samedi l'Europe, dimanche le rattrapage de la semaine.",
+          "Onglet « Veille » → carte « Recherche automatique » → « Réglages » : décrivez qui vous êtes, votre public, votre territoire, vos actions et ce qui ne vous intéresse pas. Plus le profil est précis, plus les trouvailles sont justes. L'interrupteur met la recherche en pause.",
+          "« Chercher maintenant » lance une recherche tout de suite (une à trois minutes). La carte garde la trace des dernières recherches : nouveautés à trier, appels déjà connus, liens écartés.",
+          "Chaque fiche donne la page officielle, la date limite et les montants quand ils sont publiés, pourquoi l'appel vous concerne et ce qui reste à vérifier. L'ERP écarte les liens morts et les appels déjà connus. Vérifiez toujours la page du financeur avant de décider.",
+          "Triez chaque nouveauté : « Écarter » (dites pourquoi), « À surveiller » ou « Évaluer », puis « Créer le dossier » pour y répondre dans l'atelier de rédaction.",
+          "Un plafond mensuel, séparé de celui de l'écriture, limite la dépense de la recherche ; une fois atteint, elle reprend le 1er du mois.",
+        ],
+      },
+      {
         title: "Veille : ajouter une opportunité et la trier",
         steps: [
           "Onglet « Veille » : une carte par opportunité, dans trois familles — appel à projets, appel d'offres, mécénat. Quatre filtres : famille, statut, financeur, échéance.",
@@ -1006,7 +1018,7 @@ export const FAQ: FaqItem[] = [
   },
   {
     q: "Je ne reçois plus le mail de veille du lundi : où sont les nouveaux appels à projets ?",
-    a: "Dans Financements → « Ma semaine », bloc « À trier ». Le lundi matin, un e-mail de l'ERP liste aussi les nouvelles opportunités de la semaine, avec les échéances à 30, 15 et 3 jours. Triez chaque ligne : « Écarter », « À surveiller » ou « Évaluer ».",
+    a: "Dans Financements → « Ma semaine », bloc « À trier ». L'ERP cherche lui-même de nouveaux financements chaque nuit (onglet Veille → « Recherche automatique »). Le lundi matin, un e-mail liste aussi les nouvelles opportunités de la semaine, avec les échéances à 30, 15 et 3 jours. Triez chaque ligne : « Écarter », « À surveiller » ou « Évaluer ».",
     roles: TEAM,
     module: "financements",
   },

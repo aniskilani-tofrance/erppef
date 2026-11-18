@@ -7,11 +7,19 @@ import { OpportunityFormDialog } from "@/components/financements/opportunity-for
 import { TriageButtons } from "@/components/financements/triage-buttons";
 import { VeilleFilters } from "@/components/financements/veille-filters";
 import { CreateApplicationButton } from "@/components/financements/petits-boutons";
+import { WatchCard } from "@/components/financements/watch-card";
+import { aiConfigured } from "@/lib/ai/client";
+import { isoWeekday } from "@/lib/dates";
+import { parisDay } from "@/lib/financements/echeances";
+import { focusForWeekday, resolveWatchSettings, resolveWatchCap } from "@/lib/financements/veille-auto";
 
 type SP = Promise<Record<string, string | string[] | undefined>>;
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 
-// Veille : les opportunités repérées (collecteur ou saisie), en cartes, filtrables.
+// « Chercher maintenant » lance une recherche web d'une à trois minutes.
+export const maxDuration = 300;
+
+// Veille : les opportunités repérées (recherche automatique, collecteur ou saisie), en cartes, filtrables.
 export default async function VeillePage({ searchParams }: { searchParams: SP }) {
   const { orgId } = await requireFinancements();
   const sp = await searchParams;
@@ -29,10 +37,12 @@ export default async function VeillePage({ searchParams }: { searchParams: SP })
   if (isOneOf(WATCH_STATUSES, statut)) q = q.eq("watch_status", statut);
   else if (statut !== "toutes") q = q.neq("watch_status", "ecarte");
   if (financeur && /^[0-9a-f-]{36}$/i.test(financeur)) q = q.eq("funder_id", financeur);
-  const [{ data }, funders] = await Promise.all([
+  const [{ data }, funders, { data: org }] = await Promise.all([
     q.order("deadline_at", { ascending: true, nullsFirst: false }).order("created_at", { ascending: false }).limit(300),
     loadFundersLite(orgId),
+    supabase.from("organizations").select("settings").eq("id", orgId).maybeSingle(),
   ]);
+  const watch = resolveWatchSettings(org?.settings);
 
   const now = new Date();
   const rows = (data ?? []).filter((o) => !isOneOf(DEADLINE_FILTERS, echeance) || matchesDeadlineFilter(echeance, o.deadline_at, now));
@@ -41,10 +51,18 @@ export default async function VeillePage({ searchParams }: { searchParams: SP })
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <p className="max-w-2xl text-sm text-muted-foreground">
-          Les appels repérés par le collecteur du lundi ou ajoutés à la main. Les nouveautés se trient depuis « Ma semaine » ; une opportunité retenue devient un dossier en un clic.
+          Les appels trouvés par la recherche automatique ou ajoutés à la main. Les nouveautés se trient depuis « Ma semaine » ; une opportunité retenue devient un dossier en un clic.
         </p>
         <OpportunityFormDialog funders={funders} />
       </div>
+      <WatchCard
+        enabled={watch.enabled}
+        profile={watch.profile}
+        runs={watch.runs}
+        aiReady={aiConfigured()}
+        nextFocus={focusForWeekday(isoWeekday(parisDay(now))).label}
+        budgetNote={`Plafond de la veille : ${resolveWatchCap(org?.settings)} $ par mois.`}
+      />
       <VeilleFilters funders={funders} />
       <p className="text-xs text-muted-foreground">{rows.length} opportunité{rows.length > 1 ? "s" : ""}</p>
       {rows.length === 0 ? (
