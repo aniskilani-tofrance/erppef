@@ -1,4 +1,5 @@
 import type { AppRole } from "@/lib/auth";
+import type { ModuleKey } from "@/lib/modules";
 
 // Journal des mises à jour de l'ERP, écrit pour l'équipe (pas pour les développeurs).
 // RÈGLE : chaque livraison en production = une entrée ici + la ou les leçons de la
@@ -14,6 +15,9 @@ export type UpdateItem = {
 export type AppUpdate = {
   id: string; // stable, jamais réutilisé : sert à savoir si l'email est parti
   date: string; // YYYY-MM-DD (date de mise en production)
+  // Module concerné : l'entrée n'est ni affichée ni envoyée à une personne à qui ce
+  // module a été retiré (Paramètres → Utilisateurs).
+  module?: ModuleKey;
   title: string;
   summary: string; // une phrase, en français simple
   items: UpdateItem[];
@@ -37,6 +41,45 @@ export const APP_UPDATES: AppUpdate[] = [
     training: [{ moduleId: "c5-vie-quotidienne", lessonId: "ajustements", label: "Ajuster le planning" }],
   },
   {
+    id: "2026-11-18-modules-retires",
+    date: "2026-11-18",
+    title: "Utilisateurs : retirer un module à une personne",
+    summary: "En plus des rôles, l'administration peut retirer à une personne précise les modules Financements, Leads resto, Prospection ou Candidats POEI.",
+    items: [
+      { text: "Paramètres → Utilisateurs → menu ⋯ de la personne → « Modules retirés… » : cochez, enregistrez. Le module disparaît de son menu, ses pages et ses données lui sont refusées, et elle n'en reçoit plus les e-mails.", roles: ["admin"] },
+      { text: "Un repère orange « N modules retirés » signale les comptes concernés. Pour rendre l'accès, décochez.", roles: ["admin"] },
+    ],
+    training: [{ moduleId: "c1-tour-proprietaire", lessonId: "roles", label: "Les rôles" }],
+  },
+  {
+    id: "2026-11-18-financements-atelier",
+    module: "financements",
+    date: "2026-11-18",
+    title: "Financements : l'atelier de rédaction, pour écrire un dossier sans copier-coller",
+    summary: "Chaque dossier a son atelier : les rubriques du formulaire du financeur dans l'ordre, un compteur de caractères, un bouton « Copier » par rubrique, une bibliothèque de textes, les chiffres de l'ERP et l'IA pour une première version.",
+    items: [
+      { text: "Fiche d'un dossier → « Atelier de rédaction » : choisissez le modèle (Dauphin, Cerfa 12156, Région, fondation), écrivez dans chaque rubrique — le texte s'enregistre tout seul — puis « Copier » et collez dans le portail.", roles: TEAM },
+      { text: "« Écrire avec l'IA » propose un texte à partir de vos textes, des critères de l'appel et des totaux de l'ERP. Vous relisez, puis « Remplacer », « Ajouter à la suite » ou « Abandonner ». Le texte d'avant est toujours gardé.", roles: TEAM },
+      { text: "Onglet « Bibliothèque » : la présentation de l'association, vos actions, vos réponses déjà acceptées, saisies une fois. « Insérer » les place dans une rubrique, avec les chiffres de l'ERP si besoin.", roles: TEAM },
+      { text: "« Exporter en Word » produit le dossier à la charte, pour la relecture et le Drive. Aucun nom d'apprenant ne part à l'IA ni dans un dossier.", roles: TEAM },
+    ],
+    training: [{ moduleId: "c6-pilotage", lessonId: "atelier-ecriture", label: "Écrire un dossier dans l'atelier" }],
+  },
+  {
+    id: "2026-11-18-financements",
+    module: "financements",
+    date: "2026-11-18",
+    title: "Nouveau menu « Financements » : veille, dossiers, échéances et financeurs au même endroit",
+    summary: "Les appels à projets, les dossiers de subvention, leurs échéances et les fiches des financeurs sont réunis dans le menu « Financements ». Il remplace le mail de veille du lundi et les tableaux de suivi.",
+    items: [
+      { text: "Financements → « Ma semaine » : les échéances des 30 prochains jours (rouge à moins de 15 jours), les nouveautés de la veille « À trier » et vos prochaines étapes. À ouvrir au début de la réunion du lundi.", roles: TEAM },
+      { text: "« Veille » : « Ajouter » une opportunité (le titre suffit), puis « Créer le dossier » : il s'ouvre déjà rempli. « Dossiers » : glissez la carte d'une colonne à l'autre, de « On y va » à « Bilan rendu ».", roles: TEAM },
+      { text: "« Calendrier » : dépôts, bilans, versements, rendez-vous. Un e-mail vous prévient 30, 15 et 3 jours avant ; cochez l'échéance quand elle est faite.", roles: TEAM },
+      { text: "« Financeurs » : portail, numéros de dossier, règles habituelles et contacts professionnels de chaque financeur. Les dossiers Word restent dans le Drive ; aucune donnée d'apprenant dans ce module.", roles: TEAM },
+    ],
+    training: [{ moduleId: "c6-pilotage", lessonId: "financements", label: "Suivre les financements" }],
+  },
+  {
     id: "2026-11-08-liste-attente-google-sheet",
     date: "2026-11-08",
     title: "Liste d'attente : un Google Sheet mis à jour chaque lundi",
@@ -49,6 +92,7 @@ export const APP_UPDATES: AppUpdate[] = [
   },
   {
     id: "2026-11-08-prospection-api-lemlist",
+    module: "prospection",
     date: "2026-11-08",
     title: "Prospection : la liste des restaurants à appeler, et lemlist branché sur l'ERP",
     summary: "Les restaurants de la prospection POEI arrivent dans « Prospection », sans doublon, et les réponses de lemlist (intéressé, RDV, pas intéressé, STOP) se notent toutes seules dans l'ERP.",
@@ -194,6 +238,7 @@ export const APP_UPDATES: AppUpdate[] = [
   },
   {
     id: "2026-10-23-meta-api-conversions",
+    module: "leads",
     date: "2026-10-23",
     title: "Meta apprend quels restaurateurs se qualifient vraiment",
     summary: "L'ERP signale à Meta les leads reçus, qualifiés et ceux qui prennent rendez-vous : la publicité peut chercher des restaurateurs qui avancent, pas seulement des formulaires remplis.",
@@ -206,6 +251,7 @@ export const APP_UPDATES: AppUpdate[] = [
   },
   {
     id: "2026-10-23-alerte-sms-setter",
+    module: "leads",
     date: "2026-10-23",
     title: "Un SMS au setter à chaque nouveau lead restaurateur",
     summary: "Dès qu'un restaurateur laisse ses coordonnées, le setter reçoit un SMS sur son téléphone avec le restaurant, le contact, le numéro et le lien de la fiche : rappeler sous 15 minutes.",
@@ -234,6 +280,7 @@ export const APP_UPDATES: AppUpdate[] = [
   },
   {
     id: "2026-10-22-poei-sans-plonge",
+    module: "candidats_poei",
     date: "2026-10-22",
     title: "POEI restauration : la salle et la cuisine, pas la plonge",
     summary: "La POEI ne s'applique pas aux postes de plonge : la fiche candidat et les exemples de l'ERP ne la proposent plus.",
@@ -409,6 +456,7 @@ export const APP_UPDATES: AppUpdate[] = [
   },
   {
     id: "2026-10-07-candidats-poei",
+    module: "candidats_poei",
     date: "2026-10-07",
     title: "Candidats POEI : le pont entre l'association et la POEI restauration",
     summary: "Un nouveau menu « Candidats POEI » réunit les personnes à placer chez un restaurateur : les apprenants de l'association intéressés par la restauration, et les « leads » qui étaient en réalité des candidats.",
@@ -504,6 +552,7 @@ export const APP_UPDATES: AppUpdate[] = [
   },
   {
     id: "2026-09-30-terrain-manuel",
+    module: "leads",
     date: "2026-09-30",
     title: "Leads resto : la prospection terrain reste 100 % manuelle",
     summary: "Les fiches de source « Terrain / visite » ne reçoivent plus aucun e-mail ni SMS automatique : quand le setter a rencontré le restaurateur, c'est lui qui garde la relation.",
@@ -516,6 +565,7 @@ export const APP_UPDATES: AppUpdate[] = [
   },
   {
     id: "2026-09-29-telephone-setter",
+    module: "leads",
     date: "2026-09-29",
     title: "Leads resto : le restaurateur sait désormais quel numéro va l'appeler",
     summary: "Un restaurateur ne décroche pas un numéro inconnu. Les messages qui annoncent un appel affichent maintenant le téléphone du setter, renseigné une fois dans Réglages, avec « enregistrez ce numéro ».",
@@ -553,6 +603,7 @@ export const APP_UPDATES: AppUpdate[] = [
   },
   {
     id: "2026-09-19-invitation-creneau-differee",
+    module: "leads",
     date: "2026-09-19",
     title: "Leads resto : on n'invite plus un restaurateur à réserver un créneau qu'il vient de prendre",
     summary: "Le formulaire de la landing renvoie sur une page qui porte le Calendly. L'invitation à choisir un créneau ne part donc plus dans la seconde, mais dix minutes après, et uniquement à ceux qui sont repartis sans réserver.",
@@ -565,6 +616,7 @@ export const APP_UPDATES: AppUpdate[] = [
   },
   {
     id: "2026-09-19-sms-instantanes",
+    module: "leads",
     date: "2026-09-19",
     title: "Leads resto : les SMS partent désormais à toute heure",
     summary: "La plage d'envoi de 8h00 à 21h30 est supprimée. Un restaurateur qui remplit le formulaire à minuit après son service reçoit son SMS dans la seconde, comme l'e-mail.",
@@ -577,6 +629,7 @@ export const APP_UPDATES: AppUpdate[] = [
   },
   {
     id: "2026-09-19-journal-lead-lisible",
+    module: "leads",
     date: "2026-09-19",
     title: "Leads resto : le journal d'une fiche se lit enfin d'un coup d'œil",
     summary: "Chaque ligne dit en clair ce qui s'est passé, et survoler une ligne affiche le message exact reçu par le restaurateur, e-mail ou SMS, sans ouvrir d'autre outil.",
@@ -590,6 +643,7 @@ export const APP_UPDATES: AppUpdate[] = [
   },
   {
     id: "2026-09-18-leads-messages-automatiques",
+    module: "leads",
     date: "2026-09-18",
     title: "Leads resto : les emails et SMS de suivi partent tout seuls",
     summary: "L'ERP écrit lui-même au restaurateur aux moments clés (demande reçue, rendez-vous confirmé, rappel la veille et deux heures avant, rendez-vous manqué). Un interrupteur dans les Réglages décide si ces envois partent ou non.",
@@ -694,6 +748,7 @@ export const APP_UPDATES: AppUpdate[] = [
   },
   {
     id: "2026-09-11-leads-restaurateurs",
+    module: "leads",
     date: "2026-09-11",
     title: "Leads restaurateurs : le mini-CRM du setter",
     summary: "Nouveau menu « Leads resto » : les restaurateurs qui laissent leurs coordonnées (campagne parlerresto) sont rappelés sous 24 h, qualifiés en 7 questions et transformés en rendez-vous — avec les SMS et emails du kit pré-remplis.",
@@ -803,16 +858,17 @@ export const APP_UPDATES: AppUpdate[] = [
 ];
 
 // Nouveautés visibles par un rôle (au moins un point le concerne), les plus récentes d'abord.
-export function updatesForRole(role: AppRole): AppUpdate[] {
+export function updatesForRole(role: AppRole, deniedModules: readonly string[] = []): AppUpdate[] {
   return APP_UPDATES
+    .filter((u) => !u.module || !deniedModules.includes(u.module))
     .map((u) => ({ ...u, items: u.items.filter((i) => i.roles.includes(role)) }))
     .filter((u) => u.items.length > 0)
     .sort((a, b) => b.date.localeCompare(a.date));
 }
 
 // Éléments du bandeau « Nouveau » (Dashboard, connexion) : les plus récents d'abord.
-export function tickerItemsForRole(role: AppRole | null, limit = 3): { id: string; date: string; title: string; summary: string; href: string }[] {
-  const source = role ? updatesForRole(role) : [...APP_UPDATES].sort((a, b) => b.date.localeCompare(a.date));
+export function tickerItemsForRole(role: AppRole | null, limit = 3, deniedModules: readonly string[] = []): { id: string; date: string; title: string; summary: string; href: string }[] {
+  const source = role ? updatesForRole(role, deniedModules) : [...APP_UPDATES].sort((a, b) => b.date.localeCompare(a.date));
   return source.slice(0, limit).map((u) => ({
     id: u.id,
     date: new Date(`${u.date}T12:00:00Z`).toLocaleDateString("fr-FR", { day: "numeric", month: "long", timeZone: "Europe/Paris" }),

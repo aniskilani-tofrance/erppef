@@ -14,6 +14,7 @@ import {
   CircleUser,
   DoorOpen,
   GraduationCap,
+  HandCoins,
   LayoutDashboard,
   LogOut,
   Settings,
@@ -30,6 +31,7 @@ import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { GlobalSearch } from "@/components/shell/global-search";
 import type { AppRole } from "@/lib/auth";
+import { moduleOfPath, type ModuleKey } from "@/lib/modules";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "coordinator", "trainer", "viewer", "setter", "stagiaire"] },
@@ -41,6 +43,7 @@ const NAV = [
   { href: "/salles", label: "Salles", icon: DoorOpen, roles: ["admin", "coordinator"] },
   { href: "/qualite", label: "Qualité", icon: BadgeCheck, roles: ["admin", "coordinator"] },
   { href: "/rapports", label: "Rapports", icon: FileBarChart, roles: ["admin", "coordinator"] },
+  { href: "/financements", label: "Financements", icon: HandCoins, roles: ["admin", "coordinator"] },
   { href: "/leads", label: "Leads resto", icon: UtensilsCrossed, roles: ["admin", "coordinator", "setter"] },
   { href: "/prospection", label: "Prospection", icon: PhoneOutgoing, roles: ["admin", "coordinator", "setter"] },
   { href: "/candidats-poei", label: "Candidats POEI", icon: BriefcaseBusiness, roles: ["admin", "coordinator", "setter"] },
@@ -50,7 +53,7 @@ const NAV = [
   { href: "/parametres", label: "Paramètres", icon: Settings, roles: ["admin"] },
 ] as const;
 
-export function AppSidebar({ role, orgName }: { role: AppRole; orgName: string }) {
+export function AppSidebar({ role, orgName, deniedModules = [] }: { role: AppRole; orgName: string; deniedModules?: ModuleKey[] }) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -61,7 +64,12 @@ export function AppSidebar({ role, orgName }: { role: AppRole; orgName: string }
     router.refresh();
   }
 
-  const items = NAV.filter((item) => (item.roles as readonly string[]).includes(role));
+  // Le rôle d'abord, puis les modules retirés à cette personne (Paramètres → Utilisateurs).
+  const items = NAV.filter((item) => {
+    if (!(item.roles as readonly string[]).includes(role)) return false;
+    const moduleKey = moduleOfPath(item.href);
+    return !moduleKey || !deniedModules.includes(moduleKey);
+  });
 
   const footer = (
     <div className="space-y-1 border-t p-3">
@@ -88,7 +96,8 @@ export function AppSidebar({ role, orgName }: { role: AppRole; orgName: string }
     <nav className="flex flex-1 flex-col gap-1 p-3">
       {(role === "admin" || role === "coordinator") && <GlobalSearch />}
       {items.map((item) => {
-        const active = pathname.startsWith(item.href);
+        // Préfixe + « / » : « /financements » ne doit pas allumer « /finance ».
+        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
         return (
           <Link
             key={item.href}

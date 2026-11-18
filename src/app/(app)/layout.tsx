@@ -1,11 +1,13 @@
 import { requireSession } from "@/lib/auth";
+import { loadDeniedModules } from "@/lib/module-access";
 import { createClient } from "@/lib/supabase/server";
 import { AppSidebar } from "@/components/shell/app-sidebar";
 import { Toaster } from "@/components/ui/sonner";
 import { QueryProvider } from "@/components/shell/query-provider";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const { role, orgId } = await requireSession();
+  const { role, orgId, userId } = await requireSession();
+  const deniedModules = await loadDeniedModules(userId, orgId);
 
   const supabase = await createClient();
   const { data: org } = await supabase
@@ -17,7 +19,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <QueryProvider>
       <div className="flex min-h-screen">
-        <AppSidebar role={role} orgName={org?.name ?? "Organisation"} />
+        <AppSidebar role={role} orgName={org?.name ?? "Organisation"} deniedModules={deniedModules} />
         <main className="flex-1 overflow-x-hidden bg-muted/20 p-4 md:p-8">{children}</main>
       </div>
       <Toaster richColors position="top-right" />

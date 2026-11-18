@@ -324,6 +324,7 @@ export const TRAINING_MODULES: TrainingModule[] = [
           "Coordinateur : tout le quotidien (groupes, planning, apprenants, émargements, qualité) sauf les Paramètres.",
           "Formateur : SON planning, SES feuilles d'émargement, son compte. Il ne voit ni les coûts ni les autres formateurs.",
           "Lecture seule : consultation générale sans modification (partenaire, direction).",
+          "En plus du rôle, vous pouvez retirer un module à une personne précise (Financements, Leads resto, Prospection, Candidats POEI) : Paramètres → Utilisateurs → menu ⋯ → « Modules retirés… ». Le menu, les pages, les données et les e-mails du module lui sont alors retirés.",
         ],
         tip: "Un changement de rôle s'applique à la prochaine connexion de la personne.",
       },
@@ -784,6 +785,8 @@ export const TRAINING_MODULES: TrainingModule[] = [
       "Naviguer en 2 secondes (recherche globale, références, À faire)",
       "Composer des groupes de niveau et inscrire en lot avec filtres",
       "Générer un bilan financeur complet en 3 clics",
+      "Suivre les financements : veille, dossiers, échéances",
+      "Écrire un dossier de financement dans l'atelier, avec la bibliothèque et l'IA",
     ],
     lessons: [
       {
@@ -824,6 +827,44 @@ export const TRAINING_MODULES: TrainingModule[] = [
           hrefLabel: "Ouvrir les Rapports",
         },
       },
+      {
+        id: "financements",
+        title: "Suivre les financements : veille, dossiers, échéances",
+        intro: "Le menu « Financements » réunit ce qui était éparpillé : la veille des appels, le suivi des dossiers, les dates et les fiches des financeurs.",
+        steps: [
+          "« Ma semaine » s'ouvre en premier : les échéances des 30 prochains jours (rouge à moins de 15 jours), les nouveautés « À trier » et vos prochaines étapes.",
+          "Triez chaque nouveauté : « Écarter » (dites pourquoi en une ligne), « À surveiller » ou « Évaluer ». Pour un appel que vous avez repéré vous-même : Veille → « Ajouter », le titre suffit.",
+          "Vous y allez ? Sur la fiche de l'opportunité, « Créer le dossier » : il s'ouvre déjà rempli. Indiquez le responsable et la prochaine étape.",
+          "Onglet « Dossiers » : glissez la carte d'une colonne à l'autre — On y va, En rédaction, Déposé, Accordé, Bilan rendu. Une étape à la fois ; chaque changement est gardé dans l'historique.",
+          "Onglet « Calendrier » : ajoutez les bilans à rendre, les versements attendus et les rendez-vous. Un e-mail vous prévient 30, 15 et 3 jours avant. Cochez l'échéance quand elle est faite.",
+          "Onglet « Financeurs » : le portail, le numéro de dossier (bouton « Copier ») et les règles de chaque financeur, saisis une seule fois.",
+        ],
+        tip: "Les dossiers restent des fichiers Word dans le Drive : collez leur lien sur la fiche du dossier, le bouton « Ouvrir le Word » y mène en un clic.",
+        practice: {
+          instruction: "Ouvrez Financements : regardez « Ma semaine », puis glissez un dossier de « On y va » à « En rédaction » et vérifiez son historique.",
+          href: "/financements",
+          hrefLabel: "Ouvrir Financements",
+        },
+      },
+      {
+        id: "atelier-ecriture",
+        title: "Écrire un dossier dans l'atelier",
+        intro: "Un dossier se rédige rubrique par rubrique, dans l'ordre du formulaire du financeur, puis se colle dans le portail en un clic par rubrique.",
+        steps: [
+          "Fiche du dossier → « Atelier de rédaction ». Choisissez le modèle qui correspond au portail (Dauphin, Cerfa 12156, Région, fondation) : les rubriques se posent dans l'ordre.",
+          "Recopiez les limites de caractères du formulaire avec le crayon de chaque rubrique. Le compteur vous prévient dès que vous dépassez.",
+          "Écrivez, ou partez de l'existant : « Insérer » ajoute un texte de la bibliothèque ou les chiffres de l'ERP (des totaux, jamais de nom).",
+          "« Écrire avec l'IA » propose une première version ou retravaille votre texte (plus court, plus concret, plus simple). Lisez les remarques en orange, puis décidez : remplacer, ajouter, abandonner.",
+          "Quand une rubrique est prête : « Copier », puis collez-la dans le champ du portail. « Exporter en Word » garde une trace du dossier dans le Drive.",
+          "Alimentez la « Bibliothèque » après chaque dossier accepté : la prochaine réponse sera plus rapide.",
+        ],
+        tip: "L'IA n'invente pas vos chiffres : plus la bibliothèque et l'ERP sont à jour, plus ses propositions sont justes.",
+        practice: {
+          instruction: "Ouvrez la Bibliothèque et ajoutez la présentation de l'association en dix lignes : c'est le texte que tous les dossiers réutilisent.",
+          href: "/financements/bibliotheque",
+          hrefLabel: "Ouvrir la Bibliothèque",
+        },
+      },
     ],
     quiz: [
       {
@@ -861,6 +902,26 @@ export const TRAINING_MODULES: TrainingModule[] = [
         ],
         answerIndex: 1,
         explanation: "Le sélecteur filtré croise tous les critères de la fiche apprenant et inscrit en lot.",
+      },
+      {
+        question: "Lundi matin, vous voulez savoir quels dossiers de subvention pressent. Où regardez-vous ?",
+        choices: [
+          "Dans vos e-mails, en cherchant l'ancien mail de veille",
+          "Dans le dossier Drive, fichier par fichier",
+          "Financements → « Ma semaine » : les échéances des 30 prochains jours, en rouge à moins de 15 jours",
+        ],
+        answerIndex: 2,
+        explanation: "« Ma semaine » réunit les échéances, les nouveautés à trier et vos prochaines étapes ; un e-mail vous prévient aussi 30, 15 et 3 jours avant chaque date.",
+      },
+      {
+        question: "L'IA vous propose un texte pour la rubrique « Public visé ». Que faites-vous ?",
+        choices: [
+          "Je lis la proposition et ses remarques en orange, je vérifie les chiffres, puis je choisis de la reprendre ou non",
+          "Je la colle directement dans le portail : l'IA ne se trompe pas",
+          "Je lui demande d'ajouter les noms des apprenants pour faire plus vrai",
+        ],
+        answerIndex: 0,
+        explanation: "L'IA propose, vous décidez : elle signale ce qui manque ou reste à vérifier. Aucun nom d'apprenant ne va dans un dossier.",
       },
     ],
   },

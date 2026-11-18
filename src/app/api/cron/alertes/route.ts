@@ -12,6 +12,7 @@ import { announceUpdatesEverywhere, type AnnounceResult } from "@/lib/updates-an
 import { sendTrainerRelances } from "@/lib/emargement/relances";
 import { sendEvaluationReminders } from "@/lib/evaluations/reminders";
 import { productionOrgIds } from "@/lib/production-orgs";
+import { financementsAlerts, sendFinancementsReminders } from "@/lib/financements/cron";
 import { scheduleBrevoAppointmentReminders, type AppointmentReminderKind, type LeadForBrevo } from "@/lib/leads/brevo";
 import { resolveLeadSettings } from "@/lib/leads/templates";
 import {
@@ -179,6 +180,21 @@ export async function GET(request: Request) {
     return [] as string[];
   });
 
+  // Financements : échéances à J-30 / J-15 / J-3 et, le lundi, les nouveautés de la veille
+  // (remplace le mail de veille du lundi). Jamais bloquant.
+  const fundingLines = await financementsAlerts(supabase, orgIds, now).catch((e) => {
+    console.error("[financements]", e instanceof Error ? e.message : e);
+    return [] as string[];
+  });
+  // Le même bloc part aussi aux comptes administration et coordination : le résumé du
+  // matin n'a qu'un destinataire, la coordinatrice ne le reçoit pas. Jamais bloquant.
+  const fundingMails = fundingLines.length
+    ? await sendFinancementsReminders(supabase, orgIds, now).catch((e) => {
+        console.error("[financements e-mail]", e instanceof Error ? e.message : e);
+        return 0;
+      })
+    : 0;
+
   const stats = computeLearnerStats(
     (attendanceRows ?? []).map((a) => ({
       learnerId: a.learner_id,
@@ -200,7 +216,7 @@ export async function GET(request: Request) {
     return `${group} (${day}${trainer ? `, ${trainer}` : ""})`;
   });
 
-  if (atRisk.length === 0 && sheets.length === 0 && !watchReminder && admissionLines.length === 0 && !leaveLine) {
+  if (atRisk.length === 0 && sheets.length === 0 && !watchReminder && admissionLines.length === 0 && !leaveLine && fundingLines.length === 0) {
     return Response.json({ sent: false, reason: "rien à signaler", backup, reminders, meetingReminders, leadRdvEmails, trainerRelances, evaluationReminders, updatesAnnounced });
   }
 
@@ -209,12 +225,17 @@ export async function GET(request: Request) {
     ...(sheets.length ? ["📋 Feuilles d'émargement non clôturées :", ...sheets.map((l) => `  • ${l}`), ""] : []),
     ...(admissionLines.length ? ["🤝 Admission :", ...admissionLines.map((l) => `  • ${l}`), ""] : []),
     ...(leaveLine ? [leaveLine, ""] : []),
+    ...fundingLines,
     ...(watchReminder ? [watchReminder, ""] : []),
     "Détails : https://pef-erp.vercel.app/qualite",
   ];
 
+  // Nombre de lignes du bloc Financements (puces), pour l'objet du message.
+  const fundingCount = fundingLines.filter((l) => l.startsWith("  • ")).length;
+  const alertCount = atRisk.length + sheets.length + admissionLines.length + (leaveLine ? 1 : 0) + fundingCount;
+
   if (!process.env.RESEND_API_KEY || !process.env.ALERTS_EMAIL) {
-    return Response.json({ sent: false, reason: "email non configuré", alerts: lines });
+    return Response.json({ sent: false, reason: "email non configuré", alerts: lines, financementsMails: fundingMails });
   }
 
   const res = await fetch("https://api.resend.com/emails", {
@@ -226,7 +247,7 @@ export async function GET(request: Request) {
     body: JSON.stringify({
       from: process.env.ALERTS_FROM ?? "ERP PEF <onboarding@resend.dev>",
       to: [process.env.ALERTS_EMAIL],
-      subject: `ERP PEF — ${atRisk.length + sheets.length + admissionLines.length + (leaveLine ? 1 : 0)} alerte${atRisk.length + sheets.length + admissionLines.length + (leaveLine ? 1 : 0) > 1 ? "s" : ""} ce matin`,
+      subject: `ERP PEF — ${alertCount} alerte${alertCount > 1 ? "s" : ""} ce matin`,
       text: lines.join("\n"),
     }),
   });
@@ -234,7 +255,7 @@ export async function GET(request: Request) {
   if (!res.ok) {
     return Response.json({ sent: false, error: await res.text() }, { status: 500 });
   }
-  return Response.json({ sent: true, atRisk: atRisk.length, unclosedSheets: sheets.length, admission: admissionLines.length, reminders, meetingReminders, leadRdvEmails, trainerRelances, evaluationReminders, updatesAnnounced });
+  return Response.json({ sent: true, atRisk: atRisk.length, unclosedSheets: sheets.length, admission: admissionLines.length, financements: fundingCount, financementsMails: fundingMails, reminders, meetingReminders, leadRdvEmails, trainerRelances, evaluationReminders, updatesAnnounced });
 }
 
 // Brevo ne permet de programmer un message transactionnel que dans les 72 heures.

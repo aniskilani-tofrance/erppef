@@ -1,5 +1,6 @@
 "use server";
 
+import { cleanDeniedModules, RESTRICTABLE_MODULES } from "@/lib/modules";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
@@ -132,6 +133,39 @@ const roleSchema = z.object({
   membershipId: z.string().uuid(),
   role: z.enum(["admin", "coordinator", "trainer", "viewer", "setter", "stagiaire"]),
 });
+
+const modulesSchema = z.object({
+  membershipId: z.string().uuid(),
+  denied: z.array(z.enum(RESTRICTABLE_MODULES)).max(RESTRICTABLE_MODULES.length),
+});
+
+// Modules retirés à une personne, en plus de ce que son rôle autorise. Réservé à l'admin,
+// jamais pour lui-même (il ne doit pas pouvoir se couper d'un module par erreur).
+export async function updateMemberModules(raw: z.infer<typeof modulesSchema>): Promise<ActionResult> {
+  const parsed = modulesSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Données invalides" };
+
+  const { orgId, userId } = await requireRole(["admin"]);
+  const admin = createAdminClient();
+  const { data: membership } = await admin
+    .from("memberships")
+    .select("id, user_id")
+    .eq("id", parsed.data.membershipId)
+    .eq("org_id", orgId)
+    .single();
+  if (!membership) return { ok: false, error: "Utilisateur introuvable" };
+  if (membership.user_id === userId) return { ok: false, error: "Vous ne pouvez pas vous retirer un module à vous-même." };
+
+  const { error } = await admin
+    .from("memberships")
+    .update({ denied_modules: cleanDeniedModules(parsed.data.denied) })
+    .eq("id", parsed.data.membershipId)
+    .eq("org_id", orgId);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/parametres");
+  return { ok: true };
+}
 
 // Changement de rôle par l'admin. Garde-fous : pas son propre rôle, jamais zéro admin.
 export async function updateMemberRole(raw: z.infer<typeof roleSchema>): Promise<ActionResult> {

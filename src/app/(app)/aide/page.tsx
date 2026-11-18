@@ -1,3 +1,5 @@
+import { loadDeniedModules } from "@/lib/module-access";
+import { isDenied } from "@/lib/modules";
 import Link from "next/link";
 import { requireSession } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,10 +8,12 @@ import { Printer } from "lucide-react";
 
 // Module d'aide : manuel par tâche + FAQ, filtrés selon le rôle de la personne.
 export default async function AidePage() {
-  const { role } = await requireSession();
+  const { role, userId, orgId } = await requireSession();
+  // Un module retiré à cette personne : son aide ne lui est pas montrée non plus.
+  const denied = await loadDeniedModules(userId, orgId);
 
-  const sections = HELP_SECTIONS.filter((s) => s.roles.includes(role));
-  const faq = FAQ.filter((f) => f.roles.includes(role));
+  const sections = HELP_SECTIONS.filter((s) => s.roles.includes(role) && !isDenied(denied, s.module));
+  const faq = FAQ.filter((f) => f.roles.includes(role) && !isDenied(denied, f.module));
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">

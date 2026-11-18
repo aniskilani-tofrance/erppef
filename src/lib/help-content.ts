@@ -1,4 +1,5 @@
 import type { AppRole } from "@/lib/auth";
+import type { ModuleKey } from "@/lib/modules";
 
 // Contenu du manuel et de la FAQ. Chaque section/question déclare les rôles
 // concernés : la page Aide ne montre à chacun que ce qui le concerne.
@@ -12,6 +13,7 @@ export type HelpSection = {
   id: string;
   title: string;
   roles: AppRole[]; // rôles qui voient la section
+  module?: ModuleKey; // section masquée pour une personne à qui ce module a été retiré
   articles: HelpArticle[];
 };
 
@@ -196,6 +198,15 @@ export const HELP_SECTIONS: HelpSection[] = [
     title: "Paramétrer l'organisme",
     roles: TEAM,
     articles: [
+      {
+        title: "Retirer un module à une personne",
+        steps: [
+          "Le rôle dit ce qu'un type de compte peut faire. Vous pouvez en plus retirer un module précis à une personne : Financements, Leads resto, Prospection, Candidats POEI.",
+          "Paramètres → Utilisateurs → menu ⋯ de la personne → « Modules retirés… » : cochez les modules à lui retirer, puis « Enregistrer ». Un repère orange « N modules retirés » apparaît sur sa ligne.",
+          "Effet immédiat : le module disparaît de son menu, ses pages renvoient au tableau de bord, la base lui refuse les données, et elle ne reçoit plus les e-mails de ce module (nouveautés, rappels d'échéances).",
+          "Pour rendre l'accès : décochez. Vous ne pouvez pas vous retirer un module à vous-même.",
+        ],
+      },
       {
         title: "Le socle : dispositifs, financeurs, salles, fermetures",
         steps: [
@@ -747,9 +758,100 @@ export const HELP_SECTIONS: HelpSection[] = [
     ],
   },
   {
+    id: "financements",
+    title: "Financements : veille, dossiers, échéances",
+    roles: TEAM,
+    module: "financements",
+    articles: [
+      {
+        title: "Ma semaine : ce qui presse, en un coup d'œil",
+        steps: [
+          "Menu « Financements » (administration et coordination seulement). La page d'accueil du module s'appelle « Ma semaine » : ouvrez-la au début de la réunion du lundi.",
+          "« Les 30 prochains jours » : chaque échéance avec sa pastille — rouge à moins de 15 jours, orange à moins de 30 jours. Un encadré « En retard » apparaît tant qu'une date passée n'est pas cochée « faite ».",
+          "« À trier » : les nouveautés de la veille. Trois boutons par ligne : « Écarter » (une ligne pour dire pourquoi), « À surveiller », « Évaluer ».",
+          "« Mes prochaines étapes » : la prochaine étape de chaque dossier dont vous êtes responsable. « En chiffres » : dossiers en rédaction, déposés, accordés dans l'année et montant accordé.",
+          "Les cinq onglets du module : Ma semaine, Veille, Dossiers, Calendrier, Financeurs. Sur téléphone, ils défilent sur le côté.",
+        ],
+      },
+      {
+        title: "Veille : ajouter une opportunité et la trier",
+        steps: [
+          "Onglet « Veille » : une carte par opportunité, dans trois familles — appel à projets, appel d'offres, mécénat. Quatre filtres : famille, statut, financeur, échéance.",
+          "« Ajouter » : le titre suffit. Avec le lien de l'appel, la date limite et le montant, la saisie prend moins d'une minute. Sans heure, la date limite vaut 23 h 59.",
+          "Une opportunité ajoutée à la main arrive en « À évaluer » : vous l'avez déjà lue. « Nouveau » est réservé à ce que dépose la veille automatique.",
+          "Les statuts : Nouveau → À surveiller ou À évaluer → Retenu (un dossier existe) ou Écarté (avec la raison). Une opportunité écartée reste consultable avec le filtre « Toutes, écartées comprises ».",
+          "Une date limite crée toute seule son échéance « Dépôt » dans le Calendrier. Elle suit la date si vous la corrigez.",
+        ],
+      },
+      {
+        title: "Dossiers : créer un dossier et le faire avancer",
+        steps: [
+          "Sur la fiche d'une opportunité, « Créer le dossier » : le dossier s'ouvre avec le titre, le financeur, la date limite, le montant et le lien déjà remplis. L'opportunité passe en « Retenu ».",
+          "Onglet « Dossiers » : un tableau en colonnes — On y va, En rédaction, Déposé, Accordé, Refusé, Bilan rendu, Abandonné. Glissez une carte d'une colonne à l'autre. Sur téléphone, bouton « Changer de statut » sur chaque carte.",
+          "Un dossier avance d'une étape à la fois. On peut revenir d'un cran pour corriger, ou abandonner tant que rien n'est décidé. Un passage impossible (par exemple « On y va » vers « Accordé ») est refusé avec les passages possibles.",
+          "Sur la fiche du dossier : responsable, prochaine étape et sa date, montants demandé et accordé, portail et numéro de dossier (bouton « Copier »), « Ouvrir le Word » (le lien du document dans le Drive).",
+          "« Historique des statuts » : chaque changement, avec son auteur et l'heure. Vous pouvez ajouter un mot au moment du changement.",
+          "Le dossier se rédige dans l'« Atelier de rédaction » (bouton en haut de la fiche). « Exporter en Word » produit le fichier à relire et à ranger dans le Drive ; collez son lien sur la fiche pour le bouton « Ouvrir le Word ».",
+        ],
+      },
+      {
+        title: "Atelier de rédaction : écrire un dossier rubrique par rubrique",
+        steps: [
+          "Fiche du dossier → « Atelier de rédaction ». La première fois, choisissez un modèle : il pose les rubriques dans l'ordre du formulaire du financeur (Dauphin pour la politique de la ville, Cerfa 12156 pour Le Compte Asso, Région, fondation), ou partez d'un dossier libre.",
+          "Adaptez les rubriques au formulaire réel : « Ajouter une rubrique », le crayon pour le titre, la consigne et la limite de caractères, les flèches pour l'ordre, la poubelle pour supprimer. Les limites ne sont pas préremplies : recopiez celles du portail.",
+          "Écrivez dans chaque rubrique : le texte s'enregistre tout seul (« Enregistré » sous le champ). Le compteur affiche les caractères, espaces comprises ; il passe au rouge avec le nombre de caractères en trop.",
+          "« Copier » met la rubrique dans le presse-papiers : collez-la dans le champ du portail. « Tout copier » prend le dossier entier ; « Exporter en Word » produit le fichier à la charte, pour la relecture à deux et l'archive.",
+          "« Ce que demande l'appel », en haut de l'atelier, rappelle le résumé, les critères de sélection et les pièces saisis sur la fiche de l'opportunité (Veille → fiche → « Modifier »).",
+          "L'horloge d'une rubrique ouvre ses versions gardées : le texte d'avant chaque proposition de l'IA y est conservé, et « Garder le texte actuel » en ajoute une. « Reprendre » revient à une version sans rien perdre.",
+        ],
+      },
+      {
+        title: "Écrire avec l'IA : elle propose, vous décidez",
+        steps: [
+          "Dans une rubrique, « Écrire avec l'IA » : choisissez « Rédiger » pour une première version, ou, à partir de votre texte, « Plus court », « Plus concret », « Adapter à une fondation », « Français plus simple ».",
+          "Donnez-lui de la matière : cochez les textes de la bibliothèque à utiliser, choisissez la période des chiffres de l'ERP, ajoutez une précision (« insister sur les femmes du quartier Cordon »). Elle lit aussi les autres rubriques du dossier et les critères de l'appel.",
+          "La proposition s'affiche avec son nombre de caractères et, en orange, ce qu'il faut vérifier : information manquante, chiffre à contrôler, limite dépassée. Relisez toujours avant de reprendre un texte.",
+          "« Remplacer mon texte », « Ajouter à la suite », « Redemander » ou « Abandonner » : rien ne change sans vous, et le texte d'avant reste dans les versions gardées.",
+          "L'IA n'utilise que ce que vous lui donnez : des textes de l'association et des totaux. Elle ne reçoit aucun nom d'apprenant et ne dépose rien chez le financeur.",
+          "Un plafond mensuel limite la dépense d'IA du module ; le montant utilisé s'affiche en haut de l'atelier. Une fois le plafond atteint, les boutons d'IA attendent le 1er du mois.",
+        ],
+      },
+      {
+        title: "Bibliothèque de textes et chiffres de l'ERP",
+        steps: [
+          "Onglet « Bibliothèque » : les textes qui reviennent dans chaque dossier, saisis une seule fois — présentation de l'association, description des actions, équipe, partenaires, réponses déjà acceptées par un financeur.",
+          "« Ajouter un texte » : un titre, un rangement, le texte. Mettez-le à jour quand il change : la date de mise à jour s'affiche. Aucun nom d'apprenant, aucune donnée de santé ou de séjour.",
+          "Dans l'atelier, « Insérer » ajoute un texte de la bibliothèque à la fin de la rubrique : vous le retouchez ensuite pour ce financeur.",
+          "« Insérer » → « Chiffres de l'ERP » : choisissez la période (année de formation ou année civile). L'ERP écrit les totaux : personnes accompagnées, heures réalisées, présence, répartition par sexe, âge, quartier prioritaire, commune, niveaux atteints.",
+          "Ce sont les mêmes calculs que les bilans financeurs du menu Rapports, pour toute l'association. Les données sensibles (RQTH) n'y figurent jamais.",
+        ],
+      },
+      {
+        title: "Calendrier et rappels par e-mail",
+        steps: [
+          "Onglet « Calendrier » : vue du mois et vue des six prochains mois. Une couleur par type : dépôt, compte rendu ou bilan, versement, rendez-vous, pièce à fournir.",
+          "« Ajouter une échéance » : type, date, titre, et le dossier, l'opportunité ou le financeur concerné. Cochez la case d'une échéance quand elle est faite : elle sort des rappels.",
+          "Rappels : chaque matin, 30 jours, 15 jours et 3 jours avant la date, un e-mail part aux comptes administration et coordination. Vous pouvez choisir d'autres délais pour une échéance (60, 30, 15, 7, 3 ou 1 jour).",
+          "Le lundi, le même e-mail liste les nouvelles opportunités à trier. Il remplace l'ancien mail de veille du lundi.",
+          "L'échéance « Dépôt » d'un dossier se coche toute seule quand le dossier passe en « Déposé ».",
+        ],
+      },
+      {
+        title: "Fiches des financeurs",
+        steps: [
+          "Onglet « Financeurs » : la liste avec le type, le portail de dépôt, le nombre de dossiers et le montant accordé.",
+          "Sur une fiche : site, portail (Dauphin, Le Compte Asso, Département 93, Région…), compte ou numéros sur le portail, règles habituelles (plafond, cofinancement, pièces), contacts professionnels, dossiers et échéances liés.",
+          "Ce sont les mêmes financeurs que dans Paramètres et dans le planning : le nom se saisit une seule fois. La coordination peut créer et compléter une fiche ; seule l'administration peut la supprimer.",
+          "Contacts : uniquement des coordonnées professionnelles (nom, fonction, courriel et téléphone du service).",
+        ],
+      },
+    ],
+  },
+  {
     id: "leads",
     title: "Leads restaurateurs (mini-CRM)",
     roles: ["admin", "coordinator", "setter"],
+    module: "leads",
     articles: [
       {
         title: "Rappeler un nouveau lead sous 24 h",
@@ -888,9 +990,27 @@ export const HELP_SECTIONS: HelpSection[] = [
   },
 ];
 
-export type FaqItem = { q: string; a: string; roles: AppRole[] };
+export type FaqItem = { q: string; a: string; roles: AppRole[]; module?: ModuleKey };
 
 export const FAQ: FaqItem[] = [
+  {
+    q: "Qui voit le menu « Financements » ? Y trouve-t-on des données d'apprenants ?",
+    a: "Seuls les comptes administration et coordination voient le menu et ses pages ; pour les autres rôles, la base refuse aussi les données. L'administration peut aussi retirer ce module à une personne précise (Paramètres → Utilisateurs → « Modules retirés… »). Le module ne contient aucune donnée d'apprenant : des appels publics, les dossiers de l'association, des échéances et des contacts professionnels de financeurs.",
+    roles: TEAM,
+    module: "financements",
+  },
+  {
+    q: "L'IA de l'atelier de rédaction peut-elle inventer des chiffres ou envoyer des données d'apprenants ?",
+    a: "Elle ne reçoit que ce que vous lui donnez : les rubriques du dossier, les textes de la bibliothèque que vous cochez, les critères de l'appel et des totaux de l'ERP (jamais de nom, jamais de RQTH). Sa consigne lui interdit d'inventer un fait ou un chiffre : quand une information manque, elle le signale en orange sous la proposition. Relisez toujours : c'est vous qui reprenez le texte, et c'est vous qui le déposez.",
+    roles: TEAM,
+    module: "financements",
+  },
+  {
+    q: "Je ne reçois plus le mail de veille du lundi : où sont les nouveaux appels à projets ?",
+    a: "Dans Financements → « Ma semaine », bloc « À trier ». Le lundi matin, un e-mail de l'ERP liste aussi les nouvelles opportunités de la semaine, avec les échéances à 30, 15 et 3 jours. Triez chaque ligne : « Écarter », « À surveiller » ou « Évaluer ».",
+    roles: TEAM,
+    module: "financements",
+  },
   {
     q: "L'assistant IA envoie-t-il des données personnelles à l'extérieur ? Peut-il écrire dans l'ERP sans moi ?",
     a: "Non et non. Il reçoit le prénom, la référence (A-0001), le groupe, les horaires, l'historique de présence et de contact et la langue — jamais le téléphone, l'email, l'adresse ni les champs sensibles (santé, RQTH, titre de séjour). Il ne fait que rédiger ou proposer : chaque message passe par une fenêtre de relecture avant WhatsApp, chaque action proposée doit être cochée puis enregistrée par vous, et passe par les mêmes contrôles que la saisie manuelle. Paramètres → « Assistant IA » montre s'il est actif et combien il a été utilisé.",
